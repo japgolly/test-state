@@ -10,6 +10,7 @@ object ScalaJsBenchmark extends Build {
 
   object Ver {
     final val Scala211 = "2.11.7"
+    final val MTest    = "0.3.1"
   }
 
   def scalacFlags = Seq(
@@ -46,6 +47,14 @@ object ScalaJsBenchmark extends Build {
         "ctc" -> ";clean;test:compile",
         "ct"  -> ";clean;test"))
 
+  def utestSettings: CPE = _
+    .settings(
+      libraryDependencies  += "com.lihaoyi" %%% "utest" % Ver.MTest,
+      testFrameworks       += new TestFramework("utest.runner.Framework"))
+    .jsSettings(
+      scalaJSStage in Test := FastOptStage,
+      jsEnv in Test        := NodeJSEnv().value)
+
   override def rootProject = Some(root)
 
   lazy val root =
@@ -55,6 +64,7 @@ object ScalaJsBenchmark extends Build {
 
   lazy val core = crossProject
     .bothConfigure(commonSettings, publicationSettings(ghProject))
+    .configure(utestSettings)
 
   lazy val coreJVM = core.jvm
   lazy val coreJS  = core.js

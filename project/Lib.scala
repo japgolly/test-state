@@ -7,6 +7,7 @@ import ScalaJSPlugin._
 import ScalaJSPlugin.autoImport._
 
 object Lib {
+  type CPE = CrossProject => CrossProject
   type PE = Project => Project
 
   def addCommandAliases(m: (String, String)*): PE = {

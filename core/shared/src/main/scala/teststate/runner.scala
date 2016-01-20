@@ -31,13 +31,13 @@ object Runner {
       override val before = _before
     }
 
-  def run[State, Obs, Err](
-                            initialState: State,
-                            observe: () => Obs,
-                            action: Action[State, Obs, State, Obs, Err],
-                            invariants: Invariants[State, Obs, Err]): History[Err, Unit] = {
+  def run[State, Obs, Err](action: Action[State, Obs, State, Obs, Err],
+                           invariants: Invariants[State, Obs, Err],
+                           invariants2: Checks[State, Obs, State, Obs, Err])
+                          (initialState: State,
+                           observe: () => Obs): History[Err, Unit] = {
 
-    val invariantChecks = invariants.toChecks
+    val invariantChecks = invariants.toChecks & invariants2
 
     case class OMG(state: State, obs: Obs, sso: Some[(State, Obs)], history: History.Steps[Err, Unit])
 
