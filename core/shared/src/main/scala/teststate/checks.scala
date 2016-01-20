@@ -1,38 +1,41 @@
 package teststate
 
-sealed trait Checks[State, Obs, Err] {
-  def toVector: Vector[Check[State, Obs, Err]]
+sealed trait Checks[S1, O1, S2, O2, Err] {
+  def toVector: Vector[Check[S1, O1, S2, O2, Err]]
 
-  final def &(c: Checks[State, Obs, Err]): Checks.Composite[State, Obs, Err] =
+  final def &(c: Checks[S1, O1, S2, O2, Err]): Checks.Composite[S1, O1, S2, O2, Err] =
     Checks.Composite(toVector ++ c.toVector)
 }
 
 object Checks {
   val empty = Composite(Vector.empty)
 
-  case class Composite[State, Obs, Err](private val checks: Vector[Check[State, Obs, Err]]) extends Checks[State, Obs, Err] {
-    override def toVector: Vector[Check[State, Obs, Err]] =
+  case class Composite[S1, O1, S2, O2, Err](private val checks: Vector[Check[S1, O1, S2, O2, Err]]) extends Checks[S1, O1, S2, O2, Err] {
+    override def toVector: Vector[Check[S1, O1, S2, O2, Err]] =
       checks
   }
 }
 
-sealed trait Check[State, Obs, Err] extends Checks[State, Obs, Err] {
+sealed trait Check[S1, O1, S2, O2, Err] extends Checks[S1, O1, S2, O2, Err] {
   type A
-  val name: Option[(State, Obs)] => String
-  val before: (State, Obs) => Either[Err, A]
-  val test: (State, Obs, A) => Option[Err]
+  val name: Option[(S1, O1)] => String
+  val before: (S1, O1) => Either[Err, A]
+  val test: (S2, O2, A) => Option[Err]
 
-  override final def toVector: Vector[Check[State, Obs, Err]] =
+  final def aux: Check.Aux[S1, O1, S2, O2, Err, A] =
+    this
+
+  override final def toVector: Vector[Check[S1, O1, S2, O2, Err]] =
     vector1(this)
 }
 
 object Check {
-  type Aux[State, Obs, Err, a] = Check[State, Obs, Err] {type A = a}
+  type Aux[S1, O1, S2, O2, Err, a] = Check[S1, O1, S2, O2, Err] {type A = a}
 
-  def apply[State, Obs, Err, a](_name: Option[(State, Obs)] => String,
-                                _before: (State, Obs) => Either[Err, a],
-                                _test: (State, Obs, a) => Option[Err]): Aux[State, Obs, Err, a] =
-    new Check[State, Obs, Err] {
+  def apply[S1, O1, S2, O2, Err, a](_name: Option[(S1, O1)] => String,
+                                _before: (S1, O1) => Either[Err, a],
+                                _test: (S2, O2, a) => Option[Err]): Aux[S1, O1, S2, O2, Err, a] =
+    new Check[S1, O1, S2, O2, Err] {
       override type A     = a
       override val name   = _name
       override val before = _before

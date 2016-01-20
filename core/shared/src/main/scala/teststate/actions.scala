@@ -1,46 +1,46 @@
 package teststate
 
-sealed trait Action[State, Obs, Err] {
-  def nonCompositeActions: Vector[Action.NonComposite[State, Obs, Err]]
+sealed trait Action[S1, O1, S2, O2, Err] {
+  def nonCompositeActions: Vector[Action.NonComposite[S1, O1, S2, O2, Err]]
 
-  final def >>(next: Action[State, Obs, Err]): Action.Composite[State, Obs, Err] =
+  final def >>(next: Action[S1, O1, S2, O2, Err]): Action.Composite[S1, O1, S2, O2, Err] =
     Action.Composite(nonCompositeActions ++ next.nonCompositeActions)
 
-  final def andThen(next: Action[State, Obs, Err]) =
+  final def andThen(next: Action[S1, O1, S2, O2, Err]) =
     this >> next
 }
 
 object Action {
 
-  def empty[State, Obs, Err]: Action[State, Obs, Err] =
+  def empty[S1, O1, S2, O2, Err]: Action[S1, O1, S2, O2, Err] =
     Composite(Vector.empty)
 
-  sealed trait NonComposite[State, Obs, Err] extends Action[State, Obs, Err] {
-    def name: Option[(State, Obs)] => String
+  sealed trait NonComposite[S1, O1, S2, O2, Err] extends Action[S1, O1, S2, O2, Err] {
+    def name: Option[(S1, O1)] => String
 
-    final override def nonCompositeActions: Vector[NonComposite[State, Obs, Err]] =
+    final override def nonCompositeActions: Vector[NonComposite[S1, O1, S2, O2, Err]] =
       vector1(this)
 
-    final def times(n: Int): Group[State, Obs, Err] =
-      Group(i => s"${name(i)} ($n times)", Iterator.fill(n)(this).foldLeft(Action.empty[State, Obs, Err])(_ >> _))
+    final def times(n: Int): Group[S1, O1, S2, O2, Err] =
+      Group(i => s"${name(i)} ($n times)", Iterator.fill(n)(this).foldLeft(Action.empty[S1, O1, S2, O2, Err])(_ >> _))
   }
 
-  case class Composite[State, Obs, Err](nonCompositeActions: Vector[NonComposite[State, Obs, Err]])
-    extends Action[State, Obs, Err] {
+  case class Composite[S1, O1, S2, O2, Err](nonCompositeActions: Vector[NonComposite[S1, O1, S2, O2, Err]])
+    extends Action[S1, O1, S2, O2, Err] {
 
-    def group(name: String): Group[State, Obs, Err] =
+    def group(name: String): Group[S1, O1, S2, O2, Err] =
       Group(_ => name, this)
 
     def times(n: Int, name: String) =
       group(name).times(n)
   }
 
-  case class Group[State, Obs, Err](name: Option[(State, Obs)] => String,
-                                    action: Action[State, Obs, Err])
-    extends NonComposite[State, Obs, Err]
+  case class Group[S1, O1, S2, O2, Err](name: Option[(S1, O1)] => String,
+                                    action: Action[S1, O1, S2, O2, Err])
+    extends NonComposite[S1, O1, S2, O2, Err]
 
-  case class Single[State, Obs, Err](name: Option[(State, Obs)] => String,
-                                     run: (State, Obs) => Option[() => Either[Err, Obs => State]],
-                                     checks: Checks[State, Obs, Err])
-    extends NonComposite[State, Obs, Err]
+  case class Single[S1, O1, S2, O2, Err](name: Option[(S1, O1)] => String,
+                                     run: (S1, O1) => Option[() => Either[Err, O2 => S2]],
+                                     checks: Checks[S1, O1, S2, O2, Err])
+    extends NonComposite[S1, O1, S2, O2, Err]
 }
