@@ -34,66 +34,15 @@ object Runner {
   def run[State, Obs, Err](
                             initialState: State,
                             observe: () => Obs,
-                            action: Action[State, Obs, State, Obs, Err]): History[Err, Unit] = {
+                            action: Action[State, Obs, State, Obs, Err],
+                            invariants: Invariants[State, Obs, Err]): History[Err, Unit] = {
 
-    /*
-    var state = initialState
-    var obs = observe()
-    var sso = Some((state, obs))
-    var history: History.Steps[Err, Unit] = Vector.empty
-    var indent = 0
-
-    def go(action: Action[State, Obj, State, Obj, Err]): Unit =
-      action match {
-        case Action.Single(nameFn, run, checks) =>
-          val name = nameFn(sso)
-
-          def failedChecks(errors: TraversableOnce[Err]) =
-            // TODO When up and running, put all checks in history, passes & failures
-            Result.Fail(errors.toList.head)
-
-          val result: Result[Err] =
-            run(state, obs) match {
-              case Some(act) =>
-
-                halfChecks(checks)(state, obs) match {
-                  case Right(hcs) =>
-
-                    act() match {
-                      case Right(f) =>
-                        obs = observe()
-                        state = f(obs)
-                        sso = Some(state, obs)
-
-                        val afterFailures = hcs.iterator
-                          .map(c => c.check.test(state, obs, c.before))
-                          .filter(_.isDefined)
-                          .map(_.get)
-
-                        if (afterFailures.hasNext)
-                          failedChecks(afterFailures)
-                        else
-                          Result.Pass
-
-                      case Left(e) =>
-                        Result.Fail(e)
-                    }
-
-                  case Left(errors) =>
-                    failedChecks(errors)
-                }
-
-              case None =>
-                Result.Skip
-            }
-          history :+= History.Step(indent, name, result, ())
-      }
-      */
+    val invariantChecks = invariants.toChecks
 
     case class OMG(state: State, obs: Obs, sso: Some[(State, Obs)], history: History.Steps[Err, Unit])
 
-    def start(a: Action[State, Obs, State, Obs, Err], indent: Int, state: State, obs: Obs, sso: Some[(State, Obs)]) =
-      go(vector1(a), indent, OMG(state, obs, sso, Vector.empty))
+    def start(a: Action[State, Obs, State, Obs, Err], indent: Int, state: State, obs: Obs, sso: Some[(State, Obs)], history: History.Steps[Err, Unit]) =
+      go(vector1(a), indent, OMG(state, obs, sso, history))
 
     @tailrec
     def go(queue: Vector[Action[State, Obs, State, Obs, Err]], indent: Int, omg: OMG): OMG =
@@ -124,7 +73,7 @@ object Runner {
             run(state, obs) match {
               case Some(act) =>
 
-                halfChecks(checks)(state, obs) match {
+                halfChecks(checks & invariantChecks)(state, obs) match {
                   case Right(hcs) =>
 
                     act() match {
@@ -157,7 +106,7 @@ object Runner {
           // ==============================================================================
           case Action.Group(nameFn, children) =>
             val name = nameFn(sso)
-            val omg2 = start(children, indent + 1, state, obs, sso)
+            val omg2 = start(children, indent + 1, state, obs, sso, Vector.empty)
             var failed = false
             val result =
               if (omg2.history.isEmpty)
@@ -186,9 +135,20 @@ object Runner {
       }
 
     History {
-      val obs = observe()
-      val omg = start(action, 0, initialState, obs, Some((initialState, obs)))
-      omg.history
+      val initialObs = observe()
+      val sso = Some((initialState, initialObs))
+
+      // TODO When up and running, put all checks in history, passes & failures
+      val initialFailure =
+        invariants.toVector.iterator
+          .map(i => (i, i.test(initialState, initialObs)))
+          .find(_._2.isDefined)
+          .map { case (i, e) => History.Step(0, i.name(sso), Result.Fail(e.get), ()) }
+
+      initialFailure match {
+        case None    => start(action, 0, initialState, initialObs, sso, Vector.empty).history
+        case Some(h) => vector1(h)
+      }
     }
   }
 
