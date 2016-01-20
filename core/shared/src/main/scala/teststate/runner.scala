@@ -19,33 +19,33 @@ object Result {
 
 object Runner {
 
-  trait HalfCheck[S1, O1, S2, O2, Err] {
+  trait HalfCheck[O1, S1, O2, S2, Err] {
     type A
-    val check: Check.Aux[S1, O1, S2, O2, Err, A]
+    val check: Check.Aux[O1, S1, O2, S2, Err, A]
     val before: A
   }
-  def HalfCheck[S1, O1, S2, O2, Err, a](_check: Check.Aux[S1, O1, S2, O2, Err, a])(_before: a): HalfCheck[S1, O1, S2, O2, Err] =
-    new HalfCheck[S1, O1, S2, O2, Err] {
+  def HalfCheck[O1, S1, O2, S2, Err, a](_check: Check.Aux[O1, S1, O2, S2, Err, a])(_before: a): HalfCheck[O1, S1, O2, S2, Err] =
+    new HalfCheck[O1, S1, O2, S2, Err] {
       override type A     = a
       override val check  = _check
       override val before = _before
     }
 
-  def run[State, Obs, Err](action: Action[State, Obs, State, Obs, Err],
-                           invariants: Invariants[State, Obs, Err] = Invariants.empty,
-                           invariants2: Checks[State, Obs, State, Obs, Err] = Checks.empty)
+  def run[Obs, State, Err](action: Action[Obs, State, Obs, State, Err],
+                           invariants: Invariants[Obs, State, Err] = Invariants.empty,
+                           invariants2: Checks[Obs, State, Obs, State, Err] = Checks.empty)
                           (initialState: State,
                            observe: () => Obs): History[Err, Unit] = {
 
     val invariantChecks = invariants.toChecks & invariants2
 
-    case class OMG(state: State, obs: Obs, sso: Some[(State, Obs)], history: History.Steps[Err, Unit])
+    case class OMG(obs: Obs, state: State, sos: Some[(Obs, State)], history: History.Steps[Err, Unit])
 
-    def start(a: Action[State, Obs, State, Obs, Err], indent: Int, state: State, obs: Obs, sso: Some[(State, Obs)], history: History.Steps[Err, Unit]) =
-      go(vector1(a), indent, OMG(state, obs, sso, history))
+    def start(a: Action[Obs, State, Obs, State, Err], indent: Int, obs: Obs, state: State, sos: Some[(Obs, State)], history: History.Steps[Err, Unit]) =
+      go(vector1(a), indent, OMG(obs, state, sos, history))
 
     @tailrec
-    def go(queue: Vector[Action[State, Obs, State, Obs, Err]], indent: Int, omg: OMG): OMG =
+    def go(queue: Vector[Action[Obs, State, Obs, State, Err]], indent: Int, omg: OMG): OMG =
       if (queue.isEmpty)
         omg
       else {
@@ -61,7 +61,7 @@ object Runner {
 
           // ==============================================================================
           case Action.Single(nameFn, run, checks) =>
-            val name = nameFn(sso)
+            val name = nameFn(sos)
 
             def addHistory(result: Result[Err]) =
               omg.copy(history = addStep(name, result))
@@ -70,10 +70,10 @@ object Runner {
             // TODO When up and running, put all checks in history, passes & failures
               addHistory(Result.Fail(errors.toList.head))
 
-            run(state, obs) match {
+            run(obs, state) match {
               case Some(act) =>
 
-                halfChecks(checks & invariantChecks)(state, obs) match {
+                halfChecks(checks & invariantChecks)(obs, state) match {
                   case Right(hcs) =>
 
                     act() match {
@@ -82,14 +82,14 @@ object Runner {
                         val state2 = f(obs2)
 
                         val afterFailures = hcs.iterator
-                          .map(c => c.check.test(state2, obs2, c.before))
+                          .map(c => c.check.test(obs2, state2, c.before))
                           .filter(_.isDefined)
                           .map(_.get)
 
                         if (afterFailures.hasNext)
                           failedChecks(afterFailures)
                         else
-                          go(queue.tail, indent, OMG(state2, obs2, Some((state2, obs2)), addStep(name, Result.Pass)))
+                          go(queue.tail, indent, OMG(obs2, state2, Some((obs2, state2)), addStep(name, Result.Pass)))
 
                       case Left(e) =>
                         addHistory(Result.Fail(e))
@@ -105,8 +105,8 @@ object Runner {
 
           // ==============================================================================
           case Action.Group(nameFn, children) =>
-            val name = nameFn(sso)
-            val omg2 = start(children, indent + 1, state, obs, sso, Vector.empty)
+            val name = nameFn(sos)
+            val omg2 = start(children, indent + 1, obs, state, sos, Vector.empty)
             var failed = false
             val result =
               if (omg2.history.isEmpty)
@@ -136,28 +136,28 @@ object Runner {
 
     History {
       val initialObs = observe()
-      val sso = Some((initialState, initialObs))
+      val sos = Some((initialObs, initialState))
 
       // TODO When up and running, put all checks in history, passes & failures
       val initialFailure =
         invariants.toVector.iterator
-          .map(i => (i, i.test(initialState, initialObs)))
+          .map(i => (i, i.test(initialObs, initialState)))
           .find(_._2.isDefined)
-          .map { case (i, e) => History.Step(0, i.name(sso), Result.Fail(e.get), ()) }
+          .map { case (i, e) => History.Step(0, i.name(sos), Result.Fail(e.get), ()) }
 
       initialFailure match {
-        case None    => start(action, 0, initialState, initialObs, sso, Vector.empty).history
+        case None    => start(action, 0, initialObs, initialState, sos, Vector.empty).history
         case Some(h) => vector1(h)
       }
     }
   }
 
-  private def halfChecks[S1, O1, S2, O2, Err](checks: Checks[S1, O1, S2, O2, Err])(state: S1, obs: O1): Either[List[Err], List[HalfCheck[S1, O1, S2, O2, Err]]] = {
+  private def halfChecks[O1, S1, O2, S2, Err](checks: Checks[O1, S1, O2, S2, Err])(obs: O1, state: S1): Either[List[Err], List[HalfCheck[O1, S1, O2, S2, Err]]] = {
     var errors: List[Err] = Nil
-    val b = List.newBuilder[HalfCheck[S1, O1, S2, O2, Err]]
+    val b = List.newBuilder[HalfCheck[O1, S1, O2, S2, Err]]
     for (c0 <- checks.toVector) {
       val c = c0.aux
-      c.before(state, obs) match {
+      c.before(obs, state) match {
         case Right(a) => b += HalfCheck(c)(a)
         case Left(e) => errors ::= e
       }
