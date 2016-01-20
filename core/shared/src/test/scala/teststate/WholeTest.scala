@@ -11,25 +11,26 @@ object WholeTest extends TestSuite {
     def count() = c
   }
 
+  case class Obs(count: Int)
+
+  val inc =
+    Action.Single[Example, Obs, Int, Obs, Int, String](_ => "Increment", (eg, _, s) =>
+      Some(() => {
+        eg.inc()
+        Right(_ => s + 1)
+      }),
+      Check[Obs, Int, Obs, Int, String, Int](_ => "Count increases by 1",
+        (o, _) => Right(o.count),
+        (o, _, n) => if (o.count == n + 1) None else Some(s"Expected ${n + 1}, not ${o.count}.")
+      )
+    )
+
 
   override def tests = TestSuite {
 
-    val eg = new Example(3)
-
-    val inc =
-      Action.Single[Int, Int, Int, Int, String](_ => "Increment", (_, o) =>
-        Some(() => {
-          eg.inc()
-          Right((_: Int) + 1)
-        }),
-        Check[Int, Int, Int, Int, String, Int](_ => "Count increases by 1",
-          (_, o) => Right(o),
-          (_, o, n) => if (o == n + 1) None else Some(s"Expected ${n + 1}, not $o.")
-        )
-      )
-
     println()
-    val h = Runner.run(inc)(3, () => eg.count())
+    val eg = new Example(3)
+    val h = Runner.run(inc)(3, eg)(eg => Obs(eg.count()))
     println(h)
     println(eg.count())
     println()

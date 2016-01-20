@@ -31,21 +31,25 @@ object Runner {
       override val before = _before
     }
 
-  def run[Obs, State, Err](action: Action[Obs, State, Obs, State, Err],
-                           invariants: Invariants[Obs, State, Err] = Invariants.empty,
-                           invariants2: Checks[Obs, State, Obs, State, Err] = Checks.empty)
-                          (initialState: State,
-                           observe: () => Obs): History[Err, Unit] = {
+  def run[Ref, Obs, State, Err](action: Action[Ref, Obs, State, Obs, State, Err],
+                                invariants: Invariants[Obs, State, Err] = Invariants.empty,
+                                invariants2: Checks[Obs, State, Obs, State, Err] = Checks.empty)
+                               (initialState: State,
+                                ref: Ref)
+                               (observe: Ref => Obs): History[Err, Unit] = {
+
+    type A = Action[Ref, Obs, State, Obs, State, Err]
+    type HS = History.Steps[Err, Unit]
 
     val invariantChecks = invariants.toChecks & invariants2
 
-    case class OMG(obs: Obs, state: State, sos: Some[(Obs, State)], history: History.Steps[Err, Unit])
+    case class OMG(obs: Obs, state: State, sos: Some[(Obs, State)], history: HS)
 
-    def start(a: Action[Obs, State, Obs, State, Err], indent: Int, obs: Obs, state: State, sos: Some[(Obs, State)], history: History.Steps[Err, Unit]) =
+    def start(a: A, indent: Int, obs: Obs, state: State, sos: Some[(Obs, State)], history: HS) =
       go(vector1(a), indent, OMG(obs, state, sos, history))
 
     @tailrec
-    def go(queue: Vector[Action[Obs, State, Obs, State, Err]], indent: Int, omg: OMG): OMG =
+    def go(queue: Vector[A], indent: Int, omg: OMG): OMG =
       if (queue.isEmpty)
         omg
       else {
@@ -70,7 +74,7 @@ object Runner {
             // TODO When up and running, put all checks in history, passes & failures
               addHistory(Result.Fail(errors.toList.head))
 
-            run(obs, state) match {
+            run(ref, obs, state) match {
               case Some(act) =>
 
                 halfChecks(checks & invariantChecks)(obs, state) match {
@@ -78,7 +82,7 @@ object Runner {
 
                     act() match {
                       case Right(f) =>
-                        val obs2 = observe()
+                        val obs2 = observe(ref)
                         val state2 = f(obs2)
 
                         val afterFailures = hcs.iterator
@@ -135,7 +139,7 @@ object Runner {
       }
 
     History {
-      val initialObs = observe()
+      val initialObs = observe(ref)
       val sos = Some((initialObs, initialState))
 
       // TODO When up and running, put all checks in history, passes & failures
