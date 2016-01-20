@@ -1,22 +1,22 @@
 package teststate
 
-sealed trait Checks[S1, O1, S2, O2, Err] {
+sealed trait Checks[-S1, -O1, -S2, -O2, +Err] {
   def toVector: Vector[Check[S1, O1, S2, O2, Err]]
 
-  final def &(c: Checks[S1, O1, S2, O2, Err]): Checks.Composite[S1, O1, S2, O2, Err] =
+  final def &[s1 <: S1, o1 <: O1, s2 <: S2, o2 <: O2, e >: Err](c: Checks[s1, o1, s2, o2, e]): Checks.Composite[s1, o1, s2, o2, e] =
     Checks.Composite(toVector ++ c.toVector)
 }
 
 object Checks {
   val empty = Composite(Vector.empty)
 
-  case class Composite[S1, O1, S2, O2, Err](private val checks: Vector[Check[S1, O1, S2, O2, Err]]) extends Checks[S1, O1, S2, O2, Err] {
+  case class Composite[-S1, -O1, -S2, -O2, +Err](private val checks: Vector[Check[S1, O1, S2, O2, Err]]) extends Checks[S1, O1, S2, O2, Err] {
     override def toVector: Vector[Check[S1, O1, S2, O2, Err]] =
       checks
   }
 }
 
-sealed trait Check[S1, O1, S2, O2, Err] extends Checks[S1, O1, S2, O2, Err] {
+sealed trait Check[-S1, -O1, -S2, -O2, +Err] extends Checks[S1, O1, S2, O2, Err] {
   type A
   val name: Option[(S1, O1)] => String
   val before: (S1, O1) => Either[Err, A]
@@ -30,7 +30,7 @@ sealed trait Check[S1, O1, S2, O2, Err] extends Checks[S1, O1, S2, O2, Err] {
 }
 
 object Check {
-  type Aux[S1, O1, S2, O2, Err, a] = Check[S1, O1, S2, O2, Err] {type A = a}
+  type Aux[-S1, -O1, -S2, -O2, +Err, a] = Check[S1, O1, S2, O2, Err] {type A = a}
 
   def apply[S1, O1, S2, O2, Err, a](_name: Option[(S1, O1)] => String,
                                     _before: (S1, O1) => Either[Err, a],
@@ -63,24 +63,24 @@ object Check {
 
 
 
-sealed trait Invariants[S, O, Err] {
-  def toVector: Vector[Invariant[S, O, Err]]
-  def toChecks: Checks[S, O, S, O, Err]
+sealed trait Invariants[-S, -O, +E] {
+  def toVector: Vector[Invariant[S, O, E]]
+  def toChecks: Checks[S, O, S, O, E]
 
-  final def &(c: Invariants[S, O, Err]): Invariants.Composite[S, O, Err] =
+  final def &[s <: S, o <: O, e >: E](c: Invariants[s, o, e]): Invariants.Composite[s, o, e] =
     Invariants.Composite(toVector ++ c.toVector)
 }
 
 object Invariants {
   val empty = Composite(Vector.empty)
 
-  case class Composite[S, O, Err](private val invariants: Vector[Invariant[S, O, Err]]) extends Invariants[S, O, Err] {
+  case class Composite[-S, -O, +Err](private val invariants: Vector[Invariant[S, O, Err]]) extends Invariants[S, O, Err] {
     override def toVector = invariants
     override def toChecks = Checks.Composite(invariants.map(_.toChecks))
   }
 }
 
-case class Invariant[S, O, E](name: Option[(S, O)] => String, test: (S, O) => Option[E]) extends Invariants[S, O, E] {
+case class Invariant[-S, -O, +E](name: Option[(S, O)] => String, test: (S, O) => Option[E]) extends Invariants[S, O, E] {
   override def toVector = vector1(this)
   override def toChecks = Check.post(name, test)
 }

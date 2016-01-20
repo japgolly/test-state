@@ -32,8 +32,8 @@ object Runner {
     }
 
   def run[State, Obs, Err](action: Action[State, Obs, State, Obs, Err],
-                           invariants: Invariants[State, Obs, Err],
-                           invariants2: Checks[State, Obs, State, Obs, Err])
+                           invariants: Invariants[State, Obs, Err] = Invariants.empty,
+                           invariants2: Checks[State, Obs, State, Obs, Err] = Checks.empty)
                           (initialState: State,
                            observe: () => Obs): History[Err, Unit] = {
 
