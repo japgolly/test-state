@@ -14,11 +14,6 @@ object Lib {
     _.settings(s: _*)
   }
 
-  val clearScreenTask = TaskKey[Unit]("clear", "Clears the screen.")
-
-  def clearScreen(): Unit =
-    println("\033[2J\033[;H")
-
   implicit class CrossProjectExt(val cp: CrossProject) extends AnyVal {
     def bothConfigure(fs: PE*): CrossProject =
       fs.foldLeft(cp)((q, f) =>

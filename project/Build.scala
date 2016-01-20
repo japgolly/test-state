@@ -30,21 +30,21 @@ object ScalaJsBenchmark extends Build {
       licenses                 += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
       scalaVersion             := Ver.Scala211,
       scalacOptions           ++= scalacFlags,
-      clearScreenTask          := clearScreen(),
       shellPrompt in ThisBuild := ((s: State) => Project.extract(s).currentRef.project + "> "),
+      triggeredMessage         := Watched.clearWhenTriggered,
       incOptions               := incOptions.value.withNameHashing(true),
       updateOptions            := updateOptions.value.withCachedResolution(true))
     .configure(
       addCommandAliases(
-        "/"    -> "project root",
-        "C"    -> "root/clean",
-        "cc"   -> ";clear;compile",
-        "ctc"  -> ";clear;test:compile",
-        "ct"   -> ";clear;test",
-        "cq"   -> ";clear;testQuick",
-        "ccc"  -> ";clear;clean;compile",
-        "cctc" -> ";clear;clean;test:compile",
-        "cct"  -> ";clear;clean;test"))
+        "/"   -> "project root",
+        "C"   -> "root/clean",
+        "T"   -> ";root/clean;root/test",
+        "c"   -> "compile",
+        "tc"  -> "test:compile",
+        "t"   -> "test",
+        "cc"  -> ";clean;compile",
+        "ctc" -> ";clean;test:compile",
+        "ct"  -> ";clean;test"))
 
   override def rootProject = Some(root)
 
