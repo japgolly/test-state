@@ -10,7 +10,7 @@ sealed trait Checks[State, Obs, Err] {
 object Checks {
   val empty = Composite(Vector.empty)
 
-  case class Composite[State, Obs, Err](checks: Vector[Check[State, Obs, Err]]) extends Checks[State, Obs, Err] {
+  case class Composite[State, Obs, Err](private val checks: Vector[Check[State, Obs, Err]]) extends Checks[State, Obs, Err] {
     override def toVector: Vector[Check[State, Obs, Err]] =
       checks
   }
@@ -23,7 +23,7 @@ sealed trait Check[State, Obs, Err] extends Checks[State, Obs, Err] {
   val test: (State, Obs, A) => Option[Err]
 
   override final def toVector: Vector[Check[State, Obs, Err]] =
-    Vector.empty[Check[State, Obs, Err]] :+ this
+    vector1(this)
 }
 
 object Check {
