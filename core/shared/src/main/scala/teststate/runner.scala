@@ -36,30 +36,30 @@ object Runner {
                                 invariants2: Checks[Obs, State, Obs, State, Err] = Checks.empty)
                                (initialState: State,
                                 ref: Ref)
-                               (observe: Ref => Obs): History[Err, Unit] = {
+                               (observe: Ref => Obs): History[Err] = {
 
     type A = Action[Ref, Obs, State, Obs, State, Err]
-    type HS = History.Steps[Err, Unit]
+    type HS = History.Steps[Err]
 
     val invariantChecks = invariants.toChecks & invariants2
 
     case class OMG(obs: Obs, state: State, sos: Some[(Obs, State)], history: HS)
 
-    def start(a: A, indent: Int, obs: Obs, state: State, sos: Some[(Obs, State)], history: HS) =
-      go(vector1(a), indent, OMG(obs, state, sos, history))
+    def start(a: A, obs: Obs, state: State, sos: Some[(Obs, State)], history: HS) =
+      go(vector1(a), OMG(obs, state, sos, history))
 
     @tailrec
-    def go(queue: Vector[A], indent: Int, omg: OMG): OMG =
+    def go(queue: Vector[A], omg: OMG): OMG =
       if (queue.isEmpty)
         omg
       else {
         import omg._
 
-        def step(name: String, result: Result[Err]) =
-          History.Step(indent, name, result, ())
+        def step(name: String, result: Result[Err], children: History[Err] = History.empty) =
+          History.Step(name, result, children)
 
-        def addStep(name: String, result: Result[Err]) =
-          history :+ step(name, result)
+        def addStep(name: String, result: Result[Err], children: History[Err] = History.empty) =
+          history :+ step(name, result, children)
 
         queue.head match {
 
@@ -93,7 +93,7 @@ object Runner {
                         if (afterFailures.hasNext)
                           failedChecks(afterFailures)
                         else
-                          go(queue.tail, indent, OMG(obs2, state2, Some((obs2, state2)), addStep(name, Result.Pass)))
+                          go(queue.tail, OMG(obs2, state2, Some((obs2, state2)), addStep(name, Result.Pass)))
 
                       case Left(e) =>
                         addHistory(Result.Fail(e))
@@ -104,13 +104,13 @@ object Runner {
                 }
 
               case None =>
-                go(queue.tail, indent, addHistory(Result.Skip))
+                go(queue.tail, addHistory(Result.Skip))
             }
 
           // ==============================================================================
           case Action.Group(nameFn, children) =>
             val name = nameFn(sos)
-            val omg2 = start(children, indent + 1, obs, state, sos, Vector.empty)
+            val omg2 = start(children, obs, state, sos, Vector.empty)
             var failed = false
             val result =
               if (omg2.history.isEmpty)
@@ -125,16 +125,16 @@ object Runner {
                 })
                 lastError.getOrElse(if (skipSeen) Result.Skip else Result.Pass)
               }
-            val omg3 = omg2.copy(history = addStep(name, result) ++ omg2.history)
+            val omg3 = omg2.copy(history = addStep(name, result, History(omg2.history)))
 
             if (failed)
               omg3
             else
-              go(queue.tail, indent, omg3)
+              go(queue.tail, omg3)
 
           // ==============================================================================
           case Action.Composite(actions) =>
-            go(queue.tail ++ actions.toVector, indent, omg)
+            go(queue.tail ++ actions.toVector, omg)
         }
       }
 
@@ -147,10 +147,10 @@ object Runner {
         invariants.toVector.iterator
           .map(i => (i, i.test(initialObs, initialState)))
           .find(_._2.isDefined)
-          .map { case (i, e) => History.Step(0, i.name(sos), Result.Fail(e.get), ()) }
+          .map { case (i, e) => History.Step(i.name(sos), Result.Fail(e.get), History.empty) }
 
       initialFailure match {
-        case None    => start(action, 0, initialObs, initialState, sos, Vector.empty).history
+        case None    => start(action, initialObs, initialState, sos, Vector.empty).history
         case Some(h) => vector1(h)
       }
     }

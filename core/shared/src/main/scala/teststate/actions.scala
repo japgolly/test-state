@@ -17,11 +17,16 @@ object Action {
   sealed trait NonComposite[-Ref, -O1, -S1, -O2, S2, +Err] extends Action[Ref, O1, S1, O2, S2, Err] {
     def name: Option[(O1, S2)] => String
 
+    def nameMod(f: (=> String) => String): NonComposite[Ref, O1, S1, O2, S2, Err]
+
     final override def nonCompositeActions: Vector[NonComposite[Ref, O1, S1, O2, S2, Err]] =
       vector1(this)
 
     final def times(n: Int): Group[Ref, O1, S1, O2, S2, Err] =
-      Group(i => s"${name(i)} ($n times)", Iterator.fill(n)(this).foldLeft(empty: Action[Ref, O1, S1, O2, S2, Err])(_ >> _))
+      Group(i => s"${name(i)} ($n times)",
+        (1 to n).iterator
+          .map(i => nameMod(s => s"[$i/$n] $s"))
+          .foldLeft(empty: Action[Ref, O1, S1, O2, S2, Err])(_ >> _))
   }
 
   case class Composite[-Ref, -O1, -S1, -O2, S2, +Err](nonCompositeActions: Vector[NonComposite[Ref, O1, S1, O2, S2, Err]])
@@ -36,11 +41,19 @@ object Action {
 
   case class Group[-Ref, -O1, -S1, -O2, S2, +Err](name: Option[(O1, S2)] => String,
                                                   action: Action[Ref, O1, S1, O2, S2, Err])
-    extends NonComposite[Ref, O1, S1, O2, S2, Err]
+    extends NonComposite[Ref, O1, S1, O2, S2, Err] {
+
+    override def nameMod(f: (=> String) => String) =
+      copy(name = o => f(name(o)))
+  }
 
   case class Single[-Ref, -O1, -S1, -O2, S2, +Err](name: Option[(O1, S2)] => String,
                                                    run: (Ref, O1, S2) => Option[() => Either[Err, O2 => S2]],
                                                    checks: Checks[O1, S1, O2, S2, Err])
-    extends NonComposite[Ref, O1, S1, O2, S2, Err]
+    extends NonComposite[Ref, O1, S1, O2, S2, Err] {
+
+    override def nameMod(f: (=> String) => String) =
+      copy(name = o => f(name(o)))
+  }
 
 }

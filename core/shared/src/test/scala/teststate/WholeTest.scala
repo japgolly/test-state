@@ -6,8 +6,8 @@ object WholeTest extends TestSuite {
 
   class Example(start: Int) {
     private var c = start
-    def inc() = c += 1
-    def dec() = c -= 1
+    def inc() = if (c < 10) c += 1
+    def dec() = if (c > 0) c -= 1
     def count() = c
   }
 
@@ -30,9 +30,11 @@ object WholeTest extends TestSuite {
 
     println()
     val eg = new Example(3)
-    val h = Runner.run(inc)(3, eg)(eg => Obs(eg.count()))
+    val h = Runner.run(inc.times(5) >> inc.times(5))(3, eg)(eg => Obs(eg.count()))
     println(h)
     println(eg.count())
+    println()
+    println(formatHistory(h, Options.colored))
     println()
   }
 }
