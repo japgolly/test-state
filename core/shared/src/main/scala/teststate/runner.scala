@@ -17,6 +17,21 @@ object Result {
   }
 }
 
+case class Test0[-Ref, -Obs, State, +Err](action: Action[Ref, Obs, State, Obs, State, Err],
+                                          invariants1: Invariants[Obs, State, Err] = Invariants.empty,
+                                          invariants2: Checks[Obs, State, Obs, State, Err] = Checks.empty) {
+  def observe[R <: Ref, O <: Obs](f: R => O) =
+    Test(action, f, invariants1, invariants2)
+}
+
+case class Test[Ref, Obs, State, +Err](action: Action[Ref, Obs, State, Obs, State, Err],
+                                       observe: Ref => Obs,
+                                       invariants1: Invariants[Obs, State, Err] = Invariants.empty,
+                                       invariants2: Checks[Obs, State, Obs, State, Err] = Checks.empty) {
+  def run(initialState: State, ref: Ref): History[Err] =
+    Runner.run(this)(initialState, ref)
+}
+
 object Runner {
 
   trait HalfCheck[O1, S1, O2, S2, Err] {
@@ -31,25 +46,18 @@ object Runner {
       override val before = _before
     }
 
-  def run[Ref, Obs, State, Err](action: Action[Ref, Obs, State, Obs, State, Err],
-                                invariants: Invariants[Obs, State, Err] = Invariants.empty,
-                                invariants2: Checks[Obs, State, Obs, State, Err] = Checks.empty)
-                               (initialState: State,
-                                ref: Ref)
-                               (observe: Ref => Obs): History[Err] = {
+  def run[Ref, Obs, State, Err](test: Test[Ref, Obs, State, Err])
+//                               (observe: Ref => Obs)
+                               (initialState: State, ref: Ref): History[Err] = {
+import test.observe
+    // TODO Catch all exceptions
 
     type A = Action[Ref, Obs, State, Obs, State, Err]
     type HS = History.Steps[Err]
 
-    val invariantChecks = invariants.toChecks & invariants2
+    val invariantChecks = test.invariants1.toChecks & test.invariants2
 
-    case class OMG(obs: Obs, state: State, sos: Some[(Obs, State)], history: HS) {
-//      def modHistory(f: HS => HS): OMG =
-//        copy(history = f(history))
-
-//      def addStep(s: History.Step[Err]): OMG =
-//        copy(history = history :+ s)
-    }
+    case class OMG(obs: Obs, state: State, sos: Some[(Obs, State)], history: HS)
 
     def start(a: A, obs: Obs, state: State, sos: Some[(Obs, State)], history: HS) =
       go(vector1(a), OMG(obs, state, sos, history))
@@ -60,9 +68,6 @@ object Runner {
         omg
       else {
         import omg._
-
-//        def addStep(name: String, result: Result[Err], children: History[Err] = History.empty) =
-//          history :+ History.Step(name, result, children)
 
         queue.head match {
 
@@ -128,7 +133,7 @@ object Runner {
       val sos = Some((initialObs, initialState))
 
       val firstSteps: HS = {
-        val iv = invariants.toVector
+        val iv = test.invariants1.toVector
         if (iv.isEmpty)
           Vector.empty
         else {
@@ -145,7 +150,7 @@ object Runner {
       if (firstSteps.exists(_.failed))
         firstSteps
       else {
-        val runResults = start(action, initialObs, initialState, sos, Vector.empty).history
+        val runResults = start(test.action, initialObs, initialState, sos, Vector.empty).history
         val h = firstSteps ++ runResults
         if (runResults.exists(_.failed))
           h

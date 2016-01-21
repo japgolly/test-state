@@ -15,7 +15,7 @@ object Action {
   def empty[S2] = Composite[Any, Any, Any, Any, S2, Nothing](Vector.empty)
 
   sealed trait NonComposite[-Ref, -O1, -S1, -O2, S2, +Err] extends Action[Ref, O1, S1, O2, S2, Err] {
-    def name: Option[(O1, S2)] => String
+    def name: Option[(O1, S1)] => String
 
     def nameMod(f: (=> String) => String): NonComposite[Ref, O1, S1, O2, S2, Err]
 
@@ -39,7 +39,7 @@ object Action {
       group(name).times(n)
   }
 
-  case class Group[-Ref, -O1, -S1, -O2, S2, +Err](name: Option[(O1, S2)] => String,
+  case class Group[-Ref, -O1, -S1, -O2, S2, +Err](name: Option[(O1, S1)] => String,
                                                   action: Action[Ref, O1, S1, O2, S2, Err])
     extends NonComposite[Ref, O1, S1, O2, S2, Err] {
 
@@ -47,8 +47,8 @@ object Action {
       copy(name = o => f(name(o)))
   }
 
-  case class Single[-Ref, -O1, -S1, -O2, S2, +Err](name: Option[(O1, S2)] => String,
-                                                   run: (Ref, O1, S2) => Option[() => Either[Err, O2 => S2]],
+  case class Single[-Ref, -O1, -S1, -O2, S2, +Err](name: Option[(O1, S1)] => String,
+                                                   run: (Ref, O1, S1) => Option[() => Either[Err, O2 => S2]],
                                                    checks: Checks[O1, S1, O2, S2, Err])
     extends NonComposite[Ref, O1, S1, O2, S2, Err] {
 
@@ -56,4 +56,49 @@ object Action {
       copy(name = o => f(name(o)))
   }
 
+
+  // ===================================================================================================================
+
+}
+
+class ActionBuilder[R, O, S1, S2, E] {
+
+  case class ROS
+
+  def action(name: String) = new HasName(_ => name)
+
+  class HasName(name: Option[(O, S1)] => String) {
+//    def act(f: R => Unit)
+    /*
+    def tmp(act: R => Unit, alterState: S1 => S2) =
+      Action.Single[R, O, S1, O, S2, E](name, (r, o, s) =>
+        Some(() => {
+          act(r)
+          Right(_ => alterState(s))
+        }), Checks.empty)
+*/
+  }
+
+  /*
+  class Loop(name: Option[(O, S1)] => String, act: (R, O, S1) => Unit) {
+    def act(f: R => Unit)
+
+  }
+  */
+
+  /*
+    def action(name: String)
+
+    def act(R|O|S => Unit)
+    def act(R|O|S => Option[E])
+
+    def expect(S1|O2 => S2)
+    def expect(S1 => E ∨ S2)
+    def expect(S1 => E ∨ (O2→S2))
+
+    def when|unless(R|O|S => Boolean)
+
+    def check(c)
+
+   */
 }
