@@ -15,6 +15,28 @@ package object teststate {
   }
   */
 
+  implicit class TestStateExtMethodsForOption[A](private val self: Option[A]) extends AnyVal {
+    def leftBind[L >: A, R](e: => Either[L, R]): Either[L, R] =
+      self match {
+        case None    => e
+        case Some(a) => Left(a)
+      }
+
+    @inline def leftOr[L >: A, R](r: => R): Either[L, R] =
+      leftBind(Right(r))
+  }
+
+  implicit class TestStateExtMethodsForEither[L, A](private val self: Either[L, A]) extends AnyVal {
+    def fmap[B](f: A => Either[L, B]): Either[L, B] =
+      self match {
+        case Right(a) => f(a)
+        case l: Left[L, A] => l.asInstanceOf[Left[L, Nothing]]
+      }
+
+    @inline def map[B](f: A => B): Either[L, B] =
+      fmap(a => Right(f(a)))
+  }
+
   case class History[+E](steps: History.Steps[E]) {
 
     val result: Result[E] = {

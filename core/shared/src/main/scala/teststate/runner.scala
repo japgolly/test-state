@@ -57,10 +57,10 @@ import test.observe
 
     val invariantChecks = test.invariants1.toChecks & test.invariants2
 
-    case class OMG(obs: Obs, state: State, sos: Some[(Obs, State)], history: HS)
+    case class OMG(ros: ROS[Ref, Obs, State], history: HS)
 
-    def start(a: A, obs: Obs, state: State, sos: Some[(Obs, State)], history: HS) =
-      go(vector1(a), OMG(obs, state, sos, history))
+    def start(a: A, ros: ROS[Ref, Obs, State], history: HS) =
+      go(vector1(a), OMG(ros, history))
 
     @tailrec
     def go(queue: Vector[A], omg: OMG): OMG =
@@ -73,15 +73,15 @@ import test.observe
 
           // ==============================================================================
           case Action.Single(nameFn, run, checks) =>
-            val name = nameFn(sos)
+            val name = nameFn(ros.sos)
 
             def addHistory(result: Result[Err]) =
               omg.copy(history = history :+ History.Step(name, result))
 
-            run(ref, obs, state) match {
+            run(ros) match {
               case Some(act) =>
 
-                halfChecks(checks & invariantChecks)(obs, state, sos) match {
+                halfChecks(checks & invariantChecks)(ros) match {
                   case Right(hcs) =>
 
                     act() match {
@@ -89,10 +89,10 @@ import test.observe
                         val obs2 = observe(ref)
                         val state2 = f(obs2)
 
-                        performChecks(hcs)(_.check name sos, c => c.check.test(obs2, state2, c.before)) match {
+                        performChecks(hcs)(_.check name ros.sos, c => c.check.test(obs2, state2, c.before)) match {
                           case None =>
                             val h = History.Step(name, Result.Pass)
-                            val omg2 = OMG(obs2, state2, Some((obs2, state2)), history :+ h)
+                            val omg2 = OMG(ROS(ref, obs2, state2), history :+ h)
                             go(queue.tail, omg2)
                           case Some(failedStep) =>
                             omg.copy(history = history :+ failedStep(name))
@@ -113,8 +113,8 @@ import test.observe
 
           // ==============================================================================
           case Action.Group(nameFn, children) =>
-            val name = nameFn(sos)
-            val omg2 = start(children, obs, state, sos, Vector.empty)
+            val name = nameFn(ros.sos)
+            val omg2 = start(children, ros, Vector.empty)
             val h2   = History(omg2.history)
             val omg3 = omg2.copy(history = omg.history :+ History.parent(name, h2))
             if (h2.failure.isDefined)
@@ -130,7 +130,7 @@ import test.observe
 
     History {
       val initialObs = observe(ref)
-      val sos = Some((initialObs, initialState))
+      val ros = ROS(ref, initialObs, initialState)
 
       val firstSteps: HS = {
         val iv = test.invariants1.toVector
@@ -139,7 +139,7 @@ import test.observe
         else {
           val children = iv
             .map { i =>
-              val name = i.name(sos)
+              val name = i.name(ros.sos)
               val result = i.test(initialObs, initialState).fold[Result[Err]](Result.Pass)(Result.Fail(_))
               History.Step(name, result)
             }
@@ -150,7 +150,7 @@ import test.observe
       if (firstSteps.exists(_.failed))
         firstSteps
       else {
-        val runResults = start(test.action, initialObs, initialState, sos, Vector.empty).history
+        val runResults = start(test.action, ros, Vector.empty).history
         val h = firstSteps ++ runResults
         if (runResults.exists(_.failed))
           h
@@ -160,14 +160,14 @@ import test.observe
     }
   }
 
-  private def halfChecks[O, S, E](checks: Checks[O, S, E])(obs: O, state: S, sos: Some[(O, S)])
+  private def halfChecks[O, S, E](checks: Checks[O, S, E])(ros: ROS[_, O, S])
   : Either[String => History.Step[E], Vector[HalfCheck[O, S, E]]] = {
     val r = Vector.newBuilder[HalfCheck[O, S, E]]
     val o = performChecks(checks.toVector)(
-      _ name sos,
+      _ name ros.sos,
       c0 => {
         val c = c0.aux
-        c.before(obs, state) match {
+        c.before(ros.obs, ros.state) match {
           case Right(a) => r += HalfCheck(c)(a); None
           case Left(e) => Some(e)
         }
