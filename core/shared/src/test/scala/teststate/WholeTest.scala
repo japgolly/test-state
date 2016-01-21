@@ -25,12 +25,15 @@ object WholeTest extends TestSuite {
       )
     )
 
+  val countNeverNegative =
+    Invariant[Obs, Any, String](_ => "Count is never negative",
+      (o, _) => if (o.count >= 0) None else Some(s"Count = ${o.count}."))
 
   override def tests = TestSuite {
 
     println()
     val eg = new Example(3)
-    val h = Runner.run(inc.times(5) >> inc.times(5))(3, eg)(eg => Obs(eg.count()))
+    val h = Runner.run(inc.times(5) >> inc.times(2), countNeverNegative)(3, eg)(eg => Obs(eg.count()))
     println(h)
     println(eg.count())
     println()

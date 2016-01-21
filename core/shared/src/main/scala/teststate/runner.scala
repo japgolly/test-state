@@ -43,7 +43,13 @@ object Runner {
 
     val invariantChecks = invariants.toChecks & invariants2
 
-    case class OMG(obs: Obs, state: State, sos: Some[(Obs, State)], history: HS)
+    case class OMG(obs: Obs, state: State, sos: Some[(Obs, State)], history: HS) {
+//      def modHistory(f: HS => HS): OMG =
+//        copy(history = f(history))
+
+//      def addStep(s: History.Step[Err]): OMG =
+//        copy(history = history :+ s)
+    }
 
     def start(a: A, obs: Obs, state: State, sos: Some[(Obs, State)], history: HS) =
       go(vector1(a), OMG(obs, state, sos, history))
@@ -55,11 +61,8 @@ object Runner {
       else {
         import omg._
 
-        def step(name: String, result: Result[Err], children: History[Err] = History.empty) =
-          History.Step(name, result, children)
-
-        def addStep(name: String, result: Result[Err], children: History[Err] = History.empty) =
-          history :+ step(name, result, children)
+//        def addStep(name: String, result: Result[Err], children: History[Err] = History.empty) =
+//          history :+ History.Step(name, result, children)
 
         queue.head match {
 
@@ -68,16 +71,12 @@ object Runner {
             val name = nameFn(sos)
 
             def addHistory(result: Result[Err]) =
-              omg.copy(history = addStep(name, result))
-
-            def failedChecks(errors: TraversableOnce[Err]) =
-            // TODO When up and running, put all checks in history, passes & failures
-              addHistory(Result.Fail(errors.toList.head))
+              omg.copy(history = history :+ History.Step(name, result))
 
             run(ref, obs, state) match {
               case Some(act) =>
 
-                halfChecks(checks & invariantChecks)(obs, state) match {
+                halfChecks(checks & invariantChecks)(obs, state, sos) match {
                   case Right(hcs) =>
 
                     act() match {
@@ -85,22 +84,22 @@ object Runner {
                         val obs2 = observe(ref)
                         val state2 = f(obs2)
 
-                        val afterFailures = hcs.iterator
-                          .map(c => c.check.test(obs2, state2, c.before))
-                          .filter(_.isDefined)
-                          .map(_.get)
+                        performChecks(hcs)(_.check name sos, c => c.check.test(obs2, state2, c.before)) match {
+                          case None =>
+                            val h = History.Step(name, Result.Pass)
+                            val omg2 = OMG(obs2, state2, Some((obs2, state2)), history :+ h)
+                            go(queue.tail, omg2)
+                          case Some(failedStep) =>
+                            omg.copy(history = history :+ failedStep(name))
+                        }
 
-                        if (afterFailures.hasNext)
-                          failedChecks(afterFailures)
-                        else
-                          go(queue.tail, OMG(obs2, state2, Some((obs2, state2)), addStep(name, Result.Pass)))
 
                       case Left(e) =>
                         addHistory(Result.Fail(e))
                     }
 
-                  case Left(errors) =>
-                    failedChecks(errors)
+                  case Left(failedStep) =>
+                    omg.copy(history = history :+ failedStep(name))
                 }
 
               case None =>
@@ -111,23 +110,9 @@ object Runner {
           case Action.Group(nameFn, children) =>
             val name = nameFn(sos)
             val omg2 = start(children, obs, state, sos, Vector.empty)
-            var failed = false
-            val result =
-              if (omg2.history.isEmpty)
-                Result.Pass
-              else {
-                var skipSeen = false
-                var lastError: Option[Result.Fail[Err]] = None
-                omg2.history foreach (_.result match {
-                  case Result.Pass => ()
-                  case Result.Skip => skipSeen = true
-                  case e: Result.Fail[Err] => lastError = Some(e); failed = true
-                })
-                lastError.getOrElse(if (skipSeen) Result.Skip else Result.Pass)
-              }
-            val omg3 = omg2.copy(history = addStep(name, result, History(omg2.history)))
-
-            if (failed)
+            val h2   = History(omg2.history)
+            val omg3 = omg2.copy(history = omg.history :+ History.parent(name, h2))
+            if (h2.failure.isDefined)
               omg3
             else
               go(queue.tail, omg3)
@@ -142,34 +127,80 @@ object Runner {
       val initialObs = observe(ref)
       val sos = Some((initialObs, initialState))
 
-      // TODO When up and running, put all checks in history, passes & failures
-      val initialFailure =
-        invariants.toVector.iterator
-          .map(i => (i, i.test(initialObs, initialState)))
-          .find(_._2.isDefined)
-          .map { case (i, e) => History.Step(i.name(sos), Result.Fail(e.get), History.empty) }
+      val firstSteps: HS = {
+        val iv = invariants.toVector
+        if (iv.isEmpty)
+          Vector.empty
+        else {
+          val children = iv
+            .map { i =>
+              val name = i.name(sos)
+              val result = i.test(initialObs, initialState).fold[Result[Err]](Result.Pass)(Result.Fail(_))
+              History.Step(name, result)
+            }
+          vector1(History.parent("Initial checks.", History(children)))
+        }
+      }
 
-      initialFailure match {
-        case None    => start(action, initialObs, initialState, sos, Vector.empty).history
-        case Some(h) => vector1(h)
+      if (firstSteps.exists(_.failed))
+        firstSteps
+      else {
+        val runResults = start(action, initialObs, initialState, sos, Vector.empty).history
+        val h = firstSteps ++ runResults
+        if (runResults.exists(_.failed))
+          h
+        else
+          h :+ History.Step("All pass.", Result.Pass)
       }
     }
   }
 
-  private def halfChecks[O1, S1, O2, S2, Err](checks: Checks[O1, S1, O2, S2, Err])(obs: O1, state: S1): Either[List[Err], List[HalfCheck[O1, S1, O2, S2, Err]]] = {
-    var errors: List[Err] = Nil
-    val b = List.newBuilder[HalfCheck[O1, S1, O2, S2, Err]]
-    for (c0 <- checks.toVector) {
-      val c = c0.aux
-      c.before(obs, state) match {
-        case Right(a) => b += HalfCheck(c)(a)
-        case Left(e) => errors ::= e
+  private def halfChecks[O1, S1, O2, S2, E](checks: Checks[O1, S1, O2, S2, E])(obs: O1, state: S1, sos: Some[(O1, S1)])
+  : Either[String => History.Step[E], Vector[HalfCheck[O1, S1, O2, S2, E]]] = {
+    val r = Vector.newBuilder[HalfCheck[O1, S1, O2, S2, E]]
+    val o = performChecks(checks.toVector)(
+      _ name sos,
+      c0 => {
+        val c = c0.aux
+        c.before(obs, state) match {
+          case Right(a) => r += HalfCheck(c)(a); None
+          case Left(e) => Some(e)
+        }
+      }
+    )
+    o match {
+      case None => Right(r.result())
+      case Some(h) => Left(h)
+    }
+  }
+
+  private def performChecks[A, E](as: Vector[A])(name: A => String, test: A => Option[E]): Option[String => History.Step[E]] = {
+    var failures = List.empty[(Int, E)]
+
+    for (i <- as.indices) {
+      val a = as(i)
+      test(a) match {
+        case None    => ()
+        case Some(e) => failures ::= ((i, e))
       }
     }
-    if (errors.isEmpty)
-      Right(b.result())
+
+    if (failures.isEmpty)
+      None
     else
-      Left(errors)
+      Some {
+        val m = failures.toMap
+        val history =
+          as.indices.iterator.map { i =>
+            val a = as(i)
+            val n = name(a)
+            val r = m.get(i).fold[Result[E]](Result.Pass)(Result.Fail(_))
+            History.Step(n, r)
+          }.toVector
+
+        val firstFailure = failures.head._2
+        History.Step(_, Result Fail firstFailure, History(history))
+      }
   }
 
 }

@@ -16,10 +16,20 @@ package object teststate {
   */
 
   case class History[+E](steps: History.Steps[E]) {
-    def failure: Option[E] = {
-      val it = steps.iterator.map(_.result.failure).filter(_.isDefined)
-      if (it.hasNext) it.next() else None
+
+    val result: Result[E] = {
+      var skipSeen = false
+      var firstError: Option[Result.Fail[E]] = None
+      steps foreach (_.result match {
+        case Result.Pass => ()
+        case Result.Skip => skipSeen = true
+        case e: Result.Fail[E] => if (firstError.isEmpty) firstError = Some(e)
+      })
+      firstError.getOrElse(if (skipSeen) Result.Skip else Result.Pass)
     }
+
+    def failure: Option[E] =
+      result.failure
   }
 
   case class Show[E](show: E => String) extends AnyVal
@@ -30,7 +40,13 @@ package object teststate {
   object History {
     val empty = History(Vector.empty)
     type Steps[+Err] = Vector[Step[Err]]
-    case class Step[+E](name: String, result: Result[E], children: History[E])
+    case class Step[+E](name: String, result: Result[E], children: History[E] = empty) {
+      def failure = result.failure
+      def failed = failure.isDefined
+    }
+
+    def parent[E](name: String, children: History[E]): Step[E] =
+      Step(name, children.result, children)
   }
 
   case class Options(indent: String,
