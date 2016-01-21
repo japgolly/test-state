@@ -14,12 +14,12 @@ object WholeTest extends TestSuite {
   case class Obs(count: Int)
 
   val inc =
-    Action.Single[Example, Obs, Int, Obs, Int, String](_ => "Increment", (eg, _, s) =>
+    Action.Single[Example, Obs, Int, String](_ => "Increment", (eg, _, s) =>
       Some(() => {
         eg.inc()
         Right(_ => s + 1)
       }),
-      Check[Obs, Int, Obs, Int, String, Int](_ => "Count increases by 1",
+      Check[Obs, Int, String, Int](_ => "Count increases by 1",
         (o, _) => Right(o.count),
         (o, _, n) => if (o.count == n + 1) None else Some(s"Expected ${n + 1}, not ${o.count}.")
       )

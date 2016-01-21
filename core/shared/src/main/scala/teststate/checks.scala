@@ -1,41 +1,41 @@
 package teststate
 
-sealed trait Checks[-O1, -S1, -O2, -S2, +Err] {
-  def toVector: Vector[Check[O1, S1, O2, S2, Err]]
+sealed trait Checks[-O, -S, +Err] {
+  def toVector: Vector[Check[O, S, Err]]
 
-  final def &[o1 <: O1, s1 <: S1, o2 <: O2, s2 <: S2, e >: Err](c: Checks[o1, s1, o2, s2, e]): Checks.Composite[o1, s1, o2, s2, e] =
+  final def &[o <: O, s <: S, e >: Err](c: Checks[o, s, e]): Checks.Composite[o, s, e] =
     Checks.Composite(toVector ++ c.toVector)
 }
 
 object Checks {
   val empty = Composite(Vector.empty)
 
-  case class Composite[-O1, -S1, -O2, -S2, +Err](private val checks: Vector[Check[O1, S1, O2, S2, Err]]) extends Checks[O1, S1, O2, S2, Err] {
-    override def toVector: Vector[Check[O1, S1, O2, S2, Err]] =
+  case class Composite[-O, -S, +Err](private val checks: Vector[Check[O, S, Err]]) extends Checks[O, S, Err] {
+    override def toVector: Vector[Check[O, S, Err]] =
       checks
   }
 }
 
-sealed trait Check[-O1, -S1, -O2, -S2, +Err] extends Checks[O1, S1, O2, S2, Err] {
+sealed trait Check[-O, -S, +Err] extends Checks[O, S, Err] {
   type A
-  val name: Option[(O1, S1)] => String
-  val before: (O1, S1) => Either[Err, A]
-  val test: (O2, S2, A) => Option[Err]
+  val name: Option[(O, S)] => String
+  val before: (O, S) => Either[Err, A]
+  val test: (O, S, A) => Option[Err]
 
-  final def aux: Check.Aux[O1, S1, O2, S2, Err, A] =
+  final def aux: Check.Aux[O, S, Err, A] =
     this
 
-  override final def toVector: Vector[Check[O1, S1, O2, S2, Err]] =
+  override final def toVector: Vector[Check[O, S, Err]] =
     vector1(this)
 }
 
 object Check {
-  type Aux[-O1, -S1, -O2, -S2, +Err, a] = Check[O1, S1, O2, S2, Err] {type A = a}
+  type Aux[-O, -S, +Err, a] = Check[O, S, Err] {type A = a}
 
-  def apply[O1, S1, O2, S2, Err, a](_name: Option[(O1, S1)] => String,
-                                    _before: (O1, S1) => Either[Err, a],
-                                    _test: (O2, S2, a) => Option[Err]): Aux[O1, S1, O2, S2, Err, a] =
-    new Check[O1, S1, O2, S2, Err] {
+  def apply[O, S, Err, a](_name: Option[(O, S)] => String,
+                          _before: (O, S) => Either[Err, a],
+                          _test: (O, S, a) => Option[Err]): Aux[O, S, Err, a] =
+    new Check[O, S, Err] {
       override type A     = a
       override val name   = _name
       override val before = _before
@@ -44,9 +44,9 @@ object Check {
 
   private val noBefore = (_: Any, _: Any) => Right(())
 
-  def post[O1, S1, O2, S2, Err](name: Option[(O1, S1)] => String,
-                                test: (O2, S2) => Option[Err]): Aux[O1, S1, O2, S2, Err, Unit] =
-    apply[O1, S1, O2, S2, Err, Unit](name, noBefore, (s, o, _) => test(s, o))
+  def post[O, S, Err](name: Option[(O, S)] => String,
+                                test: (O, S) => Option[Err]): Aux[O, S, Err, Unit] =
+    apply[O, S, Err, Unit](name, noBefore, (s, o, _) => test(s, o))
 }
 
 /*
@@ -65,7 +65,7 @@ object Check {
 
 sealed trait Invariants[-O, -S, +E] {
   def toVector: Vector[Invariant[O, S, E]]
-  def toChecks: Checks[O, S, O, S, E]
+  def toChecks: Checks[O, S, E]
 
   final def &[o <: O, s <: S, e >: E](c: Invariants[o, s, e]): Invariants.Composite[o, s, e] =
     Invariants.Composite(toVector ++ c.toVector)

@@ -17,30 +17,30 @@ object Result {
   }
 }
 
-case class Test0[-Ref, -Obs, State, +Err](action: Action[Ref, Obs, State, Obs, State, Err],
+case class Test0[-Ref, -Obs, State, +Err](action: Action[Ref, Obs, State, Err],
                                           invariants1: Invariants[Obs, State, Err] = Invariants.empty,
-                                          invariants2: Checks[Obs, State, Obs, State, Err] = Checks.empty) {
+                                          invariants2: Checks[Obs, State, Err] = Checks.empty) {
   def observe[R <: Ref, O <: Obs](f: R => O) =
     Test(action, f, invariants1, invariants2)
 }
 
-case class Test[Ref, Obs, State, +Err](action: Action[Ref, Obs, State, Obs, State, Err],
+case class Test[Ref, Obs, State, +Err](action: Action[Ref, Obs, State, Err],
                                        observe: Ref => Obs,
                                        invariants1: Invariants[Obs, State, Err] = Invariants.empty,
-                                       invariants2: Checks[Obs, State, Obs, State, Err] = Checks.empty) {
+                                       invariants2: Checks[Obs, State, Err] = Checks.empty) {
   def run(initialState: State, ref: Ref): History[Err] =
     Runner.run(this)(initialState, ref)
 }
 
 object Runner {
 
-  trait HalfCheck[O1, S1, O2, S2, Err] {
+  trait HalfCheck[O, S, Err] {
     type A
-    val check: Check.Aux[O1, S1, O2, S2, Err, A]
+    val check: Check.Aux[O, S, Err, A]
     val before: A
   }
-  def HalfCheck[O1, S1, O2, S2, Err, a](_check: Check.Aux[O1, S1, O2, S2, Err, a])(_before: a): HalfCheck[O1, S1, O2, S2, Err] =
-    new HalfCheck[O1, S1, O2, S2, Err] {
+  def HalfCheck[O, S, Err, a](_check: Check.Aux[O, S, Err, a])(_before: a): HalfCheck[O, S, Err] =
+    new HalfCheck[O, S, Err] {
       override type A     = a
       override val check  = _check
       override val before = _before
@@ -52,7 +52,7 @@ object Runner {
 import test.observe
     // TODO Catch all exceptions
 
-    type A = Action[Ref, Obs, State, Obs, State, Err]
+    type A = Action[Ref, Obs, State, Err]
     type HS = History.Steps[Err]
 
     val invariantChecks = test.invariants1.toChecks & test.invariants2
@@ -160,9 +160,9 @@ import test.observe
     }
   }
 
-  private def halfChecks[O1, S1, O2, S2, E](checks: Checks[O1, S1, O2, S2, E])(obs: O1, state: S1, sos: Some[(O1, S1)])
-  : Either[String => History.Step[E], Vector[HalfCheck[O1, S1, O2, S2, E]]] = {
-    val r = Vector.newBuilder[HalfCheck[O1, S1, O2, S2, E]]
+  private def halfChecks[O, S, E](checks: Checks[O, S, E])(obs: O, state: S, sos: Some[(O, S)])
+  : Either[String => History.Step[E], Vector[HalfCheck[O, S, E]]] = {
+    val r = Vector.newBuilder[HalfCheck[O, S, E]]
     val o = performChecks(checks.toVector)(
       _ name sos,
       c0 => {
