@@ -97,7 +97,6 @@ import test.observe
             run(ros) match {
 
               case Some(act) =>
-
                 checkAround(name, check & invariantsAround, omg)(
                   act() match {
                     case Right(f) =>
@@ -116,24 +115,21 @@ import test.observe
             }
 
           // ==============================================================================
-          case Action.Group(nameFn, actionFn) =>
+          case Action.Group(nameFn, actionFn, check) =>
             val name = nameFn(ros.sos)
             actionFn(ros) match {
 
               case Some(children) =>
-
-                checkAround(name, invariantsAround, omg)({
-
-                val childrenResults = start(children, ros)
-                val childrenHistory = History(childrenResults.history)
-                if (childrenHistory.failed)
-                  Left(History.parent(_, childrenHistory))
-                else
-                  Right {
-                    val groupStep = History.parent(name, childrenHistory)
-                    OMG(childrenResults.ros, omg.history :+ groupStep)
-                  }
-
+                checkAround(name, check & invariantsAround, omg)({
+                  val childrenResults = start(children, ros)
+                  val childrenHistory = History(childrenResults.history)
+                  if (childrenHistory.failed)
+                    Left(History.parent(_, childrenHistory))
+                  else
+                    Right {
+                      val groupStep = History.parent(name, childrenHistory)
+                      OMG(childrenResults.ros, omg.history :+ groupStep)
+                    }
                 }) match {
                   case Right(omg2) => go(queue.tail, omg2)
                   case Left(omg2)  => omg2
