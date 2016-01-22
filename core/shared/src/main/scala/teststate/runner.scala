@@ -54,10 +54,11 @@ import test.observe
 
     type A = Action[Ref, Obs, State, Err]
     type HS = History.Steps[Err]
+    type ROS = teststate.ROS[Ref, Obs, State]
 
     val invariantsAround = test.invariants.around
 
-    case class OMG(ros: ROS[Ref, Obs, State], history: HS) {
+    case class OMG(ros: ROS, history: HS) {
       def addHistory(name: String, result: Result[Err]): OMG =
         addHistory(name, result, History.empty)
 
@@ -68,18 +69,22 @@ import test.observe
         copy(history = history :+ step)
     }
 
-    // import scala.util.control.TailCalls
     // TODO Either[OMG, OMG] <-- gross
-    // TODO Make run Optional too - skip
-    def checkAround[A](name: String, check: Check.Around[Obs, State, Err], omg: OMG)(run: => Either[String => History.Step[Err], OMG]): Either[OMG, OMG] =
-      halfChecks(check)(omg.ros)
-        .fmap(hcs =>
-          run.check(omg2 =>
-            performChecks(hcs)(_.check name omg.ros.sos, c => c.check.test(omg2.ros.obs, omg2.ros.state, c.before)))
-        )
-        .leftMap(f => omg.addHistory(f(name)))
+    def checkAround[A](name: String, check: Check.Around[Obs, State, Err], omg: OMG)
+                      (prepare: ROS => Option[A])
+                      (run: A => Either[String => History.Step[Err], OMG]): Either[OMG, OMG] =
+      prepare(omg.ros) match {
+        case Some(a) =>
+          halfChecks(check)(omg.ros)
+            .fmap(hcs =>
+              run(a).check(omg2 =>
+                performChecks(hcs)(_.check name omg.ros.sos, c => c.check.test(omg2.ros.obs, omg2.ros.state, c.before))))
+            .leftMap(f => omg.addHistory(f(name)))
+        case None =>
+          Right(omg.addHistory(name, Result.Skip))
+      }
 
-    def start(a: A, ros: ROS[Ref, Obs, State]) =
+    def start(a: A, ros: ROS) =
       go(vector1(a), OMG(ros, Vector.empty))
 
     @tailrec
@@ -94,49 +99,35 @@ import test.observe
           // ==============================================================================
           case Action.Single(nameFn, run, check) =>
             val name = nameFn(ros.sos)
-            run(ros) match {
-
-              case Some(act) =>
-                checkAround(name, check & invariantsAround, omg)(
-                  act() match {
-                    case Right(f) =>
-                      val obs2 = observe(ref)
-                      val state2 = f(obs2)
-                      Right(OMG(ROS(ref, obs2, state2), omg.history :+ History.Step(name, Result.Pass)))
-                    case Left(e) => Left(History.Step(_, Result.Fail(e)))
-                  }
-                ) match {
-                  case Right(omg2) => go(queue.tail, omg2)
-                  case Left(omg2)  => omg2
-                }
-
-              case None =>
-                go(queue.tail, omg.addHistory(name, Result.Skip))
+            checkAround(name, check & invariantsAround, omg)(run)(act =>
+              act() match {
+                case Right(f) =>
+                  val obs2 = observe(ref)
+                  val state2 = f(obs2)
+                  Right(OMG(ROS(ref, obs2, state2), omg.history :+ History.Step(name, Result.Pass)))
+                case Left(e) => Left(History.Step(_, Result.Fail(e)))
+              }
+            ) match {
+              case Right(omg2) => go(queue.tail, omg2)
+              case Left(omg2) => omg2
             }
 
           // ==============================================================================
           case Action.Group(nameFn, actionFn, check) =>
             val name = nameFn(ros.sos)
-            actionFn(ros) match {
-
-              case Some(children) =>
-                checkAround(name, check & invariantsAround, omg)({
-                  val childrenResults = start(children, ros)
-                  val childrenHistory = History(childrenResults.history)
-                  if (childrenHistory.failed)
-                    Left(History.parent(_, childrenHistory))
-                  else
-                    Right {
-                      val groupStep = History.parent(name, childrenHistory)
-                      OMG(childrenResults.ros, omg.history :+ groupStep)
-                    }
-                }) match {
-                  case Right(omg2) => go(queue.tail, omg2)
-                  case Left(omg2)  => omg2
+            checkAround(name, check & invariantsAround, omg)(actionFn)(children => {
+              val childrenResults = start(children, ros)
+              val childrenHistory = History(childrenResults.history)
+              if (childrenHistory.failed)
+                Left(History.parent(_, childrenHistory))
+              else
+                Right {
+                  val groupStep = History.parent(name, childrenHistory)
+                  OMG(childrenResults.ros, omg.history :+ groupStep)
                 }
-
-              case None =>
-                go(queue.tail, omg.addHistory(name, Result.Skip))
+            }) match {
+              case Right(omg2) => go(queue.tail, omg2)
+              case Left(omg2) => omg2
             }
 
           // ==============================================================================
