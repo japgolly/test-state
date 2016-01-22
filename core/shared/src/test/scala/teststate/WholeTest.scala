@@ -19,7 +19,7 @@ object WholeTest extends TestSuite {
         i.ref.inc()
         Right(_ => i.state + 1)
       }),
-      Check[Obs, Int, String, Int](_ => "Count increases by 1",
+      Check.Around.Single[Obs, Int, String, Int](_ => "Count increases by 1",
         (o, _) => Right(o.count),
         (o, _, n) => if (o.count == n + 1) None else Some(s"Expected ${n + 1}, not ${o.count}.")
       )
@@ -28,7 +28,7 @@ object WholeTest extends TestSuite {
   inc.when(_.ref.count() == 3)
 
   val countNeverNegative =
-    Invariant[Obs, Any, String](_ => "Count is never negative",
+    Check.Point.Single[Obs, Any, String](_ => "Count is never negative",
       (o, _) => if (o.count >= 0) None else Some(s"Count = ${o.count}."))
 
   val test = Test0(inc.times(5) >> inc.times(2), countNeverNegative)

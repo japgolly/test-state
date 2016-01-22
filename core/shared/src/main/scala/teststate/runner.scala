@@ -18,28 +18,28 @@ object Result {
 }
 
 case class Test0[Ref, Obs, State, +Err](action: Action[Ref, Obs, State, Err],
-                                        invariants1: Invariants[Obs, State, Err] = Invariants.empty,
-                                        invariants2: Checks[Obs, State, Err] = Checks.empty) {
+                                        invariants: Check[Obs, State, Err] = Check.empty) {
   def observe(f: Ref => Obs) =
-    Test(action, f, invariants1, invariants2)
+    Test(action, f, invariants)
 }
 
 case class Test[Ref, Obs, State, +Err](action: Action[Ref, Obs, State, Err],
                                        observe: Ref => Obs,
-                                       invariants1: Invariants[Obs, State, Err] = Invariants.empty,
-                                       invariants2: Checks[Obs, State, Err] = Checks.empty) {
+                                       invariants: Check[Obs, State, Err] = Check.empty) {
   def run(initialState: State, ref: Ref): History[Err] =
     Runner.run(this)(initialState, ref)
+
+  // TODO add invariants
 }
 
 object Runner {
 
   trait HalfCheck[O, S, Err] {
     type A
-    val check: Check.Aux[O, S, Err, A]
+    val check: Check.Around.SingleA[O, S, Err, A]
     val before: A
   }
-  def HalfCheck[O, S, Err, a](_check: Check.Aux[O, S, Err, a])(_before: a): HalfCheck[O, S, Err] =
+  def HalfCheck[O, S, Err, a](_check: Check.Around.SingleA[O, S, Err, a])(_before: a): HalfCheck[O, S, Err] =
     new HalfCheck[O, S, Err] {
       override type A     = a
       override val check  = _check
@@ -55,7 +55,7 @@ import test.observe
     type A = Action[Ref, Obs, State, Err]
     type HS = History.Steps[Err]
 
-    val invariantChecks = test.invariants1.toChecks & test.invariants2
+    val invariantsAround = test.invariants.around
 
     case class OMG(ros: ROS[Ref, Obs, State], history: HS)
 
@@ -81,7 +81,7 @@ import test.observe
 
               case Some(act) =>
 
-                halfChecks(checks & invariantChecks)(ros) match {
+                halfChecks(checks & invariantsAround)(ros) match {
                   case Right(hcs) =>
 
                     act() match {
@@ -140,7 +140,7 @@ import test.observe
       val ros = ROS(ref, initialObs, initialState)
 
       val firstSteps: HS = {
-        val iv = test.invariants1.toVector
+        val iv = test.invariants.point.singles
         if (iv.isEmpty)
           Vector.empty
         else {
@@ -167,10 +167,10 @@ import test.observe
     }
   }
 
-  private def halfChecks[O, S, E](checks: Checks[O, S, E])(ros: ROS[_, O, S])
+  private def halfChecks[O, S, E](checks: Check.Around[O, S, E])(ros: ROS[_, O, S])
   : Either[String => History.Step[E], Vector[HalfCheck[O, S, E]]] = {
     val r = Vector.newBuilder[HalfCheck[O, S, E]]
-    val o = performChecks(checks.toVector)(
+    val o = performChecks(checks.singles)(
       _ name ros.sos,
       c0 => {
         val c = c0.aux

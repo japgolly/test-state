@@ -2,6 +2,11 @@ package teststate
 
 import Action.{Composite, NonComposite}
 
+case class ROS[+Ref, +Obs, +State](ref: Ref, obs: Obs, state: State) {
+  val sos: Some[(Obs, State)] =
+    Some((obs, state))
+}
+
 sealed trait Action[Ref, O, S, +Err] {
   type This[+E] <: Action[Ref, O, S, E]
 
@@ -19,11 +24,6 @@ sealed trait Action[Ref, O, S, +Err] {
 
   final def andThen[e >: Err](next: Action[Ref, O, S, e]): Composite[Ref, O, S, e] =
     this >> next
-}
-
-case class ROS[+Ref, +Obs, +State](ref: Ref, obs: Obs, state: State) {
-  val sos: Some[(Obs, State)] =
-    Some((obs, state))
 }
 
 object Action {
@@ -80,7 +80,7 @@ object Action {
 
   case class Single[Ref, O, S, +Err](name: Option[(O, S)] => String,
                                      run: ROS[Ref, O, S] => Option[() => Either[Err, O => S]],
-                                     checks: Checks[O, S, Err]) extends NonComposite[Ref, O, S, Err] {
+                                     check: Check.Around[O, S, Err]) extends NonComposite[Ref, O, S, Err] {
 
     override type This[+E] = Single[Ref, O, S, E]
 
@@ -140,7 +140,7 @@ class ActionBuilder[R, O, S, E] {
   }
 
   class B3(name: Name, act: ActionRun) {
-    def build = Action.Single(name, act, Checks.empty)
+    def build = Action.Single(name, act, Check.Around.empty)
   }
 
     /*
