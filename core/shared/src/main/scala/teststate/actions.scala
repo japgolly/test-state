@@ -1,12 +1,23 @@
 package teststate
 
-sealed trait Action[-Ref, -O, S, +Err] {
-  def nonCompositeActions: Vector[Action.NonComposite[Ref, O, S, Err]]
+import Action.{Composite, NonComposite}
 
-  final def >>[r <: Ref, o <: O, e >: Err](next: Action[r, o, S, e]): Action.Composite[r, o, S, e] =
-    Action.Composite(nonCompositeActions ++ next.nonCompositeActions)
+sealed trait Action[Ref, O, S, +Err] {
+  type This[+E] <: Action[Ref, O, S, E]
 
-  final def andThen[r <: Ref, o <: O, e >: Err](next: Action[r, o, S, e]) =
+  def nonCompositeActions: Vector[NonComposite[Ref, O, S, Err]]
+
+  def nameMod(f: (=> String) => String): This[Err]
+
+  def when(f: ROS[Ref, O, S] => Boolean): This[Err]
+
+  final def unless(f: ROS[Ref, O, S] => Boolean): This[Err] =
+    when(!f(_))
+
+  final def >>[e >: Err](next: Action[Ref, O, S, e]): Composite[Ref, O, S, e] =
+    Composite(nonCompositeActions ++ next.nonCompositeActions)
+
+  final def andThen[e >: Err](next: Action[Ref, O, S, e]): Composite[Ref, O, S, e] =
     this >> next
 }
 
@@ -17,49 +28,67 @@ case class ROS[+Ref, +Obs, +State](ref: Ref, obs: Obs, state: State) {
 
 object Action {
 
-  def empty[S] = Composite[Any, Any, S, Nothing](Vector.empty)
+  def empty[Ref, O, S] = Composite[Ref, O, S, Nothing](Vector.empty)
 
-  sealed trait NonComposite[-Ref, -O, S, +Err] extends Action[Ref, O, S, Err] {
+  sealed trait NonComposite[Ref, O, S, +Err] extends Action[Ref, O, S, Err] {
+    type This[+E] <: NonComposite[Ref, O, S, E]
 
     def name: Option[(O, S)] => String
-
-    def nameMod(f: (=> String) => String): NonComposite[Ref, O, S, Err]
-
-    def when[r <: Ref, o <: O](f: ROS[r, o, S] => Boolean): NonComposite[r, o, S, Err] = this
 
     final override def nonCompositeActions: Vector[NonComposite[Ref, O, S, Err]] =
       vector1(this)
 
     final def times(n: Int): Group[Ref, O, S, Err] =
-      Group(i => s"${name(i)} ($n times)",
+      Group(i => s"${name(i)} ($n times)", _ => Some(
         (1 to n).iterator
           .map(i => nameMod(s => s"[$i/$n] $s"))
-          .foldLeft(empty: Action[Ref, O, S, Err])(_ >> _))
+          .foldLeft(empty: Action[Ref, O, S, Err])(_ >> _)))
   }
 
-  case class Composite[-Ref, -O, S, +Err](nonCompositeActions: Vector[NonComposite[Ref, O, S, Err]])
+  case class Composite[Ref, O, S, +Err](nonCompositeActions: Vector[NonComposite[Ref, O, S, Err]])
     extends Action[Ref, O, S, Err] {
 
+    override type This[+E] = Composite[Ref, O, S, E]
+
+    def map[E >: Err](f: NonComposite[Ref, O, S, Err] => NonComposite[Ref, O, S, E]): This[E] =
+      Composite(nonCompositeActions map f)
+
+    override def nameMod(f: (=> String) => String) =
+      map(_ nameMod f)
+
+    override def when(f: ROS[Ref, O, S] => Boolean) =
+      map(_ when f)
+
     def group(name: String): Group[Ref, O, S, Err] =
-      Group(_ => name, this)
+      Group(_ => name, _ => Some(this))
 
-    def times(n: Int, name: String) =
-      group(name).times(n)
+//    def times(n: Int, name: String) =
+//      group(name).times(n)
   }
 
-  case class Group[-Ref, -O, S, +Err](name: Option[(O, S)] => String,
-                                      action: Action[Ref, O, S, Err]) extends NonComposite[Ref, O, S, Err] {
+  case class Group[Ref, O, S, +Err](name: Option[(O, S)] => String,
+                                    action: ROS[Ref, O, S] => Option[Action[Ref, O, S, Err]]) extends NonComposite[Ref, O, S, Err] {
 
-    override def nameMod(f: (=> String) => String): Group[Ref, O, S, Err] =
+    override type This[+E] = Group[Ref, O, S, E]
+
+    override def nameMod(f: (=> String) => String) =
       copy(name = o => f(name(o)))
+
+    override def when(f: ROS[Ref, O, S] => Boolean) =
+      copy(action = i => if (f(i)) action(i) else None)
   }
 
-  case class Single[-Ref, -O, S, +Err](name: Option[(O, S)] => String,
-                                       run: ROS[Ref, O, S] => Option[() => Either[Err, O => S]],
-                                       checks: Checks[O, S, Err]) extends NonComposite[Ref, O, S, Err] {
+  case class Single[Ref, O, S, +Err](name: Option[(O, S)] => String,
+                                     run: ROS[Ref, O, S] => Option[() => Either[Err, O => S]],
+                                     checks: Checks[O, S, Err]) extends NonComposite[Ref, O, S, Err] {
 
-    override def nameMod(f: (=> String) => String): Single[Ref, O, S, Err] =
+    override type This[+E] = Single[Ref, O, S, E]
+
+    override def nameMod(f: (=> String) => String) =
       copy(name = o => f(name(o)))
+
+    override def when(f: ROS[Ref, O, S] => Boolean) =
+      copy(run = i => if (f(i)) run(i) else None)
   }
 
 

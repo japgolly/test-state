@@ -17,10 +17,10 @@ object Result {
   }
 }
 
-case class Test0[-Ref, -Obs, State, +Err](action: Action[Ref, Obs, State, Err],
-                                          invariants1: Invariants[Obs, State, Err] = Invariants.empty,
-                                          invariants2: Checks[Obs, State, Err] = Checks.empty) {
-  def observe[R <: Ref, O <: Obs](f: R => O) =
+case class Test0[Ref, Obs, State, +Err](action: Action[Ref, Obs, State, Err],
+                                        invariants1: Invariants[Obs, State, Err] = Invariants.empty,
+                                        invariants2: Checks[Obs, State, Err] = Checks.empty) {
+  def observe(f: Ref => Obs) =
     Test(action, f, invariants1, invariants2)
 }
 
@@ -69,16 +69,16 @@ import test.observe
       else {
         import omg._
 
+        def addHistory(name: String, result: Result[Err]) =
+          omg.copy(history = history :+ History.Step(name, result))
+
         queue.head match {
 
           // ==============================================================================
           case Action.Single(nameFn, run, checks) =>
             val name = nameFn(ros.sos)
-
-            def addHistory(result: Result[Err]) =
-              omg.copy(history = history :+ History.Step(name, result))
-
             run(ros) match {
+
               case Some(act) =>
 
                 halfChecks(checks & invariantChecks)(ros) match {
@@ -100,7 +100,7 @@ import test.observe
 
 
                       case Left(e) =>
-                        addHistory(Result.Fail(e))
+                        addHistory(name, Result.Fail(e))
                     }
 
                   case Left(failedStep) =>
@@ -108,19 +108,26 @@ import test.observe
                 }
 
               case None =>
-                go(queue.tail, addHistory(Result.Skip))
+                go(queue.tail, addHistory(name, Result.Skip))
             }
 
           // ==============================================================================
-          case Action.Group(nameFn, children) =>
+          case Action.Group(nameFn, actionFn) =>
             val name = nameFn(ros.sos)
-            val omg2 = start(children, ros, Vector.empty)
-            val h2   = History(omg2.history)
-            val omg3 = omg2.copy(history = omg.history :+ History.parent(name, h2))
-            if (h2.failure.isDefined)
-              omg3
-            else
-              go(queue.tail, omg3)
+            actionFn(ros) match {
+
+              case Some(children) =>
+                val omg2 = start(children, ros, Vector.empty)
+                val h2   = History(omg2.history)
+                val omg3 = omg2.copy(history = omg.history :+ History.parent(name, h2))
+                if (h2.failure.isDefined)
+                  omg3
+                else
+                  go(queue.tail, omg3)
+
+              case None =>
+                go(queue.tail, addHistory(name, Result.Skip))
+            }
 
           // ==============================================================================
           case Action.Composite(actions) =>
