@@ -36,6 +36,7 @@ object Check {
     case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E]
 
     case class Single[-O, -S, +E](name: Option[(O, S)] => String, test: (O, S) => Option[E]) extends Point[O, S, E] {
+      override def toString = s"Check.Point.Single(${name(None)})"
       override final def singles = vector1(this)
     }
   }
@@ -79,6 +80,7 @@ object Check {
         override val name   = _name
         override val before = _before
         override val test   = _test
+        override def toString = s"Check.Around.Single(${name(None)})"
       }
 
 //    private val noBefore = (_: Any, _: Any) => Right(())
@@ -89,15 +91,3 @@ object Check {
 
   }
 }
-
-/*
-  compare: (A, A) => Boolean
-  assertChange
-  assertNoChange
-  assert(before, after)
-
-  assertChangeBy
-
-  // a.focus(locked_?) .assertBefore(true).assertAfter(false)
-}
- */

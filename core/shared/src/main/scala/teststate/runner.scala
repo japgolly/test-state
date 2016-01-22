@@ -57,6 +57,7 @@ import test.observe
     type ROS = teststate.ROS[Ref, Obs, State]
 
     val invariantsAround = test.invariants.around
+    val invariantsPoints = test.invariants.point.singles
 
     case class OMG(ros: ROS, history: HS) {
       def addHistory(name: String, result: Result[Err]): OMG =
@@ -77,8 +78,10 @@ import test.observe
         case Some(a) =>
           halfChecks(check)(omg.ros)
             .fmap(hcs =>
-              run(a).check(omg2 =>
-                performChecks(hcs)(_.check name omg.ros.sos, c => c.check.test(omg2.ros.obs, omg2.ros.state, c.before))))
+              run(a)
+                .check(omg2 => performChecks(hcs)(_.check name omg.ros.sos, c => c.check.test(omg2.ros.obs, omg2.ros.state, c.before)))
+                .check(omg2 => performChecks(invariantsPoints)(_ name omg.ros.sos, c => c.test(omg2.ros.obs, omg2.ros.state)))
+            )
             .leftMap(f => omg.addHistory(f(name)))
         case None =>
           Right(omg.addHistory(name, Result.Skip))
@@ -140,20 +143,17 @@ import test.observe
       val initialObs = observe(ref)
       val ros = ROS(ref, initialObs, initialState)
 
-      val firstSteps: HS = {
-        val iv = test.invariants.point.singles
-        if (iv.isEmpty)
+      val firstSteps: HS =
+        if (invariantsPoints.isEmpty)
           Vector.empty
         else {
-          val children = iv
-            .map { i =>
-              val name = i.name(ros.sos)
-              val result = i.test(initialObs, initialState).fold[Result[Err]](Result.Pass)(Result.Fail(_))
-              History.Step(name, result)
-            }
+          val children = invariantsPoints.map { i =>
+            val name = i.name(ros.sos)
+            val result = i.test(initialObs, initialState).fold[Result[Err]](Result.Pass)(Result.Fail(_))
+            History.Step(name, result)
+          }
           vector1(History.parent("Initial checks.", History(children)))
         }
-      }
 
       if (firstSteps.exists(_.failed))
         firstSteps
