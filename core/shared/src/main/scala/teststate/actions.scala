@@ -134,7 +134,7 @@ class ActionBuilder[R, O, S, E] {
     def expect2(f: S => Either[E, S]) =
       new B3(name, i => Some(() =>
         act.flatMap(_ apply i)
-          .leftBind(f(i.state).map(Function.const))
+          .leftOrF(f(i.state).map(Function.const))
       ))
 
   }

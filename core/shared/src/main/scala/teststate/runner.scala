@@ -57,58 +57,62 @@ import test.observe
 
     val invariantsAround = test.invariants.around
 
-    case class OMG(ros: ROS[Ref, Obs, State], history: HS)
+    case class OMG(ros: ROS[Ref, Obs, State], history: HS) {
+      def addHistory(name: String, result: Result[Err]): OMG =
+        addHistory(name, result, History.empty)
 
-    def start(a: A, ros: ROS[Ref, Obs, State], history: HS) =
-      go(vector1(a), OMG(ros, history))
+      def addHistory(name: String, result: Result[Err], children: History[Err]): OMG =
+        addHistory(History.Step(name, result, children))
+
+      def addHistory(step: History.Step[Err]): OMG =
+        copy(history = history :+ step)
+    }
+
+    // import scala.util.control.TailCalls
+    // TODO Either[OMG, OMG] <-- gross
+    // TODO Make run Optional too - skip
+    def checkAround[A](name: String, check: Check.Around[Obs, State, Err], omg: OMG)(run: => Either[String => History.Step[Err], OMG]): Either[OMG, OMG] =
+      halfChecks(check)(omg.ros)
+        .fmap(hcs =>
+          run.check(omg2 =>
+            performChecks(hcs)(_.check name omg.ros.sos, c => c.check.test(omg2.ros.obs, omg2.ros.state, c.before)))
+        )
+        .leftMap(f => omg.addHistory(f(name)))
+
+    def start(a: A, ros: ROS[Ref, Obs, State]) =
+      go(vector1(a), OMG(ros, Vector.empty))
 
     @tailrec
     def go(queue: Vector[A], omg: OMG): OMG =
       if (queue.isEmpty)
         omg
       else {
-        import omg._
-
-        def addHistory(name: String, result: Result[Err]) =
-          omg.copy(history = history :+ History.Step(name, result))
+        import omg.ros
 
         queue.head match {
 
           // ==============================================================================
-          case Action.Single(nameFn, run, checks) =>
+          case Action.Single(nameFn, run, check) =>
             val name = nameFn(ros.sos)
             run(ros) match {
 
               case Some(act) =>
 
-                halfChecks(checks & invariantsAround)(ros) match {
-                  case Right(hcs) =>
-
-                    act() match {
-                      case Right(f) =>
-                        val obs2 = observe(ref)
-                        val state2 = f(obs2)
-
-                        performChecks(hcs)(_.check name ros.sos, c => c.check.test(obs2, state2, c.before)) match {
-                          case None =>
-                            val h = History.Step(name, Result.Pass)
-                            val omg2 = OMG(ROS(ref, obs2, state2), history :+ h)
-                            go(queue.tail, omg2)
-                          case Some(failedStep) =>
-                            omg.copy(history = history :+ failedStep(name))
-                        }
-
-
-                      case Left(e) =>
-                        addHistory(name, Result.Fail(e))
-                    }
-
-                  case Left(failedStep) =>
-                    omg.copy(history = history :+ failedStep(name))
+                checkAround(name, check & invariantsAround, omg)(
+                  act() match {
+                    case Right(f) =>
+                      val obs2 = observe(ref)
+                      val state2 = f(obs2)
+                      Right(OMG(ROS(ref, obs2, state2), omg.history :+ History.Step(name, Result.Pass)))
+                    case Left(e) => Left(History.Step(_, Result.Fail(e)))
+                  }
+                ) match {
+                  case Right(omg2) => go(queue.tail, omg2)
+                  case Left(omg2)  => omg2
                 }
 
               case None =>
-                go(queue.tail, addHistory(name, Result.Skip))
+                go(queue.tail, omg.addHistory(name, Result.Skip))
             }
 
           // ==============================================================================
@@ -117,16 +121,26 @@ import test.observe
             actionFn(ros) match {
 
               case Some(children) =>
-                val omg2 = start(children, ros, Vector.empty)
-                val h2   = History(omg2.history)
-                val omg3 = omg2.copy(history = omg.history :+ History.parent(name, h2))
-                if (h2.failure.isDefined)
-                  omg3
+
+                checkAround(name, invariantsAround, omg)({
+
+                val childrenResults = start(children, ros)
+                val childrenHistory = History(childrenResults.history)
+                if (childrenHistory.failed)
+                  Left(History.parent(_, childrenHistory))
                 else
-                  go(queue.tail, omg3)
+                  Right {
+                    val groupStep = History.parent(name, childrenHistory)
+                    OMG(childrenResults.ros, omg.history :+ groupStep)
+                  }
+
+                }) match {
+                  case Right(omg2) => go(queue.tail, omg2)
+                  case Left(omg2)  => omg2
+                }
 
               case None =>
-                go(queue.tail, addHistory(name, Result.Skip))
+                go(queue.tail, omg.addHistory(name, Result.Skip))
             }
 
           // ==============================================================================
@@ -157,7 +171,7 @@ import test.observe
       if (firstSteps.exists(_.failed))
         firstSteps
       else {
-        val runResults = start(test.action, ros, Vector.empty).history
+        val runResults = start(test.action, ros).history
         val h = firstSteps ++ runResults
         if (runResults.exists(_.failed))
           h

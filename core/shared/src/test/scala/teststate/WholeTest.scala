@@ -31,18 +31,22 @@ object WholeTest extends TestSuite {
     Check.Point.Single[Obs, Any, String](_ => "Count is never negative",
       (o, _) => if (o.count >= 0) None else Some(s"Count = ${o.count}."))
 
-  val test = Test0(inc.times(5) >> inc.times(2), countNeverNegative)
+  val test = Test0(inc.times(5) >> inc.times(3), countNeverNegative)
     .observe((eg: Example) => Obs(eg.count()))
 
   override def tests = TestSuite {
 
     println()
-    val eg = new Example(3)
-    val h = test.run(3, eg)
-    println(h)
-    println(eg.count())
-    println()
-    println(formatHistory(h, Options.colored))
-    println()
+    def go(init: Int) = {
+      val eg = new Example(init)
+      val h = test.run(init, eg)
+      println(h)
+      println(eg.count())
+      println()
+      println(formatHistory(h, Options.colored.alwaysShowChildren))
+      println()
+    }
+    go(2)
+    go(4)
   }
 }

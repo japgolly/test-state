@@ -16,25 +16,43 @@ package object teststate {
   */
 
   implicit class TestStateExtMethodsForOption[A](private val self: Option[A]) extends AnyVal {
-    def leftBind[L >: A, R](e: => Either[L, R]): Either[L, R] =
+    def leftOrF[L >: A, R](e: => Either[L, R]): Either[L, R] =
       self match {
         case None    => e
         case Some(a) => Left(a)
       }
 
     @inline def leftOr[L >: A, R](r: => R): Either[L, R] =
-      leftBind(Right(r))
+      leftOrF(Right(r))
   }
 
-  implicit class TestStateExtMethodsForEither[L, A](private val self: Either[L, A]) extends AnyVal {
-    def fmap[B](f: A => Either[L, B]): Either[L, B] =
+  implicit class TestStateExtMethodsForEither[A, B](private val self: Either[A, B]) extends AnyVal {
+    def fmap[C](f: B => Either[A, C]): Either[A, C] =
       self match {
-        case Right(a) => f(a)
-        case l: Left[L, A] => l.asInstanceOf[Left[L, Nothing]]
+        case Right(b) => f(b)
+        case l: Left[A, B] => l.asInstanceOf[Left[A, Nothing]]
       }
 
-    @inline def map[B](f: A => B): Either[L, B] =
-      fmap(a => Right(f(a)))
+    @inline def map[C](f: B => C): Either[A, C] =
+      fmap(b => Right(f(b)))
+
+    def leftMap[C](f: A => C): Either[C, B] =
+      self match {
+        case r: Right[A, B] => r.asInstanceOf[Right[Nothing, B]]
+        case Left(a) => Left(f(a))
+      }
+
+    def check[C](f: B => Option[A]): Either[A, B] =
+      self match {
+        case r: Right[A, B] => f(r.b).leftOrF(r) //.fold[Either[A, B]](r)(Left(_))
+        case l: Left[A, B]  => l
+      }
+
+    def bimap[C, D](f: A => C, g: B => D): Either[C, D] =
+      self match {
+        case Right(b) => Right(g(b))
+        case Left(a) => Left(f(a))
+      }
   }
 
   case class History[+E](steps: History.Steps[E]) {
@@ -52,6 +70,8 @@ package object teststate {
 
     def failure: Option[E] =
       result.failure
+
+    def failed = failure.isDefined
   }
 
   case class Show[E](show: E => String) extends AnyVal
