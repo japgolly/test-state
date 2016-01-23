@@ -97,7 +97,13 @@ class Dsl[R, O, S, E] {
   3.
    */
 
-  def check(name: String) = new FocusDsl[O, S, E](name)
+  def focus(name: String) = new FocusDsl[O, S, E](name)
+
+  def bifocus[A: Show: Equal](name: String, fo: O => A, fs: S => A) =
+    new BiFocusDsl[O, S, E, A](name, fo, fs)
+
+//  def compareStateAndObs[A](name: String, fo: O => A, fs: S => A)(implicit ) =
+//    new FocusDsl[O, S, E](name)
 }
 
 case class Equal[A](equal: (A, A) => Boolean)
@@ -107,7 +113,6 @@ object Equal {
 
   implicit val equalString: Equal[String] = byUnivEq
   implicit val equalInt: Equal[Int] = byUnivEq
-
 }
 
 trait SomethingFailures[-AA, +E] {
@@ -142,6 +147,32 @@ object SomethingFailures {
     def expectedChange     [A](from: A, expected: A, actual: A)(implicit s: Show[A]) = s"Expected ${s(from)} to change into ${s(expected)}, not ${s(actual)}."
   }
 }
+
+class BiFocusDsl[O, S, E, A](focusName: String, fo: O => A, fs: S => A)(implicit sa: Show[A], eq: Equal[A]) {
+
+  private def point(name: Option[(O, S)] => String, t: (A, A) => Option[E]) =
+    Check.Point.Single[O, S, E](name, (o, s) =>
+      t(fo(o), fs(s)))
+      //fo(o).toOptionLeft(oa => t(oa, fs(s))))
+
+  def obs   = new FocusDsl[O, S, E](focusName).obsTo(fo)
+  def state = new FocusDsl[O, S, E](focusName).stateTo(fs)
+
+  def assertEqual(implicit f: SomethingFailures[A, E]) =
+    point(
+      focusName + " = " + _.fold("<state>")(os => sa(fs(os._2))),
+      (o, s) => f.expectEqual(expected = s, actual = o))
+
+//  def test(desc: String => String, t: A => Boolean)(implicit ev: String =:= E): OutP =
+//    test(desc, t, ev compose sa.show)
+
+  // TODO Create case class for (obs,state) - use instead of tuple in ros.sos - use here too
+//  def test(desc: String => String, t: (A, A) => Boolean, error: (A, A) => E) =
+//    point(
+//      Function const desc(focusName),
+//      (o, s) => if (t(o, s)) None else Some(error(o, s)))
+}
+
 
 class FocusDsl[O, S, E](focusName: String) {
   def obs  (implicit s: Show[O], e: Equal[O]) = apply((o, _) => o)
