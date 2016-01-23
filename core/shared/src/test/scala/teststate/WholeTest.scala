@@ -29,9 +29,10 @@ object WholeTest extends TestSuite {
       (o, s) => if (o.count == s) None else Some(s"Expected $s, got ${o.count}."))
 
   val countNeverNegative =
-    Check.Point.Single[Obs, Any, String](
-      _ => "Count is never negative",
-      (o, _) => if (o.count >= 0) None else Some(s"Count = ${o.count}."))
+    *.check("Count").obsTo(_.count).test(_ + " is never negative.", _ >= 0)
+//    Check.Point.Single[Obs, Any, String](
+//      _ => "Count is never negative",
+//      (o, _) => if (o.count >= 0) None else Some(s"Count = ${o.count}."))
 
   val invariants =
     objMatchesState & countNeverNegative

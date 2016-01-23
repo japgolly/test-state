@@ -218,6 +218,9 @@ class FocusDsl[O, S, E](focusName: String) {
         focusName + " ≠ " + sa.show(unexpect),
         a => f.expectNotEqual(unexpect, actual = a))
 
+    def test(desc: String => String, t: A => Boolean)(implicit ev: String =:= E): OutP =
+      test(desc, t, ev compose sa.show)
+
     def test(desc: String => String, t: A => Boolean, error: A => E): OutP =
       point(
         desc(focusName),
