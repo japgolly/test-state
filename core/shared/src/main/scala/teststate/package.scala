@@ -91,7 +91,8 @@ package object teststate {
     implicit val showInt: Show[Int] = Show(_.toString)
   }
 
-  implicit def focusDslb2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#A2[A]) = b.check
+  implicit def focusDsla2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#A2[A]) = b.check
+  implicit def focusDsli2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#I2[A]) = b.check
 
   object History {
     val empty = History(Vector.empty)
