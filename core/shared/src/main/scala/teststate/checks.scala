@@ -30,9 +30,6 @@ object Check {
   object Point {
     val empty = Composite(Vector.empty)
 
-    val x = empty & empty
-    val y = empty & Around.empty
-
     case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E]
 
     case class Single[-O, -S, +E](name: Option[(O, S)] => String, test: (O, S) => Option[E]) extends Point[O, S, E] {

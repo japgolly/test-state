@@ -74,10 +74,18 @@ package object teststate {
     def failed = failure.isDefined
   }
 
-  case class Show[E](show: E => String) extends AnyVal
+  case class Show[A](show: A => String) extends AnyVal {
+    def apply(a: A): String =
+      // Handle \n, \t, spaces (so surrounds), long strings
+      "[" + show(a) + "]"
+
+  }
   object Show {
     implicit val showString: Show[String] = Show(identity)
+    implicit val showInt: Show[Int] = Show(_.toString)
   }
+
+  implicit def focusDslb2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#B2[A]) = b.check
 
   object History {
     val empty = History(Vector.empty)

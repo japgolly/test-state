@@ -5,23 +5,27 @@ import utest._
 object WholeTest extends TestSuite {
 
   class Example(start: Int) {
-    private var c = start
-    def inc() = if (c < 10) c += 1
-    def dec() = if (c > 0) c -= 1
-    def count() = c
+    private var _count = start
+    private var _changes = 0
+
+    def inc() = if (_count < 10) {_count += 1; _changes += 1}
+    def dec() = if (_count >  0) {_count -= 1; _changes += 1}
+    def count() = _count
+    def changes() = _changes
   }
 
   // ==============================================================================================================
 
-  case class Obs(count: Int)
+  case class Obs(count: Int, changes: Int)
 
   val * = Dsl[Example, Obs, Int, String]
 
   val inc = *.action("Count increases by 1").act(_.ref.inc()).updateState(_ + 1)
+    .addCheck(*.check("Number of changes").obsTo(_.changes).assertChange("+1", _ + 1))
 
   val objMatchesState =
     Check.Point.Single[Obs, Int, String](
-      _.fold("Count = ?")(t => s"Count = " + t._2),
+      _.fold("Count = <state>")(t => s"Count = " + t._2),
       (o, s) => if (o.count == s) None else Some(s"Expected $s, got ${o.count}."))
 
   val countNeverNegative =
@@ -32,7 +36,7 @@ object WholeTest extends TestSuite {
   val invariants =
     objMatchesState & countNeverNegative
 
-  val test = Test0(inc.times(5) >> inc.times(3), invariants).observe(eg => Obs(eg.count()))
+  val test = Test0(inc.times(5) >> inc.times(3), invariants).observe(eg => Obs(eg.count(), eg.changes()))
 
   // ==============================================================================================================
 
