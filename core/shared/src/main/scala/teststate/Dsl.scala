@@ -121,8 +121,8 @@ trait SomethingFailures[-AA, +E] {
     else
       Some(expectedEqual(expected = expected, actual = actual))
 
-  final def expectNotEqual[A <: AA](expected: A, actual: A)(implicit s: Show[A], e: Equal[A]): Option[E] =
-    if (e.equal(expected, actual))
+  final def expectNotEqual[A <: AA](unexpected: A, actual: A)(implicit s: Show[A], e: Equal[A]): Option[E] =
+    if (e.equal(unexpected, actual))
       Some(expectedToChange(actual))
     else
       None
@@ -151,58 +151,116 @@ class FocusDsl[O, S, E](focusName: String) {
   def stateTo[A: Show: Equal](f: S => A) = apply((_, s) => f(s))
 
   def apply[A: Show: Equal](f: (O, S) => A) =
-    new B1((o, s) => Right(f(o, s)))
+    new A1((o, s) => Right(f(o, s)))
 
-  abstract class AroundOps[A, Out <: AroundOps[A, Out]](extract: (O, S) => Either[E, A])(implicit sa: Show[A], eq: Equal[A]) {
+  trait BaseOps[A, Out <: BaseOps[A, Out]] {
+    protected val extract: (O, S) => Either[E, A]
+    protected implicit val sa: Show[A]
+    protected implicit val eq: Equal[A]
 
-    protected def add(in: Check.Around.Single[O, S, E]): Out
+    protected type C <: Check[O, S, E]
 
-    final def build(name: Option[(O, S)] => String, t: (A, A) => Option[E]): Out =
+    protected def add(c: C): Out
+  }
+
+  trait AroundOps[A, Out <: AroundOps[A, Out]] extends BaseOps[A, Out] {
+    protected type C >: Check.Around.Single[O, S, E] <: Check[O, S, E]
+
+    protected final def around(name: String, t: (A, A) => Option[E]): Out =
+      aroundN(_ => name, t)
+
+    protected final def aroundN(name: Option[(O, S)] => String, t: (A, A) => Option[E]): Out =
       add(Check.Around.Single(
         name,
         extract,
-        (o, s, a: A) => extract(o, s) match {
-          case Right(b) => t(a, b)
-          case Left(e) => Some(e)
-        }))
+        (o, s, a: A) => extract(o, s).toOptionLeft(t(a, _))))
 
     final def assertBefore(expect: A)(implicit f: SomethingFailures[A, E]): Out =
-      build(
-        _ => focusName + " should start as " + sa.show(expect),
+      around(
+        focusName + " should start as " + sa.show(expect),
         (before, _) => f.expectEqual(expected = expect, before))
 
     final def assertAfter(expect: A)(implicit f: SomethingFailures[A, E]): Out =
-      build(
-        _ => focusName + " should end as " + sa.show(expect),
+      around(
+        focusName + " should end as " + sa.show(expect),
         (_, after) => f.expectEqual(expected = expect, after))
 
     final def assert(before: A, after: A)(implicit f: SomethingFailures[A, E]): Out =
       assertBefore(before).assertAfter(after)
 
     final def assertChange(desc: String, expect: A => A)(implicit f: SomethingFailures[A, E]): Out =
-      build(
-        _ => focusName + " change: " + desc,
+      around(
+        focusName + " change: " + desc,
         (before, after) => f.expectChange(from = before, expected = expect(before), actual = after))
 
     final def assertChanges(implicit f: SomethingFailures[A, E]): Out =
-      build(
-        _ => focusName + " should change",
+      around(
+        focusName + " should change",
         f.expectNotEqual(_, _))
 
     final def assertDoesntChange(implicit f: SomethingFailures[A, E]): Out =
-      build(
-        _ => focusName + " shouldn't change",
-        f.expectEqual(_, _))
+      around(
+        focusName + " shouldn't change",
+        (before, after) => f.expectEqual(expected = before, actual = after))
   }
 
-  class B1[A](extract: (O, S) => Either[E, A])(implicit sa: Show[A], eq: Equal[A]) extends AroundOps[A, B2[A]](extract) {
-    protected def add(c: Check.Around.Single[O, S, E]) =
-      new B2(c, extract)
+  class A1[A](protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A]) extends AroundOps[A, A2[A]] {
+    protected type C = Check.Around.Single[O, S, E]
+    protected def add(c: C) = new A2(c, extract)
   }
 
-  class B2[A](val check: Check.Around[O, S, E], extract: (O, S) => Either[E, A])(implicit sa: Show[A], eq: Equal[A]) extends AroundOps[A, B2[A]](extract) {
-    protected def add(c: Check.Around.Single[O, S, E]) =
-      new B2(check & c, extract)
+  class A2[A](val check: Check.Around[O, S, E], protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A]) extends AroundOps[A, A2[A]] {
+    protected type C = Check.Around.Single[O, S, E]
+    protected def add(c: C) = new A2(check & c, extract)
+  }
+
+  trait PointOps[A, Out <: PointOps[A, Out]] extends BaseOps[A, Out] {
+    protected type C >: Check.Point.Single[O, S, E] <: Check[O, S, E]
+
+    protected final def point(name: String, test: A => Option[E]): Out =
+      pointN(_ => name, test)
+
+    protected final def pointN(name: Option[(O, S)] => String, test: A => Option[E]): Out =
+      add(Check.Point.Single(
+        name,
+        (o, s) => extract(o, s).toOptionLeft(test)))
+
+    def assertEqual(expect: A)(implicit f: SomethingFailures[A, E]): Out =
+      point(
+        focusName + " = " + sa.show(expect),
+        a => f.expectEqual(expected = expect, actual = a))
+
+    def assertNotEqual(unexpect: A)(implicit f: SomethingFailures[A, E]): Out =
+      point(
+        focusName + " ≠ " + sa.show(unexpect),
+        a => f.expectNotEqual(unexpect, actual = a))
+
+    def test(desc: String => String, t: A => Boolean, error: A => E): Out =
+      point(
+        desc(focusName),
+        a => if (t(a)) None else Some(error(a)))
+  }
+
+//  class BP1[A](protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A]) extends PointOps[A, BP2[A]] {
+//    protected type C = Check.Point.Single[O, S, E]
+//    protected def add(c: C) = new BP2(c, extract)
+//  }
+//
+//  class BP2[A](val check: Check.Point[O, S, E], protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A]) extends PointOps[A, BP2[A]] {
+//    protected type C = Check.Point.Single[O, S, E]
+//    protected def add(c: C) = new BP2(check & c, extract)
+//  }
+
+  class I1[A](protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
+    extends PointOps[A, I2[A]] with AroundOps[A, I2[A]] {
+    protected type C = Check[O, S, E]
+    protected def add(c: C) = new I2(c, extract)
+  }
+
+  class I2[A](val check: Check[O, S, E], protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
+    extends PointOps[A, I2[A]] with AroundOps[A, I2[A]] {
+    protected type C = Check[O, S, E]
+    protected def add(c: C) = new I2(check & c, extract)
   }
 }
 

@@ -53,6 +53,12 @@ package object teststate {
         case Right(b) => Right(g(b))
         case Left(a) => Left(f(a))
       }
+
+    def toOptionLeft(f: B => Option[A]): Option[A] =
+      self match {
+        case Right(b) => f(b)
+        case Left(a) => Some(a)
+      }
   }
 
   case class History[+E](steps: History.Steps[E]) {
@@ -85,7 +91,7 @@ package object teststate {
     implicit val showInt: Show[Int] = Show(_.toString)
   }
 
-  implicit def focusDslb2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#B2[A]) = b.check
+  implicit def focusDslb2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#A2[A]) = b.check
 
   object History {
     val empty = History(Vector.empty)
