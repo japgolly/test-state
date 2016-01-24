@@ -104,6 +104,12 @@ class Dsl[R, O, S, E] {
 
 //  def compareStateAndObs[A](name: String, fo: O => A, fs: S => A)(implicit ) =
 //    new FocusDsl[O, S, E](name)
+
+  def point(name: Option[(O, S)] => String, test: (O, S) => Option[E]) =
+    Check.Point.Single(name, test)
+
+  def around[A](name: Option[(O, S)] => String, before: (O, S) => Either[E, A])(test: (O, S, A) => Option[E]) =
+    Check.Around.Single(name, before, test)
 }
 
 case class Equal[A](equal: (A, A) => Boolean)
@@ -184,6 +190,18 @@ class FocusDsl[O, S, E](focusName: String) {
   def apply[A: Show: Equal](f: (O, S) => A) =
     new A1((o, s) => Right(f(o, s)))
 
+  def coll[A](f: (O, S) => Traversable[A])(implicit sa: Show[A]) =
+    new {
+      // TODO Problem: BaseOps requires Show and Equal which doesn't make sense for the collection asserts
+      def assertDistinct(implicit ea: Equal[A], ev: CollAssert.FailedDistinct[A] => E) =
+        Check.Point.Single[O, S, E](
+          Function.const(focusName + " is distinct"),
+          (o, s) => CollAssert.distinct(f(o, s)).map(ev))
+    }
+
+
+//  def collthing[A](f: (O, S) => Traversable[A])(implicit s: Show[A], e: Equal[A]) =
+
   trait BaseOps[A, OutA <: BaseOps[A, OutA, _], OutP <: BaseOps[A, _, OutP]] {
     protected val extract: (O, S) => Either[E, A]
     protected implicit val sa: Show[A]
@@ -228,8 +246,6 @@ class FocusDsl[O, S, E](focusName: String) {
       around(
         focusName + " shouldn't change",
         (before, after) => f.expectEqual(expected = before, actual = after))
-
-
 
     protected final def point(name: String, test: A => Option[E]): OutP =
       pointN(_ => name, test)
