@@ -36,54 +36,66 @@ object Check {
     val empty = Composite(Vector.empty)
 
     case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E] {
-      override def before = Around.Composite(singles.map(_.before))
-      override def after  = Around.Composite(singles.map(_.after ))
+      override def before = Around.empty.copy(befores = singles.map(_.before))
+      override def after  = Around.empty.copy(afters = singles.map(_.after))
     }
 
     // TODO Should accept OS[O,S]
     case class Single[-O, -S, +E](name: Option[OS[O, S]] => String, test: OS[O, S] => Option[E]) extends Point[O, S, E] {
       override def toString = s"Check.Point.Single(${name(None)})"
       override def singles = vector1(this)
-      override def before = Around.before(name, test)
-      override def after  = Around.after(name, test)
+      override def before = Around.Before(this)
+      override def after  = Around.After(this)
     }
   }
 
   // ===================================================================================================================
 
   sealed abstract class Around[-O, -S, +E] extends Check[O, S, E] {
-    def singles: Vector[Around.Single[O, S, E]]
+    def befores: Vector[Around.Before[O, S, E]]
+    def dunnos: Vector[Around.Dunno[O, S, E]]
+    def afters: Vector[Around.After[O, S, E]]
 
     override final def point  = Point.empty
     override final def around = this
 
     final def &[o <: O, s <: S, e >: E](c: Around[o, s, e]): Around.Composite[o, s, e] =
-      Around.Composite(singles ++ c.singles)
+      Around.Composite(
+        befores ++ c.befores,
+        dunnos ++ c.dunnos,
+        afters ++ c.afters)
   }
 
   object Around {
-    val empty = Composite(Vector.empty)
+    val empty = Composite(Vector.empty, Vector.empty, Vector.empty)
 
-    case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Around[O, S, E]
+    case class Composite[-O, -S, +E](befores: Vector[Before[O, S, E]],
+                                     dunnos: Vector[Dunno[O, S, E]],
+                                     afters: Vector[After[O, S, E]]) extends Around[O, S, E]
 
     sealed abstract class Single[-O, -S, +E] extends Around[O, S, E] {
-      type A
-      val name: Option[OS[O, S]] => String
-      val before: OS[O, S] => Either[E, A]
-      val test: (OS[O, S], A) => Option[E]
-
-      final def aux: SingleA[O, S, E, A] =
-        this
-
-      override final def singles = vector1(this)
+      override def befores: Vector[Before[O, S, E]] = Vector.empty
+      override def dunnos: Vector[Dunno[O, S, E]] = Vector.empty
+      override def afters: Vector[After[O, S, E]] = Vector.empty
     }
 
-    type SingleA[-O, -S, +E, a] = Single[O, S, E] {type A = a}
+    // TODO This shape prevents discovery of pre vs post vs around checks
+    sealed abstract class Dunno[-O, -S, +E] extends Single[O, S, E] {
+      type A
+      val name: Option[OS[O, S]] => String
+      val before: OS[O, S] => A
+      val test: (OS[O, S], A) => Option[E]
 
-    def Single[O, S, E, _A](_name: Option[OS[O, S]] => String,
-                            _before: OS[O, S] => Either[E, _A],
-                            _test: (OS[O, S], _A) => Option[E]): SingleA[O, S, E, _A] =
-      new Single[O, S, E] {
+      final def aux: DunnoA[O, S, E, A] = this
+      final override def dunnos = vector1(this)
+    }
+
+    type DunnoA[-O, -S, +E, a] = Dunno[O, S, E] {type A = a}
+
+    def Dunno[O, S, E, _A](_name: Option[OS[O, S]] => String,
+                            _before: OS[O, S] => _A,
+                            _test: (OS[O, S], _A) => Option[E]): DunnoA[O, S, E, _A] =
+      new Dunno[O, S, E] {
         override type A     = _A
         override val name   = _name
         override val before = _before
@@ -91,14 +103,13 @@ object Check {
         override def toString = s"Check.Around.Single(${name(None)})"
       }
 
-    private val rightUnit = Right(())
-    private val noBefore = (_: Any) => rightUnit
-    private val noAfter = (_: Any, _: Any) => None
+    case class Before[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
+      final override def befores = vector1(this)
+    }
 
-    def after[O, S, E](name: Option[OS[O, S]] => String, test: OS[O, S] => Option[E]): SingleA[O, S, E, Unit] =
-      Single[O, S, E, Unit](name, noBefore, (os, _) => test(os))
+    case class After[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
+      final override def afters = vector1(this)
 
-    def before[O, S, E](name: Option[OS[O, S]] => String, test: OS[O, S] => Option[E]): SingleA[O, S, E, Unit] =
-      Single[O, S, E, Unit](name, os => test(os).leftOr(()), noAfter)
+    }
   }
 }

@@ -68,25 +68,6 @@ package object teststate {
       }
   }
 
-  case class History[+E](steps: History.Steps[E]) {
-
-    val result: Result[E] = {
-      var skipSeen = false
-      var firstError: Option[Result.Fail[E]] = None
-      steps foreach (_.result match {
-        case Result.Pass => ()
-        case Result.Skip => skipSeen = true
-        case e: Result.Fail[E] => if (firstError.isEmpty) firstError = Some(e)
-      })
-      firstError.getOrElse(if (skipSeen) Result.Skip else Result.Pass)
-    }
-
-    def failure: Option[E] =
-      result.failure
-
-    def failed = failure.isDefined
-  }
-
   // Actually this is ShowValue
   case class Show[A](show: A => String) extends AnyVal {
     @inline def apply(a: A): String =
@@ -120,9 +101,37 @@ package object teststate {
   implicit def focusDsli2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#I2[A]) = b.check
   implicit def focusDsli2ToChec1[O, S, E, A](b: FocusDsl[O, S, E]#C0[A]) = b.point
 
+  final class History[+E](val steps: History.Steps[E], val result: Result[E]) {
+    def failure = result.failure
+    def failed = failure.isDefined
+    def isEmpty = steps.isEmpty
+    @inline def nonEmpty = !isEmpty
+
+    def :+[e >: E](s: History.Step[e]) = this ++ vector1(s)
+    def ++[e >: E](s: History.Steps[e]) = {
+      val result2 = result match {
+        case Result.Fail(_) => result
+        case Result.Pass => s.find(_.failed).fold[Result[e]](Result.Pass)(_.result)
+        case Result.Skip => History.determineResult(s)
+      }
+      new History[e](steps ++ s, result2)
+    }
+
+    //def +:[e >: E](s: History.Step[e]) = new History[e](s +: steps, result)
+    //def ++[e >: E](s: History.Steps[e]) = new History[e](steps ++ s, result)
+
+    def unlessFailed[e >: E](f: History[E] => History[e]): History[e] =
+      if (failed)
+        this
+      else
+        f(this)
+  }
+
   object History {
-    val empty = History(Vector.empty)
+    val empty = History(Vector.empty, Result.Pass)
+
     type Steps[+Err] = Vector[Step[Err]]
+
     case class Step[+E](name: String, result: Result[E], children: History[E] = empty) {
       def failure = result.failure
       def failed = failure.isDefined
@@ -130,6 +139,62 @@ package object teststate {
 
     def parent[E](name: String, children: History[E]): Step[E] =
       Step(name, children.result, children)
+
+    def determineResult[E](steps: History.Steps[E]): Result[E] = {
+      val b = newBuilder[E]
+      steps foreach (b observeResult _)
+      b.result()
+    }
+
+    def apply[E](step: Step[E]): History[E] =
+      new History(vector1(step), step.result)
+
+    def apply[E](steps: Steps[E]): History[E] =
+      new History(steps, determineResult(steps))
+
+    def apply[E](steps: Steps[E], result: Result[E]): History[E] =
+      new History(steps, result)
+
+    def newBuilder[E] = new Builder[E]
+    final class Builder[E] {
+      private val steps = Vector.newBuilder[Step[E]]
+      private var skipSeen = false
+      private var firstError: Option[Result.Fail[E]] = None
+
+      def +=(s: Step[E]): Unit = {
+        steps += s
+        observeResult(s)
+      }
+
+      def ++=(h: History[E]): Unit =
+        if (h.nonEmpty) {
+          steps ++= h.steps
+          observeResult(h.result)
+        }
+
+      def addEach[A](as: Vector[A])(name: A => String, test: A => Option[E]): Unit =
+        for (a <- as) {
+          val n = name(a)
+          val r = Result passOrFail test(a)
+          this += History.Step(n, r)
+        }
+
+      @inline def observeResult(s: Step[E]): Unit =
+        observeResult(s.result)
+
+      def observeResult(r: Result[E]): Unit =
+        r match {
+          case Result.Pass => ()
+          case Result.Skip => skipSeen = true
+          case e: Result.Fail[E] => if (firstError.isEmpty) firstError = Some(e)
+        }
+
+      def result(): Result[E] =
+        firstError.getOrElse(if (skipSeen) Result.Skip else Result.Pass)
+
+      def history(): History[E] =
+        History(steps.result(), result())
+    }
   }
 
   case class Options(indent: String,
@@ -147,15 +212,24 @@ package object teststate {
   }
 
   object Options {
+
+    val uncolored = Options(
+      indent       = "  ",
+      onPass       = "✓", // ✓ ✔
+      onSkip       = "-", // ⇣ ↶ ↷
+      onFail       = "✘", // ✗ ✘
+      eol          = "\n",
+      showChildren = _.failure.isDefined)
+
     import scala.Console._
 
     val colored = Options(
       indent       = "  ",
-      onPass       = BOLD + GREEN + "✓" + RESET + WHITE, // ✓ ✔
-      onSkip       = BOLD + YELLOW + "↓" + BLACK, // ⇣ ↶ ↷
-      onFail       = RED + "✘" + BOLD, // ✗ ✘
-      eol          = RESET + "\n",
-      showChildren = _.failure.isDefined)
+      onPass       = BOLD + GREEN + uncolored.onPass + RESET + WHITE,
+      onSkip       = BOLD + YELLOW + uncolored.onSkip + BLACK,
+      onFail       = RED + uncolored.onFail + BOLD,
+      eol          = RESET + uncolored.eol,
+      showChildren = uncolored.showChildren)
   }
 
   def formatHistory[E](history: History[E], options: Options)(implicit showError: ShowError[E]): String = {
