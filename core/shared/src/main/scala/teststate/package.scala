@@ -146,7 +146,7 @@ package object teststate {
       indent       = "  ",
       onPass       = BOLD + GREEN + "✓" + RESET + WHITE, // ✓ ✔
       onSkip       = BOLD + YELLOW + "↓" + BLACK, // ⇣ ↶ ↷
-      onFail       = BOLD + RED + "✘" + RESET + RED, // ✗ ✘
+      onFail       = RED + "✘" + BOLD, // ✗ ✘
       eol          = RESET + "\n",
       showChildren = _.failure.isDefined)
   }

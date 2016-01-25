@@ -122,4 +122,35 @@ object CollAssert {
       containsAll(expected, actual).map(Right(_))
     else
       containsNone(expected, actual).map(Left(_))
+
+  // -------------------------------------------------------------------------------------------------
+
+  def equalIgnoringOrder[A: Show](expect: TraversableOnce[A], actual: TraversableOnce[A]): Option[FailedEqualIgnoringOrder[A]] = {
+    val m = mutable.HashMap.empty[A, Int]
+    def go(as: TraversableOnce[A], n: Int): Unit =
+      for (a <- as)
+        m.update(a, m.get(a).fold(n)(_ + n))
+    go(expect, -1)
+    go(actual, 1)
+    if (m.valuesIterator.forall(_ == 0))
+      None
+    else
+      Some {
+        val missing = Vector.newBuilder[A]
+        val excess  = Vector.newBuilder[A]
+        for {
+          (a, n) <- m if n != 0
+          target = if (n < 0) missing else excess
+          _ <- 1 to n.abs
+        } target += a
+        FailedEqualIgnoringOrder(missing.result(), excess.result())
+      }
+  }
+
+  case class FailedEqualIgnoringOrder[+A](missing: Vector[A], excess: Vector[A])(implicit s: Show[A]) extends HasErrorString {
+    private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Show[AA]): Option[String] =
+      if (as.isEmpty) None else Some(name + ": " +formatSet(as.iterator.map(s(_))))
+    override def errorString =
+      (fmt("Missing", missing).toList ::: fmt("Excess", excess).toList).mkString(", ")
+  }
 }

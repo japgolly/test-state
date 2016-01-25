@@ -154,6 +154,11 @@ class FocusDsl[O, S, E](focusName: String) {
         os => CollAssert.existence(expect(os), expected(os), f(os))
           .map(_.fold(ev2, ev1)))
 
+    def assertEqualIgnoringOrder(name: String => String, expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: CollAssert.FailedEqualIgnoringOrder[A] => E) =
+      Check.Point.Single[O, S, E](
+        Function.const(name(focusName)),
+        os => CollAssert.equalIgnoringOrder(expect = expect(os), actual = f(os)).map(ev))
+
     // TODO Look, all the same
 
     def assertContainsAll[B <: A : Show](name: String => String, required: OS => Set[B])(implicit ev: CollAssert.FailedContainsAll[B] => E) =
