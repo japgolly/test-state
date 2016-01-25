@@ -59,6 +59,9 @@ class Dsl[R, O, S, E] {
   def point(name: Option[OS] => String, test: OS => Option[E]) =
     Check.Point.Single(name, test)
 
+  def assertEqual[A: Equal: Show](name: Option[OS] => String, expect: OS => A, actual: OS => A)(implicit f: SomethingFailures[A, E]) =
+    point(name, i => f.expectEqual(expected = expect(i), actual = actual(i)))
+
   def around[A](name: Option[OS] => String, before: OS => Either[E, A])(test: (OS, A) => Option[E]) =
     Check.Around.Single(name, before, test)
 }
@@ -120,14 +123,7 @@ class BiFocusDsl[O, S, E, A](focusName: String, fo: O => A, fs: S => A)(implicit
       focusName + " = " + _.fold("<state>")(os => sa(fs(os.state))),
       os => f.expectEqual(expected = os.state, actual = os.obs))
 
-//  def test(desc: String => String, t: A => Boolean)(implicit ev: String =:= E): OutP =
-//    test(desc, t, ev compose sa.show)
-
-  // TODO Create case class for (obs,state) - use instead of tuple in ros.sos - use here too
-//  def test(desc: String => String, t: (A, A) => Boolean, error: (A, A) => E) =
-//    point(
-//      Function const desc(focusName),
-//      os => if (tos) None else Some(erroros))
+  // TODO if assertEqual is here, all the other ops should be too
 }
 
 class FocusDsl[O, S, E](focusName: String) {
@@ -152,7 +148,7 @@ class FocusDsl[O, S, E](focusName: String) {
       Check.Point.Single[O, S, E](
         _.fold(s"$focusName: Existence of $containsWhat."){os =>
           val e = expect(os)
-          val c = if (e) "contains" else "doesn't contain"
+          val c = if (e) "contain" else "don't contain"
           s"$focusName $c $containsWhat."
         },
         os => CollAssert.existence(expect(os), expected(os), f(os))

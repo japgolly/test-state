@@ -87,6 +87,7 @@ package object teststate {
     def failed = failure.isDefined
   }
 
+  // Actually this is ShowValue
   case class Show[A](show: A => String) extends AnyVal {
     @inline def apply(a: A): String =
       show(a)
@@ -102,6 +103,11 @@ package object teststate {
       // Handle \n, \t, spaces (so surrounds), long strings (?)
       "\"" + s + "\""
     )
+  }
+
+  case class ShowError[A](show: A => String) extends AnyVal
+  object ShowError {
+    implicit val showErrorString: ShowError[String] = ShowError(identity)
   }
 
   implicit def focusDsla2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#A2[A]) = b.check
@@ -145,7 +151,7 @@ package object teststate {
       showChildren = _.failure.isDefined)
   }
 
-  def formatHistory[E](history: History[E], options: Options)(implicit showError: Show[E]): String = {
+  def formatHistory[E](history: History[E], options: Options)(implicit showError: ShowError[E]): String = {
     val sb = new StringBuilder
 
     def appendIndent(indent: Int): Unit = {
