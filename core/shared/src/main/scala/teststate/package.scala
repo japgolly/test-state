@@ -88,14 +88,20 @@ package object teststate {
   }
 
   case class Show[A](show: A => String) extends AnyVal {
-    def apply(a: A): String =
-      // Handle \n, \t, spaces (so surrounds), long strings
-      "[" + show(a) + "]"
+    @inline def apply(a: A): String =
+      show(a)
 
+    def map(f: String => String): Show[A] =
+    Show(a => f(show(a)))
   }
+
   object Show {
-    implicit val showString: Show[String] = Show(identity)
     implicit val showInt: Show[Int] = Show(_.toString)
+
+    implicit val showString: Show[String] = Show[String](s =>
+      // Handle \n, \t, spaces (so surrounds), long strings (?)
+      "\"" + s + "\""
+    )
   }
 
   implicit def focusDsla2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#A2[A]) = b.check
