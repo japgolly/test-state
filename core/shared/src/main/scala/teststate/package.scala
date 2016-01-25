@@ -97,12 +97,17 @@ package object teststate {
   }
 
   object Show {
-    implicit val showInt: Show[Int] = Show(_.toString)
+    def byToString[A]: Show[A] = Show(_.toString)
+    implicit val showBoolean: Show[Boolean] = byToString
+    implicit val showInt: Show[Int] = byToString
 
     implicit val showString: Show[String] = Show[String](s =>
       // Handle \n, \t, spaces (so surrounds), long strings (?)
       "\"" + s + "\""
     )
+
+    implicit def showTraversable[C[X] <: Traversable[X], A](implicit show: Show[A]): Show[C[A]] =
+      Show(_.toIterator.map(show(_)).mkString(", "))
   }
 
   case class ShowError[A](show: A => String) extends AnyVal
@@ -110,8 +115,10 @@ package object teststate {
     implicit val showErrorString: ShowError[String] = ShowError(identity)
   }
 
+  implicit def focusDslX2ToCheck[R, O, S, E](b: Dsl[R, O, S, E]#A2) = b.noStateUpdate
   implicit def focusDsla2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#A2[A]) = b.check
   implicit def focusDsli2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#I2[A]) = b.check
+  implicit def focusDsli2ToChec1[O, S, E, A](b: FocusDsl[O, S, E]#C0[A]) = b.point
 
   object History {
     val empty = History(Vector.empty)

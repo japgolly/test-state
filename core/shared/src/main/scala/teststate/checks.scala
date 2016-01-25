@@ -19,6 +19,11 @@ object Check {
 
   sealed abstract class Point[-O, -S, +E] extends Check[O, S, E] {
     def singles: Vector[Point.Single[O, S, E]]
+    def before: Around[O, S, E]
+    def after : Around[O, S, E]
+
+    final def beforeAndAfter: Around.Composite[O, S, E] =
+      before & after
 
     override final def point  = this
     override final def around = Around.empty
@@ -30,12 +35,17 @@ object Check {
   object Point {
     val empty = Composite(Vector.empty)
 
-    case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E]
+    case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E] {
+      override def before = Around.Composite(singles.map(_.before))
+      override def after  = Around.Composite(singles.map(_.after ))
+    }
 
     // TODO Should accept OS[O,S]
     case class Single[-O, -S, +E](name: Option[OS[O, S]] => String, test: OS[O, S] => Option[E]) extends Point[O, S, E] {
       override def toString = s"Check.Point.Single(${name(None)})"
-      override final def singles = vector1(this)
+      override def singles = vector1(this)
+      override def before = Around.before(name, test)
+      override def after  = Around.after(name, test)
     }
   }
 
@@ -81,11 +91,14 @@ object Check {
         override def toString = s"Check.Around.Single(${name(None)})"
       }
 
-//    private val noBefore = (_: Any, _: Any) => Right(())
-//
-//    def post[O, S, E](name: Option[OS[O, S]] => String,
-//                        test: OS[O, S] => Option[E]): Aux[O, S, E, Unit] =
-//      apply[O, S, E, Unit](name, noBefore, (s, o, _) => test(s, o))
+    private val rightUnit = Right(())
+    private val noBefore = (_: Any) => rightUnit
+    private val noAfter = (_: Any, _: Any) => None
 
+    def after[O, S, E](name: Option[OS[O, S]] => String, test: OS[O, S] => Option[E]): SingleA[O, S, E, Unit] =
+      Single[O, S, E, Unit](name, noBefore, (os, _) => test(os))
+
+    def before[O, S, E](name: Option[OS[O, S]] => String, test: OS[O, S] => Option[E]): SingleA[O, S, E, Unit] =
+      Single[O, S, E, Unit](name, os => test(os).leftOr(()), noAfter)
   }
 }

@@ -10,6 +10,8 @@ class Dsl[R, O, S, E] {
   private type Name = Option[OS] => String
   private type ActionRun = ROS => Option[() => Either[E, O => S]]
 
+  type Action = teststate.Action[R, O, S, E]
+
   // ===================================================================================================================
 
   def action(name: String) = new A1(_ => name)
@@ -73,6 +75,7 @@ object Equal {
 
   implicit val equalString: Equal[String] = byUnivEq
   implicit val equalInt: Equal[Int] = byUnivEq
+  implicit val equalBoolean: Equal[Boolean] = byUnivEq
 }
 
 trait SomethingFailures[-AA, +E] {
@@ -132,49 +135,88 @@ class FocusDsl[O, S, E](focusName: String) {
   def value[A: Show: Equal](f: OS => A) =
     new A1(os => Right(f(os)))
 
-  def collection[A](f: OS => TraversableOnce[A]) = new C1(f)
+  def collection[A](f: OS => TraversableOnce[A]) = new C0(f)
 
-  class C1[A](f: OS => TraversableOnce[A]) {
+
+  trait CollOps[A, Out <: Check[O, S, E]] {
+//    type Out <: Check[O, S, E]
+
+    protected val as: OS => TraversableOnce[A]
+    protected def build(name: Option[OS] => String, test: OS => Option[E]): Out
+
+//    def assertEqual[C[X] <: TraversableOnce[X]](name: String => String, expect: OS => TraversableOnce[A])(implicit f: SomethingFailures[A, E]) =
+//      build(
+//        Function const name(focusName),
+//        i => f.expectEqual(expected = expect(i), actual = actual(i)))
+
     def assertDistinct(implicit sa: Show[A], ev: CollAssert.FailedDistinct[A] => E) =
-      Check.Point.Single[O, S, E](
+      build(
         Function.const(focusName + " are distinct."),
-        os => CollAssert.distinct(f(os)).map(ev))
+        os => CollAssert.distinct(as(os)).map(ev))
 
     def assertExistence(containsWhat: String,
                         expect: OS => Boolean, expected: OS => Set[A])
                        (implicit sa: Show[A],
                         ev1: CollAssert.FailedContainsAll[A] => E,
                         ev2: CollAssert.FailedContainsNone[A] => E) =
-      Check.Point.Single[O, S, E](
+      build(
         _.fold(s"$focusName: Existence of $containsWhat."){os =>
           val e = expect(os)
           val c = if (e) "contain" else "don't contain"
           s"$focusName $c $containsWhat."
         },
-        os => CollAssert.existence(expect(os), expected(os), f(os))
+        os => CollAssert.existence(expect(os), expected(os), as(os))
           .map(_.fold(ev2, ev1)))
 
     def assertEqualIgnoringOrder(name: String => String, expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: CollAssert.FailedEqualIgnoringOrder[A] => E) =
-      Check.Point.Single[O, S, E](
+      build(
         Function.const(name(focusName)),
-        os => CollAssert.equalIgnoringOrder(expect = expect(os), actual = f(os)).map(ev))
+        os => CollAssert.equalIgnoringOrder(expect = expect(os), actual = as(os)).map(ev))
 
     // TODO Look, all the same
 
-    def assertContainsAll[B <: A : Show](name: String => String, required: OS => Set[B])(implicit ev: CollAssert.FailedContainsAll[B] => E) =
-      Check.Point.Single[O, S, E](
+    def assertContainsAll[B <: A](name: String => String, required: OS => Set[B])(implicit sb: Show[B], ev: CollAssert.FailedContainsAll[B] => E) =
+      build(
         Function.const(name(focusName)), // focusName + " contains all " + allWhat + "."),
-        os => CollAssert.containsAll(required(os), f(os)).map(ev))
+        os => CollAssert.containsAll(required(os), as(os)).map(ev))
 
     def assertContainsOnly[B >: A](name: String => String, whitelist: OS => Set[B])(implicit sa: Show[A], ev: CollAssert.FailedContainsOnly[A] => E) =
-      Check.Point.Single[O, S, E](
+      build(
         Function.const(name(focusName)),
-        os => CollAssert.containsOnly(whitelist(os), f(os)).map(ev))
+        os => CollAssert.containsOnly(whitelist(os), as(os)).map(ev))
 
     def assertContainsNone[B >: A](name: String => String, blacklist: OS => Set[B])(implicit sa: Show[A], ev: CollAssert.FailedContainsNone[A] => E) =
-      Check.Point.Single[O, S, E](
+      build(
         Function.const(name(focusName)),
-        os => CollAssert.containsNone(blacklist(os), f(os)).map(ev))
+        os => CollAssert.containsNone(blacklist(os), as(os)).map(ev))
+  }
+
+  class C0[A](as: OS => TraversableOnce[A]) {
+    def point = new CP(as)
+
+    // TODO ↓ Better just to call .check(After|Before) right?
+    def before = new CA1(as)
+    def after = new CA2(as)
+
+//    def assert(before: A, after: A)(implicit f: SomethingFailures[A, E]) =
+//      this.before.assertEqual(before) &
+//      this.after.assertEqual(after)
+      // TODO assertBefore(before).assertAfter(after)
+  }
+
+  class CA1[A](protected val as: OS => TraversableOnce[A]) extends CollOps[A, Check.Around.Single[O, S, E]] {
+    // TODO Name should carry:         focusName + " should start as " + sa.show(expect),
+    protected def build(name: Option[OS] => String, test: OS => Option[E]) =
+      Check.Around.before(name, test)
+  }
+  class CA2[A](protected val as: OS => TraversableOnce[A]) extends CollOps[A, Check.Around.Single[O, S, E]] {
+    protected def build(name: Option[OS] => String, test: OS => Option[E]) =
+      Check.Around.after(name, test)
+  }
+
+  class CP[A](protected val as: OS => TraversableOnce[A]) extends CollOps[A, Check.Point.Single[O, S, E]] {
+    protected def build(name: Option[OS] => String, test: OS => Option[E]) =
+      Check.Point.Single(name, test)
   }
 
   trait BaseOps[A, OutA <: BaseOps[A, OutA, _], OutP <: BaseOps[A, _, OutP]] {
