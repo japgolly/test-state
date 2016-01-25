@@ -2,11 +2,6 @@ package teststate
 
 import Action.{Composite, NonComposite}
 
-case class ROS[+Ref, +Obs, +State](ref: Ref, obs: Obs, state: State) {
-  val sos: Some[(Obs, State)] =
-    Some((obs, state))
-}
-
 sealed trait Action[Ref, O, S, +Err] {
   type This[+E] <: Action[Ref, O, S, E]
 
@@ -35,7 +30,7 @@ object Action {
   sealed trait NonComposite[Ref, O, S, +Err] extends Action[Ref, O, S, Err] {
     type This[+E] <: NonComposite[Ref, O, S, E]
 
-    def name: Option[(O, S)] => String
+    def name: Option[OS[O, S]] => String
 
     final override def nonCompositeActions: Vector[NonComposite[Ref, O, S, Err]] =
       vector1(this)
@@ -72,7 +67,7 @@ object Action {
 //      group(name).times(n)
   }
 
-  case class Group[Ref, O, S, +Err](name: Option[(O, S)] => String,
+  case class Group[Ref, O, S, +Err](name: Option[OS[O, S]] => String,
                                     action: ROS[Ref, O, S] => Option[Action[Ref, O, S, Err]],
                                     check: Check.Around[O, S, Err]) extends NonComposite[Ref, O, S, Err] {
 
@@ -88,7 +83,7 @@ object Action {
       copy(action = i => if (f(i)) action(i) else None)
   }
 
-  case class Single[Ref, O, S, +Err](name: Option[(O, S)] => String,
+  case class Single[Ref, O, S, +Err](name: Option[OS[O, S]] => String,
                                      run: ROS[Ref, O, S] => Option[() => Either[Err, O => S]],
                                      check: Check.Around[O, S, Err]) extends NonComposite[Ref, O, S, Err] {
 

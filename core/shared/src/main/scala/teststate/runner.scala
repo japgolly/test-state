@@ -79,8 +79,8 @@ import test.observe
           halfChecks(check)(omg.ros)
             .fmap(hcs =>
               run(a)
-                .check(omg2 => performChecks(hcs)(_.check name omg.ros.sos, c => c.check.test(omg2.ros.obs, omg2.ros.state, c.before)))
-                .check(omg2 => performChecks(invariantsPoints)(_ name omg.ros.sos, c => c.test(omg2.ros.obs, omg2.ros.state)))
+                .check(omg2 => performChecks(hcs)(_.check name omg.ros.sos, c => c.check.test(omg2.ros.os, c.before)))
+                .check(omg2 => performChecks(invariantsPoints)(_ name omg.ros.sos, c => c.test(omg2.ros.os)))
             )
             .leftMap(f => omg.addHistory(f(name)))
         case None =>
@@ -149,7 +149,7 @@ import test.observe
         else {
           val children = invariantsPoints.map { i =>
             val name = i.name(ros.sos)
-            val result = i.test(initialObs, initialState).fold[Result[Err]](Result.Pass)(Result.Fail(_))
+            val result = i.test(ros.os).fold[Result[Err]](Result.Pass)(Result.Fail(_))
             History.Step(name, result)
           }
           vector1(History.parent("Initial checks.", History(children)))
@@ -175,7 +175,7 @@ import test.observe
       _ name ros.sos,
       c0 => {
         val c = c0.aux
-        c.before(ros.obs, ros.state) match {
+        c.before(ros.os) match {
           case Right(a) => r += HalfCheck(c)(a); None
           case Left(e) => Some(e)
         }

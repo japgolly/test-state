@@ -187,4 +187,15 @@ package object teststate {
 
     sb.result()
   }
+
+  case class ROS[+Ref, +Obs, +State](ref: Ref, obs: Obs, state: State) {
+    val os: OS[Obs, State] =
+      OS(obs, state)
+
+    val sos: Some[OS[Obs, State]] =
+      Some(os)
+  }
+
+  case class OS[+O, +S](obs: O, state: S)
+
 }

@@ -21,7 +21,7 @@ object WholeTest extends TestSuite {
   val * = Dsl[Example, Obs, Int, String]
 
   val inc = *.action("Count increases by 1").act(_.ref.inc()).updateState(_ + 1)
-    .addCheck(*.focus("Number of changes").obsTo(_.changes).assertChange("+1", _ + 1))
+    .addCheck(*.focus("Number of changes").value(_.obs.changes).assertChange("+1", _ + 1))
 
   val count = *.bifocus("Count", _.count, identity)
 

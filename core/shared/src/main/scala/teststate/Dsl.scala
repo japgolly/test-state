@@ -5,8 +5,9 @@ object Dsl {
 }
 
 class Dsl[R, O, S, E] {
-  private type Name = Option[(O, S)] => String
+  private type OS = teststate.OS[O, S]
   private type ROS = teststate.ROS[R, O, S]
+  private type Name = Option[OS] => String
   private type ActionRun = ROS => Option[() => Either[E, O => S]]
 
   // ===================================================================================================================
@@ -20,16 +21,6 @@ class Dsl[R, O, S, E] {
 
     def actTry(f: ROS => Option[E]) =
       new A2(name, Some(f))
-
-    //    def act(f: R => Unit)
-    /*
-    def tmp(act: R => Unit, alterState: S => S) =
-      Action.Single[R, O, S, E](name, (r, o, s) =>
-        Some(() => {
-          act(r)
-          Right(_ => alterState(s))
-        }), Checks.empty)
-*/
   }
 
   class A2(name: Name, act: Option[ROS => Option[E]]) {
@@ -55,47 +46,7 @@ class Dsl[R, O, S, E] {
       Action.Single(name, act, Check.Around.empty)
   }
 
-//  class A3(name: Name, act: ActionRun) {
-//    def build = Action.Single(name, act, Check.Around.empty)
-//  }
-
-    /*
-    class Loop(name: Name, act: (R, O, S) => Unit) {
-      def act(f: R => Unit)
-    }
-    */
-
-  /*
-    def expect(S|O => S)
-    def expect(S => E ∨ S)
-    def expect(S => E ∨ (O→S))
-
-    def when|unless(R|O|S => Boolean)
-
-    def check(c)
-   */
-
   // ===================================================================================================================
-
-  //def checkPoint(name: String) = new P1(_ => name)
-
-/*
-  compare: (A, A) => Boolean
-  assertChange
-  assertNoChange
-  assert(before, after)
-
-  assertChangeBy
-
-  // a.focus(locked_?) .assertBefore(true).assertAfter(false)
-
-  AROUND
-  ======
-
-  1. (O, S) => Either[E, A] | A
-  2. (A, A) => Option[E]
-  3.
-   */
 
   def focus(name: String) = new FocusDsl[O, S, E](name)
 
@@ -105,10 +56,10 @@ class Dsl[R, O, S, E] {
 //  def compareStateAndObs[A](name: String, fo: O => A, fs: S => A)(implicit ) =
 //    new FocusDsl[O, S, E](name)
 
-  def point(name: Option[(O, S)] => String, test: (O, S) => Option[E]) =
+  def point(name: Option[OS] => String, test: OS => Option[E]) =
     Check.Point.Single(name, test)
 
-  def around[A](name: Option[(O, S)] => String, before: (O, S) => Either[E, A])(test: (O, S, A) => Option[E]) =
+  def around[A](name: Option[OS] => String, before: OS => Either[E, A])(test: (OS, A) => Option[E]) =
     Check.Around.Single(name, before, test)
 }
 
@@ -156,18 +107,18 @@ object SomethingFailures {
 
 class BiFocusDsl[O, S, E, A](focusName: String, fo: O => A, fs: S => A)(implicit sa: Show[A], eq: Equal[A]) {
 
-  private def point(name: Option[(O, S)] => String, t: (A, A) => Option[E]) =
-    Check.Point.Single[O, S, E](name, (o, s) =>
-      t(fo(o), fs(s)))
+  private def point(name: Option[OS[O, S]] => String, t: OS[A, A] => Option[E]) =
+    Check.Point.Single[O, S, E](name, os =>
+      t(OS(obs = fo(os.obs), state = fs(os.state))))
       //fo(o).toOptionLeft(oa => t(oa, fs(s))))
 
-  def obs   = new FocusDsl[O, S, E](focusName).obsTo(fo)
-  def state = new FocusDsl[O, S, E](focusName).stateTo(fs)
+  def obs   = new FocusDsl[O, S, E](focusName).value(os => fo(os.obs))
+  def state = new FocusDsl[O, S, E](focusName).value(os => fs(os.state))
 
   def assertEqual(implicit f: SomethingFailures[A, E]) =
     point(
-      focusName + " = " + _.fold("<state>")(os => sa(fs(os._2))),
-      (o, s) => f.expectEqual(expected = s, actual = o))
+      focusName + " = " + _.fold("<state>")(os => sa(fs(os.state))),
+      os => f.expectEqual(expected = os.state, actual = os.obs))
 
 //  def test(desc: String => String, t: A => Boolean)(implicit ev: String =:= E): OutP =
 //    test(desc, t, ev compose sa.show)
@@ -176,23 +127,14 @@ class BiFocusDsl[O, S, E, A](focusName: String, fo: O => A, fs: S => A)(implicit
 //  def test(desc: String => String, t: (A, A) => Boolean, error: (A, A) => E) =
 //    point(
 //      Function const desc(focusName),
-//      (o, s) => if (t(o, s)) None else Some(error(o, s)))
+//      os => if (tos) None else Some(erroros))
 }
-
-// TODO Use more
-case class OS[+O, +S](obs: O, state: S)
 
 class FocusDsl[O, S, E](focusName: String) {
   type OS = teststate.OS[O, S]
 
-  def obs  (implicit s: Show[O], e: Equal[O]) = apply((o, _) => o)
-  def state(implicit s: Show[S], e: Equal[S]) = apply((_, s) => s)
-
-  def   obsTo[A: Show: Equal](f: O => A) = apply((o, _) => f(o))
-  def stateTo[A: Show: Equal](f: S => A) = apply((_, s) => f(s))
-
-  def apply[A: Show: Equal](f: (O, S) => A) =
-    new A1((o, s) => Right(f(o, s)))
+  def value[A: Show: Equal](f: OS => A) =
+    new A1(os => Right(f(os)))
 
   def collection[A](f: OS => TraversableOnce[A]) = new C1(f)
 
@@ -200,7 +142,7 @@ class FocusDsl[O, S, E](focusName: String) {
     def assertDistinct(implicit sa: Show[A], ev: CollAssert.FailedDistinct[A] => E) =
       Check.Point.Single[O, S, E](
         Function.const(focusName + " are distinct."),
-        (o, s) => CollAssert.distinct(f(OS(o, s))).map(ev))
+        os => CollAssert.distinct(f(os)).map(ev))
 
     def assertExistence(containsWhat: String,
                         expect: OS => Boolean, expected: OS => Set[A])
@@ -209,11 +151,11 @@ class FocusDsl[O, S, E](focusName: String) {
                         ev2: CollAssert.FailedContainsNone[A] => E) =
       Check.Point.Single[O, S, E](
         _.fold(s"$focusName: Existence of $containsWhat."){os =>
-          val e = expect(OS(os._1, os._2))
+          val e = expect(os)
           val c = if (e) "contains" else "doesn't contain"
           s"$focusName $c $containsWhat."
         },
-        (o, s) => CollAssert.existence(expect(OS(o, s)), expected(OS(o, s)), f(OS(o, s)))
+        os => CollAssert.existence(expect(os), expected(os), f(os))
           .map(_.fold(ev2, ev1)))
 
     // TODO Look, all the same
@@ -221,24 +163,21 @@ class FocusDsl[O, S, E](focusName: String) {
     def assertContainsAll[B <: A : Show](name: String => String, required: OS => Set[B])(implicit ev: CollAssert.FailedContainsAll[B] => E) =
       Check.Point.Single[O, S, E](
         Function.const(name(focusName)), // focusName + " contains all " + allWhat + "."),
-        (o, s) => CollAssert.containsAll(required(OS(o, s)), f(OS(o, s))).map(ev))
+        os => CollAssert.containsAll(required(os), f(os)).map(ev))
 
     def assertContainsOnly[B >: A](name: String => String, whitelist: OS => Set[B])(implicit sa: Show[A], ev: CollAssert.FailedContainsOnly[A] => E) =
       Check.Point.Single[O, S, E](
         Function.const(name(focusName)),
-        (o, s) => CollAssert.containsOnly(whitelist(OS(o, s)), f(OS(o, s))).map(ev))
+        os => CollAssert.containsOnly(whitelist(os), f(os)).map(ev))
 
     def assertContainsNone[B >: A](name: String => String, blacklist: OS => Set[B])(implicit sa: Show[A], ev: CollAssert.FailedContainsNone[A] => E) =
       Check.Point.Single[O, S, E](
         Function.const(name(focusName)),
-        (o, s) => CollAssert.containsNone(blacklist(OS(o, s)), f(OS(o, s))).map(ev))
+        os => CollAssert.containsNone(blacklist(os), f(os)).map(ev))
   }
 
-
-//  def collthing[A](f: (O, S) => Traversable[A])(implicit s: Show[A], e: Equal[A]) =
-
   trait BaseOps[A, OutA <: BaseOps[A, OutA, _], OutP <: BaseOps[A, _, OutP]] {
-    protected val extract: (O, S) => Either[E, A]
+    protected val extract: OS => Either[E, A]
     protected implicit val sa: Show[A]
     protected implicit val eq: Equal[A]
 
@@ -248,11 +187,11 @@ class FocusDsl[O, S, E](focusName: String) {
     protected final def around(name: String, t: (A, A) => Option[E]): OutA =
       aroundN(_ => name, t)
 
-    protected final def aroundN(name: Option[(O, S)] => String, t: (A, A) => Option[E]): OutA =
+    protected final def aroundN(name: Option[OS] => String, t: (A, A) => Option[E]): OutA =
       addA(Check.Around.Single(
         name,
         extract,
-        (o, s, a: A) => extract(o, s).toOptionLeft(t(a, _))))
+        (os, a: A) => extract(os).toOptionLeft(t(a, _))))
 
     final def assertBefore(expect: A)(implicit f: SomethingFailures[A, E]): OutA =
       around(
@@ -285,10 +224,10 @@ class FocusDsl[O, S, E](focusName: String) {
     protected final def point(name: String, test: A => Option[E]): OutP =
       pointN(_ => name, test)
 
-    protected final def pointN(name: Option[(O, S)] => String, test: A => Option[E]): OutP =
+    protected final def pointN(name: Option[OS] => String, test: A => Option[E]): OutP =
       addP(Check.Point.Single(
         name,
-        (o, s) => extract(o, s).toOptionLeft(test)))
+        os => extract(os).toOptionLeft(test)))
 
     def assertEqual(expect: A)(implicit f: SomethingFailures[A, E]): OutP =
       point(
@@ -309,25 +248,25 @@ class FocusDsl[O, S, E](focusName: String) {
         a => if (t(a)) None else Some(error(a)))
   }
 
-  class A1[A](protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
+  class A1[A](protected val extract: OS => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
     extends BaseOps[A, A2[A], I2[A]] {
     protected def addA(c: Check.Around[O, S, E]) = new A2(c, extract)
     protected def addP(c: Check.Point [O, S, E]) = new I2(c, extract)
   }
 
-  class A2[A](val check: Check.Around[O, S, E], protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
+  class A2[A](val check: Check.Around[O, S, E], protected val extract: OS => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
     extends BaseOps[A, A2[A], I2[A]] {
     protected def addA(c: Check.Around[O, S, E]) = new A2(check & c, extract)
     protected def addP(c: Check.Point [O, S, E]) = new I2(check & c, extract)
   }
 
-  class I1[A](protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
+  class I1[A](protected val extract: OS => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
     extends BaseOps[A, I2[A], I2[A]] {
     protected def addA(c: Check.Around[O, S, E]) = new I2(c, extract)
     protected def addP(c: Check.Point [O, S, E]) = new I2(c, extract)
   }
 
-  class I2[A](val check: Check[O, S, E], protected val extract: (O, S) => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
+  class I2[A](val check: Check[O, S, E], protected val extract: OS => Either[E, A])(implicit protected val sa: Show[A], protected val eq: Equal[A])
     extends BaseOps[A, I2[A], I2[A]] {
     protected def addA(c: Check.Around[O, S, E]) = new I2(check & c, extract)
     protected def addP(c: Check.Point [O, S, E]) = new I2(check & c, extract)
@@ -345,7 +284,7 @@ object DslNoS {
 
 class DslNoS[R, O, E] {
   private type S = Unit
-  private type Name = Option[(O, S)] => String
+  private type Name = Option[OS[O, S]] => String
   private type ROS = teststate.ROS[R, O, S]
   private type ActionRun = ROS => Option[() => Either[E, O => S]]
 

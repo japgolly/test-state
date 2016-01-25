@@ -33,7 +33,7 @@ object Check {
     case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E]
 
     // TODO Should accept OS[O,S]
-    case class Single[-O, -S, +E](name: Option[(O, S)] => String, test: (O, S) => Option[E]) extends Point[O, S, E] {
+    case class Single[-O, -S, +E](name: Option[OS[O, S]] => String, test: OS[O, S] => Option[E]) extends Point[O, S, E] {
       override def toString = s"Check.Point.Single(${name(None)})"
       override final def singles = vector1(this)
     }
@@ -58,9 +58,9 @@ object Check {
 
     sealed abstract class Single[-O, -S, +E] extends Around[O, S, E] {
       type A
-      val name: Option[(O, S)] => String
-      val before: (O, S) => Either[E, A]
-      val test: (O, S, A) => Option[E]
+      val name: Option[OS[O, S]] => String
+      val before: OS[O, S] => Either[E, A]
+      val test: (OS[O, S], A) => Option[E]
 
       final def aux: SingleA[O, S, E, A] =
         this
@@ -70,9 +70,9 @@ object Check {
 
     type SingleA[-O, -S, +E, a] = Single[O, S, E] {type A = a}
 
-    def Single[O, S, E, _A](_name: Option[(O, S)] => String,
-                            _before: (O, S) => Either[E, _A],
-                            _test: (O, S, _A) => Option[E]): SingleA[O, S, E, _A] =
+    def Single[O, S, E, _A](_name: Option[OS[O, S]] => String,
+                            _before: OS[O, S] => Either[E, _A],
+                            _test: (OS[O, S], _A) => Option[E]): SingleA[O, S, E, _A] =
       new Single[O, S, E] {
         override type A     = _A
         override val name   = _name
@@ -83,8 +83,8 @@ object Check {
 
 //    private val noBefore = (_: Any, _: Any) => Right(())
 //
-//    def post[O, S, E](name: Option[(O, S)] => String,
-//                        test: (O, S) => Option[E]): Aux[O, S, E, Unit] =
+//    def post[O, S, E](name: Option[OS[O, S]] => String,
+//                        test: OS[O, S] => Option[E]): Aux[O, S, E, Unit] =
 //      apply[O, S, E, Unit](name, noBefore, (s, o, _) => test(s, o))
 
   }
