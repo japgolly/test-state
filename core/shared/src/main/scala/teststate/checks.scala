@@ -32,6 +32,7 @@ object Check {
 
     case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E]
 
+    // TODO Should accept OS[O,S]
     case class Single[-O, -S, +E](name: Option[(O, S)] => String, test: (O, S) => Option[E]) extends Point[O, S, E] {
       override def toString = s"Check.Point.Single(${name(None)})"
       override final def singles = vector1(this)

@@ -3,6 +3,13 @@ package object teststate {
   @inline private[teststate] def vector1[A](a: A): Vector[A] =
     Vector.empty[A] :+ a
 
+
+  trait HasErrorString {
+    def errorString: String
+  }
+
+  implicit def formatHasErrorString(e: HasErrorString): String = e.errorString
+
   /*
   case class Plan[State, Obj, Err](steps: Plan.Steps[State, Obj, Err]) {
     def andThen(next: Plan[State, Obj, Err]): Plan[State, Obj, Err] =

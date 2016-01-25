@@ -22,97 +22,12 @@ object CollAssert {
     }
     r.liftL
   }
-
-  def distinctName(name: => String) = s"each $name is unique"
-
-  def distinctI[A](name: => String, input: Any, as: Iterator[A]): EvalL =
-    distinct(name, input, as.toList)
-
-  def distinct[A](name: => String, input: Any, as: GenTraversable[A]): EvalL =
-    atom(distinctName(name), input, {
-
-      val m = mutable.HashMap.empty[A, Int]
-      for (a <- as) {
-        val v = m.getOrElse(a, 0) + 1
-        m.update(a, v)
-      }
-
-      if (m.valuesIterator.forall(_ == 1))
-        None
-      else
-        Some {
-          val d = m.iterator
-            .filter(_._2 > 1)
-            .toList
-            .sortBy(_._1.toString)
-            .map { case (a, i) => s"$a → $i" }
-            .mkString("{", ", ", "}")
-          s"Inputs: $as\nDups: $d"
-        }
-    })
-
-  /**
-   * Test that all Cs are on a whitelist.
-   */
-  def whitelist[B, C](name: => String, input: Any, whitelist: Set[B], testData: => TraversableOnce[C])(implicit ev: C <:< B): EvalL =
-      setTest(name, input, true, "Whitelist", whitelist, "Found    ", testData, "Illegal  ")
-
-  /**
-   * Test that no Cs are on a blacklist.
-   */
-  def blacklist[B, C](name: => String, input: Any, blacklist: Set[B], testData: => TraversableOnce[C])(implicit ev: C <:< B): EvalL =
-      setTest(name, input, false, "Blacklist", blacklist, "Found    ", testData, "Illegal  ")
-
-  /**
-   * Test that all Bs are present in Cs.
-   */
-  def allPresent[B, C](name: => String, input: Any, required: Set[B], testData: => TraversableOnce[C])(implicit ev: B <:< C): EvalL = {
-    val cs = testData.toSet
-    atom(name, input, {
-      val rs = required.filterNot(cs contains _)
-      setMembershipResult(input, "Required", required, "Found   ", testData, "Missing ", rs)
-    })
-  }
-
-  private[this] def setTest[A, B, C](name: => String, input: Any, expect: Boolean,
-                                     bsName: String, bs: Set[B],
-                                     csName: String, cs: => TraversableOnce[C],
-                                     failureName: String)(implicit ev: C <:< B): EvalL =
-    atom(name, input, {
-      val rs = cs.foldLeft(Set.empty[C])((q, c) => if (bs.contains(c) == expect) q else q + c)
-      setMembershipResult(input, bsName, bs, csName, cs, failureName, rs)
-    })
-
-  private[this] def setMembershipResult(input: Any,
-                                        asName: String, as: => TraversableOnce[_],
-                                        bsName: String, bs: => TraversableOnce[_],
-                                        failureName: String, problems: Set[_]): FailureReasonO =
-    if (problems.isEmpty)
-      None
-    else
-      Some {
-        def fmt(name: String, vs: TraversableOnce[_]) = {
-          val x = vs.toIterable
-          s"$name: (${x.size}) $x"
-        }
-        s"$input\n${fmt(asName, as)}\n${fmt(bsName, bs)}\n$failureName: ${fmtSet(problems)}"
-      }
-
-  private[this] def fmtSet(s: Set[_]): String =
-    s.iterator.map(_.toString).toList.sorted.distinct.mkString("{", ", ", "}")
-
-//  @inline def existance[A](name: String) = new ExistanceB[A](name)
-//  final class ExistanceB[A](val name: String) { //extends AnyVal {
-//  def apply[B](expect: A => Boolean, expected: A => Set[B], testData: A => Traversable[B]): Prop[A] = {
-//    lazy val yes = Prop.allPresent[A](name + " available")(expected, testData)
-//    lazy val no = Prop.blacklist[A](name + " not available")(expected, testData)
-//    Prop.test[A](name, expect).ifelse(yes, no)
-//  }
-//  }
-
    */
 
-  def distinct[A](as: Traversable[A])(implicit s: Show[A]): Option[FailedDistinct[A]] = {
+  private def formatSet(s: TraversableOnce[_]): String =
+    s.mkString("", ", ", ".")
+
+  def distinct[A](as: TraversableOnce[A])(implicit s: Show[A]): Option[FailedDistinct[A]] = {
 
     // TODO only works when A has universal equality and appropriate hashcodes
     val m = mutable.HashMap.empty[A, Int]
@@ -124,25 +39,87 @@ object CollAssert {
     if (m.valuesIterator.forall(_ == 1))
       None
     else
-      Some {
-        val d = m.iterator
+      Some(FailedDistinct(
+        m.iterator
           .filter(_._2 > 1)
+          .map(x => (x, s(x._1)))
           .toList
-          .sortBy(_._1.toString)
-        FailedDistinct(as, d)
-      }
+          .sortBy(_._2)
+          .map(_._1)
+      ))
   }
 
-  case class FailedDistinct[A](input: Traversable[A], dups: List[(A, Int)])(implicit s: Show[A]) {
-    def dupsToString = dups.iterator
-      .map { case (a, i) => s"${s(a)} → $i" }
-      .mkString("{", ", ", "}")
-
-    override def toString =
-      s"Input: $input\nDups: $dupsToString"
+  case class FailedDistinct[+A](dups: List[(A, Int)])(implicit s: Show[A]) extends HasErrorString {
+    def dupsToString = formatSet(dups.iterator.map { case (a, i) => s"${s(a)} → $i" })
+    override def errorString = s"Dups: $dupsToString"
   }
 
+  // -------------------------------------------------------------------------------------------------
 
-  implicit def formatFailedDistinct[A](f: FailedDistinct[A]) = f.toString
+  /**
+    * Test that all Bs are present.
+    */
+  def containsAll[B, A](required: Set[B], actual: TraversableOnce[A])(implicit ev: B <:< A, sb: Show[B]) = {
+    val as = actual.toSet
+    val missing = required.iterator.filterNot(as contains _)
+    if (missing.isEmpty)
+      None
+    else
+      Some(FailedContainsAll(missing.toSet, required))
+  }
 
+  case class FailedContainsAll[B](missing: Set[B], required: Set[B])(implicit s: Show[B]) extends HasErrorString {
+    def missingToString = formatSet(missing.iterator.map(s(_)))
+    override def errorString = s"Missing: $missingToString"
+  }
+
+  // -------------------------------------------------------------------------------------------------
+
+  /**
+   * Test that all As are on a whitelist.
+   */
+  def containsOnly[B, A](whitelist: Set[B], actual: TraversableOnce[A])(implicit ev: A <:< B, sa: Show[A]) = {
+    var bad = Vector.empty[A]
+    for (a <- actual)
+      if (!whitelist.contains(a))
+        bad :+= a
+    if (bad.isEmpty)
+      None
+    else
+      Some(FailedContainsOnly(bad))
+  }
+
+  case class FailedContainsOnly[+A](bad: Vector[A])(implicit s: Show[A]) extends HasErrorString {
+    def badToString = formatSet(bad.iterator.map(s(_)))
+    override def errorString = s"Data not on whitelist: $badToString"
+  }
+
+  // -------------------------------------------------------------------------------------------------
+
+  /**
+   * Test that no As are on a blacklist.
+   */
+  def containsNone[B, A](blacklist: Set[B], actual: TraversableOnce[A])(implicit ev: A <:< B, sa: Show[A]) = {
+    var bad = Vector.empty[A]
+    for (a <- actual)
+      if (blacklist.contains(a))
+        bad :+= a
+    if (bad.isEmpty)
+      None
+    else
+      Some(FailedContainsNone(bad))
+  }
+
+  case class FailedContainsNone[+A](bad: Vector[A])(implicit s: Show[A]) extends HasErrorString {
+    def badToString = formatSet(bad.iterator.map(s(_)))
+    override def errorString = s"Data on blacklist: $badToString"
+  }
+
+  // -------------------------------------------------------------------------------------------------
+
+  def existence[A: Show](expect: Boolean, expected: Set[A], actual: TraversableOnce[A]): Option[Either[FailedContainsNone[A], FailedContainsAll[A]]] =
+    if (expect)
+      containsAll(expected, actual).map(Right(_))
+    else
+      containsNone(expected, actual).map(Left(_))
 }

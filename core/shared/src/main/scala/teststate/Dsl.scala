@@ -179,8 +179,12 @@ class BiFocusDsl[O, S, E, A](focusName: String, fo: O => A, fs: S => A)(implicit
 //      (o, s) => if (t(o, s)) None else Some(error(o, s)))
 }
 
+// TODO Use more
+case class OS[+O, +S](obs: O, state: S)
 
 class FocusDsl[O, S, E](focusName: String) {
+  type OS = teststate.OS[O, S]
+
   def obs  (implicit s: Show[O], e: Equal[O]) = apply((o, _) => o)
   def state(implicit s: Show[S], e: Equal[S]) = apply((_, s) => s)
 
@@ -190,14 +194,45 @@ class FocusDsl[O, S, E](focusName: String) {
   def apply[A: Show: Equal](f: (O, S) => A) =
     new A1((o, s) => Right(f(o, s)))
 
-  def coll[A](f: (O, S) => Traversable[A])(implicit sa: Show[A]) =
-    new {
-      // TODO Problem: BaseOps requires Show and Equal which doesn't make sense for the collection asserts
-      def assertDistinct(implicit ea: Equal[A], ev: CollAssert.FailedDistinct[A] => E) =
-        Check.Point.Single[O, S, E](
-          Function.const(focusName + " is distinct"),
-          (o, s) => CollAssert.distinct(f(o, s)).map(ev))
-    }
+  def collection[A](f: OS => TraversableOnce[A]) = new C1(f)
+
+  class C1[A](f: OS => TraversableOnce[A]) {
+    def assertDistinct(implicit sa: Show[A], ev: CollAssert.FailedDistinct[A] => E) =
+      Check.Point.Single[O, S, E](
+        Function.const(focusName + " are distinct."),
+        (o, s) => CollAssert.distinct(f(OS(o, s))).map(ev))
+
+    def assertExistence(containsWhat: String,
+                        expect: OS => Boolean, expected: OS => Set[A])
+                       (implicit sa: Show[A],
+                        ev1: CollAssert.FailedContainsAll[A] => E,
+                        ev2: CollAssert.FailedContainsNone[A] => E) =
+      Check.Point.Single[O, S, E](
+        _.fold(s"$focusName: Existence of $containsWhat."){os =>
+          val e = expect(OS(os._1, os._2))
+          val c = if (e) "contains" else "doesn't contain"
+          s"$focusName $c $containsWhat."
+        },
+        (o, s) => CollAssert.existence(expect(OS(o, s)), expected(OS(o, s)), f(OS(o, s)))
+          .map(_.fold(ev2, ev1)))
+
+    // TODO Look, all the same
+
+    def assertContainsAll[B <: A : Show](name: String => String, required: OS => Set[B])(implicit ev: CollAssert.FailedContainsAll[B] => E) =
+      Check.Point.Single[O, S, E](
+        Function.const(name(focusName)), // focusName + " contains all " + allWhat + "."),
+        (o, s) => CollAssert.containsAll(required(OS(o, s)), f(OS(o, s))).map(ev))
+
+    def assertContainsOnly[B >: A](name: String => String, whitelist: OS => Set[B])(implicit sa: Show[A], ev: CollAssert.FailedContainsOnly[A] => E) =
+      Check.Point.Single[O, S, E](
+        Function.const(name(focusName)),
+        (o, s) => CollAssert.containsOnly(whitelist(OS(o, s)), f(OS(o, s))).map(ev))
+
+    def assertContainsNone[B >: A](name: String => String, blacklist: OS => Set[B])(implicit sa: Show[A], ev: CollAssert.FailedContainsNone[A] => E) =
+      Check.Point.Single[O, S, E](
+        Function.const(name(focusName)),
+        (o, s) => CollAssert.containsNone(blacklist(OS(o, s)), f(OS(o, s))).map(ev))
+  }
 
 
 //  def collthing[A](f: (O, S) => Traversable[A])(implicit s: Show[A], e: Equal[A]) =
