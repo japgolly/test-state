@@ -9,19 +9,26 @@ object RunnerTest extends TestSuite {
 
   val options = Options.uncolored.alwaysShowChildren
 
-  val action = *.action("Press button.").act(_ => ())
-  val action2 = *.action("Pull lever.").act(_ => ())
-  val actionF = *.action("Press button!").actTry(_ => Some("BUTTON'S BROKEN"))
-  val actionG = (action >> action2).group("Groupiness.")
+  def mockAction(name: String) = *.action(name).act(_ => ())
+  def mockPoint (name: String) = *.point(name, _ => None)
+  def mockAround(name: String) = *.around(name, _ => ())((_, _) => None)
+
+
+  val action    = mockAction("Press button.")
+  val action2   = mockAction("Pull lever.")
+  val actionF   = *.action("Press button!").actTry(_ => Some("BUTTON'S BROKEN"))
+  val actionG   = (action >> action2).group("Groupiness.")
   val actionGF1 = (actionF >> action2).group("Groupiness.")
   val actionGF2 = (action >> actionF).group("Groupiness.")
-  val actionGS = actionG.when(_ => false)
-  val actionS = action.when(_ => false)
-  val action2S = action2.when(_ => false)
+  val actionGS  = actionG.when(_ => false)
+  val actionS   = action.when(_ => false)
+  val action2S  = action2.when(_ => false)
 
-  val checkPoint = *.point("Check stuff.", _ => None)
-  val checkPoint2 = *.point("Check more stuff.", _ => None)
-  val checkPointF = *.point("Check failure.", _ => Some("Shit broke!"))
+  val checkPoint   = mockPoint("Check stuff.")
+  val checkPoint2  = mockPoint("Check more stuff.")
+  val checkPointF  = *.point("Check failure.", _ => Some("Shit broke!"))
+  val checkAround  = mockAround("Button count increased.")
+  val checkAroundF = *.around("Button count increased.", _ => ())((_, _) => Some("2 != 3"))
 
   implicit def autoName(s: String): *.Name = _ => s
 
@@ -103,7 +110,16 @@ object RunnerTest extends TestSuite {
             |✓ All pass.
           """.stripMargin)
 
-        'around - t(action addCheck checkPoint.after addCheck checkPoint2.before)(
+        'around - t(action addCheck checkAround)(
+          """
+            |✓ Press button.
+            |  ✓ Action
+            |  ✓ Post-conditions
+            |    ✓ Button count increased.
+            |✓ All pass.
+          """.stripMargin)
+
+        'beforeAfter - t(action addCheck checkPoint.after addCheck checkPoint2.before)(
           """
             |✓ Press button.
             |  ✓ Pre-conditions
@@ -148,14 +164,22 @@ object RunnerTest extends TestSuite {
             |    ✘ Check failure. -- Shit broke!
           """.stripMargin)
 
-        'around1 - t(action addCheck checkPoint.after addCheck checkPointF.before)(
+        'around - t(action addCheck checkAroundF)(
+          """
+            |✘ Press button.
+            |  ✓ Action
+            |  ✘ Post-conditions
+            |    ✘ Button count increased. -- 2 != 3
+          """.stripMargin)
+
+        'beforeAfter1 - t(action addCheck checkPoint.after addCheck checkPointF.before)(
           """
             |✘ Press button.
             |  ✘ Pre-conditions
             |    ✘ Check failure. -- Shit broke!
           """.stripMargin)
 
-        'around2 - t(actionF addCheck checkPoint.after addCheck checkPoint2.before)(
+        'beforeAfter2 - t(actionF addCheck checkPoint.after addCheck checkPoint2.before)(
           """
             |✘ Press button!
             |  ✓ Pre-conditions
@@ -163,7 +187,7 @@ object RunnerTest extends TestSuite {
             |  ✘ Action -- BUTTON'S BROKEN
           """.stripMargin)
 
-        'around3 - t(action addCheck checkPointF.after addCheck checkPoint2.before)(
+        'beforeAfter3 - t(action addCheck checkPointF.after addCheck checkPoint2.before)(
           """
             |✘ Press button.
             |  ✓ Pre-conditions
@@ -206,7 +230,17 @@ object RunnerTest extends TestSuite {
             |✓ All pass.
           """.stripMargin)
 
-        'around - t(actionG addCheck checkPoint.before addCheck checkPoint2.after)(
+        'around - t(actionG addCheck checkAround)(
+          """
+            |✓ Groupiness.
+            |  ✓ Press button.
+            |  ✓ Pull lever.
+            |  ✓ Post-conditions
+            |    ✓ Button count increased.
+            |✓ All pass.
+          """.stripMargin)
+
+        'beforeAfter - t(actionG addCheck checkPoint.before addCheck checkPoint2.after)(
           """
             |✓ Groupiness.
             |  ✓ Pre-conditions
@@ -240,7 +274,13 @@ object RunnerTest extends TestSuite {
             |  ✘ Press button! -- BUTTON'S BROKEN
           """.stripMargin)
 
-        'around - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
+        'after - t(a addCheck checkAround)(
+          """
+            |✘ Groupiness.
+            |  ✘ Press button! -- BUTTON'S BROKEN
+          """.stripMargin)
+
+        'beforeAfter - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
           """
             |✘ Groupiness.
             |  ✓ Pre-conditions
@@ -273,7 +313,14 @@ object RunnerTest extends TestSuite {
             |  ✘ Press button! -- BUTTON'S BROKEN
           """.stripMargin)
 
-        'around - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
+        'around - t(a addCheck checkAround)(
+          """
+            |✘ Groupiness.
+            |  ✓ Press button.
+            |  ✘ Press button! -- BUTTON'S BROKEN
+          """.stripMargin)
+
+        'beforeAfter - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
           """
             |✘ Groupiness.
             |  ✓ Pre-conditions
@@ -322,14 +369,90 @@ object RunnerTest extends TestSuite {
         """.stripMargin)
     }
 
-    // action
-    //   - pre [1,n]
-    //   - post [1,n]
-    // invariants
-    //   - point [1,n]
+    'bulk {
+      def set(n: String) =
+        mockAction(n)
+          .addCheck(mockPoint ("Pre "    + n + 1).before)
+          .addCheck(mockPoint ("Pre "    + n + 2).before)
+          .addCheck(mockPoint ("Post "   + n + 1).after)
+          .addCheck(mockPoint ("Post "   + n + 2).after)
+          .addCheck(mockAround("Around " + n + 1))
+          .addCheck(mockAround("Around " + n + 2))
+      val i = mockPoint("Invariant 1") & mockPoint("Invariant 2")
+      val a =
+        set("A") >>
+        (set("B") >> set("C").when(_ => false) >> set("D")).group("B ~ D") >>
+        (set("E") >> set("F")).group("E & F").when(_ => false) >>
+        set("G")
+
+      test(a, i)(
+        """
+          |✓ Initial state.
+          |  ✓ Invariant 1
+          |  ✓ Invariant 2
+          |✓ A
+          |  ✓ Pre-conditions
+          |    ✓ Pre A1
+          |    ✓ Pre A2
+          |  ✓ Action
+          |  ✓ Post-conditions
+          |    ✓ Around A1
+          |    ✓ Around A2
+          |    ✓ Post A1
+          |    ✓ Post A2
+          |  ✓ Invariants
+          |    ✓ Invariant 1
+          |    ✓ Invariant 2
+          |✓ B ~ D
+          |  ✓ B
+          |    ✓ Pre-conditions
+          |      ✓ Pre B1
+          |      ✓ Pre B2
+          |    ✓ Action
+          |    ✓ Post-conditions
+          |      ✓ Around B1
+          |      ✓ Around B2
+          |      ✓ Post B1
+          |      ✓ Post B2
+          |    ✓ Invariants
+          |      ✓ Invariant 1
+          |      ✓ Invariant 2
+          |  - C
+          |  ✓ D
+          |    ✓ Pre-conditions
+          |      ✓ Pre D1
+          |      ✓ Pre D2
+          |    ✓ Action
+          |    ✓ Post-conditions
+          |      ✓ Around D1
+          |      ✓ Around D2
+          |      ✓ Post D1
+          |      ✓ Post D2
+          |    ✓ Invariants
+          |      ✓ Invariant 1
+          |      ✓ Invariant 2
+          |  ✓ Invariants
+          |    ✓ Invariant 1
+          |    ✓ Invariant 2
+          |- E & F
+          |✓ G
+          |  ✓ Pre-conditions
+          |    ✓ Pre G1
+          |    ✓ Pre G2
+          |  ✓ Action
+          |  ✓ Post-conditions
+          |    ✓ Around G1
+          |    ✓ Around G2
+          |    ✓ Post G1
+          |    ✓ Post G2
+          |  ✓ Invariants
+          |    ✓ Invariant 1
+          |    ✓ Invariant 2
+          |✓ All pass.
+        """.stripMargin)
+    }
 
     // action combinators
-    // skipping
 
   }
 }
