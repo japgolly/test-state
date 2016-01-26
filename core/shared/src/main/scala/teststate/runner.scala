@@ -4,16 +4,24 @@ import scala.annotation.tailrec
 
 sealed trait Result[+Err] {
   def failure: Option[Err]
+  def +[e >: Err](r: Result[e]): Result[e]
 }
 object Result {
+  def empty[E]: Result[E] = Skip
   case object Pass extends Result[Nothing] {
     override def failure = None
+    override def +[e](r: Result[e]): Result[e] = r match {
+      case Pass | Skip => Pass
+      case Fail(_)     => r
+    }
   }
   case object Skip extends Result[Nothing] {
     override def failure = None
+    override def +[e](r: Result[e]): Result[e] = r
   }
   case class Fail[+Err](error: Err) extends Result[Err] {
     override def failure = Some(error)
+    override def +[e >: Err](r: Result[e]): Result[e] = this
   }
   def passOrFail[E](o: Option[E]): Result[E] =
     o.fold[Result[E]](Pass)(Fail(_))
@@ -67,13 +75,16 @@ import test.observe
 
       def :+(s: History.Step[Err]) = copy(history = history :+ s)
       def ++(s: History.Steps[Err]) = copy(history = history ++ s)
+      def ++(s: History[Err]) = copy(history = history ++ s.steps)
     }
 
     val ActionName = "Action"
+    val PreName = "Pre-conditions"
+    val PostName = "Post-conditions"
 
-    def checkAround[A](name: String, checks: Check.Around.Composite[Obs, State, Err], omg: OMG)
+    def checkAround[A](name: String, checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
-                      (run: A => (String => History.Step[Err], ROS)): OMG =
+                      (run: A => (String => History[Err], ROS)): OMG =
 
       prepare(omg.ros) match {
         case Some(a) =>
@@ -82,12 +93,11 @@ import test.observe
           val pre = {
             val b = History.newBuilder[Err]
             b.addEach(checks.befores)(_.check name omg.ros.sos, _.check.test(omg.ros.os))
-            b.history()
+            b.group(PreName)
           }
 
           if (pre.failed) {
-            val children = pre :+ History.Step(ActionName, Result.Skip)
-            omg :+ History.parent(name, children)
+            omg :+ History.parent(name, pre)
 
           } else {
 
@@ -96,33 +106,53 @@ import test.observe
 
             // Perform action
             val (mkStep, ros2) = run(a)
-            val step = mkStep(if (pre.isEmpty) name else ActionName)
+            val step = mkStep(ActionName)
             if (step.failed) {
 
-              if (pre.isEmpty)
-                omg :+ step
+              if (collapse && pre.isEmpty && step.steps.length == 1)
+                omg :+ step.steps(0).copy(name = name)
               else
-                omg :+ History.parent(name, pre :+ step)
+                omg :+ History.parent(name, pre ++ step)
 
             } else {
 
               // Perform post
+              /*
               val post = {
                 val b = History.newBuilder[Err]
                 b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before)) // Perform around-post
                 b.addEach(checks.afters)(_.check name omg.ros.sos, _.check.test(ros2.os)) // Perform post
                 b.addEach(invariantsPoints)(_ name omg.ros.sos, _.test(ros2.os))// Perform invariants
-                b.history()
+                b.group(PostName)
               }
+              */
+              val post1 = {
+                val b = History.newBuilder[Err]
+                b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before)) // Perform around-post
+                b.addEach(checks.afters)(_.check name omg.ros.sos, _.check.test(ros2.os)) // Perform post
+                b.group(PostName)
+              }
+              val invs = {
+                val b = History.newBuilder[Err]
+                b.addEach(invariantsPoints)(_ name omg.ros.sos, _.test(ros2.os))// Perform invariants
+                b.group("Invariants")
+              }
+              val post = post1 ++ invs
 
+              if (collapse && pre.isEmpty && post.isEmpty && step.steps.length == 1)
+                omg :+ step.steps(0).copy(name = name)
+              else
+                omg :+ History.parent(name, pre ++ step ++ post)
+              /*
               if (pre.nonEmpty)
-                omg :+ History.parent(name, (pre :+ step) ++ post.steps) // TODO inefficient
+                omg :+ History.parent(name, pre ++ step ++ post) // TODO inefficient?
               else if (post.isEmpty)
-                omg :+ step
+                omg ++ step
               else //if (post.failed)
-                omg :+ History.Step(name, post.result, History(step.copy(name = ActionName)) ++ post.steps) // TODO need to handle children !!!!!!!!!!!!! Also inefficient
+                omg :+ History.Step(name, post.result, History(step.copy(name = ActionName)) ++ post) // TODO need to handle children !!!!!!!!!!!!! Also inefficient
 //              else
 //                omg :+ History.Step(name, post.result, post) // TODO need to handle children !!!!!!!!!!!!!
+//                */
             }
           }
 
@@ -146,15 +176,15 @@ import test.observe
           case Action.Single(nameFn, run, check) =>
             val name = nameFn(ros.sos)
             val omg2 =
-              checkAround(name, check & invariantsAround, omg)(run)(act =>
+              checkAround(name, check & invariantsAround, true, omg)(run)(act =>
                 act() match {
                   case Right(f) =>
                     val obs2 = observe(ref)
                     val state2 = f(obs2)
                     val ros2 = ROS(ref, obs2, state2)
-                    (History.Step(_, Result.Pass), ros2)
+                    (n => History(History.Step(n, Result.Pass)), ros2)
                   case Left(e) =>
-                    (History.Step(_, Result.Fail(e)), ros)
+                    (n => History(History.Step(n, Result.Fail(e))), ros)
                 }
               )
             if (omg2.failed)
@@ -166,9 +196,9 @@ import test.observe
           case Action.Group(nameFn, actionFn, check) =>
             val name = nameFn(ros.sos)
             val omg2 =
-              checkAround(name, check & invariantsAround, omg)(actionFn)(children => {
+              checkAround(name, check & invariantsAround, false, omg)(actionFn)(children => {
                 val r = start(children, ros)
-                (History.parent(_, r.history), r.ros)
+                (_ => r.history, r.ros)
               })
             if (omg2.failed)
               omg2

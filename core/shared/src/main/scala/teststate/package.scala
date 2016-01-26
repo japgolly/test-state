@@ -108,14 +108,12 @@ package object teststate {
     @inline def nonEmpty = !isEmpty
 
     def :+[e >: E](s: History.Step[e]) = this ++ vector1(s)
-    def ++[e >: E](s: History.Steps[e]) = {
-      val result2 = result match {
-        case Result.Fail(_) => result
-        case Result.Pass => s.find(_.failed).fold[Result[e]](Result.Pass)(_.result)
-        case Result.Skip => History.determineResult(s)
-      }
+    def ++[e >: E](s: History.Steps[e]): History[e] = {
+      val result2 = s.foldLeft[Result[e]](result)(_ + _.result)
       new History[e](steps ++ s, result2)
     }
+    def ++[e >: E](s: History[e]): History[e] =
+      new History[e](steps ++ s.steps, result + s.result)
 
     //def +:[e >: E](s: History.Step[e]) = new History[e](s +: steps, result)
     //def ++[e >: E](s: History.Steps[e]) = new History[e](steps ++ s, result)
@@ -140,11 +138,14 @@ package object teststate {
     def parent[E](name: String, children: History[E]): Step[E] =
       Step(name, children.result, children)
 
-    def determineResult[E](steps: History.Steps[E]): Result[E] = {
-      val b = newBuilder[E]
-      steps foreach (b observeResult _)
-      b.result()
-    }
+    def maybeParent[E](name: String, children: History[E]): History[E] =
+      if (children.isEmpty)
+        History.empty
+      else
+        History(parent(name, children))
+
+    def determineResult[E](steps: History.Steps[E]): Result[E] =
+      steps.foldLeft(Result.empty[E])(_ + _.result)
 
     def apply[E](step: Step[E]): History[E] =
       new History(vector1(step), step.result)
@@ -158,18 +159,17 @@ package object teststate {
     def newBuilder[E] = new Builder[E]
     final class Builder[E] {
       private val steps = Vector.newBuilder[Step[E]]
-      private var skipSeen = false
-      private var firstError: Option[Result.Fail[E]] = None
+      private var r = Result.empty[E]
 
       def +=(s: Step[E]): Unit = {
         steps += s
-        observeResult(s)
+        r += s.result
       }
 
       def ++=(h: History[E]): Unit =
         if (h.nonEmpty) {
           steps ++= h.steps
-          observeResult(h.result)
+          r += h.result
         }
 
       def addEach[A](as: Vector[A])(name: A => String, test: A => Option[E]): Unit =
@@ -179,21 +179,14 @@ package object teststate {
           this += History.Step(n, r)
         }
 
-      @inline def observeResult(s: Step[E]): Unit =
-        observeResult(s.result)
-
-      def observeResult(r: Result[E]): Unit =
-        r match {
-          case Result.Pass => ()
-          case Result.Skip => skipSeen = true
-          case e: Result.Fail[E] => if (firstError.isEmpty) firstError = Some(e)
-        }
-
       def result(): Result[E] =
-        firstError.getOrElse(if (skipSeen) Result.Skip else Result.Pass)
+        r
 
       def history(): History[E] =
         History(steps.result(), result())
+
+      def group(name: String): History[E] =
+        History.maybeParent(name, history())
     }
   }
 

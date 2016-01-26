@@ -85,7 +85,8 @@ object RunnerTest extends TestSuite {
         'before - t(action addCheck checkPoint.before)(
           """
             |✓ Press button.
-            |  ✓ Check stuff.
+            |  ✓ Pre-conditions
+            |    ✓ Check stuff.
             |  ✓ Action
             |✓ All pass.
           """.stripMargin)
@@ -94,16 +95,19 @@ object RunnerTest extends TestSuite {
           """
             |✓ Press button.
             |  ✓ Action
-            |  ✓ Check stuff.
+            |  ✓ Post-conditions
+            |    ✓ Check stuff.
             |✓ All pass.
           """.stripMargin)
 
         'around - t(action addCheck checkPoint.after addCheck checkPoint2.before)(
           """
             |✓ Press button.
-            |  ✓ Check more stuff.
+            |  ✓ Pre-conditions
+            |    ✓ Check more stuff.
             |  ✓ Action
-            |  ✓ Check stuff.
+            |  ✓ Post-conditions
+            |    ✓ Check stuff.
             |✓ All pass.
           """.stripMargin)
       }
@@ -116,15 +120,16 @@ object RunnerTest extends TestSuite {
         'beforeA - t(actionF addCheck checkPoint.before)(
           """
             |✘ Press button!
-            |  ✓ Check stuff.
+            |  ✓ Pre-conditions
+            |    ✓ Check stuff.
             |  ✘ Action -- BUTTON'S BROKEN
           """.stripMargin)
 
         'beforeC - t(action addCheck checkPointF.before)(
           """
             |✘ Press button.
-            |  ✘ Check failure. -- Shit broke!
-            |  - Action
+            |  ✘ Pre-conditions
+            |    ✘ Check failure. -- Shit broke!
           """.stripMargin)
 
         'afterA - t(actionF addCheck checkPoint.after)(
@@ -136,29 +141,33 @@ object RunnerTest extends TestSuite {
           """
             |✘ Press button.
             |  ✓ Action
-            |  ✘ Check failure. -- Shit broke!
+            |  ✘ Post-conditions
+            |    ✘ Check failure. -- Shit broke!
           """.stripMargin)
 
         'around1 - t(action addCheck checkPoint.after addCheck checkPointF.before)(
           """
             |✘ Press button.
-            |  ✘ Check failure. -- Shit broke!
-            |  - Action
+            |  ✘ Pre-conditions
+            |    ✘ Check failure. -- Shit broke!
           """.stripMargin)
 
         'around2 - t(actionF addCheck checkPoint.after addCheck checkPoint2.before)(
           """
             |✘ Press button!
-            |  ✓ Check more stuff.
+            |  ✓ Pre-conditions
+            |    ✓ Check more stuff.
             |  ✘ Action -- BUTTON'S BROKEN
           """.stripMargin)
 
         'around3 - t(action addCheck checkPointF.after addCheck checkPoint2.before)(
           """
             |✘ Press button.
-            |  ✓ Check more stuff.
+            |  ✓ Pre-conditions
+            |    ✓ Check more stuff.
             |  ✓ Action
-            |  ✘ Check failure. -- Shit broke!
+            |  ✘ Post-conditions
+            |    ✘ Check failure. -- Shit broke!
           """.stripMargin)
       }
     }
@@ -177,31 +186,32 @@ object RunnerTest extends TestSuite {
         'before - t(actionG addCheck checkPoint.before)(
           """
             |✓ Groupiness.
-            |  ✓ Check stuff.
-            |  ✓ Action
-            |    ✓ Press button.
-            |    ✓ Pull lever.
+            |  ✓ Pre-conditions
+            |    ✓ Check stuff.
+            |  ✓ Press button.
+            |  ✓ Pull lever.
             |✓ All pass.
           """.stripMargin)
 
         'after - t(actionG addCheck checkPoint.after)(
           """
             |✓ Groupiness.
-            |  ✓ Action
-            |    ✓ Press button.
-            |    ✓ Pull lever.
-            |  ✓ Check stuff.
+            |  ✓ Press button.
+            |  ✓ Pull lever.
+            |  ✓ Post-conditions
+            |    ✓ Check stuff.
             |✓ All pass.
           """.stripMargin)
 
         'around - t(actionG addCheck checkPoint.before addCheck checkPoint2.after)(
           """
             |✓ Groupiness.
-            |  ✓ Check stuff.
-            |  ✓ Action
-            |    ✓ Press button.
-            |    ✓ Pull lever.
-            |  ✓ Check more stuff.
+            |  ✓ Pre-conditions
+            |    ✓ Check stuff.
+            |  ✓ Press button.
+            |  ✓ Pull lever.
+            |  ✓ Post-conditions
+            |    ✓ Check more stuff.
             |✓ All pass.
           """.stripMargin)
       }
@@ -216,9 +226,9 @@ object RunnerTest extends TestSuite {
         'before - t(a addCheck checkPoint.before)(
           """
             |✘ Groupiness.
-            |  ✓ Check stuff.
-            |  ✘ Action
-            |    ✘ Press button! -- BUTTON'S BROKEN
+            |  ✓ Pre-conditions
+            |    ✓ Check stuff.
+            |  ✘ Press button! -- BUTTON'S BROKEN
           """.stripMargin)
 
         'after - t(a addCheck checkPoint.after)(
@@ -230,9 +240,9 @@ object RunnerTest extends TestSuite {
         'around - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
           """
             |✘ Groupiness.
-            |  ✓ Check stuff.
-            |  ✘ Action
-            |    ✘ Press button! -- BUTTON'S BROKEN
+            |  ✓ Pre-conditions
+            |    ✓ Check stuff.
+            |  ✘ Press button! -- BUTTON'S BROKEN
           """.stripMargin)
       }
       'fail2 {
@@ -247,10 +257,10 @@ object RunnerTest extends TestSuite {
         'before - t(a addCheck checkPoint.before)(
           """
             |✘ Groupiness.
-            |  ✓ Check stuff.
-            |  ✘ Action
-            |    ✓ Press button.
-            |    ✘ Press button! -- BUTTON'S BROKEN
+            |  ✓ Pre-conditions
+            |    ✓ Check stuff.
+            |  ✓ Press button.
+            |  ✘ Press button! -- BUTTON'S BROKEN
           """.stripMargin)
 
         'after - t(a addCheck checkPoint.after)(
@@ -263,10 +273,10 @@ object RunnerTest extends TestSuite {
         'around - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
           """
             |✘ Groupiness.
-            |  ✓ Check stuff.
-            |  ✘ Action
-            |    ✓ Press button.
-            |    ✘ Press button! -- BUTTON'S BROKEN
+            |  ✓ Pre-conditions
+            |    ✓ Check stuff.
+            |  ✓ Press button.
+            |  ✘ Press button! -- BUTTON'S BROKEN
           """.stripMargin)
 
       }
