@@ -81,6 +81,7 @@ import test.observe
     val ActionName = "Action"
     val PreName = "Pre-conditions"
     val PostName = "Post-conditions"
+    val InvariantsName = "Invariants"
 
     def checkAround[A](name: String, checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
@@ -107,52 +108,38 @@ import test.observe
             // Perform action
             val (mkStep, ros2) = run(a)
             val step = mkStep(ActionName)
+            val collapseIfNoPost = collapse && pre.isEmpty && step.steps.length == 1
+            def collapsed = step.steps(0).copy(name = name)
             if (step.failed) {
 
-              if (collapse && pre.isEmpty && step.steps.length == 1)
-                omg :+ step.steps(0).copy(name = name)
+              if (collapseIfNoPost)
+                omg :+ collapsed
               else
                 omg :+ History.parent(name, pre ++ step)
 
             } else {
 
-              // Perform post
-              /*
-              val post = {
-                val b = History.newBuilder[Err]
-                b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before)) // Perform around-post
-                b.addEach(checks.afters)(_.check name omg.ros.sos, _.check.test(ros2.os)) // Perform post
-                b.addEach(invariantsPoints)(_ name omg.ros.sos, _.test(ros2.os))// Perform invariants
-                b.group(PostName)
-              }
-              */
+              //
               val post1 = {
                 val b = History.newBuilder[Err]
                 b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before)) // Perform around-post
                 b.addEach(checks.afters)(_.check name omg.ros.sos, _.check.test(ros2.os)) // Perform post
                 b.group(PostName)
               }
+
+              // Perform invariants
               val invs = {
                 val b = History.newBuilder[Err]
-                b.addEach(invariantsPoints)(_ name omg.ros.sos, _.test(ros2.os))// Perform invariants
-                b.group("Invariants")
+                b.addEach(invariantsPoints)(_ name omg.ros.sos, _.test(ros2.os))
+                b.group(InvariantsName)
               }
+
               val post = post1 ++ invs
 
-              if (collapse && pre.isEmpty && post.isEmpty && step.steps.length == 1)
-                omg :+ step.steps(0).copy(name = name)
+              if (collapseIfNoPost && post.isEmpty)
+                omg :+ collapsed
               else
                 omg :+ History.parent(name, pre ++ step ++ post)
-              /*
-              if (pre.nonEmpty)
-                omg :+ History.parent(name, pre ++ step ++ post) // TODO inefficient?
-              else if (post.isEmpty)
-                omg ++ step
-              else //if (post.failed)
-                omg :+ History.Step(name, post.result, History(step.copy(name = ActionName)) ++ post) // TODO need to handle children !!!!!!!!!!!!! Also inefficient
-//              else
-//                omg :+ History.Step(name, post.result, post) // TODO need to handle children !!!!!!!!!!!!!
-//                */
             }
           }
 
@@ -226,9 +213,15 @@ import test.observe
           History(History.parent("Initial state.", History(children)))
         }
 
-      firstSteps
-        .unlessFailed(start(test.action, ros, _).history
-          .unlessFailed(_ :+ History.Step("All pass.", Result.Pass)))
+      val h = firstSteps.unlessFailed(start(test.action, ros, _).history)
+      if (h.isEmpty)
+        History(History.Step("Nothing to do.", Result.Skip))
+      else
+        h.result match {
+          case Result.Pass    => h :+ History.Step("All pass.", Result.Pass)
+          case Result.Skip    => h :+ History.Step("All skipped.", Result.Skip)
+          case Result.Fail(_) => h
+        }
     }
     finalResult
   }

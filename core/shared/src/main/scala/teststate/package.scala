@@ -102,6 +102,8 @@ package object teststate {
   implicit def focusDsli2ToChec1[O, S, E, A](b: FocusDsl[O, S, E]#C0[A]) = b.point
 
   final class History[+E](val steps: History.Steps[E], val result: Result[E]) {
+    override def toString = s"History($steps, $result)"
+
     def failure = result.failure
     def failed = failure.isDefined
     def isEmpty = steps.isEmpty
@@ -126,7 +128,7 @@ package object teststate {
   }
 
   object History {
-    val empty = History(Vector.empty, Result.Pass)
+    val empty = History(Vector.empty, Result.empty)
 
     type Steps[+Err] = Vector[Step[Err]]
 

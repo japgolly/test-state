@@ -15,6 +15,9 @@ object RunnerTest extends TestSuite {
   val actionG = (action >> action2).group("Groupiness.")
   val actionGF1 = (actionF >> action2).group("Groupiness.")
   val actionGF2 = (action >> actionF).group("Groupiness.")
+  val actionGS = actionG.when(_ => false)
+  val actionS = action.when(_ => false)
+  val action2S = action2.when(_ => false)
 
   val checkPoint = *.point("Check stuff.", _ => None)
   val checkPoint2 = *.point("Check more stuff.", _ => None)
@@ -30,7 +33,7 @@ object RunnerTest extends TestSuite {
 
   override def tests = TestSuite {
 
-    'empty - test(Action.empty, Check.empty)("✓ All pass.")
+    'empty - test(Action.empty, Check.empty)("- Nothing to do.")
 
     'invariants {
       def t(i: *.Check)(expect: String): Unit = test(Action.empty, i)(expect)
@@ -278,8 +281,45 @@ object RunnerTest extends TestSuite {
             |  ✓ Press button.
             |  ✘ Press button! -- BUTTON'S BROKEN
           """.stripMargin)
-
       }
+    }
+
+    'skip {
+      'simple - test(actionS, Check.empty)(
+        """
+          |- Press button.
+          |- All skipped.
+        """.stripMargin)
+
+      'group - test(actionGS, Check.empty)(
+        """
+          |- Groupiness.
+          |- All skipped.
+        """.stripMargin)
+
+      'group1 - test((actionS >> action2).group("Groupiness."), Check.empty)(
+        """
+          |✓ Groupiness.
+          |  - Press button.
+          |  ✓ Pull lever.
+          |✓ All pass.
+        """.stripMargin)
+
+      'group2 - test((action >> action2S).group("Groupiness."), Check.empty)(
+        """
+          |✓ Groupiness.
+          |  ✓ Press button.
+          |  - Pull lever.
+          |✓ All pass.
+        """.stripMargin)
+
+      'group12 - test((actionS >> action2S).group("Groupiness."), Check.empty)(
+        """
+          |- Groupiness.
+          |  - Press button.
+          |  - Pull lever.
+          |- All skipped.
+        """.stripMargin)
     }
 
     // action
@@ -289,7 +329,6 @@ object RunnerTest extends TestSuite {
     //   - point [1,n]
 
     // action combinators
-    // action groups
     // skipping
 
   }
