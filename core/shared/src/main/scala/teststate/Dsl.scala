@@ -1,5 +1,8 @@
 package teststate
 
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
+
 object Dsl {
   @inline def apply[R, O, S, E] = new Dsl[R, O, S, E]
 }
@@ -8,7 +11,7 @@ class Dsl[R, O, S, E] {
   type OS = teststate.OS[O, S]
   type ROS = teststate.ROS[R, O, S]
   type Name = Option[OS] => String
-  private type ActionRun = ROS => Option[() => Either[E, O => S]]
+  private type ActionRun = ROS => Option[() => Future[Either[E, O => S]]]
 
   type Action = teststate.Action[R, O, S, E]
   type Check = teststate.Check[O, S, E]
@@ -20,27 +23,25 @@ class Dsl[R, O, S, E] {
 
   class A1(name: Name) {
 
-    def act(f: ROS => Unit) =
-      actTry(f.andThen(_ => None))
+    def act(f: ROS => Future[Any]) =
+      actTry(f.andThen(_.map(_ => None)))
 
-    def actTry(f: ROS => Option[E]) =
-      new A2(name, Some(f))
+    def actTry(f: ROS => Future[Option[E]]) =
+      new A2(name, f)
   }
 
-  class A2(name: Name, act: Option[ROS => Option[E]]) {
+  class A2(name: Name, act: ROS => Future[Option[E]]) {
     def updateState(nextState: S => S) =
       updateStateO(s => _ => nextState(s))
 
     def updateStateO(nextState: S => O => S): Action.Single[R, O, S, E] =
       build(i => Some(() =>
-        act.flatMap(_ apply i)
-          .leftOr(nextState(i.state))
+        act(i).map(_.leftOr(nextState(i.state)))
       ))
 
     def updateState2(f: S => Either[E, S]) =
       build(i => Some(() =>
-        act.flatMap(_ apply i)
-          .leftOrF(f(i.state).map(Function.const))
+        act(i).map(_.leftOrF(f(i.state).map(Function.const)))
       ))
 
     def noStateUpdate: Action.Single[R, O, S, E] =
@@ -313,34 +314,5 @@ class FocusDsl[O, S, E](focusName: String) {
     extends BaseOps[A, I2[A], I2[A]] {
     protected def addA(c: Check.Around[O, S, E]) = new I2(check & c, extract)
     protected def addP(c: Check.Point [O, S, E]) = new I2(check & c, extract)
-  }
-}
-
-
-// =====================================================================================================================
-// =====================================================================================================================
-// =====================================================================================================================
-
-object DslNoS {
-  @inline def apply[R, O, E] = new DslNoS[R, O, E]
-}
-
-class DslNoS[R, O, E] {
-  private type S = Unit
-  private type Name = Option[OS[O, S]] => String
-  private type ROS = teststate.ROS[R, O, S]
-  private type ActionRun = ROS => Option[() => Either[E, O => S]]
-
-  // ===================================================================================================================
-
-  def action(name: String) = new A1(_ => name)
-
-  class A1(name: Name) {
-    def act(f: ROS => Unit) =
-      actTry(f.andThen(_ => None))
-
-    def actTry(f: ROS => Option[E]) =
-      Action.Single[R, O, Unit, E](name, i => Some(() => f(i).leftOr(_ => ())), Check.Around.empty)
-
   }
 }

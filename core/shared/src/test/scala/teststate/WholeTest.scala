@@ -1,6 +1,8 @@
 package teststate
 
 import utest._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object WholeTest extends TestSuite {
 
@@ -20,7 +22,7 @@ object WholeTest extends TestSuite {
 
   val * = Dsl[Example, Obs, Int, String]
 
-  val inc = *.action("Count increases by 1").act(_.ref.inc()).updateState(_ + 1)
+  val inc = *.action("Count increases by 1").act(i => Future(i.ref.inc())).updateState(_ + 1)
     .addCheck(*.focus("Number of changes").value(_.obs.changes).assertChange("+1", _ + 1))
 
   val count = *.bifocus("Count", _.count, identity)
@@ -41,14 +43,15 @@ object WholeTest extends TestSuite {
     println()
     def go(init: Int) = {
       val eg = new Example(init)
-      val h = test.run(init, eg)
-      println(h)
-      println(eg.count())
-      println()
-      println(formatHistory(h, Options.colored.alwaysShowChildren))
-      println()
+      test.run(init, eg).map { h =>
+        println(h)
+        println(eg.count())
+        println()
+        println(formatHistory(h, Options.colored.alwaysShowChildren))
+        println()
+      }
     }
-    go(2)
-    go(4)
+    "2" - go(2)
+    "4" - go(4)
   }
 }

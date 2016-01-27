@@ -2,6 +2,8 @@ package teststate
 
 import Action.{Composite, NonComposite}
 
+import scala.concurrent.Future
+
 sealed trait Action[Ref, O, S, +Err] {
   type This[+E] <: Action[Ref, O, S, E]
 
@@ -84,7 +86,7 @@ object Action {
   }
 
   case class Single[Ref, O, S, +Err](name: Option[OS[O, S]] => String,
-                                     run: ROS[Ref, O, S] => Option[() => Either[Err, O => S]],
+                                     run: ROS[Ref, O, S] => Option[() => Future[Either[Err, O => S]]],
                                      check: Check.Around[O, S, Err]) extends NonComposite[Ref, O, S, Err] {
 
     override type This[+E] = Single[Ref, O, S, E]
