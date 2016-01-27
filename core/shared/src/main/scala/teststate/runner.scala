@@ -1,8 +1,6 @@
 package teststate
 
 import scala.annotation.tailrec
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 
 sealed trait Result[+Err] {
   def failure: Option[Err]
@@ -29,16 +27,17 @@ object Result {
     o.fold[Result[E]](Pass)(Fail(_))
 }
 
-case class Test0[Ref, Obs, State, +Err](action: Action[Ref, Obs, State, Err],
+case class Test0[F[_]: ExecutionModel, Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
                                         invariants: Check[Obs, State, Err] = Check.empty) {
   def observe(f: Ref => Obs) =
     Test(action, f, invariants)
 }
 
-case class Test[Ref, Obs, State, +Err](action: Action[Ref, Obs, State, Err],
+case class Test[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
                                        observe: Ref => Obs,
-                                       invariants: Check[Obs, State, Err] = Check.empty) {
-  def run(initialState: State, ref: Ref): Future[History[Err]] =
+                                       invariants: Check[Obs, State, Err] = Check.empty)
+                                      (implicit val executionModel: ExecutionModel[F]){
+  def run(initialState: State, ref: Ref): F[History[Err]] =
     Runner.run(this)(initialState, ref)
 
   // TODO add invariants
@@ -58,13 +57,14 @@ object Runner {
       override val before = _before
     }
 
-  def run[Ref, Obs, State, Err](test: Test[Ref, Obs, State, Err])
+  def run[F[_], Ref, Obs, State, Err](test: Test[F, Ref, Obs, State, Err])
 //                               (observe: Ref => Obs)
-                               (initialState: State, ref: Ref): Future[History[Err]] = {
+                               (initialState: State, ref: Ref): F[History[Err]] = {
+import test.{executionModel => EM}
 import test.observe
     // TODO Catch all exceptions
 
-    type A = Action[Ref, Obs, State, Err]
+    type A = Action[F, Ref, Obs, State, Err]
     type HS = History.Steps[Err]
     type ROS = teststate.ROS[Ref, Obs, State]
 
@@ -87,7 +87,7 @@ import test.observe
 
     def checkAround[A](name: String, checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
-                      (run: A => Future[(String => History[Err], ROS)]): Future[OMG] =
+                      (run: A => F[(String => History[Err], ROS)]): F[OMG] =
 
       prepare(omg.ros) match {
         case Some(a) =>
@@ -100,7 +100,7 @@ import test.observe
           }
 
           if (pre.failed) {
-            Future.successful(omg :+ History.parent(name, pre))
+            EM.pure(omg :+ History.parent(name, pre))
 
           } else {
 
@@ -108,8 +108,8 @@ import test.observe
             val hcs = halfChecks(checks)(omg.ros.os)
 
             // Perform action
-            val runFuture = run(a)
-            runFuture.map { case (mkStep, ros2) =>
+            val runF = run(a)
+            EM.map(runF) { case (mkStep, ros2) =>
               val step = mkStep(ActionName)
               val collapseIfNoPost = collapse && pre.isEmpty && step.steps.length == 1
               def collapsed = step.steps(0).copy(name = name)
@@ -148,16 +148,16 @@ import test.observe
           }
 
           case None =>
-            Future.successful(omg :+ History.Step(name, Result.Skip))
+            EM.pure(omg :+ History.Step(name, Result.Skip))
       }
 
     def start(a: A, ros: ROS, history: History[Err] = History.empty) =
       go(vector1(a), OMG(ros, history))
 
 //    @tailrec
-    def go(queue: Vector[A], omg: OMG): Future[OMG] =
+    def go(queue: Vector[A], omg: OMG): F[OMG] =
       if (queue.isEmpty)
-        Future.successful(omg)
+        EM.pure(omg)
       else {
         import omg.ros
 
@@ -168,7 +168,7 @@ import test.observe
             val name = nameFn(ros.sos)
             val omg2F =
               checkAround(name, check & invariantsAround, true, omg)(run)(act =>
-                act().map {
+                EM.map(act()) {
                   case Right(f) =>
                     val obs2 = observe(ref)
                     val state2 = f(obs2)
@@ -178,9 +178,9 @@ import test.observe
                     ((n: String) => History(History.Step(n, Result.Fail(e))), ros)
                 }
               )
-            omg2F.flatMap(omg2 =>
+            EM.flatMap(omg2F)(omg2 =>
               if (omg2.failed)
-                Future.successful(omg2)
+                EM.pure(omg2)
               else
                 go(queue.tail, omg2)
             )
@@ -190,12 +190,12 @@ import test.observe
             val name = nameFn(ros.sos)
             val omg2F =
               checkAround(name, check & invariantsAround, false, omg)(actionFn)(children => {
-                start(children, ros).map(r =>
+                EM.map(start(children, ros))(r =>
                   ((_: String) => r.history, r.ros))
               })
-            omg2F.flatMap(omg2 =>
+            EM.flatMap(omg2F)(omg2 =>
               if (omg2.failed)
-                Future.successful(omg2)
+                EM.pure(omg2)
               else
                 go(queue.tail, omg2)
             )
@@ -206,7 +206,7 @@ import test.observe
         }
       }
 
-    val finalResult: Future[History[Err]] = {
+    val finalResult: F[History[Err]] = {
       val ros = ROS(ref, observe(ref), initialState)
 
       val firstSteps: History[Err] =
@@ -222,11 +222,11 @@ import test.observe
         }
 
       val fh = if (firstSteps.failed)
-        Future.successful(firstSteps)
+        EM.pure(firstSteps)
       else
-        start(test.action, ros, firstSteps).map(_.history)
+        EM.map(start(test.action, ros, firstSteps))(_.history)
 
-      fh.map(h =>
+      EM.map(fh)(h =>
         if (h.isEmpty)
           History(History.Step("Nothing to do.", Result.Skip))
         else

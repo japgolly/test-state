@@ -1,19 +1,21 @@
 package teststate
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
-
 object Dsl {
-  @inline def apply[R, O, S, E] = new Dsl[R, O, S, E]
+  def apply[F[_]: ExecutionModel, R, O, S, E] = new Dsl[F, R, O, S, E]
+
+  def sync[R, O, S, E] = apply[Id, R, O, S, E]
+
+  import scala.concurrent._
+  def future[R, O, S, E](implicit ec: ExecutionContext) = apply[Future, R, O, S, E]
 }
 
-class Dsl[R, O, S, E] {
+class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) {
   type OS = teststate.OS[O, S]
   type ROS = teststate.ROS[R, O, S]
   type Name = Option[OS] => String
-  private type ActionRun = ROS => Option[() => Future[Either[E, O => S]]]
+  private type ActionRun = ROS => Option[() => F[Either[E, O => S]]]
 
-  type Action = teststate.Action[R, O, S, E]
+  type Action = teststate.Action[F, R, O, S, E]
   type Check = teststate.Check[O, S, E]
   type CheckAround = teststate.Check.Around[O, S, E]
 
@@ -23,31 +25,31 @@ class Dsl[R, O, S, E] {
 
   class A1(name: Name) {
 
-    def act(f: ROS => Future[Any]) =
-      actTry(f.andThen(_.map(_ => None)))
+    def act[U](f: ROS => F[U]) =
+      actTry(f.andThen(EM.map(_)(_ => None)))
 
-    def actTry(f: ROS => Future[Option[E]]) =
+    def actTry(f: ROS => F[Option[E]]) =
       new A2(name, f)
   }
 
-  class A2(name: Name, act: ROS => Future[Option[E]]) {
+  class A2(name: Name, act: ROS => F[Option[E]]) {
     def updateState(nextState: S => S) =
       updateStateO(s => _ => nextState(s))
 
-    def updateStateO(nextState: S => O => S): Action.Single[R, O, S, E] =
+    def updateStateO(nextState: S => O => S): Action.Single[F, R, O, S, E] =
       build(i => Some(() =>
-        act(i).map(_.leftOr(nextState(i.state)))
+        EM.map(act(i))(_.leftOr(nextState(i.state)))
       ))
 
     def updateState2(f: S => Either[E, S]) =
       build(i => Some(() =>
-        act(i).map(_.leftOrF(f(i.state).map(Function.const)))
+        EM.map(act(i))(_.leftOrF(f(i.state).map(Function.const)))
       ))
 
-    def noStateUpdate: Action.Single[R, O, S, E] =
+    def noStateUpdate: Action.Single[F, R, O, S, E] =
       updateStateO(s => _ => s)
 
-    private def build(act: ActionRun): Action.Single[R, O, S, E] =
+    private def build(act: ActionRun): Action.Single[F, R, O, S, E] =
       Action.Single(name, act, Check.Around.empty)
   }
 

@@ -20,7 +20,7 @@ object WholeTest extends TestSuite {
 
   case class Obs(count: Int, changes: Int)
 
-  val * = Dsl[Example, Obs, Int, String]
+  val * = Dsl.future[Example, Obs, Int, String]
 
   val inc = *.action("Count increases by 1").act(i => Future(i.ref.inc())).updateState(_ + 1)
     .addCheck(*.focus("Number of changes").value(_.obs.changes).assertChange("+1", _ + 1))

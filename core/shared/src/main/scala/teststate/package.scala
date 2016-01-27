@@ -96,7 +96,7 @@ package object teststate {
     implicit val showErrorString: ShowError[String] = ShowError(identity)
   }
 
-  implicit def focusDslX2ToCheck[R, O, S, E](b: Dsl[R, O, S, E]#A2) = b.noStateUpdate
+  implicit def focusDslX2ToCheck[F[_], R, O, S, E](b: Dsl[F, R, O, S, E]#A2) = b.noStateUpdate
   implicit def focusDsla2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#A2[A]) = b.check
   implicit def focusDsli2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#I2[A]) = b.check
   implicit def focusDsli2ToChec1[O, S, E, A](b: FocusDsl[O, S, E]#C0[A]) = b.point
@@ -286,4 +286,39 @@ package object teststate {
 
   case class OS[+O, +S](obs: O, state: S)
 
+  trait ExecutionModel[M[_]] {
+    final type F[A] = M[A]
+    def pure[A](a: A): F[A]
+    def map[A, B](fa: F[A])(f: A => B): F[B]
+    def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
+  }
+  object ExecutionModel {
+    implicit val Immediate: ExecutionModel[Id] =
+      new ExecutionModel[Id] {
+        override def pure   [A]   (a: A)             = a
+        override def map    [A, B](fa: A)(f: A => B) = f(fa)
+        override def flatMap[A, B](fa: A)(f: A => B) = f(fa)
+      }
+
+    import scala.concurrent._
+    implicit def scalaFuture(implicit ec: ExecutionContext): ExecutionModel[Future] =
+      new ExecutionModel[Future] {
+        override def pure   [A]   (a: A)                   = Future successful a
+        override def map    [A, B](fa: F[A])(f: A => B)    = fa.map(f)
+        override def flatMap[A, B](fa: F[A])(f: A => F[B]) = fa.flatMap(f)
+      }
+  }
+
+//  @inline implicit private[teststate] class ExecutionModelOps1[F[_], A](private val fa: F[A]) extends AnyVal {
+//    @inline def mapEM[B](f: A => B)(implicit em: ExecutionModel[F]): F[B] =
+//      em.map(fa)(f)
+//    @inline def flatMapEM[B](f: A => F[B])(implicit em: ExecutionModel[F]): F[B] =
+//      em.flatMap(fa)(f)
+//  }
+//  @inline implicit private[teststate] class ExecutionModelOps2[A](private val a: A) extends AnyVal {
+//    @inline def pure[F](implicit em: ExecutionModel[F]): F[B] =
+//      em.map(fa)(f)
+//  }
+
+  type Id[A] = A
 }

@@ -1,24 +1,22 @@
 package teststate
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
 import utest._
 import TestUtil._
 
 object RunnerTest extends TestSuite {
 
-  val * = Dsl[Unit, Unit, Unit, String]
+  val * = Dsl.sync[Unit, Unit, Unit, String]
 
   val options = Options.uncolored.alwaysShowChildren
 
-  def mockAction(name: String) = *.action(name).act(_ => Future successful ())
+  def mockAction(name: String) = *.action(name).act(_ => ())
   def mockPoint (name: String) = *.point(name, _ => None)
   def mockAround(name: String) = *.around(name, _ => ())((_, _) => None)
 
 
   val action    = mockAction("Press button.")
   val action2   = mockAction("Pull lever.")
-  val actionF   = *.action("Press button!").actTry(_ => Future successful Some("BUTTON'S BROKEN"))
+  val actionF   = *.action("Press button!").actTry(_ => Some("BUTTON'S BROKEN"))
   val actionG   = (action >> action2).group("Groupiness.")
   val actionGF1 = (actionF >> action2).group("Groupiness.")
   val actionGF2 = (action >> actionF).group("Groupiness.")
@@ -34,18 +32,18 @@ object RunnerTest extends TestSuite {
 
   implicit def autoName(s: String): *.Name = _ => s
 
-  def test(a: *.Action, i: *.Check)(expect: String): Future[Unit] =
-    Test0(a, i).observe(_ => ()).run((), ()).map{ h =>
-      val actual = formatHistory(h, options).trim
-      assertEq(actual = actual, expect.trim)
-    }
+  def test(a: *.Action, i: *.Check)(expect: String): Unit = {
+    val h = Test0(a, i).observe(_ => ()).run((), ())
+    val actual = formatHistory(h, options).trim
+    assertEq(actual = actual, expect.trim)
+  }
 
   override def tests = TestSuite {
 
     'empty - test(Action.empty, Check.empty)("- Nothing to do.")
 
     'invariants {
-      def t(i: *.Check)(expect: String): Unit = test(Action.empty, i)(expect)
+      def t(i: *.Check)(expect: String) = test(Action.empty, i)(expect)
       'pass {
         'simplest - t(checkPoint)(
           """
@@ -86,7 +84,7 @@ object RunnerTest extends TestSuite {
     }
 
     'action {
-      def t(a: *.Action)(expect: String): Unit = test(a, Check.empty)(expect)
+      def t(a: *.Action)(expect: String) = test(a, Check.empty)(expect)
       'pass {
         'simplest - t(action)(
           """
@@ -202,7 +200,7 @@ object RunnerTest extends TestSuite {
     }
 
     'actionG {
-      def t(a: *.Action)(expect: String): Unit = test(a, Check.empty)(expect)
+      def t(a: *.Action)(expect: String) = test(a, Check.empty)(expect)
       'pass {
         'simple - t(actionG)(
           """
