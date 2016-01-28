@@ -3,7 +3,7 @@ package teststate
 import utest._
 import TestUtil._
 
-object RunnerTest extends TestSuite {
+object OutputTest extends TestSuite {
 
   val * = Dsl.sync[Unit, Unit, Unit, String]
 

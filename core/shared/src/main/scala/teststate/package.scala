@@ -1,3 +1,5 @@
+import scala.annotation.tailrec
+
 package object teststate {
 
   @inline private[teststate] def vector1[A](a: A): Vector[A] =
@@ -291,18 +293,40 @@ package object teststate {
     def pure[A](a: A): F[A]
     def map[A, B](fa: F[A])(f: A => B): F[B]
     def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
+    def tailrec[A](a: A)(stop: A => Boolean)(rec: A => F[A]): F[A]
   }
   object ExecutionModel {
+
+    trait AlreadyStackSafe[M[_]] extends ExecutionModel[M] {
+      override def tailrec[A](start: A)(stop: A => Boolean)(rec: A => F[A]): F[A] = {
+        def go(a: A): F[A] =
+          if (stop(a))
+            pure(a)
+          else
+            flatMap(rec(a))(go)
+        go(start)
+      }
+    }
+
     implicit val Immediate: ExecutionModel[Id] =
       new ExecutionModel[Id] {
         override def pure   [A]   (a: A)             = a
-        override def map    [A, B](fa: A)(f: A => B) = f(fa)
-        override def flatMap[A, B](fa: A)(f: A => B) = f(fa)
+        override def map    [A, B](a: A)(f: A => B) = f(a)
+        override def flatMap[A, B](a: A)(f: A => B) = f(a)
+        override def tailrec[A](start: A)(stop: A => Boolean)(rec: A => A): A = {
+          @tailrec
+          def go(a: A): A =
+            if (stop(a))
+              a
+            else
+              go(rec(a))
+          go(start)
+        }
       }
 
     import scala.concurrent._
     implicit def scalaFuture(implicit ec: ExecutionContext): ExecutionModel[Future] =
-      new ExecutionModel[Future] {
+      new AlreadyStackSafe[Future] {
         override def pure   [A]   (a: A)                   = Future successful a
         override def map    [A, B](fa: F[A])(f: A => B)    = fa.map(f)
         override def flatMap[A, B](fa: F[A])(f: A => F[B]) = fa.flatMap(f)

@@ -1,7 +1,5 @@
 package teststate
 
-import scala.annotation.tailrec
-
 sealed trait Result[+Err] {
   def failure: Option[Err]
   def +[e >: Err](r: Result[e]): Result[e]
@@ -71,7 +69,7 @@ import test.observe
     val invariantsAround = test.invariants.around
     val invariantsPoints = test.invariants.point.singles
 
-    case class OMG(ros: ROS, history: History[Err]) {
+    case class OMG(queue: Vector[A], ros: ROS, history: History[Err]) {
       def failure = history.failure
       def failed = history.failed
 
@@ -152,16 +150,16 @@ import test.observe
       }
 
     def start(a: A, ros: ROS, history: History[Err] = History.empty) =
-      go(vector1(a), OMG(ros, history))
+      go(OMG(vector1(a), ros, history))
 
-//    @tailrec
-    def go(queue: Vector[A], omg: OMG): F[OMG] =
-      if (queue.isEmpty)
-        EM.pure(omg)
-      else {
+    def go(omg: OMG): F[OMG] =
+      EM.tailrec(omg)(x => x.queue.isEmpty || x.failed) { omg =>
+
+        def continue(r: F[OMG]): F[OMG] =
+          EM.map(r)(_.copy(queue = omg.queue.tail))
+
         import omg.ros
-
-        queue.head match {
+        omg.queue.head match {
 
           // ==============================================================================
           case Action.Single(nameFn, run, check) =>
@@ -178,12 +176,7 @@ import test.observe
                     ((n: String) => History(History.Step(n, Result.Fail(e))), ros)
                 }
               )
-            EM.flatMap(omg2F)(omg2 =>
-              if (omg2.failed)
-                EM.pure(omg2)
-              else
-                go(queue.tail, omg2)
-            )
+            continue(omg2F)
 
           // ==============================================================================
           case Action.Group(nameFn, actionFn, check) =>
@@ -193,16 +186,11 @@ import test.observe
                 EM.map(start(children, ros))(r =>
                   ((_: String) => r.history, r.ros))
               })
-            EM.flatMap(omg2F)(omg2 =>
-              if (omg2.failed)
-                EM.pure(omg2)
-              else
-                go(queue.tail, omg2)
-            )
+            continue(omg2F)
 
           // ==============================================================================
           case Action.Composite(actions) =>
-            go(queue.tail ++ actions.toVector, omg)
+            EM.pure(omg.copy(queue = omg.queue.tail ++ actions.toVector))
         }
       }
 
