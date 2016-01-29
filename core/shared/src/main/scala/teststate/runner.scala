@@ -25,20 +25,23 @@ object Result {
     o.fold[Result[E]](Pass)(Fail(_))
 }
 
-case class Test0[F[_]: ExecutionModel, Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
-                                        invariants: Check[Obs, State, Err] = Check.empty) {
-  def observe(f: Ref => Obs) =
-    Test(action, f, invariants)
-}
-
-case class Test[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
-                                       observe: Ref => Obs,
-                                       invariants: Check[Obs, State, Err] = Check.empty)
-                                      (implicit val executionModel: ExecutionModel[F]){
+// TODO Maybe better: Script | Plan | TestCase
+class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Err],
+                                       val invariants: Check[Obs, State, Err],
+                                       val observe: Ref => Obs)
+                                      (implicit val executionModel: ExecutionModel[F]) {
   def run(initialState: State, ref: Ref): F[History[Err]] =
     Runner.run(this)(initialState, ref)
 
   // TODO add invariants
+  // TODO add actions
+}
+object Test {
+  def apply[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
+                                        invariants: Check[Obs, State, Err] = Check.empty)
+                                       (observe: Ref => Obs)
+                                       (implicit executionModel: ExecutionModel[F]): Test[F, Ref, Obs, State, Err] =
+    new Test(action, invariants, observe)
 }
 
 object Runner {
@@ -108,19 +111,23 @@ import test.observe
             // Perform action
             val runF = run(a)
             EM.map(runF) { case (mkStep, ros2) =>
+
+              def addStep(s: History.Step[Err]) =
+                omg.copy(ros = ros2, history = omg.history :+ s)
+
               val step = mkStep(ActionName)
               val collapseIfNoPost = collapse && pre.isEmpty && step.steps.length == 1
               def collapsed = step.steps(0).copy(name = name)
               if (step.failed) {
 
                 if (collapseIfNoPost)
-                  omg :+ collapsed
+                  addStep(collapsed)
                 else
-                  omg :+ History.parent(name, pre ++ step)
+                  addStep(History.parent(name, pre ++ step))
 
               } else {
 
-                //
+                // Post conditions
                 val post1 = {
                   val b = History.newBuilder[Err]
                   b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before)) // Perform around-post
@@ -128,7 +135,7 @@ import test.observe
                   b.group(PostName)
                 }
 
-                // Perform invariants
+                // Check invariants
                 val invs = {
                   val b = History.newBuilder[Err]
                   b.addEach(invariantsPoints)(_ name omg.ros.sos, _.test(ros2.os))
@@ -138,14 +145,14 @@ import test.observe
                 val post = post1 ++ invs
 
                 if (collapseIfNoPost && post.isEmpty)
-                  omg :+ collapsed
+                  addStep(collapsed)
                 else
-                  omg :+ History.parent(name, pre ++ step ++ post)
+                  addStep(History.parent(name, pre ++ step ++ post))
               }
             }
           }
 
-          case None =>
+        case None =>
             EM.pure(omg :+ History.Step(name, Result.Skip))
       }
 
@@ -183,8 +190,10 @@ import test.observe
             val name = nameFn(ros.sos)
             val omg2F =
               checkAround(name, check & invariantsAround, false, omg)(actionFn)(children => {
-                EM.map(start(children, ros))(r =>
-                  ((_: String) => r.history, r.ros))
+                val x =
+                EM.map(start(children, ros))(omgC =>
+                  ((_: String) => omgC.history, omgC.ros))
+                x
               })
             continue(omg2F)
 

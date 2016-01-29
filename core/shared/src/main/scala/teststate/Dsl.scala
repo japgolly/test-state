@@ -1,5 +1,56 @@
 package teststate
 
+case class Equal[A](equal: (A, A) => Boolean)
+object Equal {
+
+  def byUnivEq[A]: Equal[A] = Equal(_ == _)
+
+  implicit val equalString: Equal[String] = byUnivEq
+  implicit val equalInt: Equal[Int] = byUnivEq
+  implicit val equalBoolean: Equal[Boolean] = byUnivEq
+}
+
+trait SomethingFailures[-AA, +E] {
+  def expectedEqual      [A <: AA](expected: A, actual: A)         (implicit s: Show[A]): E
+  def expectedToChange   [A <: AA](a: A)                           (implicit s: Show[A]): E
+  def expectedChange     [A <: AA](from: A, expected: A, actual: A)(implicit s: Show[A]): E
+
+  final def expectMaybeEqual[A <: AA](expEqual: Boolean, ex: A, actual: A)(implicit s: Show[A], e: Equal[A]): Option[E] =
+    if (expEqual)
+      expectEqual(ex, actual)
+    else
+      expectNotEqual(ex, actual)
+
+  final def expectEqual[A <: AA](expected: A, actual: A)(implicit s: Show[A], e: Equal[A]): Option[E] =
+    if (e.equal(expected, actual))
+      None
+    else
+      Some(expectedEqual(expected = expected, actual = actual))
+
+  final def expectNotEqual[A <: AA](unexpected: A, actual: A)(implicit s: Show[A], e: Equal[A]): Option[E] =
+    if (e.equal(unexpected, actual))
+      Some(expectedToChange(actual))
+    else
+      None
+
+  final def expectChange[A <: AA](from: A, expected: A, actual: A)(implicit s: Show[A], e: Equal[A]): Option[E] =
+    if (e.equal(expected, actual))
+      None
+    else if (e.equal(from, actual))
+      Some(expectedToChange(actual))
+    else
+      Some(expectedChange(from = from, expected = expected, actual = actual))
+}
+object SomethingFailures {
+  implicit object ToString extends SomethingFailures[Any, String] {
+    def expectedEqual      [A](expected: A, actual: A)         (implicit s: Show[A]) = s"Expected ${s(expected)}, not ${s(actual)}."
+    def expectedToChange   [A](a: A)                           (implicit s: Show[A]) = s"Expected ${s(a)} to change, but it didn't."
+    def expectedChange     [A](from: A, expected: A, actual: A)(implicit s: Show[A]) = s"Expected ${s(from)} to change into ${s(expected)}, not ${s(actual)}."
+  }
+}
+
+
+/*
 object Dsl {
   def apply[F[_]: ExecutionModel, R, O, S, E] = new Dsl[F, R, O, S, E]
 
@@ -19,7 +70,10 @@ class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) {
   type Check = teststate.Check[O, S, E]
   type CheckAround = teststate.Check.Around[O, S, E]
 
-  // ===================================================================================================================
+  def test(action: Action, invariants: Check = Check.empty)(observe: R => O) =
+      Test(action, observe, invariants)
+
+    // ===================================================================================================================
 
   def action(name: String) = new A1(_ => name)
 
@@ -72,49 +126,6 @@ class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) {
 
   def around[A](name: Option[OS] => String, before: OS => A)(test: (OS, A) => Option[E]) =
     Check.Around.Dunno(name, before, test)
-}
-
-case class Equal[A](equal: (A, A) => Boolean)
-object Equal {
-
-  def byUnivEq[A]: Equal[A] = Equal(_ == _)
-
-  implicit val equalString: Equal[String] = byUnivEq
-  implicit val equalInt: Equal[Int] = byUnivEq
-  implicit val equalBoolean: Equal[Boolean] = byUnivEq
-}
-
-trait SomethingFailures[-AA, +E] {
-  def expectedEqual      [A <: AA](expected: A, actual: A)         (implicit s: Show[A]): E
-  def expectedToChange   [A <: AA](a: A)                           (implicit s: Show[A]): E
-  def expectedChange     [A <: AA](from: A, expected: A, actual: A)(implicit s: Show[A]): E
-
-  final def expectEqual[A <: AA](expected: A, actual: A)(implicit s: Show[A], e: Equal[A]): Option[E] =
-    if (e.equal(expected, actual))
-      None
-    else
-      Some(expectedEqual(expected = expected, actual = actual))
-
-  final def expectNotEqual[A <: AA](unexpected: A, actual: A)(implicit s: Show[A], e: Equal[A]): Option[E] =
-    if (e.equal(unexpected, actual))
-      Some(expectedToChange(actual))
-    else
-      None
-
-  final def expectChange[A <: AA](from: A, expected: A, actual: A)(implicit s: Show[A], e: Equal[A]): Option[E] =
-    if (e.equal(expected, actual))
-      None
-    else if (e.equal(from, actual))
-      Some(expectedToChange(actual))
-    else
-      Some(expectedChange(from = from, expected = expected, actual = actual))
-}
-object SomethingFailures {
-  implicit object ToString extends SomethingFailures[Any, String] {
-    def expectedEqual      [A](expected: A, actual: A)         (implicit s: Show[A]) = s"Expected ${s(expected)}, not ${s(actual)}."
-    def expectedToChange   [A](a: A)                           (implicit s: Show[A]) = s"Expected ${s(a)} to change, but it didn't."
-    def expectedChange     [A](from: A, expected: A, actual: A)(implicit s: Show[A]) = s"Expected ${s(from)} to change into ${s(expected)}, not ${s(actual)}."
-  }
 }
 
 class BiFocusDsl[O, S, E, A](focusName: String, fo: O => A, fs: S => A)(implicit sa: Show[A], eq: Equal[A]) {
@@ -230,6 +241,20 @@ class FocusDsl[O, S, E](focusName: String) {
     protected def addA(c: Check.Around[O, S, E]): OutA
     protected def addP(c: Check.Point[O, S, E]): OutP
 
+    protected final def _point(name: String, test: A => Option[E]): Check.Point.Single[O, S, E] =
+      _pointN(_ => name, test)
+
+    protected final def _pointN(name: Option[OS] => String, test: A => Option[E]): Check.Point.Single[O, S, E] =
+      Check.Point.Single(
+        name,
+        os => test(extract(os)))
+
+    protected final def point(name: String, test: A => Option[E]): OutP =
+      pointN(_ => name, test)
+
+    protected final def pointN(name: Option[OS] => String, test: A => Option[E]): OutP =
+      addP(_pointN(name, test))
+
     protected final def around(name: String, t: (A, A) => Option[E]): OutA =
       aroundN(_ => name, t)
 
@@ -240,14 +265,10 @@ class FocusDsl[O, S, E](focusName: String) {
         (os, a: A) => t(a, extract(os))))
 
     final def assertBefore(expect: A)(implicit f: SomethingFailures[A, E]): OutA =
-      around(
-        focusName + " should start as " + sa.show(expect),
-        (before, _) => f.expectEqual(expected = expect, before))
+      addA(_assertEqual(expect).before)
 
     final def assertAfter(expect: A)(implicit f: SomethingFailures[A, E]): OutA =
-      around(
-        focusName + " should end as " + sa.show(expect),
-        (_, after) => f.expectEqual(expected = expect, after))
+      addA(_assertEqual(expect).after)
 
     final def assert(before: A, after: A)(implicit f: SomethingFailures[A, E]): OutA =
       assertBefore(before).assertAfter(after)
@@ -267,16 +288,11 @@ class FocusDsl[O, S, E](focusName: String) {
         focusName + " shouldn't change",
         (before, after) => f.expectEqual(expected = before, actual = after))
 
-    protected final def point(name: String, test: A => Option[E]): OutP =
-      pointN(_ => name, test)
-
-    protected final def pointN(name: Option[OS] => String, test: A => Option[E]): OutP =
-      addP(Check.Point.Single(
-        name,
-        os => test(extract(os))))
-
     def assertEqual(expect: A)(implicit f: SomethingFailures[A, E]): OutP =
-      point(
+      addP(_assertEqual(expect))
+
+    def _assertEqual(expect: A)(implicit f: SomethingFailures[A, E]) =
+      _point(
         focusName + " = " + sa.show(expect),
         a => f.expectEqual(expected = expect, actual = a))
 
@@ -318,3 +334,4 @@ class FocusDsl[O, S, E](focusName: String) {
     protected def addP(c: Check.Point [O, S, E]) = new I2(check & c, extract)
   }
 }
+*/

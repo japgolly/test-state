@@ -40,7 +40,6 @@ object Check {
       override def after  = Around.empty.copy(afters = singles.map(_.after))
     }
 
-    // TODO Should accept OS[O,S]
     case class Single[-O, -S, +E](name: Option[OS[O, S]] => String, test: OS[O, S] => Option[E]) extends Point[O, S, E] {
       override def toString = s"Check.Point.Single(${name(None)})"
       override def singles = vector1(this)

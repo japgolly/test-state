@@ -1,0 +1,76 @@
+digraph G {
+
+{node [style=filled fillcolor=lightgreen]
+ba [label="before & after"]
+point
+around
+before,after -> ba
+}
+
+uPoint [label="point"]
+uTest [label="test"]
+root -> uPoint,uTest -> point
+
+uAround [label="around"]
+uTestAround [label="testAround"]
+root -> uAround,uTestAround -> around
+
+// ----------------------------------------
+
+{node [style=filled fillcolor=lightblue]
+
+eqap1 [label="?(expect)"]
+eqap2 [label="?(before, after)"]
+eqap1f [label="?(a → a)"]
+focus -> value -> equal -> eqap1 -> point -> before,after
+equal -> eqap2 -> ba
+equal -> eqap1f -> around
+
+test1 [label="test(a → Bool)"]
+value -> test1 -> point
+
+test2 [label="testAround\na → a → Bool"]
+value -> test2 -> around
+
+equal -> equal [label=" not"]
+
+collection -> collection [label=" map"]
+value -> value [label=" map"]
+
+collops [label=
+"assertDistinct
+assertExistence(os → Bool, os → as)
+assertEqualIgnoringOrder(os → as)
+assertContainsAll(os → as)
+assertContainsOnly(os → as)
+assertContainsNone(os → as)"]
+focus -> collection -> collops -> point
+collection -> value
+
+}
+root -> focus
+
+// ----------------------------------------
+
+biequal [label="assertObsEqualsState"]
+valueB [label="value"]
+root -> bifocus -> focus
+bifocus -> valueB -> biequal
+biequal -> biequal [label=" not"]
+biequal -> point
+valueB -> valueB [label=" map\n bimap"]
+
+/*
+collectionB [label="collection"]
+bifocus -> collectionB -> collopsB
+collectionB -> valueB
+collopsB [label=
+"assertDistinctFromEachOther
+assertExistence(os → Bool, os → as)
+assertEqualIgnoringOrder(os → as)
+assertContainsAll(os → as)
+assertContainsOnly(os → as)
+assertContainsNone(os → as)"]
+*/
+
+}

@@ -9,10 +9,11 @@ object OutputTest extends TestSuite {
 
   val options = Options.uncolored.alwaysShowChildren
 
+  implicit def autoName(s: String): *.Name = _ => s
+
   def mockAction(name: String) = *.action(name).act(_ => ())
   def mockPoint (name: String) = *.point(name, _ => None)
   def mockAround(name: String) = *.around(name, _ => ())((_, _) => None)
-
 
   val action    = mockAction("Press button.")
   val action2   = mockAction("Pull lever.")
@@ -30,10 +31,8 @@ object OutputTest extends TestSuite {
   val checkAround  = mockAround("Button count increased.")
   val checkAroundF = *.around("Button count increased.", _ => ())((_, _) => Some("2 != 3"))
 
-  implicit def autoName(s: String): *.Name = _ => s
-
   def test(a: *.Action, i: *.Check)(expect: String): Unit = {
-    val h = Test0(a, i).observe(_ => ()).run((), ())
+    val h = Test(a, i)(_ => ()).run((), ())
     val actual = formatHistory(h, options).trim
     assertEq(actual = actual, expect.trim)
   }

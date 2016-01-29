@@ -1,5 +1,6 @@
 package teststate
 
+/*
 import utest._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -34,7 +35,7 @@ object WholeTest extends TestSuite {
 
   val actions = inc.times(5) >> inc.times(3)
 
-  val test = Test0(actions, invariants).observe(eg => Obs(eg.count(), eg.changes()))
+  val test = *.test(actions, invariants)(eg => Obs(eg.count(), eg.changes()))
 
   // ==============================================================================================================
 
@@ -55,3 +56,4 @@ object WholeTest extends TestSuite {
     "4" - go(4)
   }
 }
+*/

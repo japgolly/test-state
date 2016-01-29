@@ -7,5 +7,5 @@ object Platform {
 
   val Name = "JS"
 
-  val StackTestSize = 1024
+  val StackTestSize = 10 //24
 }
