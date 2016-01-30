@@ -136,15 +136,15 @@ package object teststate {
 
     type Steps[+Err] = Vector[Step[Err]]
 
-    case class Step[+E](name: String, result: Result[E], children: History[E] = empty) {
+    case class Step[+E](name: Name, result: Result[E], children: History[E] = empty) {
       def failure = result.failure
       def failed = failure.isDefined
     }
 
-    def parent[E](name: String, children: History[E]): Step[E] =
+    def parent[E](name: Name, children: History[E]): Step[E] =
       Step(name, children.result, children)
 
-    def maybeParent[E](name: String, children: History[E]): History[E] =
+    def maybeParent[E](name: Name, children: History[E]): History[E] =
       if (children.isEmpty)
         History.empty
       else
@@ -178,7 +178,7 @@ package object teststate {
           r += h.result
         }
 
-      def addEach[A](as: Vector[A])(name: A => String, test: A => Option[E]): Unit =
+      def addEach[A](as: Vector[A])(name: A => Name, test: A => Option[E]): Unit =
         for (a <- as) {
           val n = name(a)
           val r = Result passOrFail test(a)
@@ -191,7 +191,7 @@ package object teststate {
       def history(): History[E] =
         History(steps.result(), result())
 
-      def group(name: String): History[E] =
+      def group(name: Name): History[E] =
         History.maybeParent(name, history())
     }
   }
@@ -264,7 +264,7 @@ package object teststate {
       appendIndent(indent)
       appendResultFlag(step.result)
       sb append ' '
-      sb append step.name
+      sb append step.name.value
       for (e <- error) {
         sb append " -- "
         sb append showError.show(e)
@@ -347,4 +347,8 @@ package object teststate {
 //  }
 
   type Id[A] = A
+
+  // TODO Use macro to avoid strictness
+  implicit def nameFromString(s: String): Name = Name(s)
+  implicit def nameFnFromString[A](a: A)(implicit ev: A => Name): Name.Fn[Any] = Function const ev(a)
 }

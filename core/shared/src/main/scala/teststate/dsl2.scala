@@ -24,7 +24,7 @@ object Dsl {
     final type Point1      = teststate.Check.Point.Single[O, S, E]
     final type Around1     = teststate.Check.Around.Dunno[O, S, E]
     final type Action1     = teststate.Action.Single[F, R, O, S, E]
-    final type Name        = Option[OS] => String
+    final type NameFn      = Option[OS] => Name
     final type ActionFn    = ROS => Option[() => F[Either[E, O => S]]]
   }
 
@@ -64,10 +64,10 @@ object Dsl {
 
 final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
 
-  def point(name: Option[OS] => String, test: OS => Option[E]): Point1 =
+  def point(name: NameFn, test: OS => Option[E]): Point1 =
     Check.Point.Single(name, test)
 
-  def around[A](name: Option[OS] => String, before: OS => A)(test: (OS, A) => Option[E]): Around1 =
+  def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around1 =
     Check.Around.Dunno(name, before, test)
 
   // TODO Delete
@@ -81,16 +81,16 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E = (_,_) => ""
 
 
-  def test(name: Name, testFn: OS => Boolean)(implicit ev: String =:= E): Point1 =
+  def test(name: NameFn, testFn: OS => Boolean)(implicit ev: String =:= E): Point1 =
     test(name, testFn, strErrorFn)
 
-  def test(name: Name, testFn: OS => Boolean, error: OS => E): Point1 =
+  def test(name: NameFn, testFn: OS => Boolean, error: OS => E): Point1 =
     point(name, os => if (testFn(os)) None else Some(error(os)))
 
-  def testAround(name: Name, testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around1 =
+  def testAround(name: NameFn, testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around1 =
     testAround(name, testFn, strErrorFn2)
 
-  def testAround(name: Name, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around1 =
+  def testAround(name: NameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around1 =
     around(name, identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
 
@@ -139,7 +139,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
     def test(desc: String => String, testFn: A => Boolean, error: A => E): Point1 =
       Dsl.this.test(
-        Function const desc(focusName),
+        desc(focusName),
         testFn compose focusFn,
         error compose focusFn)
 
@@ -153,7 +153,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       testAround(desc, testFn, strErrorFn2)
 
     def testAround(desc: String => String, testFn: (A, A) => Boolean, error: (A, A) => E): Around1 =
-      around(Function const desc(focusName), focusFn)((os, a1) => {
+      around(desc(focusName), focusFn)((os, a1) => {
         val a2 = focusFn(os)
         if (testFn(a1, a2)) None else Some(error(a1, a2))
       })
@@ -168,12 +168,12 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def not = new AssertOps(!positive)
 
       def equal(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
-        Check.Point.Single(
-          Function const s"$focusName $should be ${showA(expect)}.",
+        point(
+          s"$focusName $should be ${showA(expect)}.",
           i => f.expectMaybeEqual(positive, ex = expect, actual = focusFn(i)))
 
       def equalF(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
-        Check.Point.Single(
+        point(
           {
             case None => s"$focusName $should be <?>."
             case Some(i) => s"$focusName $should be ${showA(expect(i))}."
@@ -187,13 +187,13 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
         equalF(before).before & equalF(after).after
 
       def changesTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
-        Check.Around.Dunno(
+        around(
           {
             case None => s"$focusName $should be <?>."
             case Some(i) => s"$focusName $should be ${showA(expect(focusFn(i)))}."
           },
-          focusFn,
-          (os, a1: A) => {
+          focusFn)(
+          (os, a1) => {
             val a2 = focusFn(os)
             f.expectMaybeEqual(positive, ex = expect(a1), actual = a2)
           })
@@ -291,7 +291,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def not = new AssertOps(!positive)
 
       def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
-        Check.Point.Single(
+        point(
           {
             case None => s"$focusName $should be <?>."
             case Some(i) => s"$focusName $should be ${showA(fs(i.state))}."
@@ -303,7 +303,6 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 }
 
 // TODO Runner should print state & obs on failure, each assertion needn't. It should print S and/or S' depending on the type of check (pre and/or post) that failed.
-// TODO Give Option[OS] => String a better type and add implicits from a plain String
 // TODO History should handle empty error strings
 /*
 object Exampe {

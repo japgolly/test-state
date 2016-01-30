@@ -40,7 +40,7 @@ object Check {
       override def after  = Around.empty.copy(afters = singles.map(_.after))
     }
 
-    case class Single[-O, -S, +E](name: Option[OS[O, S]] => String, test: OS[O, S] => Option[E]) extends Point[O, S, E] {
+    case class Single[-O, -S, +E](name: Name.Fn[OS[O, S]], test: OS[O, S] => Option[E]) extends Point[O, S, E] {
       override def toString = s"Check.Point.Single(${name(None)})"
       override def singles = vector1(this)
       override def before = Around.Before(this)
@@ -81,7 +81,7 @@ object Check {
     // TODO This shape prevents discovery of pre vs post vs around checks
     sealed abstract class Dunno[-O, -S, +E] extends Single[O, S, E] {
       type A
-      val name: Option[OS[O, S]] => String
+      val name: Name.Fn[OS[O, S]]
       val before: OS[O, S] => A
       val test: (OS[O, S], A) => Option[E]
 
@@ -91,7 +91,7 @@ object Check {
 
     type DunnoA[-O, -S, +E, a] = Dunno[O, S, E] {type A = a}
 
-    def Dunno[O, S, E, _A](_name: Option[OS[O, S]] => String,
+    def Dunno[O, S, E, _A](_name: Name.Fn[OS[O, S]],
                             _before: OS[O, S] => _A,
                             _test: (OS[O, S], _A) => Option[E]): DunnoA[O, S, E, _A] =
       new Dunno[O, S, E] {

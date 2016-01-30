@@ -86,7 +86,7 @@ import test.observe
     val PostName = "Post-conditions"
     val InvariantsName = "Invariants"
 
-    def checkAround[A](name: String, checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
+    def checkAround[A](name: Name, checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
                       (run: A => F[(String => History[Err], ROS)]): F[OMG] =
 

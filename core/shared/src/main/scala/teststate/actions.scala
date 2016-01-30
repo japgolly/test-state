@@ -7,7 +7,7 @@ sealed trait Action[F[_], Ref, O, S, Err] {
 
   def nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]]
 
-  def nameMod(f: (=> String) => String): This
+  def nameMod(f: Name => Name): This
 
   def addCheck(c: Check.Around[O, S, Err]): This
 
@@ -30,7 +30,7 @@ object Action {
   sealed trait NonComposite[F[_], Ref, O, S, Err] extends Action[F, Ref, O, S, Err] {
     type This <: NonComposite[F, Ref, O, S, Err]
 
-    def name: Option[OS[O, S]] => String
+    def name: Name.Fn[OS[O, S]]
 
     final override def nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]] =
       vector1(this)
@@ -51,7 +51,7 @@ object Action {
     def map(f: NonComposite[F, Ref, O, S, Err] => NonComposite[F, Ref, O, S, Err]): This =
       Composite(nonCompositeActions map f)
 
-    override def nameMod(f: (=> String) => String) =
+    override def nameMod(f: Name => Name) =
       map(_ nameMod f)
 
     override def addCheck(c: Check.Around[O, S, Err]) =
@@ -60,20 +60,20 @@ object Action {
     override def when(f: ROS[Ref, O, S] => Boolean) =
       map(_ when f)
 
-    def group(name: String): Group[F, Ref, O, S, Err] =
+    def group(name: Name): Group[F, Ref, O, S, Err] =
       Group(_ => name, _ => Some(this), Check.Around.empty)
 
 //    def times(n: Int, name: String) =
 //      group(name).times(n)
   }
 
-  case class Group[F[_], Ref, O, S, Err](name: Option[OS[O, S]] => String,
+  case class Group[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
                                     action: ROS[Ref, O, S] => Option[Action[F, Ref, O, S, Err]],
                                     check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
     override type This = Group[F, Ref, O, S, Err]
 
-    override def nameMod(f: (=> String) => String) =
+    override def nameMod(f: Name => Name) =
       copy(name = o => f(name(o)))
 
     override def addCheck(c: Check.Around[O, S, Err]) =
@@ -83,13 +83,13 @@ object Action {
       copy(action = i => if (f(i)) action(i) else None)
   }
 
-  case class Single[F[_], Ref, O, S, Err](name: Option[OS[O, S]] => String,
+  case class Single[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
                                      run: ROS[Ref, O, S] => Option[() => F[Either[Err, O => S]]],
                                      check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
     override type This = Single[F, Ref, O, S, Err]
 
-    override def nameMod(f: (=> String) => String) =
+    override def nameMod(f: Name => Name) =
       copy(name = o => f(name(o)))
 
     override def addCheck(c: Check.Around[O, S, Err]) =
