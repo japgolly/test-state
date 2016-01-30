@@ -2,6 +2,8 @@ package teststate
 
 //import teststate.{Action, Equal, Show, Check, ROS, OS, ExecutionModel, Id, SomethingFailures, TestStateExtMethodsForEither, TestStateExtMethodsForOption}
 
+import Dsl.{Types, ActionB}
+
 object Dsl {
   def apply[F[_]: ExecutionModel, R, O, S, E] =
     new Dsl[F, R, O, S, E]
@@ -12,19 +14,55 @@ object Dsl {
   import scala.concurrent._
   @inline def future[R, O, S, E](implicit ec: ExecutionContext) =
     apply[Future, R, O, S, E]
+
+  trait Types[F[_], R, O, S, E] {
+    final type OS          = teststate.OS[O, S]
+    final type ROS         = teststate.ROS[R, O, S]
+    final type Action      = teststate.Action[F, R, O, S, E]
+    final type Check       = teststate.Check[O, S, E]
+    final type CheckAround = teststate.Check.Around[O, S, E]
+    final type Point1      = teststate.Check.Point.Single[O, S, E]
+    final type Around1     = teststate.Check.Around.Dunno[O, S, E]
+    final type Action1     = teststate.Action.Single[F, R, O, S, E]
+    final type Name        = Option[OS] => String
+    final type ActionFn    = ROS => Option[() => F[Either[E, O => S]]]
+  }
+
+  final class ActionB[F[_], R, O, S, E](actionName: String)(implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
+
+    private def build(fn: (ROS => F[Option[E]]) => ActionFn): ActionB2[F, R, O, S, E] =
+      new ActionB2(act => Action.Single[F, R, O, S, E](
+        _ => actionName,
+        fn(act), Check.Around.empty))
+
+    def updateState(nextState: S => S) =
+      updateStateO(s => _ => nextState(s))
+
+    def updateStateO(nextState: S => O => S) =
+      build(act => i => Some(() =>
+        EM.map(act(i))(_.leftOr(nextState(i.state)))
+      ))
+
+    def updateState2(f: S => Either[E, S]) =
+      build(act => i => Some(() =>
+        EM.map(act(i))(_.leftOrF(f(i.state).map(Function.const)))
+      ))
+
+    def noStateUpdate =
+      updateStateO(s => _ => s)
+  }
+
+  final class ActionB2[F[_], R, O, S, E](build: (ROS[R, O, S] => F[Option[E]]) => Action.Single[F, R, O, S, E])(implicit EM: ExecutionModel[F]) {
+
+    def act[U](f: ROS[R, O, S] => F[U]) =
+      build(f.andThen(EM.map(_)(_ => None)))
+
+    def actTry(f: ROS[R, O, S] => F[Option[E]]) =
+      build(f)
+  }
 }
 
-final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) {
-  type OS          = teststate.OS[O, S]
-  type ROS         = teststate.ROS[R, O, S]
-  type Action      = teststate.Action[F, R, O, S, E]
-  type Check       = teststate.Check[O, S, E]
-  type CheckAround = teststate.Check.Around[O, S, E]
-  type Point1  = teststate.Check.Point.Single[O, S, E]
-  type Around1  = teststate.Check.Around.Dunno[O, S, E]
-  type Action1 = teststate.Action.Single[F, R, O, S, E]
-  type Name      = Option[OS] => String
-  type ActionFn    = ROS => Option[() => F[Either[E, O => S]]]
+final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
 
   def point(name: Option[OS] => String, test: OS => Option[E]): Point1 =
     Check.Point.Single(name, test)
@@ -60,7 +98,6 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) {
 
 
 
-
   def focus(focusName: String) =
     new Focus(focusName)
 
@@ -79,39 +116,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) {
   // ===================================================================================================================
 
   def action(actionName: String) =
-    new ActionB(actionName)
-
-  final class ActionB(actionName: String) {
-    private def build(fn: (ROS => F[Option[E]]) => ActionFn): B2 =
-      new B2(act => Action.Single[F, R, O, S, E](
-        _ => actionName,
-        fn(act), Check.Around.empty))
-
-    def updateState(nextState: S => S) =
-      updateStateO(s => _ => nextState(s))
-
-    def updateStateO(nextState: S => O => S) =
-      build(act => i => Some(() =>
-        EM.map(act(i))(_.leftOr(nextState(i.state)))
-      ))
-
-    def updateState2(f: S => Either[E, S]) =
-      build(act => i => Some(() =>
-        EM.map(act(i))(_.leftOrF(f(i.state).map(Function.const)))
-      ))
-
-    def noStateUpdate =
-      updateStateO(s => _ => s)
-
-    final class B2(build: (ROS => F[Option[E]]) => Action1) {
-
-      def act[U](f: ROS => F[U]): Action1 =
-        build(f.andThen(EM.map(_)(_ => None)))
-
-      def actTry(f: ROS => F[Option[E]]): Action1 =
-        build(f)
-    }
-  }
+    new ActionB[F, R, O, S, E](actionName)
 
   // ===================================================================================================================
 
@@ -282,13 +287,12 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) {
 // TODO Runner should print state & obs on failure, each assertion needn't. It should print S and/or S' depending on the type of check (pre and/or post) that failed.
 // TODO Give Option[OS] => String a better type and add implicits from a plain String
 // TODO History should handle empty error strings
-
+/*
 object Exampe {
   implicit def sa[A]: Show[A] = ???
   implicit def ea[A]: Equal[A] = ???
   val * = Dsl.sync[Unit, Unit, Unit, String]
 
-  /*
   *.focus("stuff").value(_ => 0).assert.changeOccurs
 
   *.focus("stuff").value(_ => 0).assert.equal(3).before
@@ -298,5 +302,5 @@ object Exampe {
   *.focus("stuff").value(_ => 0).assert.not.equal(3).before
   *.focus("stuff").value(_ => 0).assert.not.beforeAndAfter(1, 2)
   *.focus("stuff").value(_ => 0).assert.not.changesTo(_ + 1)
-  */
 }
+*/
