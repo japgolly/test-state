@@ -265,9 +265,12 @@ package object teststate extends teststate.Name.Implicits {
       appendResultFlag(step.result)
       sb append ' '
       sb append step.name.value
-      for (e <- error) {
-        sb append " -- "
-        sb append showError.show(e)
+      for (err <- error) {
+        val e = showError.show(err)
+        if (e.nonEmpty) {
+          sb append " -- "
+          sb append e
+        }
       }
       sb append options.eol
 

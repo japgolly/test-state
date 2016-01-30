@@ -303,7 +303,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 }
 
 // TODO Runner should print state & obs on failure, each assertion needn't. It should print S and/or S' depending on the type of check (pre and/or post) that failed.
-// TODO History should handle empty error strings
+
 /*
 object Exampe {
   implicit def sa[A]: Show[A] = ???
