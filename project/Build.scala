@@ -9,8 +9,9 @@ object TestState extends Build {
   private val ghProject = "test-state"
 
   object Ver {
-    final val Scala211 = "2.11.7"
-    final val MTest    = "0.3.1"
+    final val Scala211      = "2.11.7"
+    final val MTest         = "0.3.1"
+    final val MacroParadise = "2.1.0"
   }
 
   def scalacFlags = Seq(
@@ -47,6 +48,17 @@ object TestState extends Build {
         "ctc" -> ";clean;test:compile",
         "ct"  -> ";clean;test"))
 
+  def definesMacros: Project => Project =
+    _.settings(
+      scalacOptions += "-language:experimental.macros",
+      libraryDependencies ++= Seq(
+        // "org.scala-lang" % "scala-reflect" % Ver.Scala211,
+        // "org.scala-lang" % "scala-library" % Ver.Scala211,
+        "org.scala-lang" % "scala-compiler" % Ver.Scala211 % "provided"))
+
+  def macroParadisePlugin =
+    compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.full)
+
   def utestSettings: CPE = _
     .settings(
       libraryDependencies  += "com.lihaoyi" %%% "utest" % Ver.MTest,
@@ -60,12 +72,18 @@ object TestState extends Build {
   lazy val root =
     Project("root", file("."))
       .configure(commonSettings, preventPublication)
-      .aggregate(coreJVM, coreJS)
+      .aggregate(coreJVM, coreJS, coreMacrosJVM, coreMacrosJS)
 
-  lazy val core = crossProject
-    .bothConfigure(commonSettings, publicationSettings(ghProject))
+  lazy val coreMacrosJVM = coreMacros.jvm
+  lazy val coreMacrosJS  = coreMacros.js
+  lazy val coreMacros = crossProject.in(file("core-macros"))
+    .bothConfigure(commonSettings, publicationSettings(ghProject), definesMacros)
     .configure(utestSettings)
 
   lazy val coreJVM = core.jvm
   lazy val coreJS  = core.js
+  lazy val core = crossProject
+    .bothConfigure(commonSettings, publicationSettings(ghProject))
+    .configure(utestSettings)
+    .dependsOn(coreMacros)
 }

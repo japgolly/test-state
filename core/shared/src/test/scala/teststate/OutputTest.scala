@@ -9,8 +9,6 @@ object OutputTest extends TestSuite {
 
   val options = Options.uncolored.alwaysShowChildren
 
-  implicit def autoName(s: String): *.NameFn = _ => s
-
   def mockAction(name: String) = *.action(name).act(_ => ())
   def mockPoint (name: String) = *.point(name, _ => None)
   def mockAround(name: String) = *.around(name, _ => ())((_, _) => None)

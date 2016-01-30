@@ -1,6 +1,6 @@
 import scala.annotation.tailrec
 
-package object teststate {
+package object teststate extends teststate.Name.Implicits {
 
   @inline private[teststate] def vector1[A](a: A): Vector[A] =
     Vector.empty[A] :+ a
@@ -348,7 +348,4 @@ package object teststate {
 
   type Id[A] = A
 
-  // TODO Use macro to avoid strictness
-  implicit def nameFromString(s: String): Name = Name(s)
-  implicit def nameFnFromString[A](a: A)(implicit ev: A => Name): Name.Fn[Any] = Function const ev(a)
 }
