@@ -182,7 +182,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
 
       def changeOccurs(implicit e: Equal[A], f: SomethingFailures[A, E]) =
-        changesTo(identity)
+        not.changesTo(identity)
     }
   } // FocusValue
 
