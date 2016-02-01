@@ -1,5 +1,6 @@
 package teststate
 
+import scala.annotation.elidable
 import History.{Options, Step, Steps}
 
 final class History[+E](val steps: Steps[E], val result: Result[E]) {
@@ -17,6 +18,18 @@ final class History[+E](val steps: Steps[E], val result: Result[E]) {
   }
   def ++[e >: E](s: History[e]): History[e] =
     new History[e](steps ++ s.steps, result + s.result)
+
+  def resultStep: Option[Step[E]] =
+    steps.find(_.result eq result)
+
+  def rootFailurePath: Vector[Step[E]] =
+    if (failed)
+      resultStep match {
+        case Some(s) => s +: s.children.rootFailurePath
+        case None => Vector.empty
+      }
+    else
+      Vector.empty
 
   //def +:[e >: E](s: Step[e]) = new History[e](s +: steps, result)
   //def ++[e >: E](s: Steps[e]) = new History[e](steps ++ s, result)
@@ -78,6 +91,23 @@ final class History[+E](val steps: Steps[E], val result: Result[E]) {
 
     sb.result()
   }
+
+  def failureReason[e >: E](implicit showError: ShowError[e]): Option[String] =
+    failure.map(e =>
+      (rootFailurePath.lastOption, Option(showError show e).filter(_.nonEmpty)) match {
+        case (Some(f), Some(e)) => s"${f.name.value} -- $e"
+        case (Some(f), None   ) => f.name.value
+        case (None   , Some(e)) => e
+        case (None   , None   ) => "Failed without an error message."
+      }
+    )
+
+  @elidable(elidable.ASSERTION)
+  def assert[e >: E](options: Options)(implicit showError: ShowError[e]): Unit =
+    for (err <- failureReason[e]) {
+      println(format[e](options))
+      throw new AssertionError(err)
+    }
 }
 
 
