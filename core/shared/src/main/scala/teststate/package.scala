@@ -88,6 +88,10 @@ package object teststate extends teststate.Name.Implicits {
       // Handle \n, \t, spaces (so surrounds), long strings (?)
       "\"" + s + "\""
     )
+    implicit val showChar: Show[Char] = Show[Char](s =>
+      // Handle \n, \t, spaces (so surrounds), long strings (?)
+      "'" + s + "'"
+    )
 
     implicit def showTraversable[C[X] <: Traversable[X], A](implicit show: Show[A]): Show[C[A]] =
       Show(_.toIterator.map(show(_)).mkString(", "))

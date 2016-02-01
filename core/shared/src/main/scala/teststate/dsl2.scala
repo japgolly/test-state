@@ -1,7 +1,5 @@
 package teststate
 
-//import teststate.{Action, Equal, Show, Check, ROS, OS, ExecutionModel, Id, SomethingFailures, TestStateExtMethodsForEither, TestStateExtMethodsForOption}
-
 import Dsl.{Types, ActionB}
 
 object Dsl {
@@ -106,7 +104,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def value[A: Show](f: OS => A) =
       new FocusValue(focusName, f)
 
-    def collection[A: Show](f: OS => TraversableOnce[A]) =
+    def collection[A](f: OS => TraversableOnce[A]) =
       new FocusColl(focusName, f)
 
     def obsAndState[A: Show](name: String, fo: O => A, fs: S => A) =
@@ -186,26 +184,43 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def beforeAndAfterF(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]) =
         equalF(before).before & equalF(after).after
 
+      private def mkAround(name: NameFn, f: (A, A) => Option[E]) =
+        around(name, focusFn)((os, a) => f(a, focusFn(os)))
+
+      /*
       def changesTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
-        around(
+        mkAround(
           {
             case None => s"$focusName $should be <?>."
             case Some(i) => s"$focusName $should be ${showA(expect(focusFn(i)))}."
           },
-          focusFn)(
-          (os, a1) => {
-            val a2 = focusFn(os)
-            f.expectMaybeEqual(positive, ex = expect(a1), actual = a2)
-          })
+          if (positive)
+            (before, after) => f.expectChange(from = before, expected = expect(before), actual = after)
+          else
+            (before, after) => f.expectChange(from = before, expected = expect(before), actual = after)
+        )
+      */
+//          (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
 
+      /*
       def changeOccurs(implicit e: Equal[A], f: SomethingFailures[A, E]) =
-        not.changesTo(identity)
+        if (positive)
+          mkAround(
+            {
+              case None => s"$focusName $should be <?>."
+              case Some(i) => s"$focusName $should be ${showA(expect(focusFn(i)))}."
+            },
+            (before, after) => f.expectChange(from = before, expected = expect(before), actual = after))
+        else
+        //not.changesTo(identity)
+          ???
+      */
     }
   } // FocusValue
 
   // ===================================================================================================================
 
-  final class FocusColl[C[X] <: TraversableOnce[X], A](focusName: String, focusFn: OS => C[A])(implicit showA: Show[A]) {
+  final class FocusColl[C[X] <: TraversableOnce[X], A](focusName: String, focusFn: OS => C[A]) {
 
     def map[D[X] <: TraversableOnce[X], B: Show](f: C[A] => D[B]): FocusColl[D, B] =
       new FocusColl(focusName, f compose focusFn)
@@ -213,61 +228,59 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def value(implicit s: Show[C[A]]) =
       new FocusValue[C[A]](focusName, focusFn)
 
-    /*
-
-    // TODO copy-and-paste
     def assert: AssertOps = new AssertOps(true)
-//    def assert(positive: Boolean): AssertOps = new AssertOps(positive)
+    def assert(positive: Boolean): AssertOps = new AssertOps(positive)
 
     final class AssertOps(positive: Boolean) {
-      private val should: String =
-        if (positive) "should" else "should not"
+      def not = new AssertOps(!positive)
 
-      // TODO Not supporting not yet - will have to inverse results
-//      def not = new AssertOps(!positive)
+      import CollectionAssertions._
 
-      def distinct(implicit sa: Show[A], ev: CollAssert.FailedDistinct[A] => E) =
+      def distinct(implicit sa: Show[A], ev: Distinct.Failure[A] => E) = {
+        val d = Distinct(positive)
         point(
-          Function.const(s"$focusName $should be distinct."),
-          os => CollAssert.distinct(focusFn(os)).map(ev))
+          d.name(focusName),
+          os => d(focusFn(os)).map(ev))
+      }
 
-      def existence(containsWhat: String,
-                          expect: OS => Boolean, expected: OS => Set[A])
-                         (implicit sa: Show[A],
-                          ev1: CollAssert.FailedContainsAll[A] => E,
-                          ev2: CollAssert.FailedContainsNone[A] => E) =
+      def containsAll[B <: A](queryNames: => String, query: OS => Set[B])(implicit sb: Show[B], ev: ContainsAll.Failure[B] => E) = {
+        val d = ContainsAll(positive)
         point(
-          _.fold(s"$focusName: Existence of $containsWhat.") { os =>
-            val e = expect(os)
-            val c = if (e) "contain" else "don't contain"
-            s"$focusName $c $containsWhat."
-          },
-          os => CollAssert.existence(expect(os), expected(os), focusFn(os))
-            .map(_.fold(ev2, ev1)))
+          d.name(focusName, queryNames),
+          os => d(focusFn(os), query(os)).map(ev))
+      }
 
-      def equalIgnoringOrder(name: String => String, expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: CollAssert.FailedEqualIgnoringOrder[A] => E) =
+      def containsAny[B >: A](queryNames: => String, query: OS => Set[B])(implicit sb: Show[B], ev: ContainsAny.Failure[B] => E) = {
+        val d = ContainsAny(positive)
         point(
-          Function.const(name(focusName)),
-          os => CollAssert.equalIgnoringOrder(expect = expect(os), actual = focusFn(os)).map(ev))
+          d.name(focusName, queryNames),
+          os => d(focusFn(os), query(os)).map(ev))
+      }
 
-      // TODO Look, all the same
+      def containsNone[B >: A](queryNames: => String, query: OS => Set[B])(implicit sb: Show[B], ev: ContainsAny.Failure[B] => E) =
+        not.containsAny(queryNames, query)
 
-      def containsAll[B <: A](name: String => String, required: OS => Set[B])(implicit sb: Show[B], ev: CollAssert.FailedContainsAll[B] => E) =
+      def containsOnly[B >: A](queryNames: => String, query: OS => Set[B])(implicit sa: Show[A], ev: ContainsOnly.Failure[A] => E) = {
+        val d = ContainsOnly(positive)
         point(
-          Function.const(name(focusName)), // focusName + " contains all " + allWhat + "."),
-          os => CollAssert.containsAll(required(os), focusFn(os)).map(ev))
+          d.name(focusName, queryNames),
+          os => d(focusFn(os), query(os)).map(ev))
+      }
 
-      def containsOnly[B >: A](name: String => String, whitelist: OS => Set[B])(implicit sa: Show[A], ev: CollAssert.FailedContainsOnly[A] => E) =
+      def existenceOfAll(allName: => String, expect: OS => Boolean, all: OS => Set[A])
+                        (implicit sa: Show[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) =
         point(
-          Function.const(name(focusName)),
-          os => CollAssert.containsOnly(whitelist(os), focusFn(os)).map(ev))
+          _.fold[Name](s"$focusName: Existence of $allName.")(os =>
+            ExistenceOfAll.name(expect(os), focusName, allName)),
+          os => ExistenceOfAll(expect(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
 
-      def containsNone[B >: A](name: String => String, blacklist: OS => Set[B])(implicit sa: Show[A], ev: CollAssert.FailedContainsNone[A] => E) =
+      def equalIgnoringOrder(expectName: => String, expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
+        val d = EqualIgnoringOrder(positive)
         point(
-          Function.const(name(focusName)),
-          os => CollAssert.containsNone(blacklist(os), focusFn(os)).map(ev))
+          d.name(focusName, expectName),
+          os => d(source = focusFn(os), expect = expect(os)).map(ev))
+      }
     }
-    */
   }
 
 
@@ -299,7 +312,6 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           os => f.expectMaybeEqual(positive, ex = fs(os.state), actual = fo(os.obs)))
     }
   }
-
 }
 
 // TODO Runner should print state & obs on failure, each assertion needn't. It should print S and/or S' depending on the type of check (pre and/or post) that failed.

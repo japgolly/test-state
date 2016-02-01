@@ -16,6 +16,9 @@ object Name {
   def apply(n: => String): Name =
     new Name(() => n)
 
+  def lazily(n: => Name): Name =
+    new Name(() => n.value) // TODO Being a bit lazy here
+
   trait Implicits {
 //    implicit def nameFromString(s: String): Name = Name(s)
     implicit def materializeNameFromString(body: String): Name = macro Name.MacroImpls.name
