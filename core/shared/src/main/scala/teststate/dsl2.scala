@@ -107,8 +107,11 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def collection[A](f: OS => TraversableOnce[A]) =
       new FocusColl(focusName, f)
 
-    def obsAndState[A: Show](name: String, fo: O => A, fs: S => A) =
-      new BiFocus[A](name, fo, fs)
+    def obsAndState[A: Show](fo: O => A, fs: S => A) =
+      new ObsAndState[A](focusName, fo, fs)
+
+    def compare[A: Show](actual: OS => A, expect: OS => A) =
+      new BiFocus[A](focusName, fa = actual, fe = expect)
   }
 
   // ===================================================================================================================
@@ -261,13 +264,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
   // ===================================================================================================================
 
-  final class BiFocus[A](focusName: String, fo: O => A, fs: S => A)(implicit showA: Show[A]) {
+  sealed class BiFocus[A](focusName: String, fa: OS => A, fe: OS => A)(implicit showA: Show[A]) {
 
     def map[B: Show](f: A => B): BiFocus[B] =
-      new BiFocus(focusName, f compose fo, f compose fs)
-
-    def obs   = new FocusValue(focusName, os => fo(os.obs))
-    def state = new FocusValue(focusName, os => fs(os.state))
+      new BiFocus(focusName, f compose fa, f compose fe)
 
     def assert: AssertOps = new AssertOps(true)
     def assert(positive: Boolean): AssertOps = new AssertOps(positive)
@@ -278,9 +278,19 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
         point(
-          NameUtils.equalFn(focusName, positive, i => fs(i.state)),
-          os => f.expectMaybeEqual(positive, ex = fs(os.state), actual = fo(os.obs)))
+          NameUtils.equalFn(focusName, positive, i => fe(i)),
+          os => f.expectMaybeEqual(positive, ex = fe(os), actual = fa(os)))
     }
+  }
+
+  final class ObsAndState[A](focusName: String, fo: O => A, fs: S => A)(implicit showA: Show[A])
+      extends BiFocus(focusName, fa = i => fs(i.state), fe = i => fo(i.obs)) {
+
+    def obs   = new FocusValue(focusName, os => fo(os.obs))
+    def state = new FocusValue(focusName, os => fs(os.state))
+
+    override def map[B: Show](f: A => B): ObsAndState[B] =
+      new ObsAndState(focusName, f compose fo, f compose fs)
   }
 }
 
