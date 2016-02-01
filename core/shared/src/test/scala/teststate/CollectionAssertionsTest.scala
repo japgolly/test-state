@@ -48,38 +48,88 @@ object CollectionAssertionsTest extends TestSuite {
 
   type D = String
 
-  def test1(name: String, f: (Boolean, D) => Option[Any], expectPass: D => Boolean) =
-    for (d <- data) {
-      val e = expectPass(d)
-      val n = s"$name: [$d]"
-      assertDefined(n, f(true, d), !e)
-      assertDefined("¬" + n, f(false, d), e)
-    }
-
-  def test2(name: String, f: (Boolean, D, Set[Char]) => Option[Any], expectPass: (D, Set[Char]) => Boolean) =
-    for {d <- data; s <- dataSets} {
-      val e = expectPass(d, s)
-      val n = s"$name: [$d] $s"
-      assertDefined(n, f(true, d, s), !e)
-      assertDefined("¬" + n, f(false, d, s), e)
-    }
-
-  def test2d(name: String, f: (Boolean, D, D) => Option[Any], expectPass: (D, D) => Boolean) =
-    for {d <- data; s <- data} {
-      val e = expectPass(d, s)
-      val n = s"$name: [$d] [$s]"
-      assertDefined(n, f(true, d, s), !e)
-      assertDefined("¬" + n, f(false, d, s), e)
-    }
-
   override def tests = TestSuite {
-    'containsAll  - test2("containsAll" , ContainsAll (_)(_, _), (d, s) => s.forall(d contains _))
-    'containsAny  - test2("containsAny" , ContainsAny (_)(_, _), (d, s) => s.exists(d contains _))
-    'containsAny2 - test2("containsAny2", ContainsAny (_)(_, _), (d, s) => d.exists(s.contains))
-    'containsOnly - test2("containsOnly", ContainsOnly(_)(_, _), (d, s) => d.forall(s.contains))
+    'logic {
 
-    'distinct - test1("distinct", Distinct(_)(_), d => d.sorted.distinct.length == d.length)
+      def test1(name: String, f: (Boolean, D) => Option[Any], expectPass: D => Boolean) =
+        for (d <- data) {
+          val e = expectPass(d)
+          val n = s"$name: [$d]"
+          assertDefined(n, f(true, d), !e)
+          assertDefined("¬" + n, f(false, d), e)
+        }
 
-    'equalIgnoringOrder - test2d("equalIgnoringOrder", EqualIgnoringOrder(_)(_, _), (a, b) => a.sorted == b.sorted)
+      def test2(name: String, f: (Boolean, D, Set[Char]) => Option[Any], expectPass: (D, Set[Char]) => Boolean) =
+        for {d <- data; s <- dataSets} {
+          val e = expectPass(d, s)
+          val n = s"$name: [$d] $s"
+          assertDefined(n, f(true, d, s), !e)
+          assertDefined("¬" + n, f(false, d, s), e)
+        }
+
+      def test2d(name: String, f: (Boolean, D, D) => Option[Any], expectPass: (D, D) => Boolean) =
+        for {d <- data; s <- data} {
+          val e = expectPass(d, s)
+          val n = s"$name: [$d] [$s]"
+          assertDefined(n, f(true, d, s), !e)
+          assertDefined("¬" + n, f(false, d, s), e)
+        }
+
+      'containsAll  - test2("containsAll" , ContainsAll (_)(_, _), (d, s) => s.forall(d contains _))
+      'containsAny  - test2("containsAny" , ContainsAny (_)(_, _), (d, s) => s.exists(d contains _))
+      'containsAny2 - test2("containsAny2", ContainsAny (_)(_, _), (d, s) => d.exists(s.contains))
+      'containsOnly - test2("containsOnly", ContainsOnly(_)(_, _), (d, s) => d.forall(s.contains))
+
+      'distinct - test1("distinct", Distinct(_)(_), d => d.sorted.distinct.length == d.length)
+
+      'equalIgnoringOrder - test2d("equalIgnoringOrder", EqualIgnoringOrder(_)(_, _), (a, b) => a.sorted == b.sorted)
+    }
+
+    'text {
+      def test[F](f: F)(name: F => Name, expectedName: String)(test: F => Option[HasErrorString], expectedError: String): Unit = {
+        assertEq(name(f).value, expectedName)
+        assertEq(test(f).map(_.errorString), Some(expectedError))
+      }
+
+      'containsAllP - test(ContainsAll(true))(
+        _.name("A", "B"), "A should contain all B.")(
+        _ ("abc", "cde".toSet), "Missing: 'd', 'e'.")
+
+      'containsAllF - test(ContainsAll(false))(
+        _.name("A", "B"), "A shouldn't contain all B.")(
+        _ ("abcde", "cd".toSet), "All members found.")
+
+      'containsAnyP - test(ContainsAny(true))(
+        _.name("A", "B"), "A should contain some B.")(
+        _ ("abc", "xy".toSet), "None found.")
+
+      'containsAnyF - test(ContainsAny(false))(
+        _.name("A", "B"), "A shouldn't contain any B.")(
+        _ ("abcde", "cdx".toSet), "Found: 'c', 'd'.")
+
+      'containsOnlyP - test(ContainsOnly(true))(
+        _.name("A", "B"), "A should only contain B.")(
+        _ ("abcde", "bcd".toSet), "Illegal: 'a', 'e'.")
+
+      'containsOnlyF - test(ContainsOnly(false))(
+        _.name("A", "B"), "A should contain other than B.")(
+        _ ("bcdbcd", "bcd".toSet), "No non-whitelist members found.")
+
+      'distinctP - test(Distinct(true))(
+        _.name("A"), "A should be distinct.")(
+        _ ("beabcdbfe"), "Dups: 'b' → 3, 'e' → 2.")
+
+      'distinctF - test(Distinct(false))(
+        _.name("A"), "A shouldn't be distinct.")(
+        _ ("abcde"), "No duplicate members found.")
+
+      'equalIgnoringOrderP - test(EqualIgnoringOrder(true))(
+        _.name("A", "B"), "A should equal B ignoring order.")(
+        _ ("abcdefa", "cdfex"), "Missing: 'x'., Excess: 'b', 'a', 'a'.")
+
+      'equalIgnoringOrderF - test(EqualIgnoringOrder(false))(
+        _.name("A", "B"), "A shouldn't equal B ignoring order.")(
+        _ ("qwe", "qwe"), "Set elements match.")
+    }
   }
 }

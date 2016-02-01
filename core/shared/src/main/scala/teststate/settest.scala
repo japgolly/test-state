@@ -90,7 +90,7 @@ object CollectionAssertions {
     }
 
     case object Was extends Failure[Nothing] {
-      override def errorString = s"No duplicate members found."
+      override def errorString = "No duplicate members found."
     }
   }
 
@@ -143,7 +143,7 @@ object CollectionAssertions {
     }
 
     case object AllPresent extends Failure[Nothing] {
-      override def errorString = s"All members found."
+      override def errorString = "All members found."
     }
   }
 
@@ -251,7 +251,7 @@ object CollectionAssertions {
     }
 
     case object NothingOffWhitelist extends Failure[Nothing] {
-      override def errorString = s"No non-whitelist members found."
+      override def errorString = "No non-whitelist members found."
     }
   }
 
@@ -323,7 +323,7 @@ object CollectionAssertions {
 
     object Neg extends EqualIgnoringOrder {
       override def name(subject: => String, expectName: => String): Name =
-        s"$subject should equal $expectName ignoring order."
+        s"$subject shouldn't equal $expectName ignoring order."
 
       override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]) =
         if (pass(prep(source, expect)))
@@ -342,7 +342,7 @@ object CollectionAssertions {
     }
 
     case object Matched extends Failure[Nothing] {
-      override def errorString = "Sets are equal."
+      override def errorString = "Set elements match."
     }
   }
 }
