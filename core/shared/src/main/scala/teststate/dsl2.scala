@@ -26,7 +26,7 @@ object Dsl {
     final type ActionFn    = ROS => Option[() => F[Either[E, O => S]]]
   }
 
-  final class ActionB[F[_], R, O, S, E](actionName: String)(implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
+  final class ActionB[F[_], R, O, S, E](actionName: => String)(implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
 
     private def build(fn: (ROS => F[Option[E]]) => ActionFn): ActionB2[F, R, O, S, E] =
       new ActionB2(act => Action.Single[F, R, O, S, E](
@@ -68,13 +68,6 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around1 =
     Check.Around.Dunno(name, before, test)
 
-  // TODO Delete
-//  def point(name: String, test: OS => Option[E]): Point1 = Check.Point.Single(_ => name, test)
-//  def around[A](name: String, before: OS => A)(test: (OS, A) => Option[E]): Around1 = Check.Around.Dunno(_ => name, before, test)
-
-  //  val point = Check.Point.Single.apply[O, S, E] _
-//  def around[A] = Check.Around.Dunno.apply[O, S, E] _
-
   private def strErrorFn(implicit ev: String =:= E): Any => E = _ => ""
   private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E = (_,_) => ""
 
@@ -94,12 +87,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
 
 
-
-
-  def focus(focusName: String) =
+  def focus(focusName: => String) =
     new Focus(focusName)
 
-  final class Focus(focusName: String) {
+  final class Focus(focusName: => String) {
     // TODO Make implicit
     def value[A: Show](f: OS => A) =
       new FocusValue(focusName, f)
@@ -116,12 +107,12 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
   // ===================================================================================================================
 
-  def action(actionName: String) =
+  def action(actionName: => String) =
     new ActionB[F, R, O, S, E](actionName)
 
   // ===================================================================================================================
 
-  final class FocusValue[A](focusName: String, focusFn: OS => A)(implicit showA: Show[A]) {
+  final class FocusValue[A](focusName: => String, focusFn: OS => A)(implicit showA: Show[A]) {
 
     def map[B: Show](f: A => B): FocusValue[B] =
       new FocusValue(focusName, f compose focusFn)
@@ -197,7 +188,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
   // ===================================================================================================================
 
-  final class FocusColl[C[X] <: TraversableOnce[X], A](focusName: String, focusFn: OS => C[A]) {
+  final class FocusColl[C[X] <: TraversableOnce[X], A](focusName: => String, focusFn: OS => C[A]) {
 
     def map[D[X] <: TraversableOnce[X], B: Show](f: C[A] => D[B]): FocusColl[D, B] =
       new FocusColl(focusName, f compose focusFn)
@@ -264,7 +255,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
   // ===================================================================================================================
 
-  sealed class BiFocus[A](focusName: String, fa: OS => A, fe: OS => A)(implicit showA: Show[A]) {
+  sealed class BiFocus[A](focusName: => String, fa: OS => A, fe: OS => A)(implicit showA: Show[A]) {
 
     def map[B: Show](f: A => B): BiFocus[B] =
       new BiFocus(focusName, f compose fa, f compose fe)
@@ -283,7 +274,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     }
   }
 
-  final class ObsAndState[A](focusName: String, fo: O => A, fs: S => A)(implicit showA: Show[A])
+  final class ObsAndState[A](focusName: => String, fo: O => A, fs: S => A)(implicit showA: Show[A])
       extends BiFocus(focusName, fa = i => fs(i.state), fe = i => fo(i.obs)) {
 
     def obs   = new FocusValue(focusName, os => fo(os.obs))
