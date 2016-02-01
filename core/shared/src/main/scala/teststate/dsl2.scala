@@ -165,17 +165,22 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def not = new AssertOps(!positive)
 
+      private def nameEqual(expect: A): Name =
+        s"$focusName $should be ${showA(expect)}."
+
+      private def nameEqualF(expect: OS => A): NameFn = {
+        case None     => s"$focusName $should be <fn>."
+        case Some(os) => nameEqual(expect(os))
+      }
+
       def equal(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
         point(
-          s"$focusName $should be ${showA(expect)}.",
+          nameEqual(expect),
           i => f.expectMaybeEqual(positive, ex = expect, actual = focusFn(i)))
 
       def equalF(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
         point(
-          {
-            case None => s"$focusName $should be <?>."
-            case Some(i) => s"$focusName $should be ${showA(expect(i))}."
-          },
+          nameEqualF(expect),
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
 
       def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]) =
@@ -187,34 +192,13 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       private def mkAround(name: NameFn, f: (A, A) => Option[E]) =
         around(name, focusFn)((os, a) => f(a, focusFn(os)))
 
-      /*
       def changesTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
         mkAround(
-          {
-            case None => s"$focusName $should be <?>."
-            case Some(i) => s"$focusName $should be ${showA(expect(focusFn(i)))}."
-          },
-          if (positive)
-            (before, after) => f.expectChange(from = before, expected = expect(before), actual = after)
-          else
-            (before, after) => f.expectChange(from = before, expected = expect(before), actual = after)
-        )
-      */
-//          (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
+          nameEqualF(expect compose focusFn),
+          (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
 
-      /*
       def changeOccurs(implicit e: Equal[A], f: SomethingFailures[A, E]) =
-        if (positive)
-          mkAround(
-            {
-              case None => s"$focusName $should be <?>."
-              case Some(i) => s"$focusName $should be ${showA(expect(focusFn(i)))}."
-            },
-            (before, after) => f.expectChange(from = before, expected = expect(before), actual = after))
-        else
-        //not.changesTo(identity)
-          ???
-      */
+        changesTo(identity)
     }
   } // FocusValue
 
