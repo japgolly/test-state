@@ -32,6 +32,11 @@ object Action {
 
     def name: Name.Fn[OS[O, S]]
 
+    def rename(newName: Name.Fn[OS[O, S]]): This
+
+    override final def nameMod(f: Name => Name) =
+      rename(f compose name)
+
     final override def nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]] =
       vector1(this)
 
@@ -68,13 +73,13 @@ object Action {
   }
 
   case class Group[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
-                                    action: ROS[Ref, O, S] => Option[Action[F, Ref, O, S, Err]],
-                                    check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
+                                         action: ROS[Ref, O, S] => Option[Action[F, Ref, O, S, Err]],
+                                         check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
     override type This = Group[F, Ref, O, S, Err]
 
-    override def nameMod(f: Name => Name) =
-      copy(name = o => f(name(o)))
+    override def rename(newName: Name.Fn[OS[O, S]]) =
+      copy(name = newName)
 
     override def addCheck(c: Check.Around[O, S, Err]) =
       copy(check = check & c)
@@ -84,13 +89,13 @@ object Action {
   }
 
   case class Single[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
-                                     run: ROS[Ref, O, S] => Option[() => F[Either[Err, O => S]]],
-                                     check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
+                                          run: ROS[Ref, O, S] => Option[() => F[Either[Err, O => S]]],
+                                          check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
     override type This = Single[F, Ref, O, S, Err]
 
-    override def nameMod(f: Name => Name) =
-      copy(name = o => f(name(o)))
+    override def rename(newName: Name.Fn[OS[O, S]]) =
+      copy(name = newName)
 
     override def addCheck(c: Check.Around[O, S, Err]) =
       copy(check = check & c)

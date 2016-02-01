@@ -35,16 +35,18 @@ object Check {
   object Point {
     val empty = Composite(Vector.empty)
 
-    case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E] {
+    final case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E] {
       override def before = Around.empty.copy(befores = singles.map(_.before))
       override def after  = Around.empty.copy(afters = singles.map(_.after))
     }
 
-    case class Single[-O, -S, +E](name: Name.Fn[OS[O, S]], test: OS[O, S] => Option[E]) extends Point[O, S, E] {
+    final case class Single[-O, -S, +E](name: Name.Fn[OS[O, S]], test: OS[O, S] => Option[E]) extends Point[O, S, E] {
       override def toString = s"Check.Point.Single(${name(None)})"
       override def singles = vector1(this)
       override def before = Around.Before(this)
       override def after  = Around.After(this)
+      def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]): Single[o, s, e] =
+        copy(newName)
     }
   }
 
@@ -68,17 +70,20 @@ object Check {
   object Around {
     val empty = Composite(Vector.empty, Vector.empty, Vector.empty)
 
-    case class Composite[-O, -S, +E](befores: Vector[Before[O, S, E]],
+    final case class Composite[-O, -S, +E](befores: Vector[Before[O, S, E]],
                                      dunnos: Vector[Dunno[O, S, E]],
                                      afters: Vector[After[O, S, E]]) extends Around[O, S, E]
 
     sealed abstract class Single[-O, -S, +E] extends Around[O, S, E] {
+      type This[-o, -s, +e] <: Single[o, s, e]
+
       override def befores: Vector[Before[O, S, E]] = Vector.empty
       override def dunnos: Vector[Dunno[O, S, E]] = Vector.empty
       override def afters: Vector[After[O, S, E]] = Vector.empty
+
+      def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]): This[o, s, e]
     }
 
-    // TODO This shape prevents discovery of pre vs post vs around checks
     sealed abstract class Dunno[-O, -S, +E] extends Single[O, S, E] {
       type A
       val name: Name.Fn[OS[O, S]]
@@ -86,6 +91,7 @@ object Check {
       val test: (OS[O, S], A) => Option[E]
 
       final def aux: DunnoA[O, S, E, A] = this
+      final override type This[-o, -s, +e] = DunnoA[o, s, e, A]
       final override def dunnos = vector1(this)
     }
 
@@ -100,15 +106,22 @@ object Check {
         override val before = _before
         override val test   = _test
         override def toString = s"Check.Around.Single(${name(None)})"
+        override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
+          Dunno(newName, before, test)
       }
 
-    case class Before[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
-      final override def befores = vector1(this)
+    final case class Before[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
+      override type This[-o, -s, +e] = Before[o, s, e]
+      override def befores = vector1(this)
+      override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
+        copy(check rename newName)
     }
 
-    case class After[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
-      final override def afters = vector1(this)
-
+    final case class After[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
+      override type This[-o, -s, +e] = After[o, s, e]
+      override def afters = vector1(this)
+      override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
+        copy(check rename newName)
     }
   }
 }
