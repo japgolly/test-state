@@ -96,7 +96,7 @@ object CollectionAssertionsTest extends TestSuite {
         _ ("abc", "cde".toSet), "Missing: 'd', 'e'.")
 
       'containsAllF - test(ContainsAll(false))(
-        _.name("A", "B"), "A shouldn't contain all B.")(
+        _.name("A", "B"), "A should not contain all B.")(
         _ ("abcde", "cd".toSet), "All members found.")
 
       'containsAnyP - test(ContainsAny(true))(
@@ -109,27 +109,27 @@ object CollectionAssertionsTest extends TestSuite {
 
       'containsOnlyP - test(ContainsOnly(true))(
         _.name("A", "B"), "A should only contain B.")(
-        _ ("abcde", "bcd".toSet), "Illegal: 'a', 'e'.")
+        _ ("abcde", "bcd".toSet), "Found: 'a', 'e'.")
 
       'containsOnlyF - test(ContainsOnly(false))(
         _.name("A", "B"), "A should contain other than B.")(
-        _ ("bcdbcd", "bcd".toSet), "No non-whitelist members found.")
+        _ ("bcdbcd", "bcd".toSet), "None found.")
 
       'distinctP - test(Distinct(true))(
         _.name("A"), "A should be distinct.")(
         _ ("beabcdbfe"), "Dups: 'b' → 3, 'e' → 2.")
 
       'distinctF - test(Distinct(false))(
-        _.name("A"), "A shouldn't be distinct.")(
-        _ ("abcde"), "No duplicate members found.")
+        _.name("A"), "A should contain duplicates.")(
+        _ ("abcde"), "No duplicates found.")
 
       'equalIgnoringOrderP - test(EqualIgnoringOrder(true))(
         _.name("A", "B"), "A should equal B ignoring order.")(
-        _ ("abcdefa", "cdfex"), "Missing: 'x'., Excess: 'b', 'a', 'a'.")
+        _ ("abcdefa", "cdfex"), "Missing: 'x'. Excess: 'b', 'a', 'a'.")
 
       'equalIgnoringOrderF - test(EqualIgnoringOrder(false))(
-        _.name("A", "B"), "A shouldn't equal B ignoring order.")(
-        _ ("qwe", "qwe"), "Set elements match.")
+        _.name("A", "B"), "A should not equal B ignoring order.")(
+        _ ("qwe", "qwe"), "Set members match.")
     }
   }
 }

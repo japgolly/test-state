@@ -73,7 +73,7 @@ object CollectionAssertions {
 
     object Neg extends Distinct {
       override def name(subject: => String): Name =
-        subject + " shouldn't be distinct."
+        subject + " should contain duplicates."
 
       override def apply[A](as: TraversableOnce[A])(implicit s: Show[A]) =
         if (pass(prep(as)))
@@ -90,7 +90,7 @@ object CollectionAssertions {
     }
 
     case object Was extends Failure[Nothing] {
-      override def errorString = "No duplicate members found."
+      override def errorString = "No duplicates found."
     }
   }
 
@@ -126,7 +126,7 @@ object CollectionAssertions {
     /** ∃b. A ∌ b */
     object Neg extends ContainsAll {
       override def name(subject: => String, queryNames: => String): Name =
-        s"$subject shouldn't contain all $queryNames."
+        s"$subject should not contain all $queryNames."
 
       override def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A, sb: Show[B]): Option[AllPresent.type] =
         if (missing(source, query).isEmpty)
@@ -247,11 +247,11 @@ object CollectionAssertions {
 
     case class FoundIllegal[+A](illegal: Vector[A])(implicit s: Show[A]) extends Failure[A] {
       def illegalToString = formatSet(illegal.iterator.map(s(_)))
-      override def errorString = s"Illegal: $illegalToString"
+      override def errorString = s"Found: $illegalToString"
     }
 
     case object NothingOffWhitelist extends Failure[Nothing] {
-      override def errorString = "No non-whitelist members found."
+      override def errorString = "None found."
     }
   }
 
@@ -323,7 +323,7 @@ object CollectionAssertions {
 
     object Neg extends EqualIgnoringOrder {
       override def name(subject: => String, expectName: => String): Name =
-        s"$subject shouldn't equal $expectName ignoring order."
+        s"$subject should not equal $expectName ignoring order."
 
       override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]) =
         if (pass(prep(source, expect)))
@@ -338,11 +338,11 @@ object CollectionAssertions {
       private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Show[AA]): Option[String] =
         if (as.isEmpty) None else Some(name + ": " +formatSet(as.iterator.map(s(_))))
       override def errorString =
-        (fmt("Missing", missing).toList ::: fmt("Excess", excess).toList).mkString(", ")
+        (fmt("Missing", missing).toList ::: fmt("Excess", excess).toList).mkString(" ")
     }
 
     case object Matched extends Failure[Nothing] {
-      override def errorString = "Set elements match."
+      override def errorString = "Set members match."
     }
   }
 }
