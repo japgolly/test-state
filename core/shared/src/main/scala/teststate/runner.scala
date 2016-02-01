@@ -29,7 +29,7 @@ object Result {
 class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Err],
                                        val invariants: Check[Obs, State, Err],
                                        val observe: Ref => Obs)
-                                      (implicit val executionModel: ExecutionModel[F]) {
+                                      (implicit val executionModel: ExecutionModel[F], val recover: Recover[Err]) {
   def run(initialState: State, ref: Ref): F[History[Err]] =
     Runner.run(this)(initialState, ref)
 
@@ -40,8 +40,22 @@ object Test {
   def apply[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
                                         invariants: Check[Obs, State, Err] = Check.empty)
                                        (observe: Ref => Obs)
-                                       (implicit executionModel: ExecutionModel[F]): Test[F, Ref, Obs, State, Err] =
+                                       (implicit executionModel: ExecutionModel[F], recover: Recover[Err]): Test[F, Ref, Obs, State, Err] =
     new Test(action, invariants, observe)
+}
+
+final case class Recover[E](apply: Throwable => E) extends AnyVal {
+  def recover[A](a: => A, ko: E => A): A =
+    try a catch { case t: Throwable => ko(apply(t)) }
+}
+object Recover {
+  implicit val recoverToString: Recover[String] =
+    Recover("Caught exception: " + _.toString)
+
+  private val forName = Recover("Name exception: " + _.toString)
+  def name(n: => Name): Name =
+    forName.recover(n, Name(_))
+
 }
 
 object Runner {
@@ -59,9 +73,8 @@ object Runner {
     }
 
   def run[F[_], Ref, Obs, State, Err](test: Test[F, Ref, Obs, State, Err])
-//                               (observe: Ref => Obs)
-                               (initialState: State, ref: Ref): F[History[Err]] = {
-import test.{executionModel => EM}
+                                     (initialState: State, ref: Ref): F[History[Err]] = {
+import test.{executionModel => EM, recover}
 import test.observe
     // TODO Catch all exceptions
 
@@ -170,10 +183,10 @@ import test.observe
 
           // ==============================================================================
           case Action.Single(nameFn, run, check) =>
-            val name = nameFn(ros.sos)
+            val name = Recover.name(nameFn(ros.sos))
             val omg2F =
               checkAround(name, check & invariantsAround, true, omg)(run)(act =>
-                EM.map(act()) {
+                EM.map(EM.recover(act())) {
                   case Right(f) =>
                     val obs2 = observe(ref)
                     val state2 = f(obs2)
@@ -187,7 +200,7 @@ import test.observe
 
           // ==============================================================================
           case Action.Group(nameFn, actionFn, check) =>
-            val name = nameFn(ros.sos)
+            val name = Recover.name(nameFn(ros.sos))
             val omg2F =
               checkAround(name, check & invariantsAround, false, omg)(actionFn)(children => {
                 val x =
@@ -210,12 +223,12 @@ import test.observe
         if (invariantsPoints.isEmpty)
           History.empty
         else {
-          val children = invariantsPoints.map { i =>
-            val name = i.name(ros.sos)
-            val result = Result passOrFail i.test(ros.os)
-            History.Step(name, result)
+          val children = {
+            val b = History.newBuilder[Err]
+            b.addEach(invariantsPoints)(_ name ros.sos, _ test ros.os)
+            b.history()
           }
-          History(History.parent("Initial state.", History(children)))
+          History(History.parent("Initial state.", children))
         }
 
       val fh = if (firstSteps.failed)

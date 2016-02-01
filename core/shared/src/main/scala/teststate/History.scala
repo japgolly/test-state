@@ -144,32 +144,35 @@ object History {
 
   def newBuilder[E] = new Builder[E]
   final class Builder[E] {
-    private val steps = Vector.newBuilder[Step[E]]
+    private val b = Vector.newBuilder[Step[E]]
     private var r = Result.empty[E]
 
     def +=(s: Step[E]): Unit = {
-      steps += s
+      b += s
       r += s.result
     }
 
     def ++=(h: History[E]): Unit =
       if (h.nonEmpty) {
-        steps ++= h.steps
+        b ++= h.steps
         r += h.result
       }
 
-    def addEach[A](as: Vector[A])(name: A => Name, test: A => Option[E]): Unit =
+    def addEach[A](as: Vector[A])(name: A => Name, test: A => Option[E])(implicit recover: Recover[E]): Unit =
       for (a <- as) {
-        val n = name(a)
-        val r = Result passOrFail test(a)
+        val n = Recover name name(a)
+        val r = recover.recover(Result passOrFail test(a), Result.Fail(_))
         this += Step(n, r)
       }
 
     def result(): Result[E] =
       r
 
+    def steps(): Steps[E] =
+      b.result()
+
     def history(): History[E] =
-      History(steps.result(), result())
+      History(steps(), result())
 
     def group(name: Name): History[E] =
       History.maybeParent(name, history())

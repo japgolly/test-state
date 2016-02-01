@@ -28,24 +28,85 @@ object RunnerTest extends TestSuite {
 //      a.addCheck(c assertAfter n.toVector)
 //  }
 
+  val nop = *.action("NOP").act(_ => ())
+
   val test = Test(
     a(1)
     >> a(2)
     >> (a(3) >> a(4)).group("A34").addCheck(f.assert.equal(expectAt(4)).after)
   )(_.s)
 
-  override def tests = TestSuite {
-    val v = new RecordVar(Record(Vector.empty))
-    val h = test.run((), v)
+  def newState = new RecordVar(Record(Vector.empty))
+
+  def testHistory(h: History[String], expect: String): Unit = {
     val actual = h.format(History.Options.uncolored).trim
-    val expect =
-      """
-        |✓ A1
-        |✓ A2
-        |✓ A34
-        |✓ All pass.
-      """.stripMargin
     assertEq(actual = actual, expect.trim)
-    assertEq(actual = v.s, Record(Vector("A1", "A2", "A3", "A4")))
+  }
+
+  override def tests = TestSuite {
+    'pass {
+      val v = newState
+      testHistory(test.run((), v),
+        """
+          |✓ A1
+          |✓ A2
+          |✓ A34
+          |✓ All pass.
+        """.stripMargin)
+      assertEq(actual = v.s, Record(Vector("A1", "A2", "A3", "A4")))
+    }
+
+    'catch {
+      def badPoint = *.point("OMG", _ => sys error "Crash!")
+
+      'action {
+        val test = Test(*.action("A").act(_ => sys error "Crash!"))(_.s)
+        testHistory(test.run((), newState),
+          """
+            |✘ A -- Caught exception: java.lang.RuntimeException: Crash!
+          """.stripMargin)
+      }
+
+      'before {
+        val test = Test(nop, badPoint.before)(_.s)
+        testHistory(test.run((), newState),
+          """
+            |✘ NOP
+            |  ✘ Pre-conditions
+            |    ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+          """.stripMargin)
+      }
+
+      'after {
+        val test = Test(nop, badPoint.after)(_.s)
+        testHistory(test.run((), newState),
+          """
+            |✘ NOP
+            |  ✓ Action
+            |  ✘ Post-conditions
+            |    ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+          """.stripMargin)
+      }
+
+      'around {
+        val test = Test(nop, *.focus("").value(_ => 0).testAround(_ => "what?", (_: Any, _: Any) => sys error "Crashhh!"))(_.s)
+        testHistory(test.run((), newState),
+          """
+            |✘ NOP
+            |  ✓ Action
+            |  ✘ Post-conditions
+            |    ✘ what? -- Caught exception: java.lang.RuntimeException: Crashhh!
+          """.stripMargin)
+      }
+
+      'invariants {
+        val test = Test(nop, badPoint)(_.s)
+        testHistory(test.run((), newState),
+          """
+            |✘ Initial state.
+            |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+          """.stripMargin)
+      }
+    }
   }
 }

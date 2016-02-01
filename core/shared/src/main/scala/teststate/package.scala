@@ -131,6 +131,7 @@ package object teststate extends teststate.Name.Implicits {
     def map[A, B](fa: F[A])(f: A => B): F[B]
     def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
     def tailrec[A](a: A)(stop: A => Boolean)(rec: A => F[A]): F[A]
+    def recover[E, A](f: => F[Either[E, A]])(implicit recover: Recover[E]): F[Either[E, A]]
   }
   object ExecutionModel {
 
@@ -159,6 +160,9 @@ package object teststate extends teststate.Name.Implicits {
               go(rec(a))
           go(start)
         }
+
+        override def recover[E, A](f: => Either[E, A])(implicit recover: Recover[E]): Either[E, A] =
+          recover.recover(f, Left(_))
       }
 
     import scala.concurrent._
@@ -167,6 +171,10 @@ package object teststate extends teststate.Name.Implicits {
         override def pure   [A]   (a: A)                   = Future successful a
         override def map    [A, B](fa: F[A])(f: A => B)    = fa.map(f)
         override def flatMap[A, B](fa: F[A])(f: A => F[B]) = fa.flatMap(f)
+        override def recover[E, A](f: => F[Either[E, A]])(implicit recover: Recover[E]): F[Either[E, A]] =
+          recover.recover(
+            f.recover { case t: Throwable => Left(recover apply t) },
+            Future successful Left(_))
       }
   }
 
