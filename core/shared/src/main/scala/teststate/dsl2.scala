@@ -160,27 +160,17 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def assert(positive: Boolean): AssertOps = new AssertOps(positive)
 
     final class AssertOps(positive: Boolean) {
-      private val should: String =
-        if (positive) "should" else "should not"
 
       def not = new AssertOps(!positive)
 
-      private def nameEqual(expect: A): Name =
-        s"$focusName $should be ${showA(expect)}."
-
-      private def nameEqualF(expect: OS => A): NameFn = {
-        case None     => s"$focusName $should be <fn>."
-        case Some(os) => nameEqual(expect(os))
-      }
-
       def equal(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
         point(
-          nameEqual(expect),
+          NameUtils.equal(focusName, positive, expect),
           i => f.expectMaybeEqual(positive, ex = expect, actual = focusFn(i)))
 
       def equalF(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
         point(
-          nameEqualF(expect),
+          NameUtils.equalFn(focusName, positive, expect),
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
 
       def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]) =
@@ -194,7 +184,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def changesTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
         mkAround(
-          nameEqualF(expect compose focusFn),
+          NameUtils.equalFn(focusName, positive, expect compose focusFn),
           (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
 
       def changeOccurs(implicit e: Equal[A], f: SomethingFailures[A, E]) =
@@ -258,10 +248,11 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
             ExistenceOfAll.name(expect(os), focusName, allName)),
           os => ExistenceOfAll(expect(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
 
-      def equalIgnoringOrder(expectName: => String, expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
+      def equalIgnoringOrder(expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
         val d = EqualIgnoringOrder(positive)
         point(
-          d.name(focusName, expectName),
+          NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])
+            .andThen(_.map(_ + " (ignoring order)")),
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
     }
@@ -282,17 +273,12 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def assert(positive: Boolean): AssertOps = new AssertOps(positive)
 
     final class AssertOps(positive: Boolean) {
-      private val should: String =
-        if (positive) "should" else "should not"
 
       def not = new AssertOps(!positive)
 
       def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
         point(
-          {
-            case None => s"$focusName $should be <?>."
-            case Some(i) => s"$focusName $should be ${showA(fs(i.state))}."
-          },
+          NameUtils.equalFn(focusName, positive, i => fs(i.state)),
           os => f.expectMaybeEqual(positive, ex = fs(os.state), actual = fo(os.obs)))
     }
   }

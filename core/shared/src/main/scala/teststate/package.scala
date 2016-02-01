@@ -76,7 +76,13 @@ package object teststate extends teststate.Name.Implicits {
       show(a)
 
     def map(f: String => String): Show[A] =
-    Show(a => f(show(a)))
+      Show(a => f(show(a)))
+
+    def mkString[C[X] <: TraversableOnce[X]](start: String, mid: String, end: String): Show[C[A]] =
+      Show(_.toIterator.map(show).mkString(start, mid, end))
+
+    def coll[C[X] <: TraversableOnce[X]]: Show[C[A]] =
+      mkString("[", ", ", "]")
   }
 
   object Show {

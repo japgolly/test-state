@@ -86,9 +86,12 @@ object CollectionAssertionsTest extends TestSuite {
     }
 
     'text {
+      def testNoName[F](f: F)(test: F => Option[HasErrorString], expectedError: String): Unit =
+        assertEq(test(f).map(_.errorString), Some(expectedError))
+
       def test[F](f: F)(name: F => Name, expectedName: String)(test: F => Option[HasErrorString], expectedError: String): Unit = {
         assertEq(name(f).value, expectedName)
-        assertEq(test(f).map(_.errorString), Some(expectedError))
+        testNoName(f)(test, expectedError)
       }
 
       'containsAllP - test(ContainsAll(true))(
@@ -123,12 +126,10 @@ object CollectionAssertionsTest extends TestSuite {
         _.name("A"), "A should contain duplicates.")(
         _ ("abcde"), "No duplicates found.")
 
-      'equalIgnoringOrderP - test(EqualIgnoringOrder(true))(
-        _.name("A", "B"), "A should equal B ignoring order.")(
+      'equalIgnoringOrderP - testNoName(EqualIgnoringOrder(true))(
         _ ("abcdefa", "cdfex"), "Missing: 'x'. Excess: 'b', 'a', 'a'.")
 
-      'equalIgnoringOrderF - test(EqualIgnoringOrder(false))(
-        _.name("A", "B"), "A should not equal B ignoring order.")(
+      'equalIgnoringOrderF - testNoName(EqualIgnoringOrder(false))(
         _ ("qwe", "qwe"), "Set members match.")
     }
   }

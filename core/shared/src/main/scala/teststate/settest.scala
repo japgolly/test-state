@@ -22,6 +22,20 @@ import scala.collection.mutable
   }
    */
 
+object NameUtils {
+
+  def should(pos: Boolean): String =
+    if (pos) "should" else "shouldn't"
+
+  def equal[A](focusName: String, pos: Boolean, expect: A)(implicit sa: Show[A]): Name =
+    s"$focusName ${should(pos)} be ${sa(expect)}."
+
+  def equalFn[I, A](focusName: String, pos: Boolean, expect: I => A)(implicit sa: Show[A]): Option[I] => Name = {
+    case None    => s"$focusName ${should(pos)} be <fn>."
+    case Some(i) => equal(focusName, pos, expect(i))
+  }
+}
+
 object CollectionAssertions {
 
   private def formatSet(s: TraversableOnce[_]): String =
@@ -278,7 +292,7 @@ object CollectionAssertions {
   // ===================================================================================================================
 
   sealed abstract class EqualIgnoringOrder {
-    def name(subject: => String, expectName: => String): Name
+//    def name(subject: => String, expectName: => String): Name
     def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]): Option[EqualIgnoringOrder.Failure[A]]
 
     protected final def prep[A](source: TraversableOnce[A], expect: TraversableOnce[A]) = {
@@ -300,8 +314,8 @@ object CollectionAssertions {
       if (positive) Pos else Neg
 
     object Pos extends EqualIgnoringOrder {
-      override def name(subject: => String, expectName: => String): Name =
-        s"$subject should equal $expectName ignoring order."
+//      override def name(subject: => String, expectName: => String): Name =
+//        s"$subject should equal $expectName ignoring order."
 
       override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]) = {
         val m = prep(source, expect)
@@ -322,8 +336,8 @@ object CollectionAssertions {
     }
 
     object Neg extends EqualIgnoringOrder {
-      override def name(subject: => String, expectName: => String): Name =
-        s"$subject should not equal $expectName ignoring order."
+//      override def name(subject: => String, expectName: => String): Name =
+//        s"$subject should not equal $expectName ignoring order."
 
       override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]) =
         if (pass(prep(source, expect)))

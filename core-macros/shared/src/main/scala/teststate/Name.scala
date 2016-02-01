@@ -8,6 +8,9 @@ final class Name(init: () => String) {
     thunk = null // dereference
     n
   }
+
+  def map(f: String => String): Name =
+    Name(f(value))
 }
 
 object Name {
