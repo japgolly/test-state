@@ -3,17 +3,19 @@ package teststate
 import Action.{Composite, NonComposite}
 
 sealed trait Action[F[_], Ref, O, S, Err] {
-  type This <: Action[F, Ref, O, S, Err]
+  type This[F[_]] <: Action[F, Ref, O, S, Err]
+
+  def trans[G[_]](t: F ~~> G): This[G]
 
   def nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]]
 
-  def nameMod(f: Name => Name): This
+  def nameMod(f: Name => Name): This[F]
 
-  def addCheck(c: Check.Around[O, S, Err]): This
+  def addCheck(c: Check.Around[O, S, Err]): This[F]
 
-  def when(f: ROS[Ref, O, S] => Boolean): This
+  def when(f: ROS[Ref, O, S] => Boolean): This[F]
 
-  final def unless(f: ROS[Ref, O, S] => Boolean): This =
+  final def unless(f: ROS[Ref, O, S] => Boolean): This[F] =
     when(!f(_))
 
   final def >>(next: Action[F, Ref, O, S, Err]): Composite[F, Ref, O, S, Err] =
@@ -28,11 +30,11 @@ object Action {
   def empty[F[_], Ref, O, S, E] = Composite[F, Ref, O, S, E](Vector.empty)
 
   sealed trait NonComposite[F[_], Ref, O, S, Err] extends Action[F, Ref, O, S, Err] {
-    type This <: NonComposite[F, Ref, O, S, Err]
+    override type This[F[_]] <: NonComposite[F, Ref, O, S, Err]
 
     def name: Name.Fn[OS[O, S]]
 
-    def rename(newName: Name.Fn[OS[O, S]]): This
+    def rename(newName: Name.Fn[OS[O, S]]): This[F]
 
     override final def nameMod(f: Name => Name) =
       rename(f compose name)
@@ -48,13 +50,16 @@ object Action {
         Check.Around.empty)
   }
 
-  case class Composite[F[_], Ref, O, S, Err](nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]])
+  final case class Composite[F[_], Ref, O, S, Err](nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]])
     extends Action[F, Ref, O, S, Err] {
 
-    override type This = Composite[F, Ref, O, S, Err]
+    override type This[F[_]] = Composite[F, Ref, O, S, Err]
 
-    def map(f: NonComposite[F, Ref, O, S, Err] => NonComposite[F, Ref, O, S, Err]): This =
+    def map[G[_]](f: NonComposite[F, Ref, O, S, Err] => NonComposite[G, Ref, O, S, Err]): This[G] =
       Composite(nonCompositeActions map f)
+
+    override def trans[G[_]](t: F ~~> G) =
+      map(_ trans t)
 
     override def nameMod(f: Name => Name) =
       map(_ nameMod f)
@@ -72,11 +77,14 @@ object Action {
 //      group(name).times(n)
   }
 
-  case class Group[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
+  final case class Group[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
                                          action: ROS[Ref, O, S] => Option[Action[F, Ref, O, S, Err]],
                                          check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
-    override type This = Group[F, Ref, O, S, Err]
+    override type This[F[_]] = Group[F, Ref, O, S, Err]
+
+    override def trans[G[_]](t: F ~~> G) =
+      copy(action = action(_).map(_ trans t))
 
     override def rename(newName: Name.Fn[OS[O, S]]) =
       copy(name = newName)
@@ -88,11 +96,14 @@ object Action {
       copy(action = i => if (f(i)) action(i) else None)
   }
 
-  case class Single[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
+  final case class Single[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
                                           run: ROS[Ref, O, S] => Option[() => F[Either[Err, O => S]]],
                                           check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
-    override type This = Single[F, Ref, O, S, Err]
+    override type This[F[_]] = Single[F, Ref, O, S, Err]
+
+    override def trans[G[_]](t: F ~~> G) =
+      copy(run = run(_).map(f => () => t(f())))
 
     override def rename(newName: Name.Fn[OS[O, S]]) =
       copy(name = newName)

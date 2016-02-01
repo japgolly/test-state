@@ -125,6 +125,10 @@ package object teststate extends teststate.Name.Implicits {
 
   case class OS[+O, +S](obs: O, state: S)
 
+  trait ~~>[F[_], G[_]] {
+    def apply[A](fa: => F[A]): G[A]
+  }
+
   trait ExecutionModel[M[_]] {
     final type F[A] = M[A]
     def pure[A](a: A): F[A]
@@ -166,6 +170,8 @@ package object teststate extends teststate.Name.Implicits {
       }
 
     import scala.concurrent._
+    import scala.concurrent.duration._
+
     implicit def scalaFuture(implicit ec: ExecutionContext): ExecutionModel[Future] =
       new AlreadyStackSafe[Future] {
         override def pure   [A]   (a: A)                   = Future successful a
@@ -176,6 +182,32 @@ package object teststate extends teststate.Name.Implicits {
             f.recover { case t: Throwable => Left(recover apply t) },
             Future successful Left(_))
       }
+
+    def toFuture(implicit ec: ExecutionContext): Id ~~> Future =
+      new (Id ~~> Future) {
+        override def apply[A](a: => A) = Future(a)
+      }
+
+    /*
+    https://github.com/jducoeur/jsext/blob/master/src/main/scala/org/querki/jsext/RichFuture.scala
+
+    def applyTimeout(duration: FiniteDuration)(implicit ec: ExecutionContext): Future ~~> Future =
+      new (Future ~~> Future) {
+        override def apply[A](a: => Future[A]) = {
+          val promise = Promise[T]
+          fut.onComplete {
+            case Success(s) => promise.success(s)
+            case Failure(f) => promise.failure(f)
+          }
+          setTimeout(duration) {
+            if (!fut.isCompleted) {
+              promise.failure(new TimeoutException(msg))
+            }
+          }
+          promise.future
+        }
+      }
+      */
   }
 
 //  @inline implicit private[teststate] class ExecutionModelOps1[F[_], A](private val fa: F[A]) extends AnyVal {

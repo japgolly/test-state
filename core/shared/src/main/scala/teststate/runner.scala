@@ -30,6 +30,9 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
                                        val invariants: Check[Obs, State, Err],
                                        val observe: Ref => Obs)
                                       (implicit val executionModel: ExecutionModel[F], val recover: Recover[Err]) {
+  def trans[G[_]: ExecutionModel](t: F ~~> G): Test[G, Ref, Obs, State, Err] =
+    Test(action trans t, invariants)(observe)
+
   def run(initialState: State, ref: Ref): F[History[Err]] =
     Runner.run(this)(initialState, ref)
 
