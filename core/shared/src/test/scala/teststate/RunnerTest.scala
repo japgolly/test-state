@@ -37,7 +37,7 @@ object RunnerTest extends TestSuite {
   override def tests = TestSuite {
     val v = new RecordVar(Record(Vector.empty))
     val h = test.run((), v)
-    val actual = formatHistory(h, Options.uncolored).trim
+    val actual = h.format(History.Options.uncolored).trim
     val expect =
       """
         |✓ A1

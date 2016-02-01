@@ -7,7 +7,7 @@ object OutputTest extends TestSuite {
 
   val * = Dsl.sync[Unit, Unit, Unit, String]
 
-  val options = Options.uncolored.alwaysShowChildren
+  val options = History.Options.uncolored.alwaysShowChildren
 
   def mockAction(name: String) = *.action(name).act(_ => ())
   def mockPoint (name: String) = *.point(name, _ => None)
@@ -31,7 +31,7 @@ object OutputTest extends TestSuite {
 
   def test(a: *.Action, i: *.Check)(expect: String): Unit = {
     val h = Test(a, i)(_ => ()).run((), ())
-    val actual = formatHistory(h, options).trim
+    val actual = h.format(options).trim
     assertEq(actual = actual, expect.trim)
   }
 
