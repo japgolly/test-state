@@ -123,6 +123,7 @@ import test.{executionModel => EM, recover}
     val PostName : Name = "Post-conditions"
     val InvariantsName : Name = "Invariants"
     val Observation = "Observation"
+    val UpdateState = "Update expected state"
     val InitialState = "Initial state."
 
     def checkAround[A](name: Name, checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
@@ -236,9 +237,13 @@ import test.{executionModel => EM, recover}
                   case Right(nextStateFn) =>
                     observe() match {
                       case Right(obs2) =>
-                        val state2 = nextStateFn(obs2)
-                        val ros2 = ROS(ref, obs2, state2)
-                        ret(ros2, Result.Pass)
+                        recover.attempt(nextStateFn(obs2)) match {
+                          case Right(state2) =>
+                            val ros2 = ROS(ref, obs2, state2)
+                            ret(ros2, Result.Pass)
+                          case Left(e) =>
+                            ret(ros, Result.Pass, vector1(History.Step(UpdateState, Result Fail e)))
+                        }
                       case Left(e) =>
                         ret(ros, Result.Pass, vector1(History.Step(Observation, Result Fail e)))
                     }

@@ -138,7 +138,15 @@ object RunnerTest extends TestSuite {
           """.stripMargin)
       }
 
-      // TODO Error in state change
+      'nextState {
+        val test = Test(*.action("Merf").updateState(_ => sys error "BERF").act(_ => ())).observe(_.s)
+        testHistory(test.run((), newState),
+          """
+            |✘ Merf
+            |  ✓ Action
+            |  ✘ Update expected state -- Caught exception: java.lang.RuntimeException: BERF
+          """.stripMargin)
+      }
     }
   }
 }
