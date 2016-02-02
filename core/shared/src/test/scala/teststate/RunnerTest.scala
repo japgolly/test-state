@@ -34,13 +34,24 @@ object RunnerTest extends TestSuite {
     a(1)
     >> a(2)
     >> (a(3) >> a(4)).group("A34").addCheck(f.assert.equal(expectAt(4)).after)
-  )(_.s)
+  ).observe(_.s)
 
   def newState = new RecordVar(Record(Vector.empty))
 
   def testHistory(h: History[String], expect: String): Unit = {
     val actual = h.format(History.Options.uncolored).trim
     assertEq(actual = actual, expect.trim)
+  }
+
+  def delayCrash[A, B](successfulInvocations: Int)(f: A => B): A => B = {
+    var i = 0
+    a => {
+      i += 1
+      if (i <= successfulInvocations)
+        f(a)
+      else
+        sys error "NO MORE!"
+    }
   }
 
   override def tests = TestSuite {
@@ -60,7 +71,7 @@ object RunnerTest extends TestSuite {
       def badPoint = *.point("OMG", _ => sys error "Crash!")
 
       'action {
-        val test = Test(*.action("A").act(_ => sys error "Crash!"))(_.s)
+        val test = Test(*.action("A").act(_ => sys error "Crash!")).observe(_.s)
         testHistory(test.run((), newState),
           """
             |✘ A -- Caught exception: java.lang.RuntimeException: Crash!
@@ -68,7 +79,7 @@ object RunnerTest extends TestSuite {
       }
 
       'before {
-        val test = Test(nop, badPoint.before)(_.s)
+        val test = Test(nop, badPoint.before).observe(_.s)
         testHistory(test.run((), newState),
           """
             |✘ NOP
@@ -78,7 +89,7 @@ object RunnerTest extends TestSuite {
       }
 
       'after {
-        val test = Test(nop, badPoint.after)(_.s)
+        val test = Test(nop, badPoint.after).observe(_.s)
         testHistory(test.run((), newState),
           """
             |✘ NOP
@@ -89,7 +100,7 @@ object RunnerTest extends TestSuite {
       }
 
       'around {
-        val test = Test(nop, *.focus("").value(_ => 0).testAround(_ => "what?", (_: Any, _: Any) => sys error "Crashhh!"))(_.s)
+        val test = Test(nop, *.focus("").value(_ => 0).testAround(_ => "what?", (_: Any, _: Any) => sys error "Crashhh!")).observe(_.s)
         testHistory(test.run((), newState),
           """
             |✘ NOP
@@ -100,13 +111,34 @@ object RunnerTest extends TestSuite {
       }
 
       'invariants {
-        val test = Test(nop, badPoint)(_.s)
+        val test = Test(nop, badPoint).observe(_.s)
         testHistory(test.run((), newState),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
           """.stripMargin)
       }
+
+      'obs1 {
+        val test = Test(nop).observe(_ => sys error "NO!")
+        testHistory(test.run((), newState),
+          """
+            |✘ Initial state.
+            |  ✘ Observation -- Caught exception: java.lang.RuntimeException: NO!
+          """.stripMargin)
+      }
+
+      'obs2 {
+        val test = Test(nop).observe(delayCrash(1)(_.s))
+        testHistory(test.run((), newState),
+          """
+            |✘ NOP
+            |  ✓ Action
+            |  ✘ Observation -- Caught exception: java.lang.RuntimeException: NO MORE!
+          """.stripMargin)
+      }
+
+      // TODO Error in state change
     }
   }
 }

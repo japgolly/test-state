@@ -15,7 +15,7 @@ object StackTest extends TestSuite {
     val nop = EM.pure(())
     val a = dsl.action("nop").act(_ => nop): dsl.Action
     val as = Iterator.fill(size)(a).reduce(_ >> _)
-    val test = Test(as)(_ => ())
+    val test = Test(as).observe(_ => ())
     val fh = test.run((), ())
     EM.map(fh) { h =>
       assert(h.result == Result.Pass)

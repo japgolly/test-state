@@ -30,7 +30,7 @@ object OutputTest extends TestSuite {
   val checkAroundF = *.around("Button count increased.", _ => ())((_, _) => Some("2 != 3"))
 
   def test(a: *.Action, i: *.Check)(expect: String): Unit = {
-    val h = Test(a, i)(_ => ()).run((), ())
+    val h = Test(a, i).observe(_ => ()).run((), ())
     val actual = h.format(options).trim
     assertEq(actual = actual, expect.trim)
   }

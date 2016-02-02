@@ -35,11 +35,18 @@ package object teststate extends teststate.Name.Implicits {
       leftOrF(Right(r))
   }
 
+  @inline implicit class TestStateExtMethodsForLeft[A, B](private val self: Left[A, B]) extends AnyVal {
+    @inline def recast = self.asInstanceOf[Left[A, Nothing]]
+  }
+  @inline implicit class TestStateExtMethodsForRight[A, B](private val self: Right[A, B]) extends AnyVal {
+    @inline def recast = self.asInstanceOf[Right[Nothing, B]]
+  }
+
   implicit class TestStateExtMethodsForEither[A, B](private val self: Either[A, B]) extends AnyVal {
     def fmap[C](f: B => Either[A, C]): Either[A, C] =
       self match {
         case Right(b) => f(b)
-        case l: Left[A, B] => l.asInstanceOf[Left[A, Nothing]]
+        case l: Left[A, B] => l.recast
       }
 
     @inline def map[C](f: B => C): Either[A, C] =
@@ -47,7 +54,7 @@ package object teststate extends teststate.Name.Implicits {
 
     def leftMap[C](f: A => C): Either[C, B] =
       self match {
-        case r: Right[A, B] => r.asInstanceOf[Right[Nothing, B]]
+        case r: Right[A, B] => r.recast
         case Left(a) => Left(f(a))
       }
 
@@ -222,5 +229,21 @@ package object teststate extends teststate.Name.Implicits {
 //  }
 
   type Id[A] = A
+
+  final case class Observe[-Ref, +Obs, +Err](val apply: Ref => Either[Err, Obs]) extends AnyVal
+  object Observe {
+    def Ops[R, O, E, Out](f: Observe[R, O, E] => Out): Ops[R, O, E, Out] =
+      new Ops[R, O, E, Out](f)
+
+    final class Ops[R, O, E, Out](private val observeOut: Observe[R, O, E] => Out) extends AnyVal {
+
+      def observe(f: R => O): Out =
+        observeTry(r => Right(f(r)))
+
+      def observeTry(f: R => Either[E, O]): Out =
+        observeOut(Observe(f))
+
+    }
+  }
 
 }
