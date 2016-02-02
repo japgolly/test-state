@@ -55,12 +55,34 @@ final case class Recover[E](apply: Throwable => E) extends AnyVal {
 }
 object Recover {
   implicit val recoverToString: Recover[String] =
-    Recover("Caught exception: " + _.toString)
+    Recover { t =>
+      val o = System.err
+      o.println()
+      t.printStackTrace(o)
+      o.println()
+      "Caught exception: " + t.toString
+    }
 
-  private val forName = Recover("Name exception: " + _.toString)
-  def name(n: => Name): Name =
-    forName.recover(n, Name(_))
+  //private val forName = Recover("Name exception: " + _.toString)
+//  def name(n: => Name): Name =
+//    Name(forName.recover(n.value, identity))
 
+  def name[A](f: Name.Fn[A], a: Some[A]): Name =
+    Name(
+      try
+        f(a).value
+      catch {
+        case t: Throwable =>
+          try {
+            val n = f(None).value
+            t.printStackTrace()
+            n
+          } catch {
+            case _: Throwable =>
+              "Name exception: " + t
+          }
+      }
+    )
 }
 
 object Runner {
@@ -128,9 +150,11 @@ import test.{executionModel => EM, recover}
     val UpdateState = "Update expected state"
     val InitialState = "Initial state."
 
-    def checkAround[A](name: Name, checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
+    def checkAround[A](nameFn: Name.Fn[OS], checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
-                      (run: A => F[(Name => History[Err], ROS)]): F[OMG] =
+                      (run: A => F[(Name => History[Err], ROS)]): F[OMG] = {
+
+      val name = Recover.name(nameFn, omg.ros.sos)
 
       prepare(omg.ros) match {
         case Some(a) =>
@@ -138,7 +162,7 @@ import test.{executionModel => EM, recover}
           // Perform before
           val pre = {
             val b = History.newBuilder[Err]
-            b.addEach(checks.befores)(_.check name omg.ros.sos, _.check.test(omg.ros.os))
+            b.addEach(checks.befores)(_.check.name)(omg.ros.sos, _.check.test(omg.ros.os))
             b.group(PreName)
           }
 
@@ -195,16 +219,16 @@ import test.{executionModel => EM, recover}
                   val b = History.newBuilder[Err]
 //                  b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before_!)) // Perform around-post
                   b.addEach(hcs)(
-                    c => c.check.name(if (c.before.isLeft) None else omg.ros.sos),
+                    c => c.check.name)(omg.ros.sos,
                     c => c.before.toOptionLeft(a => c.check.test(ros2.os, a))) // Perform around-post
-                  b.addEach(checks.afters)(_.check name omg.ros.sos, _.check.test(ros2.os)) // Perform post
+                  b.addEach(checks.afters)(_.check.name)(omg.ros.sos, _.check.test(ros2.os)) // Perform post
                   b.group(PostName)
                 }
 
                 // Check invariants
                 val invs = {
                   val b = History.newBuilder[Err]
-                  b.addEach(invariantsPoints)(_ name omg.ros.sos, _.test(ros2.os))
+                  b.addEach(invariantsPoints)(_.name)(omg.ros.sos, _.test(ros2.os))
                   b.group(InvariantsName)
                 }
 
@@ -221,6 +245,7 @@ import test.{executionModel => EM, recover}
         case None =>
             EM.pure(omg :+ History.Step(name, Result.Skip))
       }
+    }
 
     def start(a: A, ros: ROS, history: History[Err] = History.empty) =
       go(OMG(vector1(a), ros, history))
@@ -236,9 +261,8 @@ import test.{executionModel => EM, recover}
 
           // ==============================================================================
           case Action.Single(nameFn, run, check) =>
-            val name = Recover.name(nameFn(ros.sos))
             val omg2F =
-              checkAround(name, check & invariantsAround, true, omg)(run) { act =>
+              checkAround(nameFn, check & invariantsAround, true, omg)(run) { act =>
 
                 /*
                 val xx =
@@ -282,9 +306,8 @@ import test.{executionModel => EM, recover}
 
           // ==============================================================================
           case Action.Group(nameFn, actionFn, check) =>
-            val name = Recover.name(nameFn(ros.sos))
             val omg2F =
-              checkAround(name, check & invariantsAround, false, omg)(actionFn)(children => {
+              checkAround(nameFn, check & invariantsAround, false, omg)(actionFn)(children => {
                 val x =
                 EM.map(start(children, ros))(omgC =>
                   ((_: Name) => omgC.history, omgC.ros))
@@ -309,7 +332,7 @@ import test.{executionModel => EM, recover}
             else {
               val children = {
                 val b = History.newBuilder[Err]
-                b.addEach(invariantsPoints)(_ name ros.sos, _ test ros.os)
+                b.addEach(invariantsPoints)(_.name)(ros.sos, _ test ros.os)
                 b.history()
               }
               History(History.parent(InitialState, children))

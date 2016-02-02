@@ -158,9 +158,9 @@ object History {
         r += h.result
       }
 
-    def addEach[A](as: Vector[A])(name: A => Name, test: A => Option[E])(implicit recover: Recover[E]): Unit =
+    def addEach[A, B](as: Vector[A])(nameFn: A => Name.Fn[B])(sb: Some[B], test: A => Option[E])(implicit recover: Recover[E]): Unit =
       for (a <- as) {
-        val n = Recover name name(a)
+        val n = Recover.name(nameFn(a), sb)
         val r = recover.recover(Result passOrFail test(a), Result.Fail(_))
         this += Step(n, r)
       }
