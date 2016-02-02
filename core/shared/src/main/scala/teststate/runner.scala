@@ -68,9 +68,10 @@ object Runner {
   trait HalfCheck[O, S, Err] {
     type A
     val check: Check.Around.DunnoA[O, S, Err, A]
-    val before: A
+    val before: Either[Err, A]
+//    def before_! : A = before.asInstanceOf[Right[Err, A]].b
   }
-  def HalfCheck[O, S, Err, a](_check: Check.Around.DunnoA[O, S, Err, a])(_before: a): HalfCheck[O, S, Err] =
+  def HalfCheck[O, S, Err, a](_check: Check.Around.DunnoA[O, S, Err, a])(_before: Either[Err, a]): HalfCheck[O, S, Err] =
     new HalfCheck[O, S, Err] {
       override type A     = a
       override val check  = _check
@@ -104,6 +105,7 @@ import test.{executionModel => EM, recover}
 
     type A = Action[F, Ref, Obs, State, Err]
     type HS = History.Steps[Err]
+    type OS = teststate.OS[Obs, State]
     type ROS = teststate.ROS[Ref, Obs, State]
 
     val invariantsAround = test.invariants.around
@@ -146,7 +148,28 @@ import test.{executionModel => EM, recover}
           } else {
 
             // Perform around-pre
-            val hcs = halfChecks(checks)(omg.ros.os)
+//            var hcsBad = false
+            val hcs =
+              checks.dunnos.map { c0 =>
+                val c = c0.aux
+                val a = recover attempt c.before(omg.ros.os)
+//                hcsBad ||= a.isLeft
+                HalfCheck(c)(a)
+              }
+
+            /*
+            if (hcsBad) {
+
+              // Around-pre failed
+              val c = History(hcs.map(hc => hc.before match {
+                case Right(a) => History.Step(hc.check.name(omg.ros.sos), Result.Pass)
+                case Left(e) => History.Step(hc.check.name(None), Result Fail e)
+              }))
+              val g = History.maybeParent("SHIT", c)
+              EM.pure(omg :+ History.parent(name, g))
+
+            } else {
+            */
 
             // Perform action
             val runF = run(a)
@@ -170,7 +193,10 @@ import test.{executionModel => EM, recover}
                 // Post conditions
                 val post1 = {
                   val b = History.newBuilder[Err]
-                  b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before)) // Perform around-post
+//                  b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before_!)) // Perform around-post
+                  b.addEach(hcs)(
+                    c => c.check.name(if (c.before.isLeft) None else omg.ros.sos),
+                    c => c.before.toOptionLeft(a => c.check.test(ros2.os, a))) // Perform around-post
                   b.addEach(checks.afters)(_.check name omg.ros.sos, _.check.test(ros2.os)) // Perform post
                   b.group(PostName)
                 }
@@ -312,11 +338,4 @@ import test.{executionModel => EM, recover}
     }
     finalResult
   }
-
-  private def halfChecks[O, S, E](checks: Check.Around[O, S, E])(os: OS[O, S]): Vector[HalfCheck[O, S, E]] =
-    checks.dunnos.map { c0 =>
-      val c = c0.aux
-      val a = c.before(os)
-      HalfCheck(c)(a)
-    }
 }

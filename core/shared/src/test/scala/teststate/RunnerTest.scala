@@ -138,6 +138,23 @@ object RunnerTest extends TestSuite {
           """.stripMargin)
       }
 
+      'obsAround {
+        class Yar {
+          lazy val b: Boolean = ().asInstanceOf[Boolean]
+        }
+        val * = Dsl.sync[Unit, Yar, Unit, String]
+        val a = *.action("NOP").act(_ => ())
+          .addCheck(*.focus("Blah").value(_.obs.b).assert.changeOccurs)
+        val test = Test(a).observe(_ => new Yar)
+        testHistory(test.run((), ()),
+          s"""
+             |✘ NOP
+             |  ✓ Action
+             |  ✘ Post-conditions
+             |    ✘ Blah shouldn't be <fn>. -- Caught exception: ${Platform.UnitToBoolException}
+           """.stripMargin)
+      }
+
       'nextState {
         val test = Test(*.action("Merf").updateState(_ => sys error "BERF").act(_ => ())).observe(_.s)
         testHistory(test.run((), newState),
