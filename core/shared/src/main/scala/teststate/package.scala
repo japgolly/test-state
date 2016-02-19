@@ -128,6 +128,9 @@ package object teststate extends teststate.Name.Implicits {
 
     val sos: Some[OS[Obs, State]] =
       Some(os)
+
+    def mapR[A](f: Ref => A): ROS[A, Obs, State] =
+      copy(ref = f(ref))
   }
 
   case class OS[+O, +S](obs: O, state: S)
