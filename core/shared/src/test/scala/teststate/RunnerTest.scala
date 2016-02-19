@@ -38,9 +38,9 @@ object RunnerTest extends TestSuite {
 
   def newState = new RecordVar(Record(Vector.empty))
 
-  def testHistory(h: History[String], expect: String): Unit = {
-    val actual = h.format(History.Options.uncolored).trim
-    assertEq(actual = actual, expect.trim)
+  def testHistory(h: History[String], expect: String, normalise: String => String = identity): Unit = {
+    val actual = normalise(h.format(History.Options.uncolored).trim)
+    assertEq(actual = actual, normalise(expect.trim))
   }
 
   def delayCrash[A, B](successfulInvocations: Int)(f: A => B): A => B = {
@@ -146,13 +146,23 @@ object RunnerTest extends TestSuite {
         val a = *.action("NOP").act(_ => ())
           .addCheck(*.focus("Blah").value(_.obs.b).assert.changeOccurs)
         val test = Test(a).observe(_ => new Yar)
+        val error = "<EXPECTED>"
+        def fixExpectedException(s: String): String =
+          List(
+            "java.lang.ClassCastException: scala.runtime.BoxedUnit cannot be cast to java.lang.Boolean",
+            "java.lang.ClassCastException",
+            "scala.runtime.BoxedUnit cannot be cast to java.lang.Boolean",
+            "scala.scalajs.runtime.UndefinedBehaviorError: An undefined behavior was detected: undefined is not an instance of java.lang.Boolean"
+          ).foldLeft(s)(_.replace(_, error))
+
         testHistory(test.run((), ()),
-          s"""
-             |✘ NOP
-             |  ✓ Action
-             |  ✘ Post-conditions
-             |    ✘ Blah shouldn't be <fn>. -- Caught exception: ${Platform.UnitToBoolException}
-           """.stripMargin)
+          """
+            |✘ NOP
+            |  ✓ Action
+            |  ✘ Post-conditions
+            |    ✘ Blah shouldn't be <fn>. -- Caught exception: java.lang.ClassCastException
+          """.stripMargin,
+          fixExpectedException)
       }
 
       'nextState {
