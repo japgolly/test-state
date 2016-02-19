@@ -36,7 +36,7 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
   def cmapRef[R2](f: R2 => Ref): Test[F, R2, Obs, State, Err] =
     new Test(action cmapRef f, invariants, observe cmapR f)
 
-  def run(initialState: State, ref: Ref): F[History[Err]] =
+  def run(initialState: State, ref: => Ref): F[History[Err]] =
     Runner.run(this)(initialState, ref)
 
   // TODO add invariants
@@ -120,8 +120,10 @@ object Runner {
 //  }
 
   def run[F[_], Ref, Obs, State, Err](test: Test[F, Ref, Obs, State, Err])
-                                     (initialState: State, ref: Ref): F[History[Err]] = {
+                                     (initialState: State, ref: => Ref): F[History[Err]] = {
 import test.{executionModel => EM, recover}
+
+    val refFn = () => ref
 
     def observe(): Either[Err, Obs] =
       recover.recover(test.observe.apply(ref), Left(_))
@@ -292,7 +294,7 @@ import test.{executionModel => EM, recover}
                       case Right(obs2) =>
                         recover.attempt(nextStateFn(obs2)) match {
                           case Right(state2) =>
-                            val ros2 = ROS(ref, obs2, state2)
+                            val ros2 = new ROS(refFn, obs2, state2)
                             ret(ros2, Result.Pass)
                           case Left(e) =>
                             ret(ros, Result.Pass, vector1(History.Step(UpdateState, Result Fail e)))
@@ -327,7 +329,7 @@ import test.{executionModel => EM, recover}
     val finalResult: F[History[Err]] = {
       observe() match {
         case Right(obs) =>
-          val ros = ROS(ref, obs, initialState)
+          val ros = new ROS(refFn, obs, initialState)
 
           val firstSteps: History[Err] =
             if (invariantsPoints.isEmpty)
@@ -362,6 +364,7 @@ import test.{executionModel => EM, recover}
           EM pure h
       }
     }
+
     finalResult
   }
 }

@@ -175,5 +175,14 @@ object RunnerTest extends TestSuite {
           """.stripMargin)
       }
     }
+
+    'refByName {
+      var i = 3
+      val * = Dsl.sync[Int, Unit, Unit, String]
+      val inc = *.action("inc").act(x => i = x.ref + 1)
+      val h = Test(inc.times(4)).observe(_ => ()).run((), i)
+      assertEq(h.failure, None)
+      assertEq(i, 7)
+    }
   }
 }

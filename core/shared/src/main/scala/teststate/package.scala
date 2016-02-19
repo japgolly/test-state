@@ -122,15 +122,17 @@ package object teststate extends teststate.Name.Implicits {
 //  implicit def focusDsli2ToCheck[O, S, E, A](b: FocusDsl[O, S, E]#I2[A]) = b.check
 //  implicit def focusDsli2ToChec1[O, S, E, A](b: FocusDsl[O, S, E]#C0[A]) = b.point
 
-  case class ROS[+Ref, +Obs, +State](ref: Ref, obs: Obs, state: State) {
+  class ROS[+Ref, +Obs, +State](refFn: () => Ref, val obs: Obs, val state: State) {
     val os: OS[Obs, State] =
       OS(obs, state)
 
     val sos: Some[OS[Obs, State]] =
       Some(os)
 
+    lazy val ref = refFn()
+
     def mapR[A](f: Ref => A): ROS[A, Obs, State] =
-      copy(ref = f(ref))
+      new ROS(refFn = () => f(ref), obs, state)
   }
 
   case class OS[+O, +S](obs: O, state: S)
