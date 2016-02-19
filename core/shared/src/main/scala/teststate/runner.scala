@@ -33,6 +33,9 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
   def trans[G[_]: ExecutionModel](t: F ~~> G): Test[G, Ref, Obs, State, Err] =
     new Test(action trans t, invariants, observe)
 
+  def cmapRef[R2](f: R2 => Ref): Test[F, R2, Obs, State, Err] =
+    new Test(action cmapRef f, invariants, observe cmapR f)
+
   def run(initialState: State, ref: Ref): F[History[Err]] =
     Runner.run(this)(initialState, ref)
 

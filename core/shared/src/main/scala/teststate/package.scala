@@ -233,7 +233,10 @@ package object teststate extends teststate.Name.Implicits {
 
   type Id[A] = A
 
-  final case class Observe[-Ref, +Obs, +Err](val apply: Ref => Either[Err, Obs]) extends AnyVal
+  final case class Observe[-Ref, +Obs, +Err](val apply: Ref => Either[Err, Obs]) extends AnyVal {
+    def cmapR[A](f: A => Ref): Observe[A, Obs, Err] =
+      Observe(apply compose f)
+  }
   object Observe {
     def Ops[R, O, E, Out](f: Observe[R, O, E] => Out): Ops[R, O, E, Out] =
       new Ops[R, O, E, Out](f)
