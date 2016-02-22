@@ -108,6 +108,10 @@ package object teststate extends teststate.Name.Implicits {
 
     implicit def showTraversable[C[X] <: Traversable[X], A](implicit show: Show[A]): Show[C[A]] =
       Show(_.toIterator.map(show(_)).mkString(", "))
+
+    object Implicits {
+      implicit def showByToString[A]: Show[A] = Show(_.toString)
+    }
   }
 
   case class ShowError[A](show: A => String) extends AnyVal
