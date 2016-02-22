@@ -1,23 +1,34 @@
 package teststate
 
 sealed abstract class Check[-O, -S, +E] {
+  type This[-o, -s, +e] <: Check[o, s, e]
 
   final def &[o <: O, s <: S, e >: E](c: Check[o, s, e]): Check.Composite[o, s, e] =
     Check.Composite(point & c.point, around & c.around)
 
   def point : Check.Point[O, S, E]
   def around: Check.Around[O, S, E]
+
+  def cmapO[X](g: X => O): This[X, S, E]
 }
 
 object Check {
 
   val empty = Composite(Point.empty, Around.empty)
 
-  case class Composite[-O, -S, +E](point: Point[O, S, E], around: Around[O, S, E]) extends Check[O, S, E]
+  final case class Composite[-O, -S, +E](point: Point[O, S, E], around: Around[O, S, E]) extends Check[O, S, E] {
+    override type This[-o, -s, +e] = Composite[o, s, e]
+
+    override def cmapO[X](g: X => O) = Composite(
+      point cmapO g,
+      around cmapO g)
+  }
 
   // ===================================================================================================================
 
   sealed abstract class Point[-O, -S, +E] extends Check[O, S, E] {
+    override type This[-o, -s, +e] <: Point[o, s, e]
+
     def singles: Vector[Point.Single[O, S, E]]
     def before: Around[O, S, E]
     def after : Around[O, S, E]
@@ -36,23 +47,34 @@ object Check {
     val empty = Composite(Vector.empty)
 
     final case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E] {
+      override type This[-o, -s, +e] = Composite[o, s, e]
       override def before = Around.empty.copy(befores = singles.map(_.before))
       override def after  = Around.empty.copy(afters = singles.map(_.after))
+
+      override def cmapO[X](g: X => O) = Composite(
+        singles.map(_ cmapO g))
     }
 
     final case class Single[-O, -S, +E](name: Name.Fn[OS[O, S]], test: OS[O, S] => Option[E]) extends Point[O, S, E] {
+      override type This[-o, -s, +e] = Single[o, s, e]
       override def toString = s"Check.Point.Single(${name(None)})"
       override def singles = vector1(this)
       override def before = Around.Before(this)
       override def after  = Around.After(this)
       def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]): Single[o, s, e] =
         copy(newName)
+
+      override def cmapO[X](g: X => O) = Single[X, S, E](
+        Name.cmapFn(name)(_ mapO g),
+        as => test(as mapO g))
     }
   }
 
   // ===================================================================================================================
 
   sealed abstract class Around[-O, -S, +E] extends Check[O, S, E] {
+    override type This[-o, -s, +e] <: Around[o, s, e]
+
     def befores: Vector[Around.Before[O, S, E]]
     def dunnos: Vector[Around.Dunno[O, S, E]]
     def afters: Vector[Around.After[O, S, E]]
@@ -72,10 +94,17 @@ object Check {
 
     final case class Composite[-O, -S, +E](befores: Vector[Before[O, S, E]],
                                      dunnos: Vector[Dunno[O, S, E]],
-                                     afters: Vector[After[O, S, E]]) extends Around[O, S, E]
+                                     afters: Vector[After[O, S, E]]) extends Around[O, S, E] {
+      override type This[-o, -s, +e] = Composite[o, s, e]
+
+      override def cmapO[X](g: X => O) = Composite[X, S, E](
+        befores.map(_ cmapO g),
+        dunnos.map(_ cmapO g),
+        afters.map(_ cmapO g))
+    }
 
     sealed abstract class Single[-O, -S, +E] extends Around[O, S, E] {
-      type This[-o, -s, +e] <: Single[o, s, e]
+      override type This[-o, -s, +e] <: Single[o, s, e]
 
       override def befores: Vector[Before[O, S, E]] = Vector.empty
       override def dunnos: Vector[Dunno[O, S, E]] = Vector.empty
@@ -93,6 +122,10 @@ object Check {
       final def aux: DunnoA[O, S, E, A] = this
       final override type This[-o, -s, +e] = DunnoA[o, s, e, A]
       final override def dunnos = vector1(this)
+      final override def cmapO[X](g: X => O) = Dunno[X, S, E, A](
+        Name.cmapFn(name)(_ mapO g),
+        xs => before(xs mapO g),
+        (xs, a) => test(xs mapO g, a))
     }
 
     type DunnoA[-O, -S, +E, a] = Dunno[O, S, E] {type A = a}
@@ -113,6 +146,7 @@ object Check {
     final case class Before[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
       override type This[-o, -s, +e] = Before[o, s, e]
       override def befores = vector1(this)
+      override def cmapO[X](g: X => O) = Before(check cmapO g)
       override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
         copy(check rename newName)
     }
@@ -120,6 +154,7 @@ object Check {
     final case class After[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
       override type This[-o, -s, +e] = After[o, s, e]
       override def afters = vector1(this)
+      override def cmapO[X](g: X => O) = After(check cmapO g)
       override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
         copy(check rename newName)
     }

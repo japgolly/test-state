@@ -22,6 +22,9 @@ object Name {
   def lazily(n: => Name): Name =
     new Name(() => n.value) // TODO Being a bit lazy here
 
+  def cmapFn[A, B](fn: Fn[A])(f: B => A): Fn[B] =
+    ob => fn(ob map f)
+
   trait Implicits {
 //    implicit def nameFromString(s: String): Name = Name(s)
     implicit def materializeNameFromString(body: String): Name = macro Name.MacroImpls.name

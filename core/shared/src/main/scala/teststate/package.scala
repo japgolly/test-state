@@ -131,11 +131,15 @@ package object teststate extends teststate.Name.Implicits {
 
     lazy val ref = refFn()
 
-    def mapR[A](f: Ref => A): ROS[A, Obs, State] =
-      new ROS(refFn = () => f(ref), obs, state)
+    def mapR[A](f: Ref   => A) = new ROS(refFn = () => f(ref), obs, state)
+    def mapO[A](f: Obs   => A) = new ROS(refFn, f(obs), state)
+    def mapS[A](f: State => A) = new ROS(refFn, obs, f(state))
   }
 
-  case class OS[+O, +S](obs: O, state: S)
+  case class OS[+O, +S](obs: O, state: S) {
+    def mapO[A](f: O => A) = OS(f(obs), state)
+    def mapS[A](f: S => A) = OS(obs, f(state))
+  }
 
   trait ~~>[F[_], G[_]] {
     def apply[A](fa: => F[A]): G[A]

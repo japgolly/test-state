@@ -3,19 +3,19 @@ package teststate
 import Action.{Composite, NonComposite}
 
 sealed trait Action[F[_], Ref, O, S, Err] {
-  type This[F[_], R] <: Action[F, R, O, S, Err]
+  type This[F[_], R, O, S, E] <: Action[F, R, O, S, E]
 
-  def trans[G[_]](t: F ~~> G): This[G, Ref]
+  def trans[G[_]](t: F ~~> G): This[G, Ref, O, S, Err]
 
   def nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]]
 
-  def nameMod(f: Name => Name): This[F, Ref]
+  def nameMod(f: Name => Name): This[F, Ref, O, S, Err]
 
-  def addCheck(c: Check.Around[O, S, Err]): This[F, Ref]
+  def addCheck(c: Check.Around[O, S, Err]): This[F, Ref, O, S, Err]
 
-  def when(f: ROS[Ref, O, S] => Boolean): This[F, Ref]
+  def when(f: ROS[Ref, O, S] => Boolean): This[F, Ref, O, S, Err]
 
-  final def unless(f: ROS[Ref, O, S] => Boolean): This[F, Ref] =
+  final def unless(f: ROS[Ref, O, S] => Boolean): This[F, Ref, O, S, Err] =
     when(!f(_))
 
   final def >>(next: Action[F, Ref, O, S, Err]): Composite[F, Ref, O, S, Err] =
@@ -24,7 +24,8 @@ sealed trait Action[F[_], Ref, O, S, Err] {
   final def andThen(next: Action[F, Ref, O, S, Err]): Composite[F, Ref, O, S, Err] =
     this >> next
 
-  def cmapRef[R2](f: R2 => Ref): This[F, R2]
+  def cmapRef[R2](f: R2 => Ref): This[F, R2, O, S, Err]
+  def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, Ref, X, S, Err]
 }
 
 object Action {
@@ -32,11 +33,11 @@ object Action {
   def empty[F[_], Ref, O, S, E] = Composite[F, Ref, O, S, E](Vector.empty)
 
   sealed trait NonComposite[F[_], Ref, O, S, Err] extends Action[F, Ref, O, S, Err] {
-    override type This[F[_], R] <: NonComposite[F, R, O, S, Err]
+    override type This[F[_], R, O, S, E] <: NonComposite[F, R, O, S, E]
 
     def name: Name.Fn[OS[O, S]]
 
-    def rename(newName: Name.Fn[OS[O, S]]): This[F, Ref]
+    def rename(newName: Name.Fn[OS[O, S]]): This[F, Ref, O, S, Err]
 
     override final def nameMod(f: Name => Name) =
       rename(f compose name)
@@ -55,9 +56,9 @@ object Action {
   final case class Composite[F[_], Ref, O, S, Err](nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]])
     extends Action[F, Ref, O, S, Err] {
 
-    override type This[F[_], R] = Composite[F, R, O, S, Err]
+    override type This[F[_], R, O, S, E] = Composite[F, R, O, S, E]
 
-    def map[G[_], R](f: NonComposite[F, Ref, O, S, Err] => NonComposite[G, R, O, S, Err]): This[G, R] =
+    def map[f[_], r, o, s, e](f: NonComposite[F, Ref, O, S, Err] => NonComposite[f, r, o, s, e]): This[f, r, o, s, e] =
       Composite(nonCompositeActions map f)
 
     override def trans[G[_]](t: F ~~> G) =
@@ -75,6 +76,9 @@ object Action {
     override def cmapRef[R2](f: R2 => Ref) =
       map(_ cmapRef f)
 
+    override def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]) =
+      map(_ cmapO g)
+
     def group(name: Name): Group[F, Ref, O, S, Err] =
       Group(_ => name, _ => Some(this), Check.Around.empty)
 
@@ -86,7 +90,7 @@ object Action {
                                          action: ROS[Ref, O, S] => Option[Action[F, Ref, O, S, Err]],
                                          check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
-    override type This[F[_], R] = Group[F, R, O, S, Err]
+    override type This[F[_], R, O, S, E] = Group[F, R, O, S, E]
 
     override def trans[G[_]](t: F ~~> G) =
       copy(action = action(_).map(_ trans t))
@@ -102,13 +106,19 @@ object Action {
 
     override def cmapRef[R2](f: R2 => Ref) =
       copy(action = i => action(i mapR f).map(_ cmapRef f))
+
+    override def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]) =
+      Group(
+        Name.cmapFn(name)(_ mapO g),
+        ros => action(ros mapO g).map(_ cmapO g),
+        check cmapO g)
   }
 
   final case class Single[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
                                           run: ROS[Ref, O, S] => Option[() => F[Either[Err, O => S]]],
                                           check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
-    override type This[F[_], R] = Single[F, R, O, S, Err]
+    override type This[F[_], R, O, S, E] = Single[F, R, O, S, E]
 
     override def trans[G[_]](t: F ~~> G) =
       copy(run = run(_).map(f => () => t(f())))
@@ -124,5 +134,11 @@ object Action {
 
     override def cmapRef[R2](f: R2 => Ref) =
       copy(run = i => run(i mapR f))
+
+    override def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]) =
+      Single[F, Ref, X, S, Err](
+        Name.cmapFn(name)(_ mapO g),
+        ros => run(ros mapO g).map(fn => () => em.map(fn())(_.map(_ compose g))),
+        check cmapO g)
   }
 }
