@@ -109,8 +109,8 @@ object Action {
   }
 
   final case class Group[F[_], Ref, O, S, Err](name: NameFn[OS[O, S]],
-                                         action: ROS[Ref, O, S] => Option[Action[F, Ref, O, S, Err]],
-                                         check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
+                                               action: ROS[Ref, O, S] => Option[Action[F, Ref, O, S, Err]],
+                                               check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
     override type This[F[_], R, O, S, E] = Group[F, R, O, S, E]
 
@@ -144,38 +144,34 @@ object Action {
     override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) =
       Group(
         name.comap(_ mapOe f),
-        ros =>
-          f(ros.obs) match {
-            case Right(o) => action(ros.copyOS(obs = o)).map(_ pmapO f)
-            case Left(err) => Some(
-              Single[F, Ref, OO, S, Err](
-                "Action requires correct observation.",
-                _ => Some(() => em.pure(Left(err))),
-                Check.Around.empty)
-            )
-          },
+        ros => f(ros.obs) match {
+          case Right(o) => action(ros.copyOS(obs = o)).map(_ pmapO f)
+          case Left(err) => someFailAction("Action requires correct observation.", err)
+        },
         check pmapO f)
 
     override def pmapRef[R2](f: R2 => Either[Err, Ref])(implicit em: ExecutionModel[F]) =
       Group(
         name,
         ros => f(ros.ref) match {
-          case Right(r) =>
-            action(ros setRef r).map(_ pmapRef f)
-          case Left(err) => Some(
-            Single[F, R2, O, S, Err](
-              "Action requires correct reference.",
-              _ => Some(() => em.pure(Left(err))),
-              Check.Around.empty)
-          )
+          case Right(r) => action(ros setRef r).map(_ pmapRef f)
+          case Left(err) => someFailAction("Action requires correct reference.", err)
         },
         check)
 
   }
 
+  private def someFailAction[F[_], Ref, O, S, Err](name: Name, err: Err)(implicit em: ExecutionModel[F]) =
+    Some(Single[F, Ref, O, S, Err](
+      name,
+      _ => preparedFail(err),
+      Check.Around.empty))
+
+  type Prepared[F[_], O, S, E] = Option[() => F[Either[E, O => Either[E, S]]]]
+
   final case class Single[F[_], Ref, O, S, Err](name: NameFn[OS[O, S]],
-                                          run: ROS[Ref, O, S] => Option[() => F[Either[Err, O => Either[Err, S]]]],
-                                          check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
+                                                run: ROS[Ref, O, S] => Prepared[F, O, S, Err],
+                                                check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
     override type This[F[_], R, O, S, E] = Single[F, R, O, S, E]
 
@@ -208,14 +204,8 @@ object Action {
     override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) = Single[F, Ref, OO, S, Err](
       name.comap(_ mapOe f),
       ros => f(ros.obs) match {
-        case Right(o) =>
-          run(ros.copyOS(obs = o)).map(fn =>
-            () => em.map(fn())(e =>
-              e.map(g => (o: OO) => f(o).fmap(g))
-            )
-          )
-        case Left(err) =>
-          Some(() => em.pure(Left(err)))
+        case Right(o) => run(ros.copyOS(obs = o)).map(fn => () => em.map(fn())(_.map(g => (o: OO) => f(o).fmap(g))))
+        case Left(err) => preparedFail(err)
       },
       check pmapO f)
 
@@ -223,8 +213,11 @@ object Action {
       name,
       ros => f(ros.ref) match {
         case Right(r) => run(ros setRef r)
-        case Left(err) => Some(() => em.pure(Left(err)))
+        case Left(err) => preparedFail(err)
       },
       check)
   }
+
+  private def preparedFail[F[_], O, S, E](err: E)(implicit em: ExecutionModel[F]): Prepared[F, O, S, E] =
+    Some(() => em.pure(Left(err)))
 }

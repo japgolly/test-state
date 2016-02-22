@@ -23,7 +23,7 @@ object Dsl {
     final type Around1     = teststate.Check.Around.Dunno[O, S, E]
     final type Action1     = teststate.Action.Single[F, R, O, S, E]
     final type NameFn      = teststate.NameFn[OS]
-    final type ActionFn    = ROS => Option[() => F[Either[E, O => Either[E, S]]]]
+    final type ActionFn    = ROS => teststate.Action.Prepared[F, O, S, E]
   }
 
   final class ActionB[F[_], R, O, S, E](actionName: => String)(implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
