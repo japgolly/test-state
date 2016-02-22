@@ -79,6 +79,18 @@ object CoproductExample {
 //      curType.state.assert.equal(Type.Num).before
 //    - run Num.test
 
+    // [Num, Int       , Int    , String]
+    //   ↓    ?           ?            ↓
+    // [Top, Corproduct, Product, String]
+
+//    def mapOS[OO, SS](o: OO => Obs, o2: Obs => OO, s: SS => State, su: (SS, State) => SS): Test[F, Ref, OO, SS, Err] =
+    Num.test
+      .cmapS[State](_.num, (s, n) => s.copy(num = n))
+      .pmapO[Obs](Left(_)) {
+          case Left(i) => Right(i)
+          case Right(_) => Left("Expected Int, got Txt.")
+        }
+
     val invariants =
       curType.assert.equal
 

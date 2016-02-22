@@ -70,6 +70,12 @@ package object teststate extends teststate.Name.Implicits {
         case Left(a) => Left(f(a))
       }
 
+    def toOption: Option[B] =
+      self match {
+        case Right(b) => Some(b)
+        case Left(a) => None
+      }
+
     def toOptionLeft(f: B => Option[A]): Option[A] =
       self match {
         case Right(b) => f(b)
@@ -151,6 +157,9 @@ package object teststate extends teststate.Name.Implicits {
   final case class OS[+O, +S](obs: O, state: S) {
     def map[OO, SS](o: O => OO, s: S => SS) = OS(o(obs), s(state))
     def mapO[A](f: O => A) = OS(f(obs), state)
+//    def mapOo[A](f: O => Option[A]) = f(obs).map(OS(_, state))
+    def mapOe[A](f: O => Either[Any, A]): Option[OS[A, S]] = f(obs) match {case Right(x) => Some(OS(x, state)); case Left(_) => None}
+    def mapOE[E, A](f: O => Either[E, A]): Either[E, OS[A, S]] = f(obs).map(OS(_, state))
     def mapS[A](f: S => A) = OS(obs, f(state))
   }
 

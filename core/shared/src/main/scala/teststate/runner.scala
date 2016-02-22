@@ -39,18 +39,30 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
 //  final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, Ref, X, S, Err] =
 //    mapOS(g, identity, (_, s) => s)
 
-  final def unzoomS[SS](s: SS => State, su: (SS, State) => SS)(implicit em: ExecutionModel[F]) = {
-    val i: Obs => Obs = identity
-    mapOS(i, i, s, su)
-  }
+//  final def unzoomS[SS](s: SS => State, su: (SS, State) => SS)(implicit em: ExecutionModel[F]) = {
+//    val i: Obs => Obs = identity
+//    mapOS(i, i, s, su)
+//  }
 
   // TODO This mapping of O is a bit useless. Probably better to think of two types of composition over everything:
   // Product and coproduct
-  def mapOS[OO, SS](o: OO => Obs, o2: Obs => OO, s: SS => State, su: (SS, State) => SS): Test[F, Ref, OO, SS, Err] =
+//  def mapOS[OO, SS](o: OO => Option[Obs], o2: Obs => OO, s: SS => State, su: (SS, State) => SS): Test[F, Ref, OO, SS, Err] =
+//    new Test(
+//      action.mapOS(o, s, su),
+//      invariants.cmap(o, s),
+//      observe mapO o2)
+
+  def pmapO[OO](f: Obs => OO)(g: OO => Either[Err, Obs]): Test[F, Ref, OO, State, Err] =
+    new Test[F, Ref, OO, State, Err](
+      ???, //action.unzoomS(s, su),
+      invariants.pmapO(g),
+      observe mapO f)
+
+  def cmapS[SS](s: SS => State, su: (SS, State) => SS): Test[F, Ref, Obs, SS, Err] =
     new Test(
-      action.mapOS(o, s, su),
-      invariants.cmap(o, s),
-      observe mapO o2)
+      action.unzoomS(s, su),
+      invariants.cmapS(s),
+      observe)
 
   def mapE[E](f: Err => E): Test[F, Ref, Obs, State, E] =
     new Test(
