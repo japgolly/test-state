@@ -36,6 +36,28 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
   def cmapRef[R2](f: R2 => Ref): Test[F, R2, Obs, State, Err] =
     new Test(action cmapRef f, invariants, observe cmapR f)
 
+//  final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, Ref, X, S, Err] =
+//    mapOS(g, identity, (_, s) => s)
+
+  final def unzoomS[SS](s: SS => State, su: (SS, State) => SS)(implicit em: ExecutionModel[F]) = {
+    val i: Obs => Obs = identity
+    mapOS(i, i, s, su)
+  }
+
+  // TODO This mapping of O is a bit useless. Probably better to think of two types of composition over everything:
+  // Product and coproduct
+  def mapOS[OO, SS](o: OO => Obs, o2: Obs => OO, s: SS => State, su: (SS, State) => SS): Test[F, Ref, OO, SS, Err] =
+    new Test(
+      action.mapOS(o, s, su),
+      invariants.cmap(o, s),
+      observe mapO o2)
+
+  def mapE[E](f: Err => E): Test[F, Ref, Obs, State, E] =
+    new Test(
+      action mapE f,
+      invariants mapE f,
+      observe mapE f)(executionModel, recover map f)
+
   def run(initialState: State, ref: => Ref): F[History[Err]] =
     Runner.run(this)(initialState, ref)
 
@@ -55,6 +77,8 @@ final case class Recover[E](apply: Throwable => E) extends AnyVal {
     try a catch { case t: Throwable => ko(apply(t)) }
   def attempt[A](a: => A): Either[E, A] =
     recover(Right(a), Left(_))
+  def map[EE](f: E => EE): Recover[EE] =
+    Recover(f compose apply)
 }
 object Recover {
   implicit val recoverToString: Recover[String] =
