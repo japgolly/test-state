@@ -35,6 +35,8 @@ sealed trait Action[F[_], Ref, O, S, Err] {
   def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]): This[F, Ref, OO, SS, Err]
 
   def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]): This[F, Ref, O, S, E]
+
+  def pmapO[OO, EE >: Err](f: OO => Either[EE, O])(implicit em: ExecutionModel[F]): This[F, Ref, OO, S, EE]
 }
 
 object Action {
@@ -91,6 +93,9 @@ object Action {
     override def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]) =
       map(_ mapE f)
 
+    override def pmapO[OO, EE >: Err](f: OO => Either[EE, O])(implicit em: ExecutionModel[F]) =
+      map(_ pmapO f)
+
     def group(name: Name): Group[F, Ref, O, S, Err] =
       Group(name, _ => Some(this), Check.Around.empty)
 
@@ -130,6 +135,22 @@ object Action {
         name,
         action(_) map (_ mapE f),
         check mapE f)
+
+    override def pmapO[OO, EE >: Err](f: OO => Either[EE, O])(implicit em: ExecutionModel[F]) =
+      Group(
+        name.comap(_ mapOe f),
+        ros =>
+          f(ros.obs) match {
+            case Right(o) => action(ros.copyOS(obs = o)).map(_ pmapO f)
+            case Left(err) => Some(
+              Single[F, Ref, OO, S, EE](
+                "Action requires correct observation.",
+                _ => Some(() => em.pure(Left(err))),
+                Check.Around.empty
+              )
+            )
+          },
+        check pmapO f)
   }
 
   final case class Single[F[_], Ref, O, S, Err](name: NameFn[OS[O, S]],
@@ -163,5 +184,22 @@ object Action {
       name,
       run(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))),
       check mapE f)
+
+    override def pmapO[OO, EE >: Err](f: OO => Either[EE, O])(implicit em: ExecutionModel[F]) = Single[F, Ref, OO, S, EE](
+      name.comap(_ mapOe f),
+      ros =>
+        // TODO aslkdjhlaksjhasjkdlkalsjdfklasjhf
+        f(ros.obs) match {
+          case Right(o) =>
+            val ros2 = ros.copyOS(obs = o)
+            run(ros2).map { fn =>
+              () => em.map(fn()) { e =>
+                e.map(g => (o: OO) => f(o).fmap(g))
+              }
+            }
+          case Left(err) => Some(() => em.pure(Left(err)))
+        }
+      ,
+      check pmapO f)
   }
 }

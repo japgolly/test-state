@@ -54,7 +54,7 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
 
   def pmapO[OO](f: Obs => OO)(g: OO => Either[Err, Obs]): Test[F, Ref, OO, State, Err] =
     new Test[F, Ref, OO, State, Err](
-      ???, //action.unzoomS(s, su),
+      action.pmapO(g),
       invariants.pmapO(g),
       observe mapO f)
 
@@ -74,7 +74,9 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
     Runner.run(this)(initialState, ref)
 
   // TODO add invariants
-  // TODO add actions
+
+  def addCheck(c: Check.Around[Obs, State, Err]): Test[F, Ref, Obs, State, Err] =
+    new Test(action addCheck c, invariants, observe)
 }
 object Test {
   def apply[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],

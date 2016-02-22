@@ -148,10 +148,13 @@ package object teststate extends teststate.Name.Implicits {
 
     lazy val ref = refFn()
 
-    def mapR[A](f: Ref   => A) = new ROS(refFn = () => f(ref), obs, state)
-    def mapO[A](f: Obs   => A) = new ROS(refFn, f(obs), state)
-    def mapS[A](f: State => A) = new ROS(refFn, obs, f(state))
-    def mapOS[OO, SS](o: Obs => OO, s: State => SS) = new ROS(refFn, o(obs), s(state))
+    def copyOS[OO, SS](obs: OO = obs, state: SS = state) = new ROS[Ref, OO, SS](() => ref, obs, state)
+
+    def mapR[A](f: Ref => A) = new ROS(refFn = () => f(ref), obs, state)
+
+    def mapO[A](f: Obs   => A): ROS[Ref, A, State] = copyOS(obs = f(obs))
+    def mapS[A](f: State => A): ROS[Ref, Obs, A] = copyOS(state = f(state))
+    def mapOS[OO, SS](o: Obs => OO, s: State => SS): ROS[Ref, OO, SS] = copyOS(o(obs), s(state))
   }
 
   final case class OS[+O, +S](obs: O, state: S) {

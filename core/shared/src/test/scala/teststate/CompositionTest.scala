@@ -45,8 +45,8 @@ object CoproductExample {
   }
 
   class Top(initNum: Int, initTxt: String) {
-    private val num = new Num(initNum)
-    private val txt = new Txt(initTxt)
+    private[this] val num = new Num(initNum)
+    private[this] val txt = new Txt(initTxt)
 
     private var t: Type = Type.Num
 
@@ -74,27 +74,23 @@ object CoproductExample {
       case Right(_) => Type.Txt
     }, _.t)
 
-//    val testNum =
-//    - make sure type = num
-//      curType.state.assert.equal(Type.Num).before
-//    - run Num.test
-
-    // [Num, Int       , Int    , String]
-    //   ↓    ?           ?            ↓
-    // [Top, Corproduct, Product, String]
-
-//    def mapOS[OO, SS](o: OO => Obs, o2: Obs => OO, s: SS => State, su: (SS, State) => SS): Test[F, Ref, OO, SS, Err] =
-    Num.test
-      .cmapS[State](_.num, (s, n) => s.copy(num = n))
-      .pmapO[Obs](Left(_)) {
-          case Left(i) => Right(i)
-          case Right(_) => Left("Expected Int, got Txt.")
-        }
+    val testNum: Test[Id, Top, Obs, State, String] =
+      Num.test
+        // TODO shit
+        .cmapS[State](_.num, (s, n) => s.copy(num = n))
+        .pmapO[Obs](Left(_)) {
+            case Left(i) => Right(i)
+            case Right(_) => Left("Expected Int, got Txt.")
+          }
+//        .addCheck(curType.state.assert.equal(Type.Num).before)
 
     val invariants =
       curType.assert.equal
 
-    val test = Test(*.emptyAction, invariants)
+    val actions =
+      *.emptyAction
+
+    val test = Test(actions, invariants)
       .observe(_.get() match {
         case x: Num => Left(x.num)
         case x: Txt => Right(x.txt)
