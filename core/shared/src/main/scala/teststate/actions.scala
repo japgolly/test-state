@@ -26,6 +26,8 @@ sealed trait Action[F[_], Ref, O, S, Err] {
 
   def cmapRef[R2](f: R2 => Ref): This[F, R2, O, S, Err]
 
+  def pmapRef[R2](f: R2 => Either[Err, Ref])(implicit em: ExecutionModel[F]): This[F, R2, O, S, Err]
+
   final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, Ref, X, S, Err] =
     mapOS(g, identity, (_, s) => s)
 
@@ -36,7 +38,7 @@ sealed trait Action[F[_], Ref, O, S, Err] {
 
   def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]): This[F, Ref, O, S, E]
 
-  def pmapO[OO, EE >: Err](f: OO => Either[EE, O])(implicit em: ExecutionModel[F]): This[F, Ref, OO, S, EE]
+  def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]): This[F, Ref, OO, S, Err]
 }
 
 object Action {
@@ -57,9 +59,9 @@ object Action {
       vector1(this)
 
     final def times(n: Int): Group[F, Ref, O, S, Err] =
-      Group(NameFn(i => s"${name(i)} ($n times)"), _ => Some(
+      Group(NameFn(i => s"${name(i).value} ($n times)"), _ => Some(
         (1 to n).iterator
-          .map(i => nameMod(s => s"[$i/$n] $s"))
+          .map(i => nameMod(s => s"[$i/$n] ${s.value}"))
           .foldLeft(empty: Action[F, Ref, O, S, Err])(_ >> _)),
         Check.Around.empty)
   }
@@ -87,13 +89,16 @@ object Action {
     override def cmapRef[R2](f: R2 => Ref) =
       map(_ cmapRef f)
 
+    override def pmapRef[R2](f: R2 => Either[Err, Ref])(implicit em: ExecutionModel[F]) =
+      map(_ pmapRef f)
+
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       map(_.mapOS(o, s, su))
 
     override def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]) =
       map(_ mapE f)
 
-    override def pmapO[OO, EE >: Err](f: OO => Either[EE, O])(implicit em: ExecutionModel[F]) =
+    override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) =
       map(_ pmapO f)
 
     def group(name: Name): Group[F, Ref, O, S, Err] =
@@ -136,21 +141,36 @@ object Action {
         action(_) map (_ mapE f),
         check mapE f)
 
-    override def pmapO[OO, EE >: Err](f: OO => Either[EE, O])(implicit em: ExecutionModel[F]) =
+    override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) =
       Group(
         name.comap(_ mapOe f),
         ros =>
           f(ros.obs) match {
             case Right(o) => action(ros.copyOS(obs = o)).map(_ pmapO f)
             case Left(err) => Some(
-              Single[F, Ref, OO, S, EE](
+              Single[F, Ref, OO, S, Err](
                 "Action requires correct observation.",
                 _ => Some(() => em.pure(Left(err))),
-                Check.Around.empty
-              )
+                Check.Around.empty)
             )
           },
         check pmapO f)
+
+    override def pmapRef[R2](f: R2 => Either[Err, Ref])(implicit em: ExecutionModel[F]) =
+      Group(
+        name,
+        ros => f(ros.ref) match {
+          case Right(r) =>
+            action(ros setRef r).map(_ pmapRef f)
+          case Left(err) => Some(
+            Single[F, R2, O, S, Err](
+              "Action requires correct reference.",
+              _ => Some(() => em.pure(Left(err))),
+              Check.Around.empty)
+          )
+        },
+        check)
+
   }
 
   final case class Single[F[_], Ref, O, S, Err](name: NameFn[OS[O, S]],
@@ -185,21 +205,26 @@ object Action {
       run(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))),
       check mapE f)
 
-    override def pmapO[OO, EE >: Err](f: OO => Either[EE, O])(implicit em: ExecutionModel[F]) = Single[F, Ref, OO, S, EE](
+    override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) = Single[F, Ref, OO, S, Err](
       name.comap(_ mapOe f),
-      ros =>
-        // TODO aslkdjhlaksjhasjkdlkalsjdfklasjhf
-        f(ros.obs) match {
-          case Right(o) =>
-            val ros2 = ros.copyOS(obs = o)
-            run(ros2).map { fn =>
-              () => em.map(fn()) { e =>
-                e.map(g => (o: OO) => f(o).fmap(g))
-              }
-            }
-          case Left(err) => Some(() => em.pure(Left(err)))
-        }
-      ,
+      ros => f(ros.obs) match {
+        case Right(o) =>
+          run(ros.copyOS(obs = o)).map(fn =>
+            () => em.map(fn())(e =>
+              e.map(g => (o: OO) => f(o).fmap(g))
+            )
+          )
+        case Left(err) =>
+          Some(() => em.pure(Left(err)))
+      },
       check pmapO f)
+
+    override def pmapRef[R2](f: R2 => Either[Err, Ref])(implicit em: ExecutionModel[F]) = Single[F, R2, O, S, Err](
+      name,
+      ros => f(ros.ref) match {
+        case Right(r) => run(ros setRef r)
+        case Left(err) => Some(() => em.pure(Left(err)))
+      },
+      check)
   }
 }

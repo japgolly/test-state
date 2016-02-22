@@ -148,6 +148,7 @@ package object teststate extends teststate.Name.Implicits {
 
     lazy val ref = refFn()
 
+    def setRef[R](ref: => R) = new ROS[R, Obs, State](() => ref, obs, state)
     def copyOS[OO, SS](obs: OO = obs, state: SS = state) = new ROS[Ref, OO, SS](() => ref, obs, state)
 
     def mapR[A](f: Ref => A) = new ROS(refFn = () => f(ref), obs, state)
@@ -265,8 +266,11 @@ package object teststate extends teststate.Name.Implicits {
   type Id[A] = A
 
   final case class Observe[-Ref, +Obs, +Err](val apply: Ref => Either[Err, Obs]) extends AnyVal {
-    def cmapR[A](f: A => Ref): Observe[A, Obs, Err] =
+    def cmapR[R](f: R => Ref): Observe[R, Obs, Err] =
       Observe(apply compose f)
+
+    def comapR[R, E >: Err](f: R => Either[E, Ref]): Observe[R, Obs, E] =
+      Observe(r => f(r) fmap apply)
 
     def mapO[O](f: Obs => O): Observe[Ref, O, Err] =
       Observe(apply(_) map f)

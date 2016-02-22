@@ -36,6 +36,9 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
   def cmapRef[R2](f: R2 => Ref): Test[F, R2, Obs, State, Err] =
     new Test(action cmapRef f, invariants, observe cmapR f)
 
+  def comapRef[R2](f: R2 => Either[Err, Ref]): Test[F, R2, Obs, State, Err] =
+    new Test(action pmapRef f, invariants, observe comapR f)
+
 //  final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, Ref, X, S, Err] =
 //    mapOS(g, identity, (_, s) => s)
 

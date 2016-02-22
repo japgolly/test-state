@@ -76,17 +76,21 @@ object CoproductExample {
 
     val testNum: Test[Id, Top, Obs, State, String] =
       Num.test
-        // TODO shit
         .cmapS[State](_.num, (s, n) => s.copy(num = n))
         .pmapO[Obs](Left(_)) {
             case Left(i) => Right(i)
             case Right(_) => Left("Expected Int, got Txt.")
           }
-//        .addCheck(curType.state.assert.equal(Type.Num).before)
+        .comapRef[Top](_.get() match {
+            case x: Num => Right(x)
+            case _      => Left("Expected Num, got Txt.")
+          })
+        .addCheck(curType.state.assert.equal(Type.Num).before)
 
     val invariants =
       curType.assert.equal
 
+    /*
     val actions =
       *.emptyAction
 
@@ -95,6 +99,10 @@ object CoproductExample {
         case x: Num => Left(x.num)
         case x: Txt => Right(x.txt)
       })
+      */
+
+    // TODO Need a way to turn tests into actions and maintain the (now-sub-) invariants
+    val test = testNum
   }
 }
 
