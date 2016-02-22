@@ -207,7 +207,7 @@ import test.{executionModel => EM, recover}
                 val c = c0.aux
                 val a = recover attempt c.before(omg.ros.os)
 //                hcsBad ||= a.isLeft
-                HalfCheck(c)(a)
+                HalfCheck(c)(a.flatten)
               }
 
             /*

@@ -139,7 +139,7 @@ object Check {
     sealed abstract class Dunno[-O, -S, +E] extends Single[O, S, E] {
       type A
       val name: NameFn[OS[O, S]]
-      val before: OS[O, S] => A
+      val before: OS[O, S] => Either[E, A]
       val test: (OS[O, S], A) => Option[E]
 
       final def aux: DunnoA[O, S, E, A] = this
@@ -150,13 +150,13 @@ object Check {
         xs => before(xs.map(o, s)),
         (xs, a) => test(xs.map(o, s), a))
       final override def mapE[EE](f: E => EE) = Dunno[O, S, EE, A](
-        name, before, test(_, _) map f)
+        name, before(_) leftMap f, test(_, _) map f)
     }
 
     type DunnoA[-O, -S, +E, a] = Dunno[O, S, E] {type A = a}
 
     def Dunno[O, S, E, _A](_name: NameFn[OS[O, S]],
-                            _before: OS[O, S] => _A,
+                            _before: OS[O, S] => Either[E, _A],
                             _test: (OS[O, S], _A) => Option[E]): DunnoA[O, S, E, _A] =
       new Dunno[O, S, E] {
         override type A     = _A

@@ -75,6 +75,13 @@ package object teststate extends teststate.Name.Implicits {
         case Right(b) => f(b)
         case Left(a) => Some(a)
       }
+
+    def flatten[AA >: A, BB](implicit ev: B <:< Either[AA, BB]): Either[AA, BB] =
+      self match {
+        case Right(b) => ev(b)
+        case l => l.asInstanceOf[Left[A, Nothing]]
+      }
+
   }
 
   // Actually this is ShowValue
