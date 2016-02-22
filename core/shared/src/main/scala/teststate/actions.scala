@@ -44,18 +44,18 @@ object Action {
   sealed trait NonComposite[F[_], Ref, O, S, Err] extends Action[F, Ref, O, S, Err] {
     override type This[F[_], R, O, S, E] <: NonComposite[F, R, O, S, E]
 
-    def name: Name.Fn[OS[O, S]]
+    def name: NameFn[OS[O, S]]
 
-    def rename(newName: Name.Fn[OS[O, S]]): This[F, Ref, O, S, Err]
+    def rename(newName: NameFn[OS[O, S]]): This[F, Ref, O, S, Err]
 
     override final def nameMod(f: Name => Name) =
-      rename(f compose name)
+      rename(name map f)
 
     final override def nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]] =
       vector1(this)
 
     final def times(n: Int): Group[F, Ref, O, S, Err] =
-      Group(i => s"${name(i)} ($n times)", _ => Some(
+      Group(NameFn(i => s"${name(i)} ($n times)"), _ => Some(
         (1 to n).iterator
           .map(i => nameMod(s => s"[$i/$n] $s"))
           .foldLeft(empty: Action[F, Ref, O, S, Err])(_ >> _)),
@@ -92,13 +92,13 @@ object Action {
       map(_ mapE f)
 
     def group(name: Name): Group[F, Ref, O, S, Err] =
-      Group(_ => name, _ => Some(this), Check.Around.empty)
+      Group(name, _ => Some(this), Check.Around.empty)
 
 //    def times(n: Int, name: String) =
 //      group(name).times(n)
   }
 
-  final case class Group[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
+  final case class Group[F[_], Ref, O, S, Err](name: NameFn[OS[O, S]],
                                          action: ROS[Ref, O, S] => Option[Action[F, Ref, O, S, Err]],
                                          check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
@@ -107,7 +107,7 @@ object Action {
     override def trans[G[_]](t: F ~~> G) =
       copy(action = action(_).map(_ trans t))
 
-    override def rename(newName: Name.Fn[OS[O, S]]) =
+    override def rename(newName: NameFn[OS[O, S]]) =
       copy(name = newName)
 
     override def addCheck(c: Check.Around[O, S, Err]) =
@@ -121,7 +121,7 @@ object Action {
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       Group(
-        Name.cmapFn(name)(_.map(o, s)),
+        name.cmap(_.map(o, s)),
         ros => action(ros.mapOS(o, s)).map(_.mapOS(o, s, su)),
         check.cmap(o, s))
 
@@ -132,7 +132,7 @@ object Action {
         check mapE f)
   }
 
-  final case class Single[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
+  final case class Single[F[_], Ref, O, S, Err](name: NameFn[OS[O, S]],
                                           run: ROS[Ref, O, S] => Option[() => F[Either[Err, O => S]]],
                                           check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
@@ -141,7 +141,7 @@ object Action {
     override def trans[G[_]](t: F ~~> G) =
       copy(run = run(_).map(f => () => t(f())))
 
-    override def rename(newName: Name.Fn[OS[O, S]]) =
+    override def rename(newName: NameFn[OS[O, S]]) =
       copy(name = newName)
 
     override def addCheck(c: Check.Around[O, S, Err]) =
@@ -155,7 +155,7 @@ object Action {
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       Single[F, Ref, OO, SS, Err](
-        Name.cmapFn(name)(_.map(o, s)),
+        name.cmap(_.map(o, s)),
         ros => run(ros.mapOS(o, s)).map(fn => () => em.map(fn())(_.map(os => (oo: OO) => su(ros.state, os(o(oo)))))),
         check.cmap(o, s))
 

@@ -14,7 +14,6 @@ final class Name(init: () => String) {
 }
 
 object Name {
-  type Fn[A] = Option[A] => Name
 
   def apply(n: => String): Name =
     new Name(() => n)
@@ -22,15 +21,14 @@ object Name {
   def lazily(n: => Name): Name =
     new Name(() => n.value) // TODO Being a bit lazy here
 
-  def cmapFn[A, B](fn: Fn[A])(f: B => A): Fn[B] =
-    ob => fn(ob map f)
-
+  // TODO Is this needed? Just put in comp objects, no?
   trait Implicits {
 //    implicit def nameFromString(s: String): Name = Name(s)
     implicit def materializeNameFromString(body: String): Name = macro Name.MacroImpls.name
-    implicit def materializeNameFnFromString(body: String): Name.Fn[Any] = macro Name.MacroImpls.nameFn
-//    implicit def materializeNameFnFromString[A](body: A)(implicit ev: A => Name): Name.Fn[Any] = macro Name.MacroImpls.nameFn2[A]
-    implicit def nameFnFromString[A](a: A)(implicit ev: A => Name): Name.Fn[Any] = Function const ev(a)
+    implicit def materializeNameFnFromString(body: String): NameFn[Any] = macro Name.MacroImpls.nameFn
+//    implicit def materializeNameFnFromString[A](body: A)(implicit ev: A => Name): NameFn[Any] = macro Name.MacroImpls.nameFn2[A]
+    implicit def nameFnFromString[A](a: A)(implicit ev: A => Name): NameFn[Any] = NameFn const ev(a)
+//    implicit def nameFnFromFn[A](f: Option[A] => Name): NameFn[A] = Fn(f)
   }
 
   import scala.reflect.macros.blackbox.Context
@@ -41,10 +39,28 @@ object Name {
     def name(body: c.Expr[String]): c.Expr[Name] =
       c.Expr[Name](q"_root_.teststate.Name($body)")
 
-    def nameFn(body: c.Expr[String]): c.Expr[Name.Fn[Any]] =
-      c.Expr[Name.Fn[Any]](q"Function const _root_.teststate.Name($body)")
+    def nameFn(body: c.Expr[String]): c.Expr[NameFn[Any]] =
+      c.Expr[NameFn[Any]](q"_root_.teststate.NameFn.const($body)")
 
-//    def nameFn2[A](body: c.Expr[A])(ev: c.Expr[A => Name]): c.Expr[Name.Fn[Any]] =
-//      c.Expr[Name.Fn[Any]](q"Function const $ev($body)")
+//    def nameFn2[A](body: c.Expr[A])(ev: c.Expr[A => Name]): c.Expr[NameFn[Any]] =
+//      c.Expr[NameFn[Any]](q"Function const $ev($body)")
   }
+}
+
+// =====================================================================================================================
+
+final case class NameFn[-A](fn: Option[A] => Name) extends AnyVal {
+  @inline def apply(i: Option[A]) =
+    fn(i)
+
+  def map(f: Name => Name): NameFn[A] =
+    NameFn(f compose fn)
+
+  def cmap[B](f: B => A): NameFn[B] =
+    NameFn(ob => apply(ob map f))
+}
+
+object NameFn {
+  def const(n: Name): NameFn[Any] =
+    NameFn(_ => n)
 }

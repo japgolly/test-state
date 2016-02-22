@@ -70,17 +70,17 @@ object Check {
         singles.map(_ mapE f))
     }
 
-    final case class Single[-O, -S, +E](name: Name.Fn[OS[O, S]], test: OS[O, S] => Option[E]) extends Point[O, S, E] {
+    final case class Single[-O, -S, +E](name: NameFn[OS[O, S]], test: OS[O, S] => Option[E]) extends Point[O, S, E] {
       override type This[-o, -s, +e] = Single[o, s, e]
       override def toString = s"Check.Point.Single(${name(None)})"
       override def singles = vector1(this)
       override def before = Around.Before(this)
       override def after  = Around.After(this)
-      def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]): Single[o, s, e] =
+      def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]): Single[o, s, e] =
         copy(newName)
 
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Single[OO, SS, E](
-        Name.cmapFn(name)(_.map(o, s)),
+        name.cmap(_.map(o, s)),
         as => test(as.map(o, s)))
 
       override def mapE[EE](f: E => EE) = Single[O, S, EE](
@@ -133,12 +133,12 @@ object Check {
       override def dunnos: Vector[Dunno[O, S, E]] = Vector.empty
       override def afters: Vector[After[O, S, E]] = Vector.empty
 
-      def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]): This[o, s, e]
+      def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]): This[o, s, e]
     }
 
     sealed abstract class Dunno[-O, -S, +E] extends Single[O, S, E] {
       type A
-      val name: Name.Fn[OS[O, S]]
+      val name: NameFn[OS[O, S]]
       val before: OS[O, S] => A
       val test: (OS[O, S], A) => Option[E]
 
@@ -146,7 +146,7 @@ object Check {
       final override type This[-o, -s, +e] = DunnoA[o, s, e, A]
       final override def dunnos = vector1(this)
       final override def cmap[OO, SS](o: OO => O, s: SS => S) = Dunno[OO, SS, E, A](
-        Name.cmapFn(name)(_.map(o, s)),
+        name.cmap(_.map(o, s)),
         xs => before(xs.map(o, s)),
         (xs, a) => test(xs.map(o, s), a))
       final override def mapE[EE](f: E => EE) = Dunno[O, S, EE, A](
@@ -155,7 +155,7 @@ object Check {
 
     type DunnoA[-O, -S, +E, a] = Dunno[O, S, E] {type A = a}
 
-    def Dunno[O, S, E, _A](_name: Name.Fn[OS[O, S]],
+    def Dunno[O, S, E, _A](_name: NameFn[OS[O, S]],
                             _before: OS[O, S] => _A,
                             _test: (OS[O, S], _A) => Option[E]): DunnoA[O, S, E, _A] =
       new Dunno[O, S, E] {
@@ -164,7 +164,7 @@ object Check {
         override val before = _before
         override val test   = _test
         override def toString = s"Check.Around.Single(${name(None)})"
-        override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
+        override def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]) =
           Dunno(newName, before, test)
       }
 
@@ -173,7 +173,7 @@ object Check {
       override def befores = vector1(this)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Before(check.cmap(o, s))
       override def mapE[EE](f: E => EE) = Before(check mapE f)
-      override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
+      override def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]) =
         copy(check rename newName)
     }
 
@@ -182,7 +182,7 @@ object Check {
       override def afters = vector1(this)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = After(check.cmap(o, s))
       override def mapE[EE](f: E => EE) = After(check mapE f)
-      override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
+      override def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]) =
         copy(check rename newName)
     }
   }

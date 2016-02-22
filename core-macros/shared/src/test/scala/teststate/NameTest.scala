@@ -22,7 +22,7 @@ object NameTest extends TestSuite {
 
       'nameFn {
         var i = 0
-        val f: Option[Unit] => Name = s"i = ${ i += 1; i.toString }"
+        val f: NameFn[Unit] = s"i = ${ i += 1; i.toString }"
         assert(i == 0)
         assert(f(None).value == "i = 1")
         assert(i == 1)

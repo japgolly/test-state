@@ -94,7 +94,7 @@ object Recover {
 //  def name(n: => Name): Name =
 //    Name(forName.recover(n.value, identity))
 
-  def name[A](f: Name.Fn[A], a: Some[A]): Name =
+  def name[A](f: NameFn[A], a: Some[A]): Name =
     Name(
       try
         f(a).value
@@ -179,7 +179,7 @@ import test.{executionModel => EM, recover}
     val UpdateState = "Update expected state"
     val InitialState = "Initial state."
 
-    def checkAround[A](nameFn: Name.Fn[OS], checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
+    def checkAround[A](nameFn: NameFn[OS], checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
                       (run: A => F[(Name => History[Err], ROS)]): F[OMG] = {
 

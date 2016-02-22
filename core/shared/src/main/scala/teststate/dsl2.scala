@@ -22,7 +22,7 @@ object Dsl {
     final type Point1      = teststate.Check.Point.Single[O, S, E]
     final type Around1     = teststate.Check.Around.Dunno[O, S, E]
     final type Action1     = teststate.Action.Single[F, R, O, S, E]
-    final type NameFn      = Option[OS] => Name
+    final type NameFn      = teststate.NameFn[OS]
     final type ActionFn    = ROS => Option[() => F[Either[E, O => S]]]
   }
 
@@ -30,7 +30,7 @@ object Dsl {
 
     private def build(fn: (ROS => F[Option[E]]) => ActionFn): ActionB2[F, R, O, S, E] =
       new ActionB2(act => Action.Single[F, R, O, S, E](
-        _ => actionName,
+        actionName,
         fn(act), Check.Around.empty))
 
     def updateState(nextState: S => S) =
@@ -167,7 +167,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def equalF(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
         point(
-          NameUtils.equalFn(focusName, positive, expect),
+          NameFn(NameUtils.equalFn(focusName, positive, expect)),
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
 
       def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]) =
@@ -181,7 +181,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def changesTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
         mkAround(
-          NameUtils.equalFn(focusName, positive, expect compose focusFn),
+          NameFn(NameUtils.equalFn(focusName, positive, expect compose focusFn)),
           (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
 
       def changeOccurs(implicit e: Equal[A], f: SomethingFailures[A, E]) =
@@ -241,15 +241,15 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def existenceOfAll(allName: => String, expect: OS => Boolean, all: OS => Set[A])
                         (implicit sa: Show[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) =
         point(
-          _.fold[Name](s"$focusName: Existence of $allName.")(os =>
-            ExistenceOfAll.name(expect(os), focusName, allName)),
+          NameFn(_.fold[Name](s"$focusName: Existence of $allName.")(os =>
+            ExistenceOfAll.name(expect(os), focusName, allName))),
           os => ExistenceOfAll(expect(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
 
       def equalIgnoringOrder(expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
         val d = EqualIgnoringOrder(positive)
         point(
-          NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])
-            .andThen(_.map(_ + " (ignoring order)")),
+          NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])
+            .andThen(_.map(_ + " (ignoring order)"))),
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
     }
@@ -272,7 +272,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
         point(
-          NameUtils.equalFn(focusName, positive, i => fe(i)),
+          NameFn(NameUtils.equalFn(focusName, positive, i => fe(i))),
           os => f.expectMaybeEqual(positive, ex = fe(os), actual = fa(os)))
     }
   }
