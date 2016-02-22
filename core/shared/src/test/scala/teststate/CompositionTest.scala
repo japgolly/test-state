@@ -87,6 +87,19 @@ object CoproductExample {
           })
         .addCheck(curType.state.assert.equal(Type.Num).before)
 
+    val testTxt: Test[Id, Top, Obs, State, String] =
+      Txt.test
+        .cmapS[State](_.txt, (s, n) => s.copy(txt = n))
+        .pmapO[Obs](Right(_)) {
+            case Right(t) => Right(t)
+            case Left(_) => Left("Expected Int, got Txt.")
+          }
+        .comapRef[Top](_.get() match {
+            case x: Txt => Right(x)
+            case _      => Left("Expected Txt, got Num.")
+          })
+        .addCheck(curType.state.assert.equal(Type.Txt).before)
+
     val invariants =
       curType.assert.equal
 
