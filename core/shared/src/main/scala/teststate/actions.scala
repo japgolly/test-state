@@ -39,11 +39,20 @@ sealed trait Action[F[_], Ref, O, S, Err] {
   def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]): This[F, Ref, O, S, E]
 
   def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]): This[F, Ref, OO, S, Err]
+
+  final def group(name: Name): Action.Group[F, Ref, O, S, Err] =
+    Action.Group(name, _ => Some(this), Check.Around.empty)
 }
 
 object Action {
 
   def empty[F[_], Ref, O, S, E] = Composite[F, Ref, O, S, E](Vector.empty)
+
+//  def apply[F[_], R, O, S, E](as: Action[F, R, O, S, E]*): Action[F, R, O, S, E] =
+//    if (as.isEmpty)
+//      empty
+//    else
+//      as.reduce(_ >> _)
 
   sealed trait NonComposite[F[_], Ref, O, S, Err] extends Action[F, Ref, O, S, Err] {
     override type This[F[_], R, O, S, E] <: NonComposite[F, R, O, S, E]
@@ -101,9 +110,6 @@ object Action {
     override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) =
       map(_ pmapO f)
 
-    def group(name: Name): Group[F, Ref, O, S, Err] =
-      Group(name, _ => Some(this), Check.Around.empty)
-
 //    def times(n: Int, name: String) =
 //      group(name).times(n)
   }
@@ -158,7 +164,6 @@ object Action {
           case Left(err) => someFailAction("Action requires correct reference.", err)
         },
         check)
-
   }
 
   private def someFailAction[F[_], Ref, O, S, Err](name: Name, err: Err)(implicit em: ExecutionModel[F]) =
@@ -220,4 +225,39 @@ object Action {
 
   private def preparedFail[F[_], O, S, E](err: E)(implicit em: ExecutionModel[F]): Prepared[F, O, S, E] =
     Some(() => em.pure(Left(err)))
+
+  final case class SubTest[F[_], R, O, S, E](name: NameFn[OS[O, S]],
+                                             action: Action[F, R, O, S, E],
+                                             invariants: Check[O, S, E]) extends NonComposite[F, R, O, S, E] {
+    override type This[F[_], R, O, S, E] = SubTest[F, R, O, S, E]
+
+    override def trans[G[_]](t: F ~~> G) =
+      copy(action = action trans t)
+
+    override def rename(newName: NameFn[OS[O, S]]) =
+      copy(name = newName)
+
+    override def addCheck(c: Check.Around[O, S, E]) =
+      copy(action = action addCheck c)
+
+    override def when(f: ROS[R, O, S] => Boolean) =
+      copy(action = action when f)
+
+    override def cmapRef[R2](f: R2 => R) =
+      copy(action = action cmapRef f)
+
+    override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
+      SubTest(name.cmap(_.map(o, s)), action.mapOS(o, s, su), invariants.cmap(o, s))
+
+    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
+      SubTest(name, action mapE f, invariants mapE f)
+
+    override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) =
+      SubTest(name.comap(_ mapOe f), action pmapO f, invariants pmapO f)
+
+    override def pmapRef[R2](f: R2 => Either[E, R])(implicit em: ExecutionModel[F]) =
+      copy(action = action pmapRef f)
+
+  }
+
 }

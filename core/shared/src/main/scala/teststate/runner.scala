@@ -80,6 +80,9 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
 
   def addCheck(c: Check.Around[Obs, State, Err]): Test[F, Ref, Obs, State, Err] =
     new Test(action addCheck c, invariants, observe)
+
+  // TODO observe not needed
+  def asAction(name: NameFn[OS[Obs, State]]) = Action.SubTest(name, action, invariants)
 }
 object Test {
   def apply[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
@@ -166,18 +169,11 @@ import test.{executionModel => EM, recover}
 
     val refFn = () => ref
 
-    def observe(): Either[Err, Obs] =
-      recover.recover(test.observe.apply(ref), Left(_))
-
-//    type FEM[B] = Runner.FEM[F, Err, B]
-
     type A = Action[F, Ref, Obs, State, Err]
     type HS = History.Steps[Err]
     type OS = teststate.OS[Obs, State]
     type ROS = teststate.ROS[Ref, Obs, State]
-
-    val invariantsAround = test.invariants.around
-    val invariantsPoints = test.invariants.point.singles
+    type Test = teststate.Test[F, Ref, Obs, State, Err]
 
     case class OMG(queue: Vector[A], ros: ROS, history: History[Err]) {
       def failure = history.failure
@@ -195,6 +191,14 @@ import test.{executionModel => EM, recover}
     val Observation = "Observation"
     val UpdateState = "Update expected state"
     val InitialState = "Initial state."
+
+    def observe(test: Test): Either[Err, Obs] =
+      recover.recover(test.observe.apply(ref), Left(_))
+
+    def subtest(test: Test, initROS: ROS, summariseFinalResult: Boolean): F[OMG] = {
+
+    val invariantsAround = test.invariants.around
+    val invariantsPoints = test.invariants.point.singles
 
     def checkAround[A](nameFn: NameFn[OS], checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
@@ -218,28 +222,11 @@ import test.{executionModel => EM, recover}
           } else {
 
             // Perform around-pre
-//            var hcsBad = false
-            val hcs =
-              checks.dunnos.map { c0 =>
+            val hcs = checks.dunnos.map { c0 =>
                 val c = c0.aux
                 val a = recover attempt c.before(omg.ros.os)
-//                hcsBad ||= a.isLeft
                 HalfCheck(c)(a.flatten)
               }
-
-            /*
-            if (hcsBad) {
-
-              // Around-pre failed
-              val c = History(hcs.map(hc => hc.before match {
-                case Right(a) => History.Step(hc.check.name(omg.ros.sos), Result.Pass)
-                case Left(e) => History.Step(hc.check.name(None), Result Fail e)
-              }))
-              val g = History.maybeParent("SHIT", c)
-              EM.pure(omg :+ History.parent(name, g))
-
-            } else {
-            */
 
             // Perform action
             val runF = run(a)
@@ -265,16 +252,16 @@ import test.{executionModel => EM, recover}
                   val b = History.newBuilder[Err]
 //                  b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before_!)) // Perform around-post
                   b.addEach(hcs)(
-                    c => c.check.name)(omg.ros.sos,
+                    c => c.check.name)(ros2.sos,
                     c => c.before.toOptionLeft(a => c.check.test(ros2.os, a))) // Perform around-post
-                  b.addEach(checks.afters)(_.check.name)(omg.ros.sos, _.check.test(ros2.os)) // Perform post
+                  b.addEach(checks.afters)(_.check.name)(ros2.sos, _.check.test(ros2.os)) // Perform post
                   b.group(PostName)
                 }
 
                 // Check invariants
                 val invs = {
                   val b = History.newBuilder[Err]
-                  b.addEach(invariantsPoints)(_.name)(omg.ros.sos, _.test(ros2.os))
+                  b.addEach(invariantsPoints)(_.name)(ros2.sos, _.test(ros2.os))
                   b.group(InvariantsName)
                 }
 
@@ -310,28 +297,12 @@ import test.{executionModel => EM, recover}
             val omg2F =
               checkAround(nameFn, check & invariantsAround, true, omg)(run) { act =>
 
-                /*
-                val xx =
-                for {
-                  nextStateFn <- FEM(EM.recover(act()))
-                  obs2 <- FEM(EM pure observe())
-                } yield {
-                  val state2 = nextStateFn(obs2)
-                  val ros2 = ROS(ref, obs2, state2)
-                  ((n: String) => History(History.Step(n, Result.Pass)), ros2)
-                }
-
-                EM.map(xx.value) {
-                  case Right(a) => a
-                  case Left(e) => fail(e)
-                }*/
-
                 def ret(ros: ROS, r: Result[Err], hs: History.Steps[Err] = Vector.empty) =
                   ((n: Name) => History(History.Step(n, r) +: hs), ros)
 
                 EM.map(EM.recover(act())) {
                   case Right(nextStateFn) =>
-                    observe() match {
+                    observe(test) match {
                       case Right(obs2) =>
                         recover.attempt(nextStateFn(obs2)) match {
                           case Right(Right(state2)) =>
@@ -355,13 +326,22 @@ import test.{executionModel => EM, recover}
           // ==============================================================================
           case Action.Group(nameFn, actionFn, check) =>
             val omg2F =
-              checkAround(nameFn, check & invariantsAround, false, omg)(actionFn)(children => {
-                val x =
+              checkAround(nameFn, check & invariantsAround, false, omg)(actionFn)(children =>
                 EM.map(start(children, ros))(omgC =>
                   ((_: Name) => omgC.history, omgC.ros))
-                x
-              })
+              )
             continue(omg2F)
+
+          // ==============================================================================
+          case Action.SubTest(name, action, invars) =>
+            val t = new Test(action, test.invariants & invars, test.observe)
+            val subomg = subtest(t, ros, false)
+            EM.map(subomg)(s =>
+              OMG(
+                omg.queue.tail,
+                s.ros,
+                omg.history ++ History.maybeParent(name(ros.sos), s.history)
+              ))
 
           // ==============================================================================
           case Action.Composite(actions) =>
@@ -369,10 +349,8 @@ import test.{executionModel => EM, recover}
         }
       }
 
-    val finalResult: F[History[Err]] = {
-      observe() match {
-        case Right(obs) =>
-          val ros = new ROS(refFn, obs, initialState)
+    val finalResult: F[OMG] = {
+          val ros = initROS
 
           val firstSteps: History[Err] =
             if (invariantsPoints.isEmpty)
@@ -386,28 +364,42 @@ import test.{executionModel => EM, recover}
               History(History.parent(InitialState, children))
             }
 
-          val fh = if (firstSteps.failed)
-            EM.pure(firstSteps)
-          else
-            EM.map(start(test.action, ros, firstSteps))(_.history)
-
-          EM.map(fh)(h =>
-            if (h.isEmpty)
-              History(History.Step("Nothing to do.", Result.Skip))
+          val fh: F[OMG] =
+            if (firstSteps.failed)
+              EM.pure(OMG(Vector.empty, ros, firstSteps))
             else
-              h.result match {
-                case Result.Pass    => h :+ History.Step("All pass.", Result.Pass)
-                case Result.Skip    => h :+ History.Step("All skipped.", Result.Skip)
-                case Result.Fail(_) => h
-              }
-          )
-        case Left(e) =>
-          val s = History.Step(Observation, Result Fail e)
-          val h = History(History.parent(InitialState, History(s)))
-          EM pure h
-      }
+              start(test.action, ros, firstSteps)
+
+          EM.map(fh) { omg =>
+            import omg.{history => h}
+            val h2: History[Err] =
+              if (h.isEmpty)
+                History(History.Step("Nothing to do.", Result.Skip))
+              else if (summariseFinalResult)
+                h.result match {
+                  case Result.Pass    => h :+ History.Step("All pass.", Result.Pass)
+                  case Result.Skip    => h :+ History.Step("All skipped.", Result.Skip)
+                  case Result.Fail(_) => h
+                }
+              else
+                h
+            omg.copy(history = h2)
+          }
     }
 
     finalResult
+    }
+
+    observe(test) match {
+      case Right(obs) =>
+        val ros = new ROS(refFn, obs, initialState)
+        EM.map(subtest(test, ros, true))(_.history)
+
+      case Left(e) =>
+        val s = History.Step(Observation, Result Fail e)
+        val h = History(History.parent(InitialState, History(s)))
+        EM pure h
+    }
+
   }
 }
