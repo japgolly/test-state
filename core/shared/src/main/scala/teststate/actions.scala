@@ -33,6 +33,8 @@ sealed trait Action[F[_], Ref, O, S, Err] {
     mapOS(identity, s, su)
 
   def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]): This[F, Ref, OO, SS, Err]
+
+  def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]): This[F, Ref, O, S, E]
 }
 
 object Action {
@@ -86,6 +88,9 @@ object Action {
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       map(_.mapOS(o, s, su))
 
+    override def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]) =
+      map(_ mapE f)
+
     def group(name: Name): Group[F, Ref, O, S, Err] =
       Group(_ => name, _ => Some(this), Check.Around.empty)
 
@@ -119,6 +124,12 @@ object Action {
         Name.cmapFn(name)(_.map(o, s)),
         ros => action(ros.mapOS(o, s)).map(_.mapOS(o, s, su)),
         check.cmap(o, s))
+
+    override def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]) =
+      Group(
+        name,
+        action(_) map (_ mapE f),
+        check mapE f)
   }
 
   final case class Single[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
@@ -147,5 +158,10 @@ object Action {
         Name.cmapFn(name)(_.map(o, s)),
         ros => run(ros.mapOS(o, s)).map(fn => () => em.map(fn())(_.map(os => (oo: OO) => su(ros.state, os(o(oo)))))),
         check.cmap(o, s))
+
+    override def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]) = Single[F, Ref, O, S, E](
+      name,
+      run(_).map(fn => () => em.map(fn())(_ leftMap f)),
+      check mapE f)
   }
 }

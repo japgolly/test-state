@@ -16,6 +16,8 @@ sealed abstract class Check[-O, -S, +E] {
     cmap(identity, s)
 
   def cmap[OO, SS](o: OO => O, s: SS => S): This[OO, SS, E]
+
+  def mapE[EE](f: E => EE): This[O, S, EE]
 }
 
 object Check {
@@ -28,6 +30,10 @@ object Check {
     override def cmap[OO, SS](o: OO => O, s: SS => S) = Composite(
       point.cmap(o, s),
       around.cmap(o, s))
+
+    override def mapE[EE](f: E => EE) = Composite(
+      point mapE f,
+      around mapE f)
   }
 
   // ===================================================================================================================
@@ -59,6 +65,9 @@ object Check {
 
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Composite(
         singles.map(_.cmap(o, s)))
+
+      override def mapE[EE](f: E => EE) = Composite(
+        singles.map(_ mapE f))
     }
 
     final case class Single[-O, -S, +E](name: Name.Fn[OS[O, S]], test: OS[O, S] => Option[E]) extends Point[O, S, E] {
@@ -73,6 +82,9 @@ object Check {
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Single[OO, SS, E](
         Name.cmapFn(name)(_.map(o, s)),
         as => test(as.map(o, s)))
+
+      override def mapE[EE](f: E => EE) = Single[O, S, EE](
+        name, test(_) map f)
     }
   }
 
@@ -107,6 +119,11 @@ object Check {
         befores.map(_.cmap(o, s)),
         dunnos.map(_.cmap(o, s)),
         afters.map(_.cmap(o, s)))
+
+      override def mapE[EE](f: E => EE) = Composite(
+        befores.map(_ mapE f),
+        dunnos.map(_ mapE f),
+        afters.map(_ mapE f))
     }
 
     sealed abstract class Single[-O, -S, +E] extends Around[O, S, E] {
@@ -132,6 +149,8 @@ object Check {
         Name.cmapFn(name)(_.map(o, s)),
         xs => before(xs.map(o, s)),
         (xs, a) => test(xs.map(o, s), a))
+      final override def mapE[EE](f: E => EE) = Dunno[O, S, EE, A](
+        name, before, test(_, _) map f)
     }
 
     type DunnoA[-O, -S, +E, a] = Dunno[O, S, E] {type A = a}
@@ -153,6 +172,7 @@ object Check {
       override type This[-o, -s, +e] = Before[o, s, e]
       override def befores = vector1(this)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Before(check.cmap(o, s))
+      override def mapE[EE](f: E => EE) = Before(check mapE f)
       override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
         copy(check rename newName)
     }
@@ -161,6 +181,7 @@ object Check {
       override type This[-o, -s, +e] = After[o, s, e]
       override def afters = vector1(this)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = After(check.cmap(o, s))
+      override def mapE[EE](f: E => EE) = After(check mapE f)
       override def rename[o <: O, s <: S, e >: E](newName: Name.Fn[OS[o, s]]) =
         copy(check rename newName)
     }
