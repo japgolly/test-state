@@ -40,8 +40,8 @@ sealed trait Action[F[_], Ref, O, S, Err] {
 
   def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]): This[F, Ref, OO, S, Err]
 
-  final def group(name: Name): Action.Group[F, Ref, O, S, Err] =
-    Action.Group(name, _ => Some(this), Check.Around.empty)
+//  final def group(name: Name): Action.Group[F, Ref, O, S, Err] =
+//    Action.Group(name, _ => Some(this), Check.Around.empty)
 }
 
 object Action {
@@ -109,6 +109,9 @@ object Action {
 
     override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) =
       map(_ pmapO f)
+
+    def group(name: Name): Group[F, Ref, O, S, Err] =
+      Group(name, _ => Some(this), Check.Around.empty)
 
 //    def times(n: Int, name: String) =
 //      group(name).times(n)
