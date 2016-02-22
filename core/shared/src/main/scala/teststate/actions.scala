@@ -25,7 +25,14 @@ sealed trait Action[F[_], Ref, O, S, Err] {
     this >> next
 
   def cmapRef[R2](f: R2 => Ref): This[F, R2, O, S, Err]
-  def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, Ref, X, S, Err]
+
+  final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, Ref, X, S, Err] =
+    mapOS(g, identity, (_, s) => s)
+
+  final def unzoomS[SS](s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]): This[F, Ref, O, SS, Err] =
+    mapOS(identity, s, su)
+
+  def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]): This[F, Ref, OO, SS, Err]
 }
 
 object Action {
@@ -76,8 +83,8 @@ object Action {
     override def cmapRef[R2](f: R2 => Ref) =
       map(_ cmapRef f)
 
-    override def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]) =
-      map(_ cmapO g)
+    override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
+      map(_.mapOS(o, s, su))
 
     def group(name: Name): Group[F, Ref, O, S, Err] =
       Group(_ => name, _ => Some(this), Check.Around.empty)
@@ -107,11 +114,11 @@ object Action {
     override def cmapRef[R2](f: R2 => Ref) =
       copy(action = i => action(i mapR f).map(_ cmapRef f))
 
-    override def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]) =
+    override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       Group(
-        Name.cmapFn(name)(_ mapO g),
-        ros => action(ros mapO g).map(_ cmapO g),
-        check cmapO g)
+        Name.cmapFn(name)(_.map(o, s)),
+        ros => action(ros.mapOS(o, s)).map(_.mapOS(o, s, su)),
+        check.cmap(o, s))
   }
 
   final case class Single[F[_], Ref, O, S, Err](name: Name.Fn[OS[O, S]],
@@ -135,10 +142,10 @@ object Action {
     override def cmapRef[R2](f: R2 => Ref) =
       copy(run = i => run(i mapR f))
 
-    override def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]) =
-      Single[F, Ref, X, S, Err](
-        Name.cmapFn(name)(_ mapO g),
-        ros => run(ros mapO g).map(fn => () => em.map(fn())(_.map(_ compose g))),
-        check cmapO g)
+    override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
+      Single[F, Ref, OO, SS, Err](
+        Name.cmapFn(name)(_.map(o, s)),
+        ros => run(ros.mapOS(o, s)).map(fn => () => em.map(fn())(_.map(os => (oo: OO) => su(ros.state, os(o(oo)))))),
+        check.cmap(o, s))
   }
 }
