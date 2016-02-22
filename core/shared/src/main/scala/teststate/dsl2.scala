@@ -23,7 +23,7 @@ object Dsl {
     final type Around1     = teststate.Check.Around.Dunno[O, S, E]
     final type Action1     = teststate.Action.Single[F, R, O, S, E]
     final type NameFn      = teststate.NameFn[OS]
-    final type ActionFn    = ROS => Option[() => F[Either[E, O => S]]]
+    final type ActionFn    = ROS => Option[() => F[Either[E, O => Either[E, S]]]]
   }
 
   final class ActionB[F[_], R, O, S, E](actionName: => String)(implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
@@ -38,12 +38,12 @@ object Dsl {
 
     def updateStateO(nextState: S => O => S) =
       build(act => i => Some(() =>
-        EM.map(act(i))(_.leftOr(nextState(i.state)))
+        EM.map(act(i))(_.leftOr(o => Right(nextState(i.state)(o))))
       ))
 
     def updateState2(f: S => Either[E, S]) =
       build(act => i => Some(() =>
-        EM.map(act(i))(_.leftOrF(f(i.state).map(Function.const)))
+        EM.map(act(i))(_.leftOrF(f(i.state).map(s => Function const Right(s))))
       ))
 
     def noStateUpdate =

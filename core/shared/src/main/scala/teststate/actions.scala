@@ -133,7 +133,7 @@ object Action {
   }
 
   final case class Single[F[_], Ref, O, S, Err](name: NameFn[OS[O, S]],
-                                          run: ROS[Ref, O, S] => Option[() => F[Either[Err, O => S]]],
+                                          run: ROS[Ref, O, S] => Option[() => F[Either[Err, O => Either[Err, S]]]],
                                           check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
 
     override type This[F[_], R, O, S, E] = Single[F, R, O, S, E]
@@ -156,12 +156,12 @@ object Action {
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       Single[F, Ref, OO, SS, Err](
         name.cmap(_.map(o, s)),
-        ros => run(ros.mapOS(o, s)).map(fn => () => em.map(fn())(_.map(os => (oo: OO) => su(ros.state, os(o(oo)))))),
+        ros => run(ros.mapOS(o, s)).map(fn => () => em.map(fn())(_.map(f => (oo: OO) => f(o(oo)).map(s => su(ros.state, s))))),
         check.cmap(o, s))
 
     override def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]) = Single[F, Ref, O, S, E](
       name,
-      run(_).map(fn => () => em.map(fn())(_ leftMap f)),
+      run(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))),
       check mapE f)
   }
 }

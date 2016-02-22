@@ -329,9 +329,11 @@ import test.{executionModel => EM, recover}
                     observe() match {
                       case Right(obs2) =>
                         recover.attempt(nextStateFn(obs2)) match {
-                          case Right(state2) =>
+                          case Right(Right(state2)) =>
                             val ros2 = new ROS(refFn, obs2, state2)
                             ret(ros2, Result.Pass)
+                          case Right(Left(e)) =>
+                            ret(ros, Result.Pass, vector1(History.Step(Observation, Result Fail e)))
                           case Left(e) =>
                             ret(ros, Result.Pass, vector1(History.Step(UpdateState, Result Fail e)))
                         }
