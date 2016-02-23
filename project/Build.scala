@@ -17,6 +17,7 @@ object TestState extends Build {
   def scalacFlags = Seq(
     "-deprecation",
     "-unchecked",
+    "-Ywarn-dead-code",
     "-Ywarn-unused",
     "-Ywarn-value-discard",
     "-feature",
@@ -33,6 +34,7 @@ object TestState extends Build {
       licenses                 += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
       scalaVersion             := Ver.Scala211,
       scalacOptions           ++= scalacFlags,
+      scalacOptions in Test   --= Seq("-Ywarn-dead-code"),
       shellPrompt in ThisBuild := ((s: State) => Project.extract(s).currentRef.project + "> "),
       triggeredMessage         := Watched.clearWhenTriggered,
       incOptions               := incOptions.value.withNameHashing(true),
