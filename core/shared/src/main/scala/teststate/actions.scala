@@ -2,45 +2,45 @@ package teststate
 
 import Action.{Composite, NonComposite}
 
-sealed trait Action[F[_], Ref, O, S, Err] {
-  type This[F[_], R, O, S, E] <: Action[F, R, O, S, E]
+sealed trait Action[F[_], R, O, S, E] {
+  type This[f[_], r, o, s, e] <: Action[f, r, o, s, e]
 
-  def trans[G[_]](t: F ~~> G): This[G, Ref, O, S, Err]
+  def trans[G[_]](t: F ~~> G): This[G, R, O, S, E]
 
-  def nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]]
+  def nonCompositeActions: Vector[NonComposite[F, R, O, S, E]]
 
-  def nameMod(f: Name => Name): This[F, Ref, O, S, Err]
+  def nameMod(f: Name => Name): This[F, R, O, S, E]
 
-  def addCheck(c: Check.Around[O, S, Err]): This[F, Ref, O, S, Err]
+  def addCheck(c: Check.Around[O, S, E]): This[F, R, O, S, E]
 
-  def when(f: ROS[Ref, O, S] => Boolean): This[F, Ref, O, S, Err]
+  def when(f: ROS[R, O, S] => Boolean): This[F, R, O, S, E]
 
-  final def unless(f: ROS[Ref, O, S] => Boolean): This[F, Ref, O, S, Err] =
+  final def unless(f: ROS[R, O, S] => Boolean): This[F, R, O, S, E] =
     when(!f(_))
 
-  final def >>(next: Action[F, Ref, O, S, Err]): Composite[F, Ref, O, S, Err] =
+  final def >>(next: Action[F, R, O, S, E]): Composite[F, R, O, S, E] =
     Composite(nonCompositeActions ++ next.nonCompositeActions)
 
-  final def andThen(next: Action[F, Ref, O, S, Err]): Composite[F, Ref, O, S, Err] =
+  final def andThen(next: Action[F, R, O, S, E]): Composite[F, R, O, S, E] =
     this >> next
 
-  def cmapRef[R2](f: R2 => Ref): This[F, R2, O, S, Err]
+  def cmapRef[RR](f: RR => R): This[F, RR, O, S, E]
 
-  def pmapRef[R2](f: R2 => Either[Err, Ref])(implicit em: ExecutionModel[F]): This[F, R2, O, S, Err]
+  def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]): This[F, RR, O, S, E]
 
-  final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, Ref, X, S, Err] =
+  final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, R, X, S, E] =
     mapOS(g, identity, (_, s) => s)
 
-  final def unzoomS[SS](s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]): This[F, Ref, O, SS, Err] =
+  final def unzoomS[SS](s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]): This[F, R, O, SS, E] =
     mapOS(identity, s, su)
 
-  def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]): This[F, Ref, OO, SS, Err]
+  def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]): This[F, R, OO, SS, E]
 
-  def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]): This[F, Ref, O, S, E]
+  def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]): This[F, R, O, S, EE]
 
-  def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]): This[F, Ref, OO, S, Err]
+  def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]): This[F, R, OO, S, E]
 
-//  final def group(name: Name): Action.Group[F, Ref, O, S, Err] =
+//  final def group(name: Name): Action.Group[F, R, O, S, Err] =
 //    Action.Group(name, _ => Some(this), Check.Around.empty)
 }
 
@@ -54,33 +54,29 @@ object Action {
 //    else
 //      as.reduce(_ >> _)
 
-  sealed trait NonComposite[F[_], Ref, O, S, Err] extends Action[F, Ref, O, S, Err] {
-    override type This[F[_], R, O, S, E] <: NonComposite[F, R, O, S, E]
+  private def someFailAction[F[_], R, O, S, E](name: Name, err: E)(implicit em: ExecutionModel[F]) =
+    Some(Single[F, R, O, S, E](
+      name,
+      _ => preparedFail(err),
+      Check.Around.empty))
 
-    def name: NameFn[OS[O, S]]
+  type Prepared[F[_], O, S, E] = Option[() => F[Either[E, O => Either[E, S]]]]
 
-    def rename(newName: NameFn[OS[O, S]]): This[F, Ref, O, S, Err]
+  private def preparedFail[F[_], O, S, E](err: E)(implicit em: ExecutionModel[F]): Prepared[F, O, S, E] =
+    Some(() => em.pure(Left(err)))
 
-    override final def nameMod(f: Name => Name) =
-      rename(name map f)
+  private def tryPrepare[F[_]: ExecutionModel, O, S, E, A](e: Either[E, A])(f: A => Prepared[F, O, S, E]): Prepared[F, O, S, E] =
+    e match {
+      case Right(a) => f(a)
+      case Left(err) => preparedFail(err)
+    }
 
-    final override def nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]] =
-      vector1(this)
+  final case class Composite[F[_], R, O, S, E](nonCompositeActions: Vector[NonComposite[F, R, O, S, E]])
+    extends Action[F, R, O, S, E] {
 
-    final def times(n: Int): Group[F, Ref, O, S, Err] =
-      Group(NameFn(i => s"${name(i).value} ($n times)"), _ => Some(
-        (1 to n).iterator
-          .map(i => nameMod(s => s"[$i/$n] ${s.value}"))
-          .foldLeft(empty: Action[F, Ref, O, S, Err])(_ >> _)),
-        Check.Around.empty)
-  }
+    override type This[f[_], r, o, s, e] = Composite[f, r, o, s, e]
 
-  final case class Composite[F[_], Ref, O, S, Err](nonCompositeActions: Vector[NonComposite[F, Ref, O, S, Err]])
-    extends Action[F, Ref, O, S, Err] {
-
-    override type This[F[_], R, O, S, E] = Composite[F, R, O, S, E]
-
-    def map[f[_], r, o, s, e](f: NonComposite[F, Ref, O, S, Err] => NonComposite[f, r, o, s, e]): This[f, r, o, s, e] =
+    def map[f[_], r, o, s, e](f: NonComposite[F, R, O, S, E] => NonComposite[f, r, o, s, e]): This[f, r, o, s, e] =
       Composite(nonCompositeActions map f)
 
     override def trans[G[_]](t: F ~~> G) =
@@ -89,39 +85,60 @@ object Action {
     override def nameMod(f: Name => Name) =
       map(_ nameMod f)
 
-    override def addCheck(c: Check.Around[O, S, Err]) =
+    override def addCheck(c: Check.Around[O, S, E]) =
       map(_ addCheck c)
 
-    override def when(f: ROS[Ref, O, S] => Boolean) =
+    override def when(f: ROS[R, O, S] => Boolean) =
       map(_ when f)
 
-    override def cmapRef[R2](f: R2 => Ref) =
+    override def cmapRef[RR](f: RR => R) =
       map(_ cmapRef f)
 
-    override def pmapRef[R2](f: R2 => Either[Err, Ref])(implicit em: ExecutionModel[F]) =
+    override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
       map(_ pmapRef f)
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       map(_.mapOS(o, s, su))
 
-    override def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]) =
+    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
       map(_ mapE f)
 
-    override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) =
+    override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) =
       map(_ pmapO f)
 
-    def group(name: Name): Group[F, Ref, O, S, Err] =
+    def group(name: Name): Group[F, R, O, S, E] =
       Group(name, _ => Some(this), Check.Around.empty)
 
 //    def times(n: Int, name: String) =
 //      group(name).times(n)
   }
 
-  final case class Group[F[_], Ref, O, S, Err](name: NameFn[OS[O, S]],
-                                               action: ROS[Ref, O, S] => Option[Action[F, Ref, O, S, Err]],
-                                               check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
+  sealed abstract class NonComposite[F[_], R, O, S, E] extends Action[F, R, O, S, E] {
+    override type This[f[_], r, o, s, e] <: NonComposite[f, r, o, s, e]
 
-    override type This[F[_], R, O, S, E] = Group[F, R, O, S, E]
+    def name: NameFn[OS[O, S]]
+
+    def rename(newName: NameFn[OS[O, S]]): This[F, R, O, S, E]
+
+    override final def nameMod(f: Name => Name) =
+      rename(name map f)
+
+    final override def nonCompositeActions: Vector[NonComposite[F, R, O, S, E]] =
+      vector1(this)
+
+    final def times(n: Int): Group[F, R, O, S, E] =
+      Group(NameFn(i => s"${name(i).value} ($n times)"), _ => Some(
+        (1 to n).iterator
+          .map(i => nameMod(s => s"[$i/$n] ${s.value}"))
+          .foldLeft(empty: Action[F, R, O, S, E])(_ >> _)),
+        Check.Around.empty)
+  }
+
+  final case class Group[F[_], R, O, S, E](name: NameFn[OS[O, S]],
+                                           action: ROS[R, O, S] => Option[Action[F, R, O, S, E]],
+                                           check: Check.Around[O, S, E]) extends NonComposite[F, R, O, S, E] {
+
+    override type This[f[_], r, o, s, e] = Group[f, r, o, s, e]
 
     override def trans[G[_]](t: F ~~> G) =
       copy(action = action(_).map(_ trans t))
@@ -129,13 +146,13 @@ object Action {
     override def rename(newName: NameFn[OS[O, S]]) =
       copy(name = newName)
 
-    override def addCheck(c: Check.Around[O, S, Err]) =
+    override def addCheck(c: Check.Around[O, S, E]) =
       copy(check = check & c)
 
-    override def when(f: ROS[Ref, O, S] => Boolean) =
+    override def when(f: ROS[R, O, S] => Boolean) =
       copy(action = i => if (f(i)) action(i) else None)
 
-    override def cmapRef[R2](f: R2 => Ref) =
+    override def cmapRef[RR](f: RR => R) =
       copy(action = i => action(i mapR f).map(_ cmapRef f))
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
@@ -144,13 +161,13 @@ object Action {
         ros => action(ros.mapOS(o, s)).map(_.mapOS(o, s, su)),
         check.cmap(o, s))
 
-    override def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]) =
+    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
       Group(
         name,
         action(_) map (_ mapE f),
         check mapE f)
 
-    override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) =
+    override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) =
       Group(
         name.comap(_ mapOe f),
         ros => f(ros.obs) match {
@@ -159,7 +176,7 @@ object Action {
         },
         check pmapO f)
 
-    override def pmapRef[R2](f: R2 => Either[Err, Ref])(implicit em: ExecutionModel[F]) =
+    override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
       Group(
         name,
         ros => f(ros.ref) match {
@@ -169,19 +186,11 @@ object Action {
         check)
   }
 
-  private def someFailAction[F[_], Ref, O, S, Err](name: Name, err: Err)(implicit em: ExecutionModel[F]) =
-    Some(Single[F, Ref, O, S, Err](
-      name,
-      _ => preparedFail(err),
-      Check.Around.empty))
+  final case class Single[F[_], R, O, S, E](name: NameFn[OS[O, S]],
+                                            run: ROS[R, O, S] => Prepared[F, O, S, E],
+                                            check: Check.Around[O, S, E]) extends NonComposite[F, R, O, S, E] {
 
-  type Prepared[F[_], O, S, E] = Option[() => F[Either[E, O => Either[E, S]]]]
-
-  final case class Single[F[_], Ref, O, S, Err](name: NameFn[OS[O, S]],
-                                                run: ROS[Ref, O, S] => Prepared[F, O, S, Err],
-                                                check: Check.Around[O, S, Err]) extends NonComposite[F, Ref, O, S, Err] {
-
-    override type This[F[_], R, O, S, E] = Single[F, R, O, S, E]
+    override type This[f[_], r, o, s, e] = Single[f, r, o, s, e]
 
     override def trans[G[_]](t: F ~~> G) =
       copy(run = run(_).map(f => () => t(f())))
@@ -189,50 +198,42 @@ object Action {
     override def rename(newName: NameFn[OS[O, S]]) =
       copy(name = newName)
 
-    override def addCheck(c: Check.Around[O, S, Err]) =
+    override def addCheck(c: Check.Around[O, S, E]) =
       copy(check = check & c)
 
-    override def when(f: ROS[Ref, O, S] => Boolean) =
+    override def when(f: ROS[R, O, S] => Boolean) =
       copy(run = i => if (f(i)) run(i) else None)
 
-    override def cmapRef[R2](f: R2 => Ref) =
+    override def cmapRef[RR](f: RR => R) =
       copy(run = i => run(i mapR f))
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
-      Single[F, Ref, OO, SS, Err](
+      Single[F, R, OO, SS, E](
         name.cmap(_.map(o, s)),
         ros => run(ros.mapOS(o, s)).map(fn => () => em.map(fn())(_.map(f => (oo: OO) => f(o(oo)).map(s => su(ros.state, s))))),
         check.cmap(o, s))
 
-    override def mapE[E](f: Err => E)(implicit em: ExecutionModel[F]) = Single[F, Ref, O, S, E](
+    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) = Single[F, R, O, S, EE](
       name,
       run(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))),
       check mapE f)
 
-    override def pmapO[OO](f: OO => Either[Err, O])(implicit em: ExecutionModel[F]) = Single[F, Ref, OO, S, Err](
+    override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) = Single[F, R, OO, S, E](
       name.comap(_ mapOe f),
-      ros => f(ros.obs) match {
-        case Right(o) => run(ros.copyOS(obs = o)).map(fn => () => em.map(fn())(_.map(g => (o: OO) => f(o).fmap(g))))
-        case Left(err) => preparedFail(err)
-      },
+      ros => tryPrepare(f(ros.obs))(o =>
+        run(ros.copyOS(obs = o)).map(fn => () => em.map(fn())(_.map(g => (o: OO) => f(o).fmap(g))))),
       check pmapO f)
 
-    override def pmapRef[R2](f: R2 => Either[Err, Ref])(implicit em: ExecutionModel[F]) = Single[F, R2, O, S, Err](
+    override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) = Single[F, RR, O, S, E](
       name,
-      ros => f(ros.ref) match {
-        case Right(r) => run(ros setRef r)
-        case Left(err) => preparedFail(err)
-      },
+      ros => tryPrepare(f(ros.ref))(r => run(ros setRef r)),
       check)
   }
-
-  private def preparedFail[F[_], O, S, E](err: E)(implicit em: ExecutionModel[F]): Prepared[F, O, S, E] =
-    Some(() => em.pure(Left(err)))
 
   final case class SubTest[F[_], R, O, S, E](name: NameFn[OS[O, S]],
                                              action: Action[F, R, O, S, E],
                                              invariants: Check[O, S, E]) extends NonComposite[F, R, O, S, E] {
-    override type This[F[_], R, O, S, E] = SubTest[F, R, O, S, E]
+    override type This[f[_], r, o, s, e] = SubTest[f, r, o, s, e]
 
     override def trans[G[_]](t: F ~~> G) =
       copy(action = action trans t)
@@ -246,7 +247,7 @@ object Action {
     override def when(f: ROS[R, O, S] => Boolean) =
       copy(action = action when f)
 
-    override def cmapRef[R2](f: R2 => R) =
+    override def cmapRef[RR](f: RR => R) =
       copy(action = action cmapRef f)
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
@@ -258,7 +259,7 @@ object Action {
     override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) =
       SubTest(name.comap(_ mapOe f), action pmapO f, invariants pmapO f)
 
-    override def pmapRef[R2](f: R2 => Either[E, R])(implicit em: ExecutionModel[F]) =
+    override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
       copy(action = action pmapRef f)
 
   }
