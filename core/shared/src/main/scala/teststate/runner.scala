@@ -59,7 +59,8 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
   def addCheck(c: Check.Around[Obs, State, Err]): TestContent[F, Ref, Obs, State, Err] =
     new TestContent(action addCheck c, invariants)
 
-  def asAction(name: NameFn[OS[Obs, State]]) = Action.SubTest(name, action, invariants)
+  def asAction(name: NameFn[ROS[Ref, Obs, State]]) =
+    Action.SubTest(name, action, invariants)
 
   def observe(f: Ref => Obs) =
     observeTry(r => Right(f(r)))
@@ -229,11 +230,11 @@ import test.content.{executionModel => EM, recover}
     val invariantsAround = test.content.invariants.around
     val invariantsPoints = test.content.invariants.point.singles
 
-    def checkAround[A](nameFn: NameFn[OS], checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
+    def checkAround[N, A](nameFn: NameFn[ROS], checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
                       (run: A => F[(Name => History[Err], ROS)]): F[OMG] = {
 
-      val name = Recover.name(nameFn, omg.ros.sos)
+      val name = Recover.name(nameFn, omg.ros.some)
 
       prepare(omg.ros) match {
         case Some(a) =>
@@ -369,7 +370,7 @@ import test.content.{executionModel => EM, recover}
               OMG(
                 omg.queue.tail,
                 s.ros,
-                omg.history ++ History.maybeParent(name(ros.sos), s.history)
+                omg.history ++ History.maybeParent(name(ros.some), s.history)
               ))
 
           // ==============================================================================

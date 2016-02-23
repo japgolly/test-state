@@ -116,9 +116,9 @@ object Action {
   sealed abstract class NonComposite[F[_], R, O, S, E] extends Action[F, R, O, S, E] {
     override type This[f[_], r, o, s, e] <: NonComposite[f, r, o, s, e]
 
-    def name: NameFn[OS[O, S]]
+    def name: NameFn[ROS[R, O, S]]
 
-    def rename(newName: NameFn[OS[O, S]]): This[F, R, O, S, E]
+    def rename(newName: NameFn[ROS[R, O, S]]): This[F, R, O, S, E]
 
     override final def nameMod(f: Name => Name) =
       rename(name map f)
@@ -134,7 +134,7 @@ object Action {
         Check.Around.empty)
   }
 
-  final case class Group[F[_], R, O, S, E](name: NameFn[OS[O, S]],
+  final case class Group[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]],
                                            action: ROS[R, O, S] => Option[Action[F, R, O, S, E]],
                                            check: Check.Around[O, S, E]) extends NonComposite[F, R, O, S, E] {
 
@@ -143,7 +143,7 @@ object Action {
     override def trans[G[_]](t: F ~~> G) =
       copy(action = action(_).map(_ trans t))
 
-    override def rename(newName: NameFn[OS[O, S]]) =
+    override def rename(newName: NameFn[ROS[R, O, S]]) =
       copy(name = newName)
 
     override def addCheck(c: Check.Around[O, S, E]) =
@@ -153,11 +153,14 @@ object Action {
       copy(action = i => if (f(i)) action(i) else None)
 
     override def cmapRef[RR](f: RR => R) =
-      copy(action = i => action(i mapR f).map(_ cmapRef f))
+      Group(
+        name.cmap(_ mapR f),
+        i => action(i mapR f).map(_ cmapRef f),
+        check)
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       Group(
-        name.cmap(_.map(o, s)),
+        name.cmap(_.mapOS(o, s)),
         ros => action(ros.mapOS(o, s)).map(_.mapOS(o, s, su)),
         check.cmap(o, s))
 
@@ -178,7 +181,7 @@ object Action {
 
     override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
       Group(
-        name,
+        name.comap(_ mapRe f),
         ros => f(ros.ref) match {
           case Right(r) => action(ros setRef r).map(_ pmapRef f)
           case Left(err) => someFailAction("Action requires correct reference.", err)
@@ -186,7 +189,7 @@ object Action {
         check)
   }
 
-  final case class Single[F[_], R, O, S, E](name: NameFn[OS[O, S]],
+  final case class Single[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]],
                                             run: ROS[R, O, S] => Prepared[F, O, S, E],
                                             check: Check.Around[O, S, E]) extends NonComposite[F, R, O, S, E] {
 
@@ -195,7 +198,7 @@ object Action {
     override def trans[G[_]](t: F ~~> G) =
       copy(run = run(_).map(f => () => t(f())))
 
-    override def rename(newName: NameFn[OS[O, S]]) =
+    override def rename(newName: NameFn[ROS[R, O, S]]) =
       copy(name = newName)
 
     override def addCheck(c: Check.Around[O, S, E]) =
@@ -205,11 +208,14 @@ object Action {
       copy(run = i => if (f(i)) run(i) else None)
 
     override def cmapRef[RR](f: RR => R) =
-      copy(run = i => run(i mapR f))
+      Single(
+        name.cmap(_ mapR f),
+        i => run(i mapR f),
+        check)
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       Single[F, R, OO, SS, E](
-        name.cmap(_.map(o, s)),
+        name.cmap(_.mapOS(o, s)),
         ros => run(ros.mapOS(o, s)).map(fn => () => em.map(fn())(_.map(f => (oo: OO) => f(o(oo)).map(s => su(ros.state, s))))),
         check.cmap(o, s))
 
@@ -225,12 +231,12 @@ object Action {
       check pmapO f)
 
     override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) = Single[F, RR, O, S, E](
-      name,
+      name.comap(_ mapRe f),
       ros => tryPrepare(f(ros.ref))(r => run(ros setRef r)),
       check)
   }
 
-  final case class SubTest[F[_], R, O, S, E](name: NameFn[OS[O, S]],
+  final case class SubTest[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]],
                                              action: Action[F, R, O, S, E],
                                              invariants: Check[O, S, E]) extends NonComposite[F, R, O, S, E] {
     override type This[f[_], r, o, s, e] = SubTest[f, r, o, s, e]
@@ -238,7 +244,7 @@ object Action {
     override def trans[G[_]](t: F ~~> G) =
       copy(action = action trans t)
 
-    override def rename(newName: NameFn[OS[O, S]]) =
+    override def rename(newName: NameFn[ROS[R, O, S]]) =
       copy(name = newName)
 
     override def addCheck(c: Check.Around[O, S, E]) =
@@ -248,20 +254,34 @@ object Action {
       copy(action = action when f)
 
     override def cmapRef[RR](f: RR => R) =
-      copy(action = action cmapRef f)
+      SubTest(
+        name.cmap(_ mapR f),
+        action cmapRef f,
+        invariants)
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
-      SubTest(name.cmap(_.map(o, s)), action.mapOS(o, s, su), invariants.cmap(o, s))
+      SubTest(
+        name.cmap(_.mapOS(o, s)),
+        action.mapOS(o, s, su),
+        invariants.cmap(o, s))
 
     override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
-      SubTest(name, action mapE f, invariants mapE f)
+      SubTest(
+        name,
+        action mapE f,
+        invariants mapE f)
 
     override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) =
-      SubTest(name.comap(_ mapOe f), action pmapO f, invariants pmapO f)
+      SubTest(
+        name.comap(_ mapOe f),
+        action pmapO f,
+        invariants pmapO f)
 
     override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
-      copy(action = action pmapRef f)
-
+      SubTest(
+        name.comap(_ mapRe f),
+        action pmapRef f,
+        invariants)
   }
 
 }

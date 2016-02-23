@@ -82,12 +82,17 @@ package object teststate extends teststate.Name.Implicits {
         case Left(a) => Some(a)
       }
 
+    def mapToOption[C](f: B => C): Option[C] =
+      self match {
+        case Right(b) => Some(f(b))
+        case Left(a) => None
+      }
+
     def flatten[AA >: A, BB](implicit ev: B <:< Either[AA, BB]): Either[AA, BB] =
       self match {
         case Right(b) => ev(b)
         case l => l.asInstanceOf[Left[A, Nothing]]
       }
-
   }
 
   // Actually this is ShowValue
@@ -140,6 +145,9 @@ package object teststate extends teststate.Name.Implicits {
 //  implicit def focusDsli2ToChec1[O, S, E, A](b: FocusDsl[O, S, E]#C0[A]) = b.point
 
   final class ROS[+Ref, +Obs, +State](refFn: () => Ref, val obs: Obs, val state: State) {
+    val some: Some[this.type] =
+      Some(this)
+
     val os: OS[Obs, State] =
       OS(obs, state)
 
@@ -151,20 +159,22 @@ package object teststate extends teststate.Name.Implicits {
     def setRef[R](ref: => R) = new ROS[R, Obs, State](() => ref, obs, state)
     def copyOS[OO, SS](obs: OO = obs, state: SS = state) = new ROS[Ref, OO, SS](() => ref, obs, state)
 
-    def mapR[A](f: Ref => A) = new ROS(refFn = () => f(ref), obs, state)
+    def mapR[A](f: Ref => A) = new ROS(() => f(ref), obs, state)
 
     def mapO[A](f: Obs   => A): ROS[Ref, A, State] = copyOS(obs = f(obs))
     def mapS[A](f: State => A): ROS[Ref, Obs, A] = copyOS(state = f(state))
     def mapOS[OO, SS](o: Obs => OO, s: State => SS): ROS[Ref, OO, SS] = copyOS(o(obs), s(state))
+    def mapOe[OO](f: Obs => Either[Any, OO]): Option[ROS[Ref, OO, State]] = f(obs).mapToOption(o => copyOS(obs = o))
+    def mapRe[RR](f: Ref => Either[Any, RR]): Option[ROS[RR, Obs, State]] = f(ref).mapToOption(setRef(_))
   }
 
   final case class OS[+O, +S](obs: O, state: S) {
     def map[OO, SS](o: O => OO, s: S => SS) = OS(o(obs), s(state))
     def mapO[A](f: O => A) = OS(f(obs), state)
 //    def mapOo[A](f: O => Option[A]) = f(obs).map(OS(_, state))
-    def mapOe[A](f: O => Either[Any, A]): Option[OS[A, S]] = f(obs) match {case Right(x) => Some(OS(x, state)); case Left(_) => None}
-    def mapOE[E, A](f: O => Either[E, A]): Either[E, OS[A, S]] = f(obs).map(OS(_, state))
-    def mapS[A](f: S => A) = OS(obs, f(state))
+    def mapOe[OO](f: O => Either[Any, OO]): Option[OS[OO, S]] = f(obs).mapToOption(OS(_, state))
+    def mapOE[E, OO](f: O => Either[E, OO]): Either[E, OS[OO, S]] = f(obs).map(OS(_, state))
+    def mapS[SS](f: S => SS) = OS(obs, f(state))
   }
 
   trait ~~>[F[_], G[_]] {
