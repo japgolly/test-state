@@ -53,7 +53,8 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
       action mapE f,
       invariants mapE f)(executionModel, recover map f)
 
-  // TODO add invariants
+  def addInvariants(i: Check[Obs, State, Err]): TestContent[F, Ref, Obs, State, Err] =
+    new TestContent(action, invariants & i)
 
   def addCheck(c: Check.Around[Obs, State, Err]): TestContent[F, Ref, Obs, State, Err] =
     new TestContent(action addCheck c, invariants)
