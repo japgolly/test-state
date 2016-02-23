@@ -77,7 +77,7 @@ object CoproductExample {
     }, _.t)
 
     val testNum: Action[Id, Top, Obs, State, String] =
-      Num.test
+      Num.test.content
         .cmapS[State](_.num, (s, n) => s.copy(num = n))
         .pmapO[Obs](Left(_)) {
             case Left(i) => Right(i)
@@ -91,7 +91,7 @@ object CoproductExample {
         .asAction("Test Num")
 
     val testTxt: Action[Id, Top, Obs, State, String] =
-      Txt.test
+      Txt.test.content
         .cmapS[State](_.txt, (s, n) => s.copy(txt = n))
         .pmapO[Obs](Right(_)) {
             case Right(t) => Right(t)

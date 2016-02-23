@@ -26,18 +26,57 @@ object Result {
 }
 
 // TODO Maybe better: Script | Plan | TestCase
-class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Err],
-                                       val invariants: Check[Obs, State, Err],
-                                       val observe: Observe[Ref, Obs, Err])
-                                      (implicit val executionModel: ExecutionModel[F], val recover: Recover[Err]) {
+class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Err],
+                                              val invariants: Check[Obs, State, Err])
+                                             (implicit val executionModel: ExecutionModel[F], val recover: Recover[Err]) {
+  def trans[G[_]: ExecutionModel](t: F ~~> G): TestContent[G, Ref, Obs, State, Err] =
+    new TestContent(action trans t, invariants)
+
+  def cmapRef[R2](f: R2 => Ref): TestContent[F, R2, Obs, State, Err] =
+    new TestContent(action cmapRef f, invariants)
+
+  def comapRef[R2](f: R2 => Either[Err, Ref]): TestContent[F, R2, Obs, State, Err] =
+    new TestContent(action pmapRef f, invariants)
+
+  def pmapO[OO](f: Obs => OO)(g: OO => Either[Err, Obs]): TestContent[F, Ref, OO, State, Err] =
+    new TestContent[F, Ref, OO, State, Err](
+      action.pmapO(g),
+      invariants.pmapO(g))
+
+  def cmapS[SS](s: SS => State, su: (SS, State) => SS): TestContent[F, Ref, Obs, SS, Err] =
+    new TestContent(
+      action.unzoomS(s, su),
+      invariants.cmapS(s))
+
+  def mapE[E](f: Err => E): TestContent[F, Ref, Obs, State, E] =
+    new TestContent(
+      action mapE f,
+      invariants mapE f)(executionModel, recover map f)
+
+  // TODO add invariants
+
+  def addCheck(c: Check.Around[Obs, State, Err]): TestContent[F, Ref, Obs, State, Err] =
+    new TestContent(action addCheck c, invariants)
+
+  def asAction(name: NameFn[OS[Obs, State]]) = Action.SubTest(name, action, invariants)
+
+  def observe(f: Ref => Obs) =
+    observeTry(r => Right(f(r)))
+
+  def observeTry(f: Ref => Either[Err, Obs]) =
+    new Test(this, Observe(f))
+}
+
+class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, State, Err],
+                                       val observe: Observe[Ref, Obs, Err]) {
   def trans[G[_]: ExecutionModel](t: F ~~> G): Test[G, Ref, Obs, State, Err] =
-    new Test(action trans t, invariants, observe)
+    new Test(content trans t, observe)
 
   def cmapRef[R2](f: R2 => Ref): Test[F, R2, Obs, State, Err] =
-    new Test(action cmapRef f, invariants, observe cmapR f)
+    new Test(content cmapRef f, observe cmapR f)
 
   def comapRef[R2](f: R2 => Either[Err, Ref]): Test[F, R2, Obs, State, Err] =
-    new Test(action pmapRef f, invariants, observe comapR f)
+    new Test(content comapRef f, observe comapR f)
 
 //  final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, Ref, X, S, Err] =
 //    mapOS(g, identity, (_, s) => s)
@@ -56,40 +95,29 @@ class Test[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Er
 //      observe mapO o2)
 
   def pmapO[OO](f: Obs => OO)(g: OO => Either[Err, Obs]): Test[F, Ref, OO, State, Err] =
-    new Test[F, Ref, OO, State, Err](
-      action.pmapO(g),
-      invariants.pmapO(g),
-      observe mapO f)
+    new Test(content.pmapO(f)(g), observe mapO f)
 
   def cmapS[SS](s: SS => State, su: (SS, State) => SS): Test[F, Ref, Obs, SS, Err] =
-    new Test(
-      action.unzoomS(s, su),
-      invariants.cmapS(s),
-      observe)
+    new Test(content.cmapS(s, su), observe)
 
   def mapE[E](f: Err => E): Test[F, Ref, Obs, State, E] =
-    new Test(
-      action mapE f,
-      invariants mapE f,
-      observe mapE f)(executionModel, recover map f)
+    new Test(content mapE f, observe mapE f)
 
   def run(initialState: State, ref: => Ref): F[History[Err]] =
     Runner.run(this)(initialState, ref)
 
-  // TODO add invariants
-
-  def addCheck(c: Check.Around[Obs, State, Err]): Test[F, Ref, Obs, State, Err] =
-    new Test(action addCheck c, invariants, observe)
-
-  // TODO observe not needed
-  def asAction(name: NameFn[OS[Obs, State]]) = Action.SubTest(name, action, invariants)
+//  def addCheck(c: Check.Around[Obs, State, Err]): Test[F, Ref, Obs, State, Err] =
+//    new Test(content addCheck c, invariants, observe)
 }
+
+
+
+
 object Test {
   def apply[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
                                         invariants: Check[Obs, State, Err] = Check.empty)
-                                       (implicit executionModel: ExecutionModel[F], recover: Recover[Err])
-      : Observe.Ops[Ref, Obs, Err, Test[F, Ref, Obs, State, Err]] =
-    new Observe.Ops[Ref, Obs, Err, Test[F, Ref, Obs, State, Err]](o => new Test(action, invariants, o))
+                                       (implicit em: ExecutionModel[F], recover: Recover[Err]) =
+    new TestContent(action, invariants)(em, recover)
 }
 
 final case class Recover[E](apply: Throwable => E) extends AnyVal {
@@ -165,7 +193,7 @@ object Runner {
 
   def run[F[_], Ref, Obs, State, Err](test: Test[F, Ref, Obs, State, Err])
                                      (initialState: State, ref: => Ref): F[History[Err]] = {
-import test.{executionModel => EM, recover}
+import test.content.{executionModel => EM, recover}
 
     val refFn = () => ref
 
@@ -197,8 +225,8 @@ import test.{executionModel => EM, recover}
 
     def subtest(test: Test, initROS: ROS, summariseFinalResult: Boolean): F[OMG] = {
 
-    val invariantsAround = test.invariants.around
-    val invariantsPoints = test.invariants.point.singles
+    val invariantsAround = test.content.invariants.around
+    val invariantsPoints = test.content.invariants.point.singles
 
     def checkAround[A](nameFn: NameFn[OS], checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
@@ -334,7 +362,7 @@ import test.{executionModel => EM, recover}
 
           // ==============================================================================
           case Action.SubTest(name, action, invars) =>
-            val t = new Test(action, test.invariants & invars, test.observe)
+            val t = new Test(new TestContent(action, test.content.invariants & invars), test.observe)
             val subomg = subtest(t, ros, false)
             EM.map(subomg)(s =>
               OMG(
@@ -368,7 +396,7 @@ import test.{executionModel => EM, recover}
             if (firstSteps.failed)
               EM.pure(OMG(Vector.empty, ros, firstSteps))
             else
-              start(test.action, ros, firstSteps)
+              start(test.content.action, ros, firstSteps)
 
           EM.map(fh) { omg =>
             import omg.{history => h}

@@ -278,19 +278,19 @@ package object teststate extends teststate.Name.Implicits {
     def mapE[E](f: Err => E): Observe[Ref, Obs, E] =
       Observe(apply(_) leftMap f)
   }
-  object Observe {
-    def Ops[R, O, E, Out](f: Observe[R, O, E] => Out): Ops[R, O, E, Out] =
-      new Ops[R, O, E, Out](f)
-
-    final class Ops[R, O, E, Out](private val observeOut: Observe[R, O, E] => Out) extends AnyVal {
-
-      def observe(f: R => O): Out =
-        observeTry(r => Right(f(r)))
-
-      def observeTry(f: R => Either[E, O]): Out =
-        observeOut(Observe(f))
-
-    }
-  }
+//  object Observe {
+//    def Ops[R, O, E, Out](f: Observe[R, O, E] => Out): Ops[R, O, E, Out] =
+//      new Ops[R, O, E, Out](f)
+//
+//    final class Ops[R, O, E, Out](private val observeOut: Observe[R, O, E] => Out) extends AnyVal {
+//
+//      def observe(f: R => O): Out =
+//        observeTry(r => Right(f(r)))
+//
+//      def observeTry(f: R => Either[E, O]): Out =
+//        observeOut(Observe(f))
+//
+//    }
+//  }
 
 }
