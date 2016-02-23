@@ -200,18 +200,18 @@ import test.content.{executionModel => EM, recover}
     val refFn = () => ref
 
     type A = Action[F, Ref, Obs, State, Err]
-    type HS = History.Steps[Err]
-    type OS = teststate.OS[Obs, State]
+    type H = History[Err]
+//    type OS = teststate.OS[Obs, State]
     type ROS = teststate.ROS[Ref, Obs, State]
     type Test = teststate.Test[F, Ref, Obs, State, Err]
 
-    case class OMG(queue: Vector[A], ros: ROS, history: History[Err]) {
+    case class OMG(queue: Vector[A], ros: ROS, history: H) {
       def failure = history.failure
       def failed = history.failed
 
       def :+(s: History.Step[Err]) = copy(history = history :+ s)
       def ++(s: History.Steps[Err]) = copy(history = history ++ s)
-      def ++(s: History[Err]) = copy(history = history ++ s.steps)
+      def ++(s: H) = copy(history = history ++ s.steps)
     }
 
     val ActionName : Name = "Action"
@@ -232,7 +232,7 @@ import test.content.{executionModel => EM, recover}
 
     def checkAround[N, A](nameFn: NameFn[ROS], checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
-                      (run: A => F[(Name => History[Err], ROS)]): F[OMG] = {
+                      (run: A => F[(Name => H, ROS)]): F[OMG] = {
 
       val name = Recover.name(nameFn, omg.ros.some)
 
@@ -310,7 +310,7 @@ import test.content.{executionModel => EM, recover}
       }
     }
 
-    def start(a: A, ros: ROS, history: History[Err] = History.empty) =
+    def start(a: A, ros: ROS, history: H = History.empty) =
       go(OMG(vector1(a), ros, history))
 
     def go(omg: OMG): F[OMG] =
@@ -382,7 +382,7 @@ import test.content.{executionModel => EM, recover}
     val finalResult: F[OMG] = {
           val ros = initROS
 
-          val firstSteps: History[Err] =
+          val firstSteps: H =
             if (invariantsPoints.isEmpty)
               History.empty
             else {
@@ -402,7 +402,7 @@ import test.content.{executionModel => EM, recover}
 
           EM.map(fh) { omg =>
             import omg.{history => h}
-            val h2: History[Err] =
+            val h2: H =
               if (h.isEmpty)
                 History(History.Step("Nothing to do.", Result.Skip))
               else if (summariseFinalResult)

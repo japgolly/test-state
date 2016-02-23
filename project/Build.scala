@@ -17,6 +17,7 @@ object TestState extends Build {
   def scalacFlags = Seq(
     "-deprecation",
     "-unchecked",
+    "-Ywarn-unused",
     "-Ywarn-value-discard",
     "-feature",
     "-language:postfixOps",

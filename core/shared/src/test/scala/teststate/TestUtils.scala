@@ -19,10 +19,10 @@ trait TestUtil {
         case a            => a.toString
       }
 
-      var as = toString(actual)
-      var es = toString(expect)
+      val as = toString(actual)
+      val es = toString(expect)
       var pre = "["
-      var post = "]"
+      val post = "]"
       if ((as + es) contains "\n") {
         pre = "↙[\n"
       }
