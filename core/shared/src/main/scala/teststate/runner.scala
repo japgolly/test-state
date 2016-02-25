@@ -32,11 +32,11 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
   def trans[G[_]: ExecutionModel](t: F ~~> G): TestContent[G, Ref, Obs, State, Err] =
     new TestContent(action trans t, invariants)
 
-  def cmapRef[R2](f: R2 => Ref): TestContent[F, R2, Obs, State, Err] =
-    new TestContent(action cmapRef f, invariants)
+  def cmapR[R2](f: R2 => Ref): TestContent[F, R2, Obs, State, Err] =
+    new TestContent(action cmapR f, invariants)
 
-  def comapRef[R2](f: R2 => Either[Err, Ref]): TestContent[F, R2, Obs, State, Err] =
-    new TestContent(action pmapRef f, invariants)
+  def pmapR[R2](f: R2 => Either[Err, Ref]): TestContent[F, R2, Obs, State, Err] =
+    new TestContent(action pmapR f, invariants)
 
   def pmapO[OO](g: OO => Either[Err, Obs]): TestContent[F, Ref, OO, State, Err] =
     new TestContent[F, Ref, OO, State, Err](
@@ -74,11 +74,11 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
   def trans[G[_]: ExecutionModel](t: F ~~> G): Test[G, Ref, Obs, State, Err] =
     new Test(content trans t, observe)
 
-  def cmapRef[R2](f: R2 => Ref): Test[F, R2, Obs, State, Err] =
-    new Test(content cmapRef f, observe cmapR f)
+  def cmapR[R2](f: R2 => Ref): Test[F, R2, Obs, State, Err] =
+    new Test(content cmapR f, observe cmapR f)
 
-  def comapRef[R2](f: R2 => Either[Err, Ref]): Test[F, R2, Obs, State, Err] =
-    new Test(content comapRef f, observe comapR f)
+  def pmapR[R2](f: R2 => Either[Err, Ref]): Test[F, R2, Obs, State, Err] =
+    new Test(content pmapR f, observe pmapR f)
 
   def cmapS[SS](s: SS => State, su: (SS, State) => SS): Test[F, Ref, Obs, SS, Err] =
     new Test(content.cmapS(s, su), observe)

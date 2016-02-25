@@ -24,9 +24,9 @@ sealed trait Action[F[_], R, O, S, E] {
   final def andThen(next: Action[F, R, O, S, E]): Composite[F, R, O, S, E] =
     this >> next
 
-  def cmapRef[RR](f: RR => R): This[F, RR, O, S, E]
+  def cmapR[RR](f: RR => R): This[F, RR, O, S, E]
 
-  def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]): This[F, RR, O, S, E]
+  def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]): This[F, RR, O, S, E]
 
   final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, R, X, S, E] =
     mapOS(g, identity, (_, s) => s)
@@ -91,11 +91,11 @@ object Action {
     override def when(f: ROS[R, O, S] => Boolean) =
       map(_ when f)
 
-    override def cmapRef[RR](f: RR => R) =
-      map(_ cmapRef f)
+    override def cmapR[RR](f: RR => R) =
+      map(_ cmapR f)
 
-    override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
-      map(_ pmapRef f)
+    override def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
+      map(_ pmapR f)
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       map(_.mapOS(o, s, su))
@@ -152,10 +152,10 @@ object Action {
     override def when(f: ROS[R, O, S] => Boolean) =
       copy(action = i => if (f(i)) action(i) else None)
 
-    override def cmapRef[RR](f: RR => R) =
+    override def cmapR[RR](f: RR => R) =
       Group(
         name.cmap(_ mapR f),
-        i => action(i mapR f).map(_ cmapRef f),
+        i => action(i mapR f).map(_ cmapR f),
         check)
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
@@ -179,11 +179,11 @@ object Action {
         },
         check pmapO f)
 
-    override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
+    override def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
       Group(
         name.comap(_ mapRe f),
         ros => f(ros.ref) match {
-          case Right(r) => action(ros setRef r).map(_ pmapRef f)
+          case Right(r) => action(ros setRef r).map(_ pmapR f)
           case Left(err) => someFailAction("Action requires correct reference.", err)
         },
         check)
@@ -207,7 +207,7 @@ object Action {
     override def when(f: ROS[R, O, S] => Boolean) =
       copy(run = i => if (f(i)) run(i) else None)
 
-    override def cmapRef[RR](f: RR => R) =
+    override def cmapR[RR](f: RR => R) =
       Single(
         name.cmap(_ mapR f),
         i => run(i mapR f),
@@ -230,7 +230,7 @@ object Action {
         run(ros.copyOS(obs = o)).map(fn => () => em.map(fn())(_.map(g => (o: OO) => f(o).fmap(g))))),
       check pmapO f)
 
-    override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) = Single[F, RR, O, S, E](
+    override def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) = Single[F, RR, O, S, E](
       name.comap(_ mapRe f),
       ros => tryPrepare(f(ros.ref))(r => run(ros setRef r)),
       check)
@@ -253,10 +253,10 @@ object Action {
     override def when(f: ROS[R, O, S] => Boolean) =
       copy(action = action when f)
 
-    override def cmapRef[RR](f: RR => R) =
+    override def cmapR[RR](f: RR => R) =
       SubTest(
         name.cmap(_ mapR f),
-        action cmapRef f,
+        action cmapR f,
         invariants)
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
@@ -277,10 +277,10 @@ object Action {
         action pmapO f,
         invariants pmapO f)
 
-    override def pmapRef[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
+    override def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
       SubTest(
         name.comap(_ mapRe f),
-        action pmapRef f,
+        action pmapR f,
         invariants)
   }
 

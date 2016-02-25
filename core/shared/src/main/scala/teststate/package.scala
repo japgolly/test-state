@@ -279,7 +279,7 @@ package object teststate extends teststate.Name.Implicits {
     def cmapR[R](f: R => Ref): Observe[R, Obs, Err] =
       Observe(apply compose f)
 
-    def comapR[R, E >: Err](f: R => Either[E, Ref]): Observe[R, Obs, E] =
+    def pmapR[R, E >: Err](f: R => Either[E, Ref]): Observe[R, Obs, E] =
       Observe(r => f(r) fmap apply)
 
     def mapO[O](f: Obs => O): Observe[Ref, O, Err] =

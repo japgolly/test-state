@@ -83,7 +83,7 @@ object CoproductExample {
             case Left(i) => Right(i)
             case Right(_) => Left("Expected Int, got Txt.")
           }
-        .comapRef[Top](_.get() match {
+        .pmapR[Top](_.get() match {
             case x: Num => Right(x)
             case _      => Left("Expected Num, got Txt.")
           })
@@ -97,7 +97,7 @@ object CoproductExample {
             case Right(t) => Right(t)
             case Left(_) => Left("Expected Int, got Txt.")
           }
-        .comapRef[Top](_.get() match {
+        .pmapR[Top](_.get() match {
             case x: Txt => Right(x)
             case _      => Left("Expected Txt, got Num.")
           })
