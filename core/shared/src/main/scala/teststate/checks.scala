@@ -1,18 +1,18 @@
 package teststate
 
-sealed abstract class Check[-O, -S, +E] {
-  type This[-o, -s, +e] <: Check[o, s, e]
+sealed abstract class Check[O, S, +E] {
+  type This[o, s, +e] <: Check[o, s, e]
 
-  final def &[o <: O, s <: S, e >: E](c: Check[o, s, e]): Check.Composite[o, s, e] =
+  final def &[e >: E](c: Check[O, S, e]): Check.Composite[O, S, e] =
     Check.Composite(point & c.point, around & c.around)
 
   def point : Check.Point[O, S, E]
   def around: Check.Around[O, S, E]
 
-  final def skip[OO <: O, SS <: S, EE >: E]: This[OO, SS, E] =
+  final def skip[EE >: E]: This[O, S, E] =
     when(_ => false)
 
-  def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean): This[OO, SS, E]
+  def when[EE >: E](f: OS[O, S] => Boolean): This[O, S, E]
 
   final def cmapO[OO](o: OO => O): This[OO, S, E] =
     cmap(o, identity)
@@ -29,12 +29,12 @@ sealed abstract class Check[-O, -S, +E] {
 
 object Check {
 
-  val empty = Composite(Point.empty, Around.empty)
+  def empty[O, S] = Composite[O, S, Nothing](Point.empty, Around.empty)
 
-  final case class Composite[-O, -S, +E](point: Point[O, S, E], around: Around[O, S, E]) extends Check[O, S, E] {
-    override type This[-o, -s, +e] = Composite[o, s, e]
+  final case class Composite[O, S, +E](point: Point[O, S, E], around: Around[O, S, E]) extends Check[O, S, E] {
+    override type This[o, s, +e] = Composite[o, s, e]
 
-    override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Composite(
+    override def when[EE >: E](f: OS[O, S] => Boolean) = Composite(
       point when f,
       around when f)
 
@@ -53,8 +53,8 @@ object Check {
 
   // ===================================================================================================================
 
-  sealed abstract class Point[-O, -S, +E] extends Check[O, S, E] {
-    override type This[-o, -s, +e] <: Point[o, s, e]
+  sealed abstract class Point[O, S, +E] extends Check[O, S, E] {
+    override type This[o, s, +e] <: Point[o, s, e]
 
     def singles: Vector[Point.Single[O, S, E]]
     def before: Around[O, S, E]
@@ -64,21 +64,21 @@ object Check {
       before & after
 
     override final def point  = this
-    override final def around = Around.empty
+    override final def around = Around.empty[O, S]
 
-    final def &[o <: O, s <: S, e >: E](c: Point[o, s, e]): Point.Composite[o, s, e] =
+    final def &[e >: E](c: Point[O, S, e]): Point.Composite[O, S, e] =
       Point.Composite(singles ++ c.singles)
   }
 
   object Point {
-    val empty = Composite(Vector.empty)
+    def empty[O, S] = Composite[O, S, Nothing](Vector.empty)
 
-    final case class Composite[-O, -S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E] {
-      override type This[-o, -s, +e] = Composite[o, s, e]
-      override def before = Around.empty.copy(befores = singles.map(_.before))
-      override def after  = Around.empty.copy(afters = singles.map(_.after))
+    final case class Composite[O, S, +E](singles: Vector[Single[O, S, E]]) extends Point[O, S, E] {
+      override type This[o, s, +e] = Composite[o, s, e]
+      override def before = Around.Composite(singles.map(_.before), Vector.empty, Vector.empty)
+      override def after  = Around.Composite(Vector.empty, Vector.empty, singles.map(_.after))
 
-      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Composite(
+      override def when[EE >: E](f: OS[O, S] => Boolean) = Composite(
         singles.map(_ when f))
 
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Composite(
@@ -91,16 +91,16 @@ object Check {
         singles.map(_ mapE f))
     }
 
-    final case class Single[-O, -S, +E](name: NameFn[OS[O, S]], test: OS[O, S] => TriResult[E, Unit]) extends Point[O, S, E] {
-      override type This[-o, -s, +e] = Single[o, s, e]
+    final case class Single[O, S, +E](name: NameFn[OS[O, S]], test: OS[O, S] => TriResult[E, Unit]) extends Point[O, S, E] {
+      override type This[o, s, +e] = Single[o, s, e]
       override def toString = s"Check.Point.Single(${name(None)})"
       override def singles = vector1(this)
       override def before = Around.Before(this)
       override def after  = Around.After(this)
-      def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]): Single[o, s, e] =
+      def rename[e >: E](newName: NameFn[OS[O, S]]): Single[O, S, e] =
         copy(newName)
 
-      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Single[OO, SS, E](
+      override def when[EE >: E](f: OS[O, S] => Boolean) = Single(
         name,
         wrapWithCond2(f, test))
 
@@ -120,17 +120,17 @@ object Check {
 
   // ===================================================================================================================
 
-  sealed abstract class Around[-O, -S, +E] extends Check[O, S, E] {
-    override type This[-o, -s, +e] <: Around[o, s, e]
+  sealed abstract class Around[O, S, +E] extends Check[O, S, E] {
+    override type This[o, s, +e] <: Around[o, s, e]
 
     def befores: Vector[Around.Before[O, S, E]]
     def dunnos: Vector[Around.Dunno[O, S, E]]
     def afters: Vector[Around.After[O, S, E]]
 
-    override final def point  = Point.empty
+    override final def point  = Point.empty[O, S]
     override final def around = this
 
-    final def &[o <: O, s <: S, e >: E](c: Around[o, s, e]): Around.Composite[o, s, e] =
+    final def &[e >: E](c: Around[O, S, e]): Around.Composite[O, S, e] =
       Around.Composite(
         befores ++ c.befores,
         dunnos ++ c.dunnos,
@@ -138,14 +138,14 @@ object Check {
   }
 
   object Around {
-    val empty = Composite(Vector.empty, Vector.empty, Vector.empty)
+    def empty[O, S] = Composite[O, S, Nothing](Vector.empty, Vector.empty, Vector.empty)
 
-    final case class Composite[-O, -S, +E](befores: Vector[Before[O, S, E]],
+    final case class Composite[O, S, +E](befores: Vector[Before[O, S, E]],
                                      dunnos: Vector[Dunno[O, S, E]],
                                      afters: Vector[After[O, S, E]]) extends Around[O, S, E] {
-      override type This[-o, -s, +e] = Composite[o, s, e]
+      override type This[o, s, +e] = Composite[o, s, e]
 
-      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Composite(
+      override def when[EE >: E](f: OS[O, S] => Boolean) = Composite(
         befores.map(_ when f),
         dunnos.map(_ when f),
         afters.map(_ when f))
@@ -166,27 +166,27 @@ object Check {
         afters.map(_ mapE f))
     }
 
-    sealed abstract class Single[-O, -S, +E] extends Around[O, S, E] {
-      override type This[-o, -s, +e] <: Single[o, s, e]
+    sealed abstract class Single[O, S, +E] extends Around[O, S, E] {
+      override type This[o, s, +e] <: Single[o, s, e]
 
       override def befores: Vector[Before[O, S, E]] = Vector.empty
       override def dunnos: Vector[Dunno[O, S, E]] = Vector.empty
       override def afters: Vector[After[O, S, E]] = Vector.empty
 
-      def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]): This[o, s, e]
+      def rename[e >: E](newName: NameFn[OS[O, S]]): This[O, S, e]
     }
 
-    sealed abstract class Dunno[-O, -S, +E] extends Single[O, S, E] {
+    sealed abstract class Dunno[O, S, +E] extends Single[O, S, E] {
       type A
       val name: NameFn[OS[O, S]]
       val before: OS[O, S] => TriResult[E, A]
       val test: (OS[O, S], A) => Option[E]
 
       final def aux: DunnoA[O, S, E, A] = this
-      final override type This[-o, -s, +e] = DunnoA[o, s, e, A]
+      final override type This[o, s, +e] = DunnoA[o, s, e, A]
       final override def dunnos = vector1(this)
 
-      final override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Dunno[OO, SS, E, A](
+      final override def when[EE >: E](f: OS[O, S] => Boolean) = Dunno[O, S, E, A](
         name,
         wrapWithCond2(f, before),
         test)
@@ -207,7 +207,7 @@ object Check {
         (xs, a) => xs.mapOE(f).toOptionLeft(test(_, a)))
     }
 
-    type DunnoA[-O, -S, +E, a] = Dunno[O, S, E] {type A = a}
+    type DunnoA[O, S, +E, a] = Dunno[O, S, E] {type A = a}
 
     def Dunno[O, S, E, _A](_name: NameFn[OS[O, S]],
                             _before: OS[O, S] => TriResult[E, _A],
@@ -218,29 +218,29 @@ object Check {
         override val before = _before
         override val test   = _test
         override def toString = s"Check.Around.Single(${name(None)})"
-        override def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]) =
+        override def rename[e >: E](newName: NameFn[OS[O, S]]) =
           Dunno(newName, before, test)
       }
 
-    final case class Before[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
-      override type This[-o, -s, +e] = Before[o, s, e]
+    final case class Before[O, S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
+      override type This[o, s, +e] = Before[o, s, e]
       override def befores = vector1(this)
-      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Before(check when f)
+      override def when[EE >: E](f: OS[O, S] => Boolean) = Before(check when f)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Before(check.cmap(o, s))
       override def mapE[EE](f: E => EE) = Before(check mapE f)
       override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Before(check pmapO f)
-      override def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]) =
+      override def rename[e >: E](newName: NameFn[OS[O, S]]) =
         copy(check rename newName)
     }
 
-    final case class After[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
-      override type This[-o, -s, +e] = After[o, s, e]
+    final case class After[O, S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
+      override type This[o, s, +e] = After[o, s, e]
       override def afters = vector1(this)
-      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = After(check when f)
+      override def when[EE >: E](f: OS[O, S] => Boolean) = After(check when f)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = After(check.cmap(o, s))
       override def mapE[EE](f: E => EE) = After(check mapE f)
       override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = After(check pmapO f)
-      override def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]) =
+      override def rename[e >: E](newName: NameFn[OS[O, S]]) =
         copy(check rename newName)
     }
   }

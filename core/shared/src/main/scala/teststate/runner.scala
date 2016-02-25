@@ -107,7 +107,7 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
 
 object Test {
   def apply[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
-                                        invariants: Check[Obs, State, Err] = Check.empty)
+                                        invariants: Check[Obs, State, Err] = Check.empty[Obs, State])
                                        (implicit em: ExecutionModel[F], recover: Recover[Err]) =
     new TestContent(action, invariants)(em, recover)
 }
