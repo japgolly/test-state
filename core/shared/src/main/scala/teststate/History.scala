@@ -160,7 +160,7 @@ object History {
 
     def addEach[A, B](as: Vector[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => TriResult[E, Any])(implicit recover: Recover[E]): Unit =
       for (a <- as) {
-        val n = Recover.name(nameFn(a), nameInput)
+        val n = recover.name(nameFn(a), nameInput)
         val r = recover.recover(Result(test(a)), Result.Fail(_))
         this += Step(n, r)
       }

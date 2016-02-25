@@ -49,6 +49,12 @@ package object teststate extends teststate.Name.Implicits {
         case l: Left[A, B] => l.recast
       }
 
+//    def lfmap[C](f: => (A => Either[C, B])): Either[C, B] =
+//      self match {
+//        case r: Right[A, B] => r.recast
+//        case Left(a) => f(a)
+//      }
+
     @inline def map[C](f: B => C): Either[A, C] =
       fmap(b => Right(f(b)))
 

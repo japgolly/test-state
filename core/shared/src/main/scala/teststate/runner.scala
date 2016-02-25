@@ -119,7 +119,17 @@ final case class Recover[E](apply: Throwable => E) extends AnyVal {
     recover(Right(a), Left(_))
   def map[EE](f: E => EE): Recover[EE] =
     Recover(f compose apply)
+
+  def name[A](f: NameFn[A], a: Some[A]): String =
+    attempt(f(a).value) match {
+      case Right(n) => n
+      case Left(_) => attempt(f(None).value) match {
+        case Right(n) => n
+        case Left(e) => "Name exception: " + e.toString
+      }
+    }
 }
+
 object Recover {
   implicit val recoverToString: Recover[String] =
     Recover { t =>
@@ -129,27 +139,6 @@ object Recover {
       o.println()
       "Caught exception: " + t.toString
     }
-
-  //private val forName = Recover("Name exception: " + _.toString)
-//  def name(n: => Name): Name =
-//    Name(forName.recover(n.value, identity))
-
-  def name[A](f: NameFn[A], a: Some[A]): Name =
-    Name(
-      try
-        f(a).value
-      catch {
-        case t: Throwable =>
-          try {
-            val n = f(None).value
-            t.printStackTrace()
-            n
-          } catch {
-            case _: Throwable =>
-              "Name exception: " + t
-          }
-      }
-    )
 }
 
 object Runner {
@@ -207,7 +196,7 @@ import test.content.{executionModel => EM, recover}
                       (prepare: ROS => Option[A])
                       (run: A => F[(Name => H, ROS)]): F[OMG] = {
 
-      val name = Recover.name(nameFn, omg.ros.some)
+      val name = recover.name(nameFn, omg.ros.some)
 
       prepare(omg.ros) match {
         case Some(a) =>
