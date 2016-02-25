@@ -136,6 +136,12 @@ package object teststate extends teststate.Name.Implicits {
       "'" + s + "'"
     )
 
+    implicit def showOption[A](implicit show: Show[A]): Show[Option[A]] =
+      Show {
+        case None => "None"
+        case Some(a) => s"Some(${show(a)})"
+      }
+
     implicit def showTraversable[C[X] <: Traversable[X], A](implicit show: Show[A]): Show[C[A]] =
       Show(_.toIterator.map(show(_)).mkString(", "))
 
