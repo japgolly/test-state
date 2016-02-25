@@ -189,8 +189,8 @@ import test.content.{executionModel => EM, recover}
 
     def subtest(test: Test, initROS: ROS, summariseFinalResult: Boolean): F[OMG] = {
 
-    val invariantsAround = test.content.invariants.around
-    val invariantsPoints = test.content.invariants.point.singles
+    val invariantsAround = test.content.invariants.getAround
+    val invariantsPoints = test.content.invariants.getPoint.getSingles
 
     def checkAround[N, A](nameFn: NameFn[ROS], checks: Check.Around.Composite[Obs, State, Err], collapse: Boolean, omg: OMG)
                       (prepare: ROS => Option[A])
@@ -204,7 +204,7 @@ import test.content.{executionModel => EM, recover}
           // Perform before
           val pre = {
             val b = History.newBuilder[Err]
-            b.addEach(checks.befores)(_.check.name)(omg.ros.sos, _.check.test(omg.ros.os))
+            b.addEach(checks.getBefores)(_.check.name)(omg.ros.sos, _.check.test(omg.ros.os))
             b.group(PreName)
           }
 
@@ -216,7 +216,7 @@ import test.content.{executionModel => EM, recover}
             // Perform around-pre
             val hcs = {
               val b = Vector.newBuilder[HalfCheck[Obs, State, Err]]
-              for (c0 <- checks.dunnos) {
+              for (c0 <- checks.getDunnos) {
                 val c = c0.aux
                 val r = TriResult unwrapEither recover.attempt(c.before(omg.ros.os))
                 b += HalfCheck(c)(r)
@@ -250,7 +250,7 @@ import test.content.{executionModel => EM, recover}
                   b.addEach(hcs)(
                     c => c.check.name)(ros2.sos,
                     c => c.before.flatMap(a => TriResult failedOption c.check.test(ros2.os, a))) // Perform around-post
-                  b.addEach(checks.afters)(_.check.name)(ros2.sos, _.check.test(ros2.os)) // Perform post
+                  b.addEach(checks.getAfters)(_.check.name)(ros2.sos, _.check.test(ros2.os)) // Perform post
                   b.group(PostName)
                 }
 
