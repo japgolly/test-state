@@ -24,6 +24,8 @@ object Dsl {
     final type Action1     = teststate.Action.Single[F, R, O, S, E]
     final type NameFn      = teststate.NameFn[OS]
     final type ActionFn    = ROS => teststate.Action.Prepared[F, O, S, E]
+    final type TestContent = teststate.TestContent[F, R, O, S, E]
+    final type Test        = teststate.Test[F, R, O, S, E]
   }
 
   final class ActionB[F[_], R, O, S, E](actionName: => String)(implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
