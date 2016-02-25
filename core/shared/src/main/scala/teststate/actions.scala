@@ -13,6 +13,9 @@ sealed trait Action[F[_], R, O, S, E] {
 
   def addCheck(c: Check.Around[O, S, E]): This[F, R, O, S, E]
 
+  final def skip: This[F, R, O, S, E] =
+    when(_ => false)
+
   def when(f: ROS[R, O, S] => Boolean): This[F, R, O, S, E]
 
   final def unless(f: ROS[R, O, S] => Boolean): This[F, R, O, S, E] =
@@ -150,7 +153,7 @@ object Action {
       copy(check = check & c)
 
     override def when(f: ROS[R, O, S] => Boolean) =
-      copy(action = i => if (f(i)) action(i) else None)
+      copy(action = wrapWithCond(f, action))
 
     override def cmapR[RR](f: RR => R) =
       Group(
@@ -205,7 +208,7 @@ object Action {
       copy(check = check & c)
 
     override def when(f: ROS[R, O, S] => Boolean) =
-      copy(run = i => if (f(i)) run(i) else None)
+      copy(run = wrapWithCond(f, run))
 
     override def cmapR[RR](f: RR => R) =
       Single(

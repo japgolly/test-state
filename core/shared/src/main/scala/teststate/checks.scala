@@ -9,6 +9,11 @@ sealed abstract class Check[-O, -S, +E] {
   def point : Check.Point[O, S, E]
   def around: Check.Around[O, S, E]
 
+  final def skip[OO <: O, SS <: S, EE >: E]: This[OO, SS, E] =
+    when(_ => false)
+
+  def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean): This[OO, SS, E]
+
   final def cmapO[OO](o: OO => O): This[OO, S, E] =
     cmap(o, identity)
 
@@ -28,6 +33,10 @@ object Check {
 
   final case class Composite[-O, -S, +E](point: Point[O, S, E], around: Around[O, S, E]) extends Check[O, S, E] {
     override type This[-o, -s, +e] = Composite[o, s, e]
+
+    override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Composite(
+      point when f,
+      around when f)
 
     override def cmap[OO, SS](o: OO => O, s: SS => S) = Composite(
       point.cmap(o, s),
@@ -69,6 +78,9 @@ object Check {
       override def before = Around.empty.copy(befores = singles.map(_.before))
       override def after  = Around.empty.copy(afters = singles.map(_.after))
 
+      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Composite(
+        singles.map(_ when f))
+
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Composite(
         singles.map(_.cmap(o, s)))
 
@@ -79,7 +91,7 @@ object Check {
         singles.map(_ mapE f))
     }
 
-    final case class Single[-O, -S, +E](name: NameFn[OS[O, S]], test: OS[O, S] => Option[E]) extends Point[O, S, E] {
+    final case class Single[-O, -S, +E](name: NameFn[OS[O, S]], test: OS[O, S] => TriResult[E, Unit]) extends Point[O, S, E] {
       override type This[-o, -s, +e] = Single[o, s, e]
       override def toString = s"Check.Point.Single(${name(None)})"
       override def singles = vector1(this)
@@ -88,16 +100,21 @@ object Check {
       def rename[o <: O, s <: S, e >: E](newName: NameFn[OS[o, s]]): Single[o, s, e] =
         copy(newName)
 
+      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Single[OO, SS, E](
+        name,
+        wrapWithCond2(f, test))
+
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Single[OO, SS, E](
         name.cmap(_.map(o, s)),
         as => test(as.map(o, s)))
 
       override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Single[OO, S, EE](
         name.comap(_ mapOe f),
-        _.mapOE(f).toOptionLeft(test))
+        _.mapOE(f).toTriResult(test))
 
       override def mapE[EE](f: E => EE) = Single[O, S, EE](
-        name, test(_) map f)
+        name,
+        test(_) mapE f)
     }
   }
 
@@ -128,6 +145,11 @@ object Check {
                                      afters: Vector[After[O, S, E]]) extends Around[O, S, E] {
       override type This[-o, -s, +e] = Composite[o, s, e]
 
+      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Composite(
+        befores.map(_ when f),
+        dunnos.map(_ when f),
+        afters.map(_ when f))
+
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Composite(
         befores.map(_.cmap(o, s)),
         dunnos.map(_.cmap(o, s)),
@@ -157,28 +179,38 @@ object Check {
     sealed abstract class Dunno[-O, -S, +E] extends Single[O, S, E] {
       type A
       val name: NameFn[OS[O, S]]
-      val before: OS[O, S] => Either[E, A]
+      val before: OS[O, S] => TriResult[E, A]
       val test: (OS[O, S], A) => Option[E]
 
       final def aux: DunnoA[O, S, E, A] = this
       final override type This[-o, -s, +e] = DunnoA[o, s, e, A]
       final override def dunnos = vector1(this)
+
+      final override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Dunno[OO, SS, E, A](
+        name,
+        wrapWithCond2(f, before),
+        test)
+
       final override def cmap[OO, SS](o: OO => O, s: SS => S) = Dunno[OO, SS, E, A](
         name.cmap(_.map(o, s)),
         xs => before(xs.map(o, s)),
         (xs, a) => test(xs.map(o, s), a))
+
       final override def mapE[EE](f: E => EE) = Dunno[O, S, EE, A](
-        name, before(_) leftMap f, test(_, _) map f)
+        name,
+        before(_) mapE f,
+        test(_, _) map f)
+
       final override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Dunno[OO, S, EE, A](
         name.comap(_ mapOe f),
-        _.mapOE(f).fmap(before),
+        _.mapOE(f).toTriResult(before),
         (xs, a) => xs.mapOE(f).toOptionLeft(test(_, a)))
     }
 
     type DunnoA[-O, -S, +E, a] = Dunno[O, S, E] {type A = a}
 
     def Dunno[O, S, E, _A](_name: NameFn[OS[O, S]],
-                            _before: OS[O, S] => Either[E, _A],
+                            _before: OS[O, S] => TriResult[E, _A],
                             _test: (OS[O, S], _A) => Option[E]): DunnoA[O, S, E, _A] =
       new Dunno[O, S, E] {
         override type A     = _A
@@ -193,6 +225,7 @@ object Check {
     final case class Before[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
       override type This[-o, -s, +e] = Before[o, s, e]
       override def befores = vector1(this)
+      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = Before(check when f)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Before(check.cmap(o, s))
       override def mapE[EE](f: E => EE) = Before(check mapE f)
       override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Before(check pmapO f)
@@ -203,6 +236,7 @@ object Check {
     final case class After[-O, -S, +E](check: Point.Single[O, S, E]) extends Single[O, S, E] {
       override type This[-o, -s, +e] = After[o, s, e]
       override def afters = vector1(this)
+      override def when[OO <: O, SS <: S, EE >: E](f: OS[OO, SS] => Boolean) = After(check when f)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = After(check.cmap(o, s))
       override def mapE[EE](f: E => EE) = After(check mapE f)
       override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = After(check pmapO f)

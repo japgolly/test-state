@@ -4,6 +4,13 @@ import scala.io.AnsiColor._
 
 object TestUtil extends TestUtil
 
+case class ActualExpect[A](actual: A, expect: A) {
+  def map[B](f: A => B) = ActualExpect[B](f(actual), f(expect))
+
+  def forall(f: A => Boolean) = f(actual) && f(expect)
+  def exists(f: A => Boolean) = f(actual) || f(expect)
+}
+
 trait TestUtil {
 
   def assertEq[A: Equal](actual: A, expect: A): Unit =
@@ -19,15 +26,38 @@ trait TestUtil {
         case a            => a.toString
       }
 
-      val as = toString(actual)
-      val es = toString(expect)
-      var pre = "["
-      val post = "]"
-      if ((as + es) contains "\n") {
-        pre = "↙[\n"
+      val strs = ActualExpect(actual, expect) map toString
+      val lines = strs.map(_ split '\n')
+
+      if (lines.actual.length == lines.expect.length && lines.actual.length > 0) {
+        // Print side-by-side
+        val norm = lines.map(_.map(_.replace("\t", "\\t")))
+        val maxs = norm.map(_.iterator.map(_.length).max max 6)
+        val fmt = s"%s%-${maxs.expect}s$RESET | %s%s$RESET"
+        val sep = s"${"-" * maxs.expect}-+-${"-" * maxs.actual}"
+        val B = BOLD + RED
+        val G = ""
+        println(sep)
+        println(fmt.format(G, "Expect", G, "Actual"))
+        println(sep)
+        for ((l, r) <- norm.expect zip norm.actual) {
+          println(if (l == r)
+              fmt.format(G, l, G, r)
+          else
+              fmt.format(B, l, B, r))
+        }
+        println(sep)
+
+      } else {
+        var pre = "["
+        val post = "]"
+        if ((strs.actual + strs.expect) contains "\n") {
+          pre = "↙[\n"
+        }
+        println(s"expect: $pre$BOLD$BLUE${strs.expect}$RESET$post")
+        println(s"actual: $pre$BOLD$RED${strs.actual}$RESET$post")
       }
-      println(s"expect: $pre$BOLD$BLUE$es$RESET$post")
-      println(s"actual: $pre$BOLD$RED$as$RESET$post")
+
       println()
       fail("assertEq failed.")
     }

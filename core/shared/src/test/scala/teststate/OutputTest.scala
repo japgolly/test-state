@@ -19,9 +19,9 @@ object OutputTest extends TestSuite {
   val actionG   = (action >> action2).group("Groupiness.")
   val actionGF1 = (actionF >> action2).group("Groupiness.")
   val actionGF2 = (action >> actionF).group("Groupiness.")
-  val actionGS  = actionG.when(_ => false)
-  val actionS   = action.when(_ => false)
-  val action2S  = action2.when(_ => false)
+  val actionGS  = actionG.skip
+  val actionS   = action.skip
+  val action2S  = action2.skip
 
   val checkPoint   = mockPoint("Check stuff.")
   val checkPoint2  = mockPoint("Check more stuff.")
@@ -329,7 +329,44 @@ object OutputTest extends TestSuite {
     }
 
     'skip {
-      'simple - test(actionS, Check.empty)(
+      'invariant - test(action, checkPoint.skip)(
+        """
+          |- Initial state.
+          |  - Check stuff.
+          |✓ Press button.
+          |  ✓ Action
+          |  - Invariants
+          |    - Check stuff.
+          |✓ All pass.
+        """.stripMargin)
+
+      'invariant12 - test(action, checkPoint.skip & checkPoint2)(
+        """
+          |✓ Initial state.
+          |  - Check stuff.
+          |  ✓ Check more stuff.
+          |✓ Press button.
+          |  ✓ Action
+          |  ✓ Invariants
+          |    - Check stuff.
+          |    ✓ Check more stuff.
+          |✓ All pass.
+        """.stripMargin)
+
+      'invariant21 - test(action, checkPoint & checkPoint2.skip)(
+        """
+          |✓ Initial state.
+          |  ✓ Check stuff.
+          |  - Check more stuff.
+          |✓ Press button.
+          |  ✓ Action
+          |  ✓ Invariants
+          |    ✓ Check stuff.
+          |    - Check more stuff.
+          |✓ All pass.
+        """.stripMargin)
+
+      'action - test(actionS, Check.empty)(
         """
           |- Press button.
           |- All skipped.
@@ -378,8 +415,8 @@ object OutputTest extends TestSuite {
       val i = mockPoint("Invariant 1") & mockPoint("Invariant 2")
       val a =
         set("A") >>
-        (set("B") >> set("C").when(_ => false) >> set("D")).group("B ~ D") >>
-        (set("E") >> set("F")).group("E & F").when(_ => false) >>
+        (set("B") >> set("C").skip >> set("D")).group("B ~ D") >>
+        (set("E") >> set("F")).group("E & F").skip >>
         set("G")
 
       test(a, i)(
@@ -448,6 +485,8 @@ object OutputTest extends TestSuite {
           |✓ All pass.
         """.stripMargin)
     }
+
+    // TODO test subtest-action output
 
     // action combinators
 

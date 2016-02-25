@@ -65,10 +65,10 @@ object Dsl {
 final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
 
   def point(name: NameFn, test: OS => Option[E]): Point1 =
-    Check.Point.Single(name, test)
+    Check.Point.Single(name, Failed fromOption test(_))
 
   def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around1 =
-    Check.Around.Dunno(name, os => Right(before(os)), test)
+    Check.Around.Dunno(name, os => Passed(before(os)), test)
 
   private def strErrorFn(implicit ev: String =:= E): Any => E = _ => ""
   private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E = (_,_) => ""

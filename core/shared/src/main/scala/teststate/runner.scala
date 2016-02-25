@@ -21,8 +21,17 @@ object Result {
     override def failure = Some(error)
     override def +[e >: Err](r: Result[e]): Result[e] = this
   }
+
+  @deprecated("is this needed?", "")
   def passOrFail[E](o: Option[E]): Result[E] =
     o.fold[Result[E]](Pass)(Fail(_))
+
+  def apply[E](r: TriResult[E, Any]): Result[E] =
+    r match {
+      case Passed(_) => Pass
+      case Skipped   => Skip
+      case Failed(e) => Fail(e)
+    }
 }
 
 // TODO Maybe better: Script | Plan | TestCase
@@ -149,7 +158,6 @@ object Runner {
     type A
     val check: Check.Around.DunnoA[O, S, Err, A]
     val before: Either[Err, A]
-//    def before_! : A = before.asInstanceOf[Right[Err, A]].b
   }
   def HalfCheck[O, S, Err, a](_check: Check.Around.DunnoA[O, S, Err, a])(_before: Either[Err, a]): HalfCheck[O, S, Err] =
     new HalfCheck[O, S, Err] {
@@ -157,22 +165,6 @@ object Runner {
       override val check  = _check
       override val before = _before
     }
-
-//  private final case class FEM[F[_], E, A](value: F[Either[E, A]]) extends AnyVal {
-//    type M[B] = FEM[F, E, B]
-//    type FE[B] = F[Either[E, B]]
-//
-//    def map[B](f: A => B)(implicit em: ExecutionModel[F]): M[B] =
-//      FEM(em.map(value)(_ map f))
-//
-//    def flatMap[B](f: A => M[B])(implicit em: ExecutionModel[F]): M[B] =
-//      FEM(em.flatMap(value) { ea =>
-//        (ea match {
-//          case Right(a) => f(a).value
-//          case l: Left[E, A] => em.pure(l.castRight[B])
-//        }): FE[B]
-//      })
-//  }
 
   def run[F[_], Ref, Obs, State, Err](test: Test[F, Ref, Obs, State, Err])
                                      (initialState: State, ref: => Ref): F[History[Err]] = {
@@ -221,23 +213,31 @@ import test.content.{executionModel => EM, recover}
         case Some(a) =>
 
           // Perform before
-          val pre = {
-            val b = History.newBuilder[Err]
-            b.addEach(checks.befores)(_.check.name)(omg.ros.sos, _.check.test(omg.ros.os))
-            b.group(PreName)
-          }
+          val preBuilder = History.newBuilder[Err]
+          preBuilder.addEach2(checks.befores)(_.check.name)(omg.ros.sos, _.check.test(omg.ros.os))
 
-          if (pre.failed) {
+          if (preBuilder.failed()) {
+            val pre = preBuilder.group(PreName)
             EM.pure(omg :+ History.parent(name, pre))
 
           } else {
 
             // Perform around-pre
-            val hcs = checks.dunnos.map { c0 =>
+            val hcs = {
+              val b = Vector.newBuilder[HalfCheck[Obs, State, Err]]
+              for (c0 <- checks.dunnos) {
                 val c = c0.aux
-                val a = recover attempt c.before(omg.ros.os)
-                HalfCheck(c)(a.flatten)
+                recover attempt c.before(omg.ros.os) match {
+                  case Right(Passed(a)) => b += HalfCheck(c)(Right(a))
+                  case Right(Failed(e)) => b += HalfCheck(c)(Left(e))
+                  case l@Left(_)        => b += HalfCheck(c)(l.recast)
+                  case Right(Skipped)   => preBuilder += History.Step(c name omg.ros.sos, Result.Skip)
+                }
               }
+              b.result()
+            }
+
+            val pre = preBuilder.group(PreName)
 
             // Perform action
             val runF = run(a)
@@ -265,14 +265,14 @@ import test.content.{executionModel => EM, recover}
                   b.addEach(hcs)(
                     c => c.check.name)(ros2.sos,
                     c => c.before.toOptionLeft(a => c.check.test(ros2.os, a))) // Perform around-post
-                  b.addEach(checks.afters)(_.check.name)(ros2.sos, _.check.test(ros2.os)) // Perform post
+                  b.addEach2(checks.afters)(_.check.name)(ros2.sos, _.check.test(ros2.os)) // Perform post
                   b.group(PostName)
                 }
 
                 // Check invariants
                 val invs = {
                   val b = History.newBuilder[Err]
-                  b.addEach(invariantsPoints)(_.name)(ros2.sos, _.test(ros2.os))
+                  b.addEach2(invariantsPoints)(_.name)(ros2.sos, _.test(ros2.os))
                   b.group(InvariantsName)
                 }
 
@@ -369,7 +369,7 @@ import test.content.{executionModel => EM, recover}
             else {
               val children = {
                 val b = History.newBuilder[Err]
-                b.addEach(invariantsPoints)(_.name)(ros.sos, _ test ros.os)
+                b.addEach2(invariantsPoints)(_.name)(ros.sos, _ test ros.os)
                 b.history()
               }
               History(History.parent(InitialState, children))
