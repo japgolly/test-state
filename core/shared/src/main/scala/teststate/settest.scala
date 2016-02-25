@@ -31,7 +31,7 @@ object NameUtils {
     s"$focusName ${should(pos)} be ${sa(expect)}."
 
   def equalFn[I, A](focusName: String, pos: Boolean, expect: I => A)(implicit sa: Show[A]): Option[I] => Name = {
-    case None    => s"$focusName ${should(pos)} be <fn>."
+    case None    => s"$focusName ${should(pos)} be <?>."
     case Some(i) => equal(focusName, pos, expect(i))
   }
 }

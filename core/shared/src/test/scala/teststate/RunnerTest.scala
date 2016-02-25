@@ -164,7 +164,7 @@ object RunnerTest extends TestSuite {
             |✘ NOP
             |  ✓ Action
             |  ✘ Post-conditions
-            |    ✘ Blah shouldn't be <fn>. -- Caught exception: java.lang.ClassCastException
+            |    ✘ Blah shouldn't be <?>. -- Caught exception: java.lang.ClassCastException
           """.stripMargin,
           fixExpectedException)
       }

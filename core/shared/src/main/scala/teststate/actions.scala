@@ -46,6 +46,7 @@ sealed trait Action[F[_], R, O, S, E] {
 //  final def group(name: Name): Action.Group[F, R, O, S, Err] =
 //    Action.Group(name, _ => Some(this), Check.Around.empty)
 
+  // TODO hmmm, Action should just get the updateState methods from DSL
   def modS(f: S => S)(implicit em: ExecutionModel[F]): This[F, R, O, S, E]
 }
 
