@@ -372,6 +372,33 @@ object OutputTest extends TestSuite {
           |- All skipped.
         """.stripMargin)
 
+      'actionBefore - test(action addCheck checkPoint.before.skip, Check.empty)(
+        """
+          |✓ Press button.
+          |  - Pre-conditions
+          |    - Check stuff.
+          |  ✓ Action
+          |✓ All pass.
+        """.stripMargin)
+
+      'actionAround - test(action addCheck checkAround.skip, Check.empty)(
+        """
+          |✓ Press button.
+          |  ✓ Action
+          |  - Post-conditions
+          |    - Button count increased.
+          |✓ All pass.
+        """.stripMargin)
+
+      'actionAfter - test(action addCheck checkPoint.after.skip, Check.empty)(
+        """
+          |✓ Press button.
+          |  ✓ Action
+          |  - Post-conditions
+          |    - Check stuff.
+          |✓ All pass.
+        """.stripMargin)
+
       'group - test(actionGS, Check.empty)(
         """
           |- Groupiness.

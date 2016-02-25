@@ -158,15 +158,7 @@ object History {
         r += h.result
       }
 
-    @deprecated("use addEach2", "")
-    def addEach[A, B](as: Vector[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Option[E])(implicit recover: Recover[E]): Unit =
-      for (a <- as) {
-        val n = Recover.name(nameFn(a), nameInput)
-        val r = recover.recover(Result passOrFail test(a), Result.Fail(_))
-        this += Step(n, r)
-      }
-
-    def addEach2[A, B](as: Vector[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => TriResult[E, Any])(implicit recover: Recover[E]): Unit =
+    def addEach[A, B](as: Vector[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => TriResult[E, Any])(implicit recover: Recover[E]): Unit =
       for (a <- as) {
         val n = Recover.name(nameFn(a), nameInput)
         val r = recover.recover(Result(test(a)), Result.Fail(_))

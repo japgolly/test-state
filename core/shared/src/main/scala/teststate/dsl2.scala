@@ -65,7 +65,7 @@ object Dsl {
 final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
 
   def point(name: NameFn, test: OS => Option[E]): Point1 =
-    Check.Point.Single(name, Failed fromOption test(_))
+    Check.Point.Single(name, TriResult failedOption test(_))
 
   def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around1 =
     Check.Around.Dunno(name, os => Passed(before(os)), test)
