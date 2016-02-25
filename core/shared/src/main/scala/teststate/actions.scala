@@ -45,6 +45,8 @@ sealed trait Action[F[_], R, O, S, E] {
 
 //  final def group(name: Name): Action.Group[F, R, O, S, Err] =
 //    Action.Group(name, _ => Some(this), Check.Around.empty)
+
+  def modS(f: S => S)(implicit em: ExecutionModel[F]): This[F, R, O, S, E]
 }
 
 object Action {
@@ -93,6 +95,9 @@ object Action {
 
     override def when(f: ROS[R, O, S] => Boolean) =
       map(_ when f)
+
+    override def modS(f: S => S)(implicit em: ExecutionModel[F]) =
+      map(_ modS f)
 
     override def cmapR[RR](f: RR => R) =
       map(_ cmapR f)
@@ -155,6 +160,9 @@ object Action {
     override def when(f: ROS[R, O, S] => Boolean) =
       copy(action = wrapWithCond(f, action))
 
+    override def modS(f: S => S)(implicit em: ExecutionModel[F]) =
+      copy(action = action(_).map(_ modS f))
+
     override def cmapR[RR](f: RR => R) =
       Group(
         name.cmap(_ mapR f),
@@ -209,6 +217,9 @@ object Action {
 
     override def when(f: ROS[R, O, S] => Boolean) =
       copy(run = wrapWithCond(f, run))
+
+    override def modS(m: S => S)(implicit em: ExecutionModel[F]) =
+      copy(run = run(_).map(f => () => em.map(f())(_.map(_.andThen(_ map m)))))
 
     override def cmapR[RR](f: RR => R) =
       Single(
@@ -285,6 +296,9 @@ object Action {
         name.comap(_ mapRe f),
         action pmapR f,
         invariants)
+
+    override def modS(f: S => S)(implicit em: ExecutionModel[F]) =
+      copy(action = action modS f)
   }
 
 }

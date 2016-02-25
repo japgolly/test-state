@@ -188,5 +188,14 @@ object RunnerTest extends TestSuite {
       assertEq(h.failure, None)
       assertEq(i, 7)
     }
+
+    'modS {
+      var i = 9
+      val * = Dsl.sync[Unit, Int, Int, String]
+      val inc = *.action("inc").updateState(_ + 8).act(_ => i = i + 1).modS(_ - 3).modS(_ - 4)
+      val h = Test(inc.times(3)).observe(_ => i).run(i, ())
+      assertEq(h.failure, None)
+      assertEq(i, 12)
+    }
   }
 }

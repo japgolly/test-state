@@ -42,6 +42,7 @@ object TestState extends Build {
     .configure(
       addCommandAliases(
         "/"   -> "project root",
+        "L"   -> "root/publishLocal",
         "C"   -> "root/clean",
         "T"   -> ";root/clean;root/test",
         "c"   -> "compile",
