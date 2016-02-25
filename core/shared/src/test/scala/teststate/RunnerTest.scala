@@ -30,7 +30,7 @@ object RunnerTest extends TestSuite {
 
   val nop = *.action("NOP").act(_ => ())
 
-  val test = Test(
+  def test(implicit r: Recover[String]) = Test(
     a(1)
     >> a(2)
     >> (a(3) >> a(4)).group("A34").addCheck(f.assert.equal(expectAt(4)).after)
@@ -68,6 +68,9 @@ object RunnerTest extends TestSuite {
     }
 
     'catch {
+      implicit val recoverToString: Recover[String] =
+        Recover("Caught exception: " + _.toString)
+
       def badPoint = *.point("OMG", _ => sys error "Crash!")
 
       'action {
