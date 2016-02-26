@@ -29,7 +29,7 @@ trait TestUtil {
       val strs = ActualExpect(actual, expect) map toString
       val lines = strs.map(_ split '\n')
 
-      if (lines.actual.length == lines.expect.length && lines.actual.length > 0) {
+      if (lines.actual.length == lines.expect.length && lines.actual.length > 1) {
         // Print side-by-side
         val norm = lines.map(_.map(_.replace("\t", "\\t")))
         val maxs = norm.map(_.iterator.map(_.length).max max 6)

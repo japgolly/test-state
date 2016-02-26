@@ -197,5 +197,32 @@ object RunnerTest extends TestSuite {
       assertEq(h.failure, None)
       assertEq(i, 12)
     }
+
+    'skip {
+      'action {
+        var i = 0
+        val a = *.action("A").act(_ => i += 1).skip
+        val test = Test(a: *.Action /* TODO What? */).observe(_.s)
+        test.run((), newState)
+        assertEq(i, 0)
+      }
+
+      'invariant {
+        var i = 0
+        val c = *.point("X", _ => {i += 1; None}).skip
+        val test = Test(a(1), c).observe(_.s)
+        test.run((), newState)
+        assertEq(i, 0)
+      }
+
+      'action {
+        var i = 0
+        val c = *.point("X", _ => {i += 1; None}).skip
+        val d = *.around("Y", _ => {i += 1; i})((_, _) => {i += 1; None}).skip
+        val test = Test(a(1) addCheck c.beforeAndAfter addCheck d).observe(_.s)
+        test.run((), newState)
+        assertEq(i, 0)
+      }
+    }
   }
 }
