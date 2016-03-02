@@ -2,40 +2,6 @@ package teststate
 
 import Or.{Left, Right}
 
-sealed trait Result[+Err] {
-  def failure: Option[Err]
-  def +[e >: Err](r: Result[e]): Result[e]
-}
-object Result {
-  def empty[E]: Result[E] = Skip
-  case object Pass extends Result[Nothing] {
-    override def failure = None
-    override def +[e](r: Result[e]): Result[e] = r match {
-      case Pass | Skip => Pass
-      case Fail(_)     => r
-    }
-  }
-  case object Skip extends Result[Nothing] {
-    override def failure = None
-    override def +[e](r: Result[e]): Result[e] = r
-  }
-  case class Fail[+Err](error: Err) extends Result[Err] {
-    override def failure = Some(error)
-    override def +[e >: Err](r: Result[e]): Result[e] = this
-  }
-
-  @deprecated("is this needed?", "")
-  def passOrFail[E](o: Option[E]): Result[E] =
-    o.fold[Result[E]](Pass)(Fail(_))
-
-  def apply[E](r: TriResult[E, Any]): Result[E] =
-    r match {
-      case Passed(_) => Pass
-      case Skipped   => Skip
-      case Failed(e) => Fail(e)
-    }
-}
-
 final case class Observe[-Ref, +Obs, +Err](val apply: Ref => Err Or Obs) extends AnyVal {
   def cmapR[R](f: R => Ref): Observe[R, Obs, Err] =
     Observe(apply compose f)
