@@ -261,6 +261,13 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
             .andThen(_.map(_ + " (ignoring order)"))),
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
+
+      def equalConst(expect: A*)(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) =
+        equal(Function const expect)(eq, sa, ev)
+
+      def equalIgnoringOrderConst(expect: A*)(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) =
+        equalIgnoringOrder(Function const expect)(sa, ev)
+
     }
   }
 
