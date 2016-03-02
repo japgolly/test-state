@@ -192,6 +192,7 @@ import test.content.{executionModel => EM, recover}
 
     def subtest(test: Test, initROS: ROS, summariseFinalResult: Boolean): F[OMG] = {
 
+      // TODO Remove duplicate checks by reference
     val invariantsAround = test.content.invariants.getAround
     val invariantsPoints = test.content.invariants.getPoint.getSingles
 

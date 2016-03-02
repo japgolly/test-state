@@ -48,6 +48,12 @@ sealed trait Action[F[_], R, O, S, E] {
 
   // TODO hmmm, Action should just get the updateState methods from DSL
   def modS(f: S => S)(implicit em: ExecutionModel[F]): This[F, R, O, S, E]
+
+  final def withInvariants(is: Check[O, S, E])(implicit em: ExecutionModel[F], r: Recover[E]): TestContent[F, R, O, S, E] =
+    Test(this, is)(em, r)
+
+  final def withoutInvariants(implicit em: ExecutionModel[F], r: Recover[E]): TestContent[F, R, O, S, E] =
+    Test(this)(em, r)
 }
 
 object Action {

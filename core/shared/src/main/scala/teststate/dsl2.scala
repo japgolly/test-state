@@ -112,6 +112,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def emptyAction: Action =
     Action.empty
 
+  def emptyTest(implicit r: Recover[E]): TestContent =
+    emptyAction.withoutInvariants
+
   def action(actionName: => String) =
     new ActionB[F, R, O, S, E](actionName)
 
