@@ -97,7 +97,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def value[A: Show](f: OS => A) =
       new FocusValue(focusName, f)
 
-    def collection[A](f: OS => TraversableOnce[A]) =
+    def collection[T[x] <: TraversableOnce[x], A](f: OS => T[A]) =
       new FocusColl(focusName, f)
 
     def obsAndState[A: Show](fo: O => A, fs: S => A) =
@@ -246,6 +246,13 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           NameFn(_.fold[Name](s"$focusName: Existence of $allName.")(os =>
             ExistenceOfAll.name(expect(os), focusName, allName))),
           os => ExistenceOfAll(expect(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
+
+      def equal(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) = {
+        val d = EqualIncludingOrder(positive)
+        point(
+          NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])),
+          os => d(source = focusFn(os), expect = expect(os)).map(ev))
+      }
 
       def equalIgnoringOrder(expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
         val d = EqualIgnoringOrder(positive)

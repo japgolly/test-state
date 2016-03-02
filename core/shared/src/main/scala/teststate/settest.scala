@@ -359,4 +359,48 @@ object CollectionAssertions {
       override def errorString = "Set members match."
     }
   }
+
+  // ===================================================================================================================
+
+  sealed abstract class EqualIncludingOrder {
+    def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit eq: Equal[A], s: Show[A]): Option[EqualIncludingOrder.Failure[A]]
+  }
+
+  // TODO Could do much better. Should diff
+  object EqualIncludingOrder {
+    def apply(positive: Boolean): EqualIncludingOrder =
+      if (positive) Pos else Neg
+
+    object Pos extends EqualIncludingOrder {
+      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit eq: Equal[A], s: Show[A]) = {
+        val a = source.toVector
+        val e = expect.toSeq
+        if (a.corresponds(e)(eq.equal))
+          None
+        else
+          Some(Mismatch(a, e.toVector))
+      }
+    }
+
+    object Neg extends EqualIncludingOrder {
+      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit eq: Equal[A], s: Show[A]) =
+        if (source.toSeq.corresponds(expect.toSeq)(eq.equal))
+          Some(Matched)
+        else
+          None
+    }
+
+    sealed trait Failure[+A] extends HasErrorString with Product with Serializable
+
+    case class Mismatch[+A](actual: Vector[A], expect: Vector[A])(implicit s: Show[A]) extends Failure[A] {
+      private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Show[AA]): Option[String] =
+        if (as.isEmpty) None else Some(name + ": " +formatSet(as.iterator.map(s(_))))
+      override def errorString =
+        (fmt("Actual", actual).toList ::: fmt("Expect", expect).toList).mkString(" ")
+    }
+
+    case object Matched extends Failure[Nothing] {
+      override def errorString = "Set members match."
+    }
+  }
 }

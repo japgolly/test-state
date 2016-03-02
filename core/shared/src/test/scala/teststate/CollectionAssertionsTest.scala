@@ -83,6 +83,8 @@ object CollectionAssertionsTest extends TestSuite {
       'distinct - test1("distinct", Distinct(_)(_), d => d.sorted.distinct.length == d.length)
 
       'equalIgnoringOrder - test2d("equalIgnoringOrder", EqualIgnoringOrder(_)(_, _), (a, b) => a.sorted == b.sorted)
+
+      'equalIncludingOrder - test2d("equalIncludingOrder", EqualIncludingOrder(_)(_, _), (a, b) => a == b)
     }
 
     'text {
@@ -130,6 +132,12 @@ object CollectionAssertionsTest extends TestSuite {
         _ ("abcdefa", "cdfex"), "Missing: 'x'. Excess: 'b', 'a', 'a'.")
 
       'equalIgnoringOrderF - testNoName(EqualIgnoringOrder(false))(
+        _ ("qwe", "qwe"), "Set members match.")
+
+      'equalIncludingOrderP - testNoName(EqualIncludingOrder(true))(
+        _ ("abc", "acb"), "Actual: 'a', 'b', 'c'. Expect: 'a', 'c', 'b'.")
+
+      'equalIncludingOrderF - testNoName(EqualIncludingOrder(false))(
         _ ("qwe", "qwe"), "Set members match.")
     }
   }
