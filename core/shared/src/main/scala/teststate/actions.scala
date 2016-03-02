@@ -29,7 +29,7 @@ sealed trait Action[F[_], R, O, S, E] {
 
   def cmapR[RR](f: RR => R): This[F, RR, O, S, E]
 
-  def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]): This[F, RR, O, S, E]
+  def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F]): This[F, RR, O, S, E]
 
   final def cmapO[X](g: X => O)(implicit em: ExecutionModel[F]): This[F, R, X, S, E] =
     mapOS(g, identity, (_, s) => s)
@@ -41,7 +41,7 @@ sealed trait Action[F[_], R, O, S, E] {
 
   def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]): This[F, R, O, S, EE]
 
-  def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]): This[F, R, OO, S, E]
+  def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]): This[F, R, OO, S, E]
 
 //  final def group(name: Name): Action.Group[F, R, O, S, Err] =
 //    Action.Group(name, _ => Some(this), Check.Around.empty)
@@ -72,12 +72,12 @@ object Action {
       _ => preparedFail(err),
       Check.Around.empty))
 
-  type Prepared[F[_], O, S, E] = Option[() => F[Either[E, O => Either[E, S]]]]
+  type Prepared[F[_], O, S, E] = Option[() => F[E Or (O => E Or S)]]
 
   private def preparedFail[F[_], O, S, E](err: E)(implicit em: ExecutionModel[F]): Prepared[F, O, S, E] =
     Some(() => em.pure(Left(err)))
 
-  private def tryPrepare[F[_]: ExecutionModel, O, S, E, A](e: Either[E, A])(f: A => Prepared[F, O, S, E]): Prepared[F, O, S, E] =
+  private def tryPrepare[F[_]: ExecutionModel, O, S, E, A](e: E Or A)(f: A => Prepared[F, O, S, E]): Prepared[F, O, S, E] =
     e match {
       case Right(a) => f(a)
       case Left(err) => preparedFail(err)
@@ -109,7 +109,7 @@ object Action {
     override def cmapR[RR](f: RR => R) =
       map(_ cmapR f)
 
-    override def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
+    override def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F]) =
       map(_ pmapR f)
 
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
@@ -118,7 +118,7 @@ object Action {
     override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
       map(_ mapE f)
 
-    override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) =
+    override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) =
       map(_ pmapO f)
 
     def group(name: Name): Group[F, R, O, S, E] =
@@ -188,7 +188,7 @@ object Action {
         action(_) map (_ mapE f),
         check mapE f)
 
-    override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) =
+    override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) =
       Group(
         name.comap(_ mapOe f),
         ros => f(ros.obs) match {
@@ -197,7 +197,7 @@ object Action {
         },
         check pmapO f)
 
-    override def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
+    override def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F]) =
       Group(
         name.comap(_ mapRe f),
         ros => f(ros.ref) match {
@@ -245,13 +245,13 @@ object Action {
       run(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))),
       check mapE f)
 
-    override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) = Single[F, R, OO, S, E](
+    override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) = Single[F, R, OO, S, E](
       name.comap(_ mapOe f),
       ros => tryPrepare(f(ros.obs))(o =>
-        run(ros.copyOS(obs = o)).map(fn => () => em.map(fn())(_.map(g => (o: OO) => f(o).fmap(g))))),
+        run(ros.copyOS(obs = o)).map(fn => () => em.map(fn())(_.map(g => (o: OO) => f(o) flatMap g)))),
       check pmapO f)
 
-    override def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) = Single[F, RR, O, S, E](
+    override def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F]) = Single[F, RR, O, S, E](
       name.comap(_ mapRe f),
       ros => tryPrepare(f(ros.ref))(r => run(ros setRef r)),
       check)
@@ -292,13 +292,13 @@ object Action {
         action mapE f,
         invariants mapE f)
 
-    override def pmapO[OO](f: OO => Either[E, O])(implicit em: ExecutionModel[F]) =
+    override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) =
       SubTest(
         name.comap(_ mapOe f),
         action pmapO f,
         invariants pmapO f)
 
-    override def pmapR[RR](f: RR => Either[E, R])(implicit em: ExecutionModel[F]) =
+    override def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F]) =
       SubTest(
         name.comap(_ mapRe f),
         action pmapR f,

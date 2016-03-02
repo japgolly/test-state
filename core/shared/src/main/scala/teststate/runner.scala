@@ -44,10 +44,10 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
   def cmapR[R2](f: R2 => Ref): TestContent[F, R2, Obs, State, Err] =
     new TestContent(action cmapR f, invariants)
 
-  def pmapR[R2](f: R2 => Either[Err, Ref]): TestContent[F, R2, Obs, State, Err] =
+  def pmapR[R2](f: R2 => Err Or Ref): TestContent[F, R2, Obs, State, Err] =
     new TestContent(action pmapR f, invariants)
 
-  def pmapO[OO](g: OO => Either[Err, Obs]): TestContent[F, Ref, OO, State, Err] =
+  def pmapO[OO](g: OO => Err Or Obs): TestContent[F, Ref, OO, State, Err] =
     new TestContent[F, Ref, OO, State, Err](
       action.pmapO(g),
       invariants.pmapO(g))
@@ -74,7 +74,7 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
   def observe(f: Ref => Obs) =
     observeTry(r => Right(f(r)))
 
-  def observeTry(f: Ref => Either[Err, Obs]) =
+  def observeTry(f: Ref => Err Or Obs) =
     new Test(this, Observe(f))
 }
 
@@ -86,7 +86,7 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
   def cmapR[R2](f: R2 => Ref): Test[F, R2, Obs, State, Err] =
     new Test(content cmapR f, observe cmapR f)
 
-  def pmapR[R2](f: R2 => Either[Err, Ref]): Test[F, R2, Obs, State, Err] =
+  def pmapR[R2](f: R2 => Err Or Ref): Test[F, R2, Obs, State, Err] =
     new Test(content pmapR f, observe pmapR f)
 
   def cmapS[SS](s: SS => State, su: (SS, State) => SS): Test[F, Ref, Obs, SS, Err] =
@@ -115,7 +115,7 @@ object Test {
 final case class Recover[E](apply: Throwable => E) extends AnyVal {
   def recover[A](a: => A, ko: E => A): A =
     try a catch { case t: Throwable => ko(apply(t)) }
-  def attempt[A](a: => A): Either[E, A] =
+  def attempt[A](a: => A): E Or A =
     recover(Right(a), Left(_))
   def map[EE](f: E => EE): Recover[EE] =
     Recover(f compose apply)
@@ -187,7 +187,7 @@ import test.content.{executionModel => EM, recover}
     val UpdateState = "Update expected state"
     val InitialState = "Initial state."
 
-    def observe(test: Test): Either[Err, Obs] =
+    def observe(test: Test): Err Or Obs =
       recover.recover(test.observe.apply(ref), Left(_))
 
     def subtest(test: Test, initROS: ROS, summariseFinalResult: Boolean): F[OMG] = {
@@ -222,7 +222,7 @@ import test.content.{executionModel => EM, recover}
               val b = Vector.newBuilder[HalfCheck[Obs, State, Err]]
               for (c0 <- checks.getDunnos) {
                 val c = c0.aux
-                val r = TriResult unwrapEither recover.attempt(c.before(omg.ros.os))
+                val r = recover.attempt(c.before(omg.ros.os)).fold(Failed(_), identity)
                 b += HalfCheck(c)(r)
               }
               b.result()

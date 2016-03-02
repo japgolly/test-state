@@ -284,9 +284,9 @@ object CollectionAssertions {
 
     def apply[A: Show](expect: Boolean, source: TraversableOnce[A], all: Set[A]): Option[Either[ContainsAny.FoundSome[A], ContainsAll.Missing[A]]] =
       if (expect)
-        ContainsAll.Pos(source, all).map(Right(_))
+        ContainsAll.Pos(source, all).map(scala.util.Right(_))
       else
-        ContainsNone(source, all).map(Left(_))
+        ContainsNone(source, all).map(scala.util.Left(_))
   }
 
   // ===================================================================================================================

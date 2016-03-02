@@ -40,12 +40,12 @@ object Dsl {
 
     def updateStateO(nextState: S => O => S) =
       build(act => i => Some(() =>
-        EM.map(act(i))(_.leftOr(o => Right(nextState(i.state)(o))))
+        EM.map(act(i))(Or.liftLeft(_, o => Right(nextState(i.state)(o))))
       ))
 
-    def updateState2(f: S => Either[E, S]) =
+    def updateState2(f: S => E Or S) =
       build(act => i => Some(() =>
-        EM.map(act(i))(_.leftOrF(f(i.state).map(s => Function const Right(s))))
+        EM.map(act(i))(Or.liftLeft(_) >> f(i.state).map(s => Function const Right(s)))
       ))
 
     def noStateUpdate =

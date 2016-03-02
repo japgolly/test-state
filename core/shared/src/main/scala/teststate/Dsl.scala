@@ -104,7 +104,7 @@ class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) {
         EM.map(act(i))(_.leftOr(nextState(i.state)))
       ))
 
-    def updateState2(f: S => Either[E, S]) =
+    def updateState2(f: S => E Or S) =
       build(i => Some(() =>
         EM.map(act(i))(_.leftOrF(f(i.state).map(Function.const)))
       ))

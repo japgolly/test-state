@@ -62,7 +62,7 @@ final case class NameFn[-A](fn: Option[A] => Name) extends AnyVal {
   def comap[B](f: B => Option[A]): NameFn[B] =
     NameFn(ob => apply(ob flatMap f))
 
-  //    def pmapFnE[A, B](fn: Fn[A])(f: B => Either[Nothing, A]): Fn[B] =
+  //    def pmapFnE[A, B](fn: Fn[A])(f: B => Nothing Or A): Fn[B] =
   //      pmapFn(fn)(f(_).right.toOption) // TODO Use custom toOption after moving EitherExt into own package
 }
 

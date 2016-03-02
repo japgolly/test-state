@@ -24,7 +24,7 @@ sealed abstract class Check[O, S, +E] {
 
   def mapE[EE](f: E => EE): This[O, S, EE]
 
-  def pmapO[OO, EE >: E](o: OO => Either[EE, O]): This[OO, S, EE]
+  def pmapO[OO, EE >: E](o: OO => EE Or O): This[OO, S, EE]
 }
 
 object Check {
@@ -42,7 +42,7 @@ object Check {
       getPoint.cmap(o, s),
       getAround.cmap(o, s))
 
-    override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Composite(
+    override def pmapO[OO, EE >: E](f: OO => EE Or O) = Composite(
       getPoint pmapO f,
       getAround pmapO f)
 
@@ -84,7 +84,7 @@ object Check {
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Composite(
         getSingles.map(_.cmap(o, s)))
 
-      override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Composite(
+      override def pmapO[OO, EE >: E](f: OO => EE Or O) = Composite(
         getSingles.map(_ pmapO f))
 
       override def mapE[EE](f: E => EE) = Composite(
@@ -108,9 +108,9 @@ object Check {
         name.cmap(_.map(o, s)),
         as => test(as.map(o, s)))
 
-      override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Single[OO, S, EE](
+      override def pmapO[OO, EE >: E](f: OO => EE Or O) = Single[OO, S, EE](
         name.comap(_ mapOe f),
-        _.mapOE(f).toTriResult(test))
+        _.mapOE(f).toTriResultFlatMap(test))
 
       override def mapE[EE](f: E => EE) = Single[O, S, EE](
         name,
@@ -155,7 +155,7 @@ object Check {
         getDunnos.map(_.cmap(o, s)),
         getAfters.map(_.cmap(o, s)))
 
-      override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Composite(
+      override def pmapO[OO, EE >: E](f: OO => EE Or O) = Composite(
         getBefores.map(_ pmapO f),
         getDunnos.map(_ pmapO f),
         getAfters.map(_ pmapO f))
@@ -201,10 +201,10 @@ object Check {
         before(_) mapE f,
         test(_, _) map f)
 
-      final override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Dunno[OO, S, EE, A](
+      final override def pmapO[OO, EE >: E](f: OO => EE Or O) = Dunno[OO, S, EE, A](
         name.comap(_ mapOe f),
-        _.mapOE(f).toTriResult(before),
-        (xs, a) => xs.mapOE(f).toOptionLeft(test(_, a)))
+        _.mapOE(f).toTriResultFlatMap(before),
+        (xs, a) => xs.mapOE(f).test(test(_, a)).leftOption)
     }
 
     type DunnoA[O, S, +E, a] = Dunno[O, S, E] {type A = a}
@@ -228,7 +228,7 @@ object Check {
       override def when[EE >: E](f: OS[O, S] => Boolean) = Before(check when f)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = Before(check.cmap(o, s))
       override def mapE[EE](f: E => EE) = Before(check mapE f)
-      override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = Before(check pmapO f)
+      override def pmapO[OO, EE >: E](f: OO => EE Or O) = Before(check pmapO f)
       override def rename[e >: E](newName: NameFn[OS[O, S]]) =
         copy(check rename newName)
     }
@@ -239,7 +239,7 @@ object Check {
       override def when[EE >: E](f: OS[O, S] => Boolean) = After(check when f)
       override def cmap[OO, SS](o: OO => O, s: SS => S) = After(check.cmap(o, s))
       override def mapE[EE](f: E => EE) = After(check mapE f)
-      override def pmapO[OO, EE >: E](f: OO => Either[EE, O]) = After(check pmapO f)
+      override def pmapO[OO, EE >: E](f: OO => EE Or O) = After(check pmapO f)
       override def rename[e >: E](newName: NameFn[OS[O, S]]) =
         copy(check rename newName)
     }

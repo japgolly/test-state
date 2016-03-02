@@ -67,7 +67,7 @@ object CoproductExample {
 
   object Top {
     case class State(t: Type, num: Int, txt: String)
-    type Obs = Either[Int, String]
+    type Obs = Int Or String
 
     val * = Dsl.sync[Top, Obs, State, String]
 

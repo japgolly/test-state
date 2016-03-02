@@ -12,101 +12,6 @@ package object teststate extends teststate.Name.Implicits {
 
   implicit def formatHasErrorString(e: HasErrorString): String = e.errorString
 
-  /*
-  case class Plan[State, Obj, Err](steps: Plan.Steps[State, Obj, Err]) {
-    def andThen(next: Plan[State, Obj, Err]): Plan[State, Obj, Err] =
-      Plan(steps ++ next.steps)
-  }
-
-  object Plan {
-    type Steps[State, Obj, Err] = Vector[Step[State, Obj, Err]]
-    case class Step[State, Obj, Err](indent: Int, name: String, action: Action.NonComposite[State, Obj, Err])
-  }
-  */
-
-  implicit class TestStateExtMethodsForOption[A](private val self: Option[A]) extends AnyVal {
-    def leftOrF[L >: A, R](e: => Either[L, R]): Either[L, R] =
-      self match {
-        case None    => e
-        case Some(a) => Left(a)
-      }
-
-    @inline def leftOr[L >: A, R](r: => R): Either[L, R] =
-      leftOrF(Right(r))
-  }
-
-  @inline implicit class TestStateExtMethodsForLeft[A, B](private val self: Left[A, B]) extends AnyVal {
-    @inline def recast = self.asInstanceOf[Left[A, Nothing]]
-  }
-  @inline implicit class TestStateExtMethodsForRight[A, B](private val self: Right[A, B]) extends AnyVal {
-    @inline def recast = self.asInstanceOf[Right[Nothing, B]]
-  }
-
-  implicit class TestStateExtMethodsForEither[A, B](private val self: Either[A, B]) extends AnyVal {
-    def fmap[C](f: B => Either[A, C]): Either[A, C] =
-      self match {
-        case Right(b) => f(b)
-        case l: Left[A, B] => l.recast
-      }
-
-//    def lfmap[C](f: => (A => Either[C, B])): Either[C, B] =
-//      self match {
-//        case r: Right[A, B] => r.recast
-//        case Left(a) => f(a)
-//      }
-
-    @inline def map[C](f: B => C): Either[A, C] =
-      fmap(b => Right(f(b)))
-
-    def leftMap[C](f: A => C): Either[C, B] =
-      self match {
-        case r: Right[A, B] => r.recast
-        case Left(a) => Left(f(a))
-      }
-
-    def check[C](f: B => Option[A]): Either[A, B] =
-      self match {
-        case r: Right[A, B] => f(r.b).leftOrF(r) //.fold[Either[A, B]](r)(Left(_))
-        case l: Left[A, B]  => l
-      }
-
-    def bimap[C, D](f: A => C, g: B => D): Either[C, D] =
-      self match {
-        case Right(b) => Right(g(b))
-        case Left(a) => Left(f(a))
-      }
-
-    def toOption: Option[B] =
-      self match {
-        case Right(b) => Some(b)
-        case Left(a) => None
-      }
-
-    def toOptionLeft(f: B => Option[A]): Option[A] =
-      self match {
-        case Right(b) => f(b)
-        case Left(a) => Some(a)
-      }
-
-    def toTriResult[C](f: B => TriResult[A, C]): TriResult[A, C] =
-      self match {
-        case Right(b) => f(b)
-        case Left(a) => Failed(a)
-      }
-
-    def mapToOption[C](f: B => C): Option[C] =
-      self match {
-        case Right(b) => Some(f(b))
-        case Left(a) => None
-      }
-
-    def flatten[AA >: A, BB](implicit ev: B <:< Either[AA, BB]): Either[AA, BB] =
-      self match {
-        case Right(b) => ev(b)
-        case l => l.asInstanceOf[Left[A, Nothing]]
-      }
-  }
-
   // Actually this is ShowValue
   case class Show[A](show: A => String) extends AnyVal {
     @inline def apply(a: A): String =
@@ -182,16 +87,16 @@ package object teststate extends teststate.Name.Implicits {
     def mapO[A](f: Obs   => A): ROS[Ref, A, State] = copyOS(obs = f(obs))
     def mapS[A](f: State => A): ROS[Ref, Obs, A] = copyOS(state = f(state))
     def mapOS[OO, SS](o: Obs => OO, s: State => SS): ROS[Ref, OO, SS] = copyOS(o(obs), s(state))
-    def mapOe[OO](f: Obs => Either[Any, OO]): Option[ROS[Ref, OO, State]] = f(obs).mapToOption(o => copyOS(obs = o))
-    def mapRe[RR](f: Ref => Either[Any, RR]): Option[ROS[RR, Obs, State]] = f(ref).mapToOption(setRef(_))
+    def mapOe[OO](f: Obs => Any Or OO): Option[ROS[Ref, OO, State]] = f(obs).toOptionMap(o => copyOS(obs = o))
+    def mapRe[RR](f: Ref => Any Or RR): Option[ROS[RR, Obs, State]] = f(ref).toOptionMap(setRef(_))
   }
 
   final case class OS[+O, +S](obs: O, state: S) {
     def map[OO, SS](o: O => OO, s: S => SS) = OS(o(obs), s(state))
     def mapO[A](f: O => A) = OS(f(obs), state)
 //    def mapOo[A](f: O => Option[A]) = f(obs).map(OS(_, state))
-    def mapOe[OO](f: O => Either[Any, OO]): Option[OS[OO, S]] = f(obs).mapToOption(OS(_, state))
-    def mapOE[E, OO](f: O => Either[E, OO]): Either[E, OS[OO, S]] = f(obs).map(OS(_, state))
+    def mapOe[OO](f: O => Any Or OO): Option[OS[OO, S]] = f(obs).toOptionMap(OS(_, state))
+    def mapOE[E, OO](f: O => E Or OO): E Or OS[OO, S] = f(obs).map(OS(_, state))
     def mapS[SS](f: S => SS) = OS(obs, f(state))
   }
 
@@ -205,7 +110,7 @@ package object teststate extends teststate.Name.Implicits {
     def map[A, B](fa: F[A])(f: A => B): F[B]
     def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
     def tailrec[A](a: A)(stop: A => Boolean)(rec: A => F[A]): F[A]
-    def recover[E, A](f: => F[Either[E, A]])(implicit recover: Recover[E]): F[Either[E, A]]
+    def recover[E, A](f: => F[E Or A])(implicit recover: Recover[E]): F[E Or A]
   }
   object ExecutionModel {
 
@@ -235,7 +140,7 @@ package object teststate extends teststate.Name.Implicits {
           go(start)
         }
 
-        override def recover[E, A](f: => Either[E, A])(implicit recover: Recover[E]): Either[E, A] =
+        override def recover[E, A](f: => E Or A)(implicit recover: Recover[E]): E Or A =
           recover.recover(f, Left(_))
       }
 
@@ -247,7 +152,7 @@ package object teststate extends teststate.Name.Implicits {
         override def pure   [A]   (a: A)                   = Future successful a
         override def map    [A, B](fa: F[A])(f: A => B)    = fa.map(f)
         override def flatMap[A, B](fa: F[A])(f: A => F[B]) = fa.flatMap(f)
-        override def recover[E, A](f: => F[Either[E, A]])(implicit recover: Recover[E]): F[Either[E, A]] =
+        override def recover[E, A](f: => F[E Or A])(implicit recover: Recover[E]): F[E Or A] =
           recover.recover(
             f.recover { case t: Throwable => Left(recover apply t) },
             Future successful Left(_))
@@ -293,12 +198,12 @@ package object teststate extends teststate.Name.Implicits {
 
   type Id[A] = A
 
-  final case class Observe[-Ref, +Obs, +Err](val apply: Ref => Either[Err, Obs]) extends AnyVal {
+  final case class Observe[-Ref, +Obs, +Err](val apply: Ref => Err Or Obs) extends AnyVal {
     def cmapR[R](f: R => Ref): Observe[R, Obs, Err] =
       Observe(apply compose f)
 
-    def pmapR[R, E >: Err](f: R => Either[E, Ref]): Observe[R, Obs, E] =
-      Observe(r => f(r) fmap apply)
+    def pmapR[R, E >: Err](f: R => E Or Ref): Observe[R, Obs, E] =
+      Observe(r => f(r) flatMap apply)
 
     def mapO[O](f: Obs => O): Observe[Ref, O, Err] =
       Observe(apply(_) map f)
@@ -315,7 +220,7 @@ package object teststate extends teststate.Name.Implicits {
 //      def observe(f: R => O): Out =
 //        observeTry(r => Right(f(r)))
 //
-//      def observeTry(f: R => Either[E, O]): Out =
+//      def observeTry(f: R => E Or O): Out =
 //        observeOut(Observe(f))
 //
 //    }
@@ -357,8 +262,5 @@ package object teststate extends teststate.Name.Implicits {
         case None    => pass
         case Some(e) => Failed(e)
       }
-
-    def unwrapEither[E, A](e: Either[E, TriResult[E, A]]): TriResult[E, A] =
-      e.fold(Failed(_), identity)
   }
 }
