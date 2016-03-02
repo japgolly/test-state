@@ -1,0 +1,50 @@
+package teststate
+
+// TODO Actually this is ShowValue
+case class Show[A](show: A => String) extends AnyVal {
+  @inline def apply(a: A): String =
+    show(a)
+
+  def map(f: String => String): Show[A] =
+    Show(a => f(show(a)))
+
+  def mkString[C[X] <: TraversableOnce[X]](start: String, mid: String, end: String): Show[C[A]] =
+    Show(_.toIterator.map(show).mkString(start, mid, end))
+
+  def coll[C[X] <: TraversableOnce[X]]: Show[C[A]] =
+    mkString("[", ", ", "]")
+}
+
+object Show {
+  def byToString[A]: Show[A] = Show(_.toString)
+  implicit val showBoolean: Show[Boolean] = byToString
+  implicit val showInt: Show[Int] = byToString
+
+  implicit val showString: Show[String] = Show[String](s =>
+    // Handle \n, \t, spaces (so surrounds), long strings (?)
+    "\"" + s + "\""
+  )
+  implicit val showChar: Show[Char] = Show[Char](s =>
+    // Handle \n, \t, spaces (so surrounds), long strings (?)
+    "'" + s + "'"
+  )
+
+  implicit def showOption[A](implicit show: Show[A]): Show[Option[A]] =
+    Show {
+      case None => "None"
+      case Some(a) => s"Some(${show(a)})"
+    }
+
+  implicit def showTraversable[C[X] <: Traversable[X], A](implicit show: Show[A]): Show[C[A]] =
+    Show(_.toIterator.map(show(_)).mkString(", "))
+
+  object Implicits {
+    implicit def showByToString[A]: Show[A] = Show(_.toString)
+  }
+}
+
+case class ShowError[A](show: A => String) extends AnyVal
+object ShowError {
+  implicit val showErrorString: ShowError[String] = ShowError(identity)
+}
+

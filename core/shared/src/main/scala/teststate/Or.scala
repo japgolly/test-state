@@ -2,7 +2,7 @@ package teststate
 
 import Or.{Left, Right}
 
-sealed abstract class Or[+A, +B] {
+sealed abstract class Or[+A, +B] extends Product with Serializable {
   def fold[C](l: A => C, r: B => C): C
   def cata[C](l: Left[A] => C, r: Right[B] => C): C
 

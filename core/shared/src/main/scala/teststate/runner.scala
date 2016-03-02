@@ -36,6 +36,34 @@ object Result {
     }
 }
 
+final case class Observe[-Ref, +Obs, +Err](val apply: Ref => Err Or Obs) extends AnyVal {
+  def cmapR[R](f: R => Ref): Observe[R, Obs, Err] =
+    Observe(apply compose f)
+
+  def pmapR[R, E >: Err](f: R => E Or Ref): Observe[R, Obs, E] =
+    Observe(r => f(r) flatMap apply)
+
+  def mapO[O](f: Obs => O): Observe[Ref, O, Err] =
+    Observe(apply(_) map f)
+
+  def mapE[E](f: Err => E): Observe[Ref, Obs, E] =
+    Observe(apply(_) leftMap f)
+}
+//  object Observe {
+//    def Ops[R, O, E, Out](f: Observe[R, O, E] => Out): Ops[R, O, E, Out] =
+//      new Ops[R, O, E, Out](f)
+//
+//    final class Ops[R, O, E, Out](private val observeOut: Observe[R, O, E] => Out) extends AnyVal {
+//
+//      def observe(f: R => O): Out =
+//        observeTry(r => Right(f(r)))
+//
+//      def observeTry(f: R => E Or O): Out =
+//        observeOut(Observe(f))
+//
+//    }
+//  }
+
 // TODO Maybe better: Script | Plan | TestCase
 class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Err],
                                               val invariants: Check[Obs, State, Err])
@@ -104,46 +132,11 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
 //    new Test(content addCheck c, invariants, observe)
 }
 
-
-
-
 object Test {
   def apply[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
                                         invariants: Check[Obs, State, Err] = Check.empty[Obs, State])
                                        (implicit em: ExecutionModel[F], recover: Recover[Err]) =
     new TestContent(action, invariants)(em, recover)
-}
-
-final case class Recover[E](apply: Throwable => E) extends AnyVal {
-  def recover[A](a: => A, ko: E => A): A =
-    try a catch { case t: Throwable => ko(apply(t)) }
-  def attempt[A](a: => A): E Or A =
-    recover(Right(a), Left(_))
-  def map[EE](f: E => EE): Recover[EE] =
-    Recover(f compose apply)
-
-  def name[A](f: NameFn[A], a: Some[A]): String =
-    attempt(f(a).value) match {
-      case Right(n) => n
-      case Left(_) => attempt(f(None).value) match {
-        case Right(n) => n
-        case Left(e) => "Name exception: " + e.toString
-      }
-    }
-}
-
-object Recover {
-  implicit val recoverToString: Recover[String] =
-    Recover { t =>
-      // TODO Yay? Nay?
-      /*
-      val o = System.err
-      o.println()
-      t.printStackTrace(o)
-      o.println()
-      */
-      "Caught exception: " + t.toString
-    }
 }
 
 object Runner {
