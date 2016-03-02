@@ -133,10 +133,13 @@ final case class Recover[E](apply: Throwable => E) extends AnyVal {
 object Recover {
   implicit val recoverToString: Recover[String] =
     Recover { t =>
+      // TODO Yay? Nay?
+      /*
       val o = System.err
       o.println()
       t.printStackTrace(o)
       o.println()
+      */
       "Caught exception: " + t.toString
     }
 }
