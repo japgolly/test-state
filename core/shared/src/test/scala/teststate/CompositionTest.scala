@@ -1,6 +1,7 @@
 package teststate
 
 import utest._
+import Or.{Left, Right}
 import Show.Implicits.showByToString
 
 object CoproductExample {

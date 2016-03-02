@@ -1,14 +1,6 @@
 package teststate
 
-final case class Left[+A](left: A) extends Or[A, Nothing] {
-  override def fold[C](l: A => C, r: Nothing => C): C = l(left)
-  override def cata[C](l: Left[A] => C, r: Right[Nothing] => C): C = l(this)
-}
-
-final case class Right[+B](right: B) extends Or[Nothing, B] {
-  override def fold[C](l: Nothing => C, r: B => C): C = r(right)
-  override def cata[C](l: Left[Nothing] => C, r: Right[B] => C): C = r(this)
-}
+import Or.{Left, Right}
 
 sealed abstract class Or[+A, +B] {
   def fold[C](l: A => C, r: B => C): C
@@ -71,6 +63,16 @@ sealed abstract class Or[+A, +B] {
 }
 
 object Or {
+  final case class Left[+A](left: A) extends Or[A, Nothing] {
+    override def fold[C](l: A => C, r: Nothing => C): C = l(left)
+    override def cata[C](l: Left[A] => C, r: Right[Nothing] => C): C = l(this)
+  }
+
+  final case class Right[+B](right: B) extends Or[Nothing, B] {
+    override def fold[C](l: Nothing => C, r: B => C): C = r(right)
+    override def cata[C](l: Left[Nothing] => C, r: Right[B] => C): C = r(this)
+  }
+
   def liftLeft[A, B](o: Option[A]): A Or Unit =
     liftLeft(o, ())
 

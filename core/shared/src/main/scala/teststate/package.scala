@@ -1,6 +1,7 @@
 import scala.annotation.tailrec
 
 package object teststate extends teststate.Name.Implicits {
+  import Or.{Left, Right}
 
   @inline private[teststate] def vector1[A](a: A): Vector[A] =
     Vector.empty[A] :+ a

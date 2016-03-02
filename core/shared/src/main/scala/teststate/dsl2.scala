@@ -1,6 +1,7 @@
 package teststate
 
 import Dsl.{Types, ActionB}
+import Or.{Left, Right}
 
 object Dsl {
   def apply[F[_]: ExecutionModel, R, O, S, E] =

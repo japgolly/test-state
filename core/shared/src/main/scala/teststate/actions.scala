@@ -1,6 +1,7 @@
 package teststate
 
 import Action.{Composite, NonComposite}
+import Or.{Left, Right}
 
 sealed trait Action[F[_], R, O, S, E] {
   type This[f[_], r, o, s, e] <: Action[f, r, o, s, e]

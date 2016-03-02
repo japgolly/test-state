@@ -1,5 +1,7 @@
 package teststate
 
+import Or.{Left, Right}
+
 sealed trait Result[+Err] {
   def failure: Option[Err]
   def +[e >: Err](r: Result[e]): Result[e]
