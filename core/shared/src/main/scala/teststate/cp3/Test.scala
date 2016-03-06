@@ -40,11 +40,13 @@ abstract class AbstractTest {
     }
   }
 
+  def testAA[A] = test2[A, A]
+
   def test2[A, B] = new {
     def apply[R](f: (A, B) => R) = new {
-      def expect[E](implicit ev: R =:= E) = ()
-      def expectA  (implicit ev: R =:= A) = ()
-      def expectB  (implicit ev: R =:= B) = ()
+      def expect[E](implicit ev: E =:= R) = ()
+      def expectA  (implicit ev: A =:= R) = ()
+      def expectB  (implicit ev: B =:= R) = ()
     }
   }
 }
@@ -54,6 +56,7 @@ abstract class Test extends AbstractTest {
   import CheckOps.Instances._
   import CheckOps.ToOps._
   import Conditional.Implicits._
+  import PCompose._
 
   // mapO
   test[Points    [O, S, E]](_ mapO o21).expect[Points    [O2, S, E]]
@@ -65,4 +68,16 @@ abstract class Test extends AbstractTest {
   test[Arounds   [O, S, E]](_.when(_.obs.bool)).expect[Arounds   [O, S, E]]
   test[Invariants[O, S, E]](_.when(_.obs.bool)).expect[Invariants[O, S, E]]
 
+  // compose (mono)
+  testAA[Points    [O, S, E]](_ & _).expect[Points    [O, S, E]]
+  testAA[Arounds   [O, S, E]](_ & _).expect[Arounds   [O, S, E]]
+  testAA[Invariants[O, S, E]](_ & _).expect[Invariants[O, S, E]]
+
+  // compose (poly)
+  test2[Points    [O, S, E], Arounds   [O, S, E]](_ & _).expect[Invariants[O, S, E]]
+  test2[Arounds   [O, S, E], Points    [O, S, E]](_ & _).expect[Invariants[O, S, E]]
+  test2[Invariants[O, S, E], Arounds   [O, S, E]](_ & _).expect[Invariants[O, S, E]]
+  test2[Invariants[O, S, E], Points    [O, S, E]](_ & _).expect[Invariants[O, S, E]]
+  test2[Points    [O, S, E], Invariants[O, S, E]](_ & _).expect[Invariants[O, S, E]]
+  test2[Arounds   [O, S, E], Invariants[O, S, E]](_ & _).expect[Invariants[O, S, E]]
 }
