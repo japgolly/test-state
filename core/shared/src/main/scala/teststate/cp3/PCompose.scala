@@ -78,17 +78,13 @@ object PCompose extends LP {
         }
     }
 
-  // λ C[_,_] => X
-//  implicit def composeSack2[C[_, _], D[_, _], A, E](implicit c: C[A, E] => Invariant[A, E],
-//                                                    d: D[A, E] => Invariant[A, E])
-//      : PCompose[CheckShapeA[C, A, E], CheckShapeA[D, A, E], CheckShapeA[Invariant, A, E]] = {
-//    type X = CheckShapeA[C, A, E]
-//    type Y = CheckShapeA[D, A, E]
-//    type Z = CheckShapeA[Invariant, A, E]
-//    new PCompose[X, Y, Z] {
-//      override def compose(x: X, y: Y): Z =
-//        c(x) & d(y)
-//    }
-//  }
 
+//  implicit def autosdlasdfP[O, S, E](p: Points[O, S, E]): Invariants[O, S, E] =
+//    sackToInvariant[Point].toInvariant(p)
+//
+//  implicit def autosdlasdfA[O, S, E](p: Arounds[O, S, E]): Invariants[O, S, E] =
+//    sackToInvariant[Around].toInvariant(p)
+
+  implicit def autosdlasdfA[C[_, _], A, E](p: CheckShapeA[C, A, E])(implicit ci: ToInvariant[Id, C]): CheckShapeA[Invariant, A, E] =
+    sackToInvariant[C].toInvariant(p)
 }

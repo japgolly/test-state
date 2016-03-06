@@ -80,4 +80,8 @@ abstract class Test extends AbstractTest {
   test2[Invariants[O, S, E], Points    [O, S, E]](_ & _).expect[Invariants[O, S, E]]
   test2[Points    [O, S, E], Invariants[O, S, E]](_ & _).expect[Invariants[O, S, E]]
   test2[Arounds   [O, S, E], Invariants[O, S, E]](_ & _).expect[Invariants[O, S, E]]
+
+  // fake subtyping
+  test[Points [O, S, E]](c => c: Invariants[O, S, E])
+  test[Arounds[O, S, E]](c => c: Invariants[O, S, E])
 }
