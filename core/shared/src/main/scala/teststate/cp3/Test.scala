@@ -53,10 +53,16 @@ abstract class Test extends AbstractTest {
   import Types._
   import CheckOps.Instances._
   import CheckOps.ToOps._
+  import Conditional.Implicits._
 
   // mapO
   test[Points    [O, S, E]](_ mapO o21).expect[Points    [O2, S, E]]
   test[Arounds   [O, S, E]](_ mapO o21).expect[Arounds   [O2, S, E]]
   test[Invariants[O, S, E]](_ mapO o21).expect[Invariants[O2, S, E]]
+
+  // when
+  test[Points    [O, S, E]](_.when(_.obs.bool)).expect[Points    [O, S, E]]
+  test[Arounds   [O, S, E]](_.when(_.obs.bool)).expect[Arounds   [O, S, E]]
+  test[Invariants[O, S, E]](_.when(_.obs.bool)).expect[Invariants[O, S, E]]
 
 }

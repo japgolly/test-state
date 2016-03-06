@@ -1,6 +1,7 @@
 package teststate.cp3
 
 import teststate.NameFn
+import Profunctor.ToOps.toProfunctorOps
 
 sealed abstract class Sack[-I, +A]
 object Sack {
@@ -15,7 +16,6 @@ object Sack {
 
   implicit val sackInstanceProfunctor: Profunctor[Sack] =
     new Profunctor[Sack] {
-      import Profunctor.ToOps.toProfunctorOps
 
       override def rmap[A, B, C](m: Sack[A, B])(f: B => C): Sack[A, C] =
         m match {
@@ -30,5 +30,11 @@ object Sack {
           case Product(s)      => Product(s map (_.dimap(g, f)))
           case CoProduct(n, p) => CoProduct(n cmap g, c => p(g(c)).dimap(g, f))
         }
+    }
+
+  implicit def sackInstanceConditionalR[A, B, I](implicit c: Conditional[B, I]): Conditional[Sack[A, B], I] =
+    new Conditional[Sack[A, B], I] {
+      override def when(m: Sack[A, B], f: I => Boolean) =
+        m.rmap(c.when(_, f))
     }
 }

@@ -3,6 +3,7 @@ package teststate.cp3
 import teststate.{TriResult, NameFn}
 import teststate.{cp3 => ^}
 import Profunctor.ToOps._
+import Conditional.Implicits._
 
 final case class Point[I, E](name: NameFn[I], test: I => TriResult[E, Unit])
 
@@ -12,6 +13,12 @@ object Point {
       override def dimap[A, B, C, D](p: Point[A, B])(g: C => A, f: B => D): Point[C, D] =
         Point(p.name cmap g, c => p.test(g(c)) mapE f)
     }
+
+    implicit def pointInstanceConditional[I, E]: Conditional[Point[I, E], I] =
+      new Conditional[Point[I, E], I] {
+        override def when(m: Point[I, E], f: I => Boolean) =
+          Point(m.name, m.test when f)
+      }
 }
 
 
@@ -56,6 +63,15 @@ object Around {
             Delta(n cmap g, da)
         }
     }
+
+  implicit def aroundInstanceConditional[I, E]: Conditional[Around[I, E], I] =
+    new Conditional[Around[I, E], I] {
+      override def when(m: Around[I, E], f: I => Boolean) =
+        m match {
+          case Point(p, w) => Point(p when f, w)
+          case Delta(n, d) => Delta(n, DeltaA(d.before when f, d.test))
+        }
+    }
 }
 
 
@@ -70,6 +86,15 @@ object Invariant {
         a match {
           case Point (x) => Point (x.dimap(g, f))
           case Around(x) => Around(x.dimap(g, f))
+        }
+    }
+
+  implicit def invariantInstanceConditional[I, E]: Conditional[Invariant[I, E], I] =
+    new Conditional[Invariant[I, E], I] {
+      override def when(m: Invariant[I, E], f: I => Boolean) =
+        m match {
+          case Point (x) => Point (x when f)
+          case Around(x) => Around(x when f)
         }
     }
 }
