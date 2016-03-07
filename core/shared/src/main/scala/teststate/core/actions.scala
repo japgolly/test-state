@@ -6,7 +6,6 @@ import teststate.data._
 import teststate.typeclass._
 import teststate.vector1
 import CoreExports._
-import CheckOps.NameFnOsExt
 
 sealed trait Action[F[_], R, O, S, E] {
   type This[f[_], r, o, s, e] <: Action[f, r, o, s, e]
@@ -63,6 +62,11 @@ sealed trait Action[F[_], R, O, S, E] {
 }
 
 object Action {
+  @inline implicit def NameFnRosExt[R, O, S](n: NameFn[ROS[R, O, S]]): NameFnRosExt[R, O, S] = new NameFnRosExt(n.fn)
+  class NameFnRosExt[R, O, S](private val _n: Option[ROS[R, O, S]] => Name) extends AnyVal {
+    def pmapO[X](f: X => Any Or O): NameFn[ROS[R, X, S]] = NameFn(_n).comap(_ mapOe f)
+    def pmapR[X](f: X => Any Or R): NameFn[ROS[X, O, S]] = NameFn(_n).comap(_ mapRe f)
+  }
 
   def empty[F[_], Ref, O, S, E] = Composite[F, Ref, O, S, E](Vector.empty)
 
@@ -196,7 +200,7 @@ object Action {
 
     override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) =
       Group(
-        name.comap(_ mapOe f),
+        name pmapO f,
         ros => f(ros.obs) match {
           case Right(o) => action(ros.copyOS(obs = o)).map(_ pmapO f)
           case Left(err) => someFailAction("Action requires correct observation.", err)
@@ -205,7 +209,7 @@ object Action {
 
     override def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F]) =
       Group(
-        name.comap(_ mapRe f),
+        name pmapR f,
         ros => f(ros.ref) match {
           case Right(r) => action(ros setRef r).map(_ pmapR f)
           case Left(err) => someFailAction("Action requires correct reference.", err)
@@ -252,13 +256,13 @@ object Action {
 //      check mapE f)
 
     override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) = Single[F, R, OO, S, E](
-      name.comap(_ mapOe f),
+      name pmapO f,
       ros => tryPrepare(f(ros.obs))(o =>
         run(ros.copyOS(obs = o)).map(fn => () => em.map(fn())(_.map(g => (o: OO) => f(o) flatMap g)))),
       check pmapO f)
 
     override def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F]) = Single[F, RR, O, S, E](
-      name.comap(_ mapRe f),
+      name pmapR f,
       ros => tryPrepare(f(ros.ref))(r => run(ros setRef r)),
       check)
   }
@@ -300,13 +304,13 @@ object Action {
 
     override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) =
       SubTest(
-        name.comap(_ mapOe f),
+        name pmapO f,
         action pmapO f,
         invariants pmapO f)
 
     override def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F]) =
       SubTest(
-        name.comap(_ mapRe f),
+        name pmapR f,
         action pmapR f,
         invariants)
 
