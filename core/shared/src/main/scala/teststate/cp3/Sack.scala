@@ -1,5 +1,6 @@
 package teststate.cp3
 
+import acyclic.file
 import teststate.NameFn
 import Profunctor.ToOps.toProfunctorOps
 
@@ -38,3 +39,4 @@ object Sack {
         m.rmap(c.when(_, f))
     }
 }
+

@@ -1,5 +1,6 @@
 package teststate.cp3
 
+import acyclic.file
 import Profunctor.ToOps._
 import Types.CheckShapeA
 
@@ -9,6 +10,18 @@ trait ToInvariant[F[_[_, _], _, _], C[_, _]] {
 
 object ToInvariant {
   type Id[C[_, _], A, B] = C[A, B]
+
+  implicit val pointToInvariant: ToInvariant[Id, Point] =
+    new ToInvariant[Id, Point] {
+      override def toInvariant[A, B](c: Point[A, B]) =
+        Invariant.Point(c)
+    }
+
+  implicit val aroundToInvariant: ToInvariant[Id, Around] =
+    new ToInvariant[Id, Around] {
+      override def toInvariant[A, B](c: Around[A, B]) =
+        Invariant.Around(c)
+    }
 
   private def checksToInvariants[C[_, _]](implicit ci: ToInvariant[Id, C]): ToInvariant[CheckShapeA, C] =
     new ToInvariant[CheckShapeA, C] {
@@ -27,3 +40,4 @@ object ToInvariant {
       override def toInvariant[A, B](c: CheckShapeA[Invariant, A, B]) = c
     }
 }
+

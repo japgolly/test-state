@@ -1,5 +1,6 @@
 package teststate.cp3
 
+import acyclic.file
 import teststate.OS
 import Profunctor.ToOps._
 import Types._
@@ -57,3 +58,4 @@ object CheckOps {
     implicit def invariantsToCheckOps[O, S, E](c: Invariants[O, S, E]): Ops[Invariants, O, S, E] = new Ops(c)
   }
 }
+

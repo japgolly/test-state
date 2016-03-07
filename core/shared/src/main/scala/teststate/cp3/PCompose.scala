@@ -1,5 +1,6 @@
 package teststate.cp3
 
+import acyclic.file
 trait PCompose[A, B, C] {
   def compose(a: A, b: B): C
 }
@@ -60,3 +61,4 @@ object PCompose {
 
   trait Implicits extends Instances with ToOps
 }
+

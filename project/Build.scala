@@ -10,6 +10,7 @@ object TestState extends Build {
 
   object Ver {
     final val Scala211      = "2.11.7"
+    final val Acyclic       = "0.1.4"
     final val MTest         = "0.3.1"
     final val MacroParadise = "2.1.0"
     final val KindProjector = "0.7.1"
@@ -42,6 +43,7 @@ object TestState extends Build {
       updateOptions            := updateOptions.value.withCachedResolution(true),
       addCompilerPlugin("org.spire-math" %% "kind-projector" % Ver.KindProjector))
     .configure(
+      acyclicSettings,
       addCommandAliases(
         "/"   -> "project root",
         "L"   -> "root/publishLocal",
@@ -53,6 +55,12 @@ object TestState extends Build {
         "cc"  -> ";clean;compile",
         "ctc" -> ";clean;test:compile",
         "ct"  -> ";clean;test"))
+
+  def acyclicSettings: PE = _
+    .settings(
+      libraryDependencies += "com.lihaoyi" %% "acyclic" % Ver.Acyclic % "provided",
+      addCompilerPlugin("com.lihaoyi" %% "acyclic" % Ver.Acyclic),
+      autoCompilerPlugins := true)
 
   def definesMacros: Project => Project =
     _.settings(

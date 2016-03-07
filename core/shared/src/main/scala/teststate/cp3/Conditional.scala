@@ -1,5 +1,7 @@
 package teststate.cp3
 
+import acyclic.file
+
 trait Conditional[M, I] {
   def when(m: M, f: I => Boolean): M
 }
@@ -34,3 +36,4 @@ object Conditional {
 
   object Implicits extends Implicits
 }
+

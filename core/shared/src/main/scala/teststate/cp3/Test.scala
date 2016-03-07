@@ -1,5 +1,6 @@
 package teststate.cp3
 
+import acyclic.file
 import teststate._
 import language.reflectiveCalls
 import scala.annotation.implicitNotFound
@@ -61,6 +62,10 @@ abstract class Test extends AbstractTest {
 
   import XXX._
 
+  implicit def autoWidenChecksToInvariants[C[_, _], A, E](c: CheckShapeA[C, A, E])
+                                                         (implicit t: ToInvariant[CheckShapeA, C]): CheckShapeA[Invariant, A, E] =
+    t.toInvariant(c)
+
   // mapO
   test[Points    [O, S, E]](_ mapO o21).expect[Points    [O2, S, E]]
   test[Arounds   [O, S, E]](_ mapO o21).expect[Arounds   [O2, S, E]]
@@ -88,3 +93,4 @@ abstract class Test extends AbstractTest {
   test[Points [O, S, E]](c => c: Invariants[O, S, E])
   test[Arounds[O, S, E]](c => c: Invariants[O, S, E])
 }
+

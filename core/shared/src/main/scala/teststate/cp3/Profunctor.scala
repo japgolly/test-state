@@ -1,5 +1,7 @@
 package teststate.cp3
 
+import acyclic.file
+
 trait Profunctor[M[_, _]] {
 
   def lmap[A, B, C](m: M[A, B])(g: C => A): M[C, B] =
@@ -33,3 +35,4 @@ object Profunctor {
 
   object ToOps extends ToOps
 }
+

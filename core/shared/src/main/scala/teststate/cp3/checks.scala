@@ -1,22 +1,18 @@
 package teststate.cp3
 
+import acyclic.file
 import teststate.{TriResult, NameFn}
 import teststate.{cp3 => ^}
 import Profunctor.ToOps._
 import Conditional.Implicits._
-import ToInvariant.Id
 
 final case class Point[I, E](name: NameFn[I], test: I => TriResult[E, Unit])
 
 object Point {
-  implicit val pointInstance: Profunctor[Point] with ToInvariant[Id, Point] =
-    new Profunctor[Point] with ToInvariant[Id, Point]{
-
+  implicit val pointInstance: Profunctor[Point] =
+    new Profunctor[Point] {
       override def dimap[A, B, C, D](p: Point[A, B])(g: C => A, f: B => D): Point[C, D] =
         Point(p.name cmap g, c => p.test(g(c)) mapE f)
-
-      override def toInvariant[A, B](c: Point[A, B]) =
-        Invariant.Point(c)
     }
 
   implicit def pointInstanceConditional[I, E]: Conditional[Point[I, E], I] =
@@ -57,9 +53,8 @@ object Around {
       override val test   = _test
     }
 
-  implicit val aroundInstance: Profunctor[Around] with ToInvariant[Id, Around] =
-    new Profunctor[Around] with ToInvariant[Id, Around] {
-
+  implicit val aroundInstance: Profunctor[Around] =
+    new Profunctor[Around] {
       override def dimap[A, B, C, D](around: Around[A, B])(g: C => A, f: B => D): Around[C, D] =
         around match {
           case Point(p, w) => Point(p.dimap(g, f), w)
@@ -69,9 +64,6 @@ object Around {
               (c, a) => d.test(g(c), a) map f)
             Delta(n cmap g, da)
         }
-
-      override def toInvariant[A, B](c: Around[A, B]) =
-        Invariant.Around(c)
     }
 
   implicit def aroundInstanceConditional[I, E]: Conditional[Around[I, E], I] =
@@ -109,3 +101,4 @@ object Invariant {
         }
     }
 }
+
