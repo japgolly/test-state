@@ -1,7 +1,7 @@
-package teststate.cp3
+package teststate.data
 
 import acyclic.file
-import teststate.NameFn
+import teststate.typeclass._
 import Profunctor.ToOps.toProfunctorOps
 
 sealed abstract class Sack[-I, +A]

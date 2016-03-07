@@ -1,6 +1,6 @@
-package teststate
+package teststate.data
 
-import Or.{Left, Right}
+import acyclic.file
 
 sealed abstract class Or[+A, +B] extends Product with Serializable {
   def fold[C](l: A => C, r: B => C): C
@@ -52,27 +52,27 @@ sealed abstract class Or[+A, +B] extends Product with Serializable {
   final def toOptionMap[C](f: B => C): Option[C] =
     fold(_ => None, b => Some(f(b)))
 
-  final def toTriResult: TriResult[A, B] =
-    toTriResultFlatMap(Passed(_))
+  final def toTri: Tri[A, B] =
+    toTriFlatMap(Passed(_))
 
-  final def toTriResultMap[C](f: B => C): TriResult[A, C] =
-    toTriResultFlatMap(b => Passed(f(b)))
+  final def toTriMap[C](f: B => C): Tri[A, C] =
+    toTriFlatMap(b => Passed(f(b)))
 
-  final def toTriResultFlatMap[C >: A, D](f: B => TriResult[C, D]): TriResult[C, D] =
+  final def toTriFlatMap[C >: A, D](f: B => Tri[C, D]): Tri[C, D] =
     fold(Failed(_), f)
 }
 
+final case class Left[+A](left: A) extends Or[A, Nothing] {
+  override def fold[C](l: A => C, r: Nothing => C): C = l(left)
+  override def cata[C](l: Left[A] => C, r: Right[Nothing] => C): C = l(this)
+}
+
+final case class Right[+B](right: B) extends Or[Nothing, B] {
+  override def fold[C](l: Nothing => C, r: B => C): C = r(right)
+  override def cata[C](l: Left[Nothing] => C, r: Right[B] => C): C = r(this)
+}
+
 object Or {
-  final case class Left[+A](left: A) extends Or[A, Nothing] {
-    override def fold[C](l: A => C, r: Nothing => C): C = l(left)
-    override def cata[C](l: Left[A] => C, r: Right[Nothing] => C): C = l(this)
-  }
-
-  final case class Right[+B](right: B) extends Or[Nothing, B] {
-    override def fold[C](l: Nothing => C, r: B => C): C = r(right)
-    override def cata[C](l: Left[Nothing] => C, r: Right[B] => C): C = r(this)
-  }
-
   def liftLeft[A, B](o: Option[A]): A Or Unit =
     liftLeft(o, ())
 

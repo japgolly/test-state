@@ -1,6 +1,9 @@
 package teststate.cp3
 
 import acyclic.file
+import teststate.data._
+import teststate.typeclass._
+
 trait PCompose[A, B, C] {
   def compose(a: A, b: B): C
 }

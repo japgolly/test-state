@@ -1,23 +1,7 @@
 package teststate
 
-case class Equal[A](equal: (A, A) => Boolean)
-object Equal {
-
-  def byUnivEq[A]: Equal[A] = Equal(_ == _)
-
-  implicit val equalUnit   : Equal[Unit] = byUnivEq
-  implicit val equalChar   : Equal[Char] = byUnivEq
-  implicit val equalString : Equal[String] = byUnivEq
-  implicit val equalBoolean: Equal[Boolean] = byUnivEq
-  implicit val equalInt    : Equal[Int] = byUnivEq
-  implicit val equalLong   : Equal[Long] = byUnivEq
-
-  implicit def equalOption[A](implicit e: Equal[A]): Equal[Option[A]] =
-    Equal((a, b) => a match {
-      case None => b.isEmpty
-      case Some(x) => b.exists(e.equal(x, _))
-    })
-}
+import acyclic.file
+import teststate.typeclass.{Equal, Show}
 
 trait SomethingFailures[-AA, +E] {
   def expectedEqual      [A <: AA](expected: A, actual: A)         (implicit s: Show[A]): E
@@ -50,6 +34,7 @@ trait SomethingFailures[-AA, +E] {
     else
       Some(expectedChange(from = from, expected = expected, actual = actual))
 }
+
 object SomethingFailures {
   implicit object ToString extends SomethingFailures[Any, String] {
     def expectedEqual      [A](expected: A, actual: A)         (implicit s: Show[A]) = s"Expected ${s(expected)}, not ${s(actual)}."

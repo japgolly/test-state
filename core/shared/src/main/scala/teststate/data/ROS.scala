@@ -1,4 +1,8 @@
-package teststate
+package teststate.data
+
+import acyclic.file
+
+// TODO Fix this crap
 
 final class ROS[+Ref, +Obs, +State](refFn: () => Ref, val obs: Obs, val state: State) {
   val some: Some[this.type] =

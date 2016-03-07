@@ -1,8 +1,12 @@
 package teststate
 
+import acyclic.file
+//import teststate.data.{Left => _, Right => _, Or => _, _}
+import teststate.data.Name
+import teststate.typeclass._
 import scala.collection.mutable
 
-  // exists
+// exists
 
   /*
 

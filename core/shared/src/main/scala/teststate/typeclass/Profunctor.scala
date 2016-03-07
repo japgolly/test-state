@@ -1,4 +1,4 @@
-package teststate.cp3
+package teststate.typeclass
 
 import acyclic.file
 

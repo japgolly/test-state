@@ -1,6 +1,9 @@
 package teststate
 
 import scala.annotation.elidable
+import acyclic.file
+import teststate.data._
+import teststate.typeclass._
 import History.{Options, Step, Steps}
 
 final class History[+E](val steps: Steps[E], val result: Result[E]) {
@@ -53,9 +56,9 @@ final class History[+E](val steps: Steps[E], val result: Result[E]) {
 
     def appendResultFlag(r: Result[E]): Unit = {
       sb append (r match {
-        case Result.Pass    => options.onPass
-        case Result.Skip    => options.onSkip
-        case Result.Fail(_) => options.onFail
+        case Pass    => options.onPass
+        case Skip    => options.onSkip
+        case Fail(_) => options.onFail
       })
       ()
     }
@@ -158,10 +161,10 @@ object History {
         r += h.result
       }
 
-    def addEach[A, B](as: Vector[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => TriResult[E, Any])(implicit recover: Recover[E]): Unit =
+    def addEach[A, B](as: Vector[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit =
       for (a <- as) {
         val n = recover.name(nameFn(a), nameInput)
-        val r = recover.recover(Result(test(a)), Result.Fail(_))
+        val r = recover.recover(test(a).toResult, Fail(_))
         this += Step(n, r)
       }
 

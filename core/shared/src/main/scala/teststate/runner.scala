@@ -1,5 +1,6 @@
 package teststate
 
+/*
 import Or.{Left, Right}
 
 final case class Observe[-Ref, +Obs, +Err](val apply: Ref => Err Or Obs) extends AnyVal {
@@ -110,9 +111,9 @@ object Runner {
   trait HalfCheck[O, S, Err] {
     type A
     val check: Check.Around.DunnoA[O, S, Err, A]
-    val before: TriResult[Err, A]
+    val before: Tri[Err, A]
   }
-  def HalfCheck[O, S, Err, a](_check: Check.Around.DunnoA[O, S, Err, a])(_before: TriResult[Err, a]): HalfCheck[O, S, Err] =
+  def HalfCheck[O, S, Err, a](_check: Check.Around.DunnoA[O, S, Err, a])(_before: Tri[Err, a]): HalfCheck[O, S, Err] =
     new HalfCheck[O, S, Err] {
       override type A     = a
       override val check  = _check
@@ -214,7 +215,7 @@ import test.content.{executionModel => EM, recover}
 //                  b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before_!)) // Perform around-post
                   b.addEach(hcs)(
                     c => c.check.name)(ros2.sos,
-                    c => c.before.flatMap(a => TriResult failedOption c.check.test(ros2.os, a))) // Perform around-post
+                    c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a))) // Perform around-post
                   b.addEach(checks.getAfters)(_.check.name)(ros2.sos, _.check.test(ros2.os)) // Perform post
                   b.group(PostName)
                 }
@@ -364,3 +365,4 @@ import test.content.{executionModel => EM, recover}
 
   }
 }
+*/

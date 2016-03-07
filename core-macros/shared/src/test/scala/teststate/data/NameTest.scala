@@ -1,4 +1,4 @@
-package teststate
+package teststate.data
 
 import utest._
 

@@ -1,5 +1,6 @@
 package teststate
 
+/*
 import Dsl.{Types, ActionB}
 import Or.{Left, Right}
 
@@ -66,7 +67,7 @@ object Dsl {
 final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
 
   def point(name: NameFn, test: OS => Option[E]): Point1 =
-    Check.Point.Single(name, TriResult failedOption test(_))
+    Check.Point.Single(name, Tri failedOption test(_))
 
   def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around1 =
     Check.Around.Dunno(name, os => Passed(before(os)), test)
@@ -307,6 +308,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       new ObsAndState(focusName, f compose fo, f compose fs)
   }
 }
+*/
 
 // TODO Runner should print state & obs on failure, each assertion needn't. It should print S and/or S' depending on the type of check (pre and/or post) that failed.
 

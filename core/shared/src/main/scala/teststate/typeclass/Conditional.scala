@@ -1,6 +1,7 @@
-package teststate.cp3
+package teststate.typeclass
 
 import acyclic.file
+import teststate.data.{Skipped, Tri}
 
 trait Conditional[M, I] {
   def when(m: M, f: I => Boolean): M
@@ -18,11 +19,9 @@ object Conditional {
   }
 
   trait Instances {
-    import teststate.{Skipped, TriResult}
-
-    implicit def conditionalFnToTri[I, E, A]: Conditional[I => TriResult[E, A], I] =
-      new Conditional[I => TriResult[E, A], I] {
-        override def when(m: I => TriResult[E, A], f: I => Boolean) =
+    implicit def conditionalFnToTri[I, E, A]: Conditional[I => Tri[E, A], I] =
+      new Conditional[I => Tri[E, A], I] {
+        override def when(m: I => Tri[E, A], f: I => Boolean) =
           i => if (f(i)) m(i) else Skipped
       }
   }

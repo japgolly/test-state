@@ -1,12 +1,13 @@
 package teststate.cp3
 
 import acyclic.file
-import teststate.{TriResult, NameFn}
+import teststate.data._
+import teststate.typeclass._
 import teststate.{cp3 => ^}
 import Profunctor.ToOps._
 import Conditional.Implicits._
 
-final case class Point[I, E](name: NameFn[I], test: I => TriResult[E, Unit])
+final case class Point[I, E](name: NameFn[I], test: I => Tri[E, Unit])
 
 object Point {
   implicit val pointInstance: Profunctor[Point] =
@@ -40,13 +41,13 @@ object Around {
 
   sealed abstract class DeltaA[I, E] {
     type A
-    val before: I => TriResult[E, A]
+    val before: I => Tri[E, A]
     val test: (I, A) => Option[E]
 
     final def aux: DeltaAux[I, E, A] = this
   }
 
-  def DeltaA[I, E, AA](_before: I => TriResult[E, AA], _test: (I, AA) => Option[E]): DeltaAux[I, E, AA] =
+  def DeltaA[I, E, AA](_before: I => Tri[E, AA], _test: (I, AA) => Option[E]): DeltaAux[I, E, AA] =
     new DeltaA[I, E] {
       override type A     = AA
       override val before = _before

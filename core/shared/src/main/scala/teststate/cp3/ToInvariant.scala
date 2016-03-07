@@ -1,6 +1,7 @@
 package teststate.cp3
 
 import acyclic.file
+import teststate.typeclass._
 import Profunctor.ToOps._
 import Types.CheckShapeA
 

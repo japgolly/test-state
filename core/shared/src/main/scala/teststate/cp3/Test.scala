@@ -1,6 +1,8 @@
 package teststate.cp3
 
 import acyclic.file
+import teststate.data._
+import teststate.typeclass._
 import language.reflectiveCalls
 import scala.annotation.implicitNotFound
 
@@ -14,7 +16,7 @@ abstract class AbstractTest {
   trait S2
   trait E
   trait E2
-  type OS1 = teststate.OS[O, S]
+  type OS1 = teststate.data.OS[O, S]
   def o12: O => O2
   def o21: O2 => O
   def s12: S => S2

@@ -1,7 +1,7 @@
 package teststate.cp3
 
 import acyclic.file
-import teststate.{OS, Or}
+import teststate.data._
 
 object Types {
 

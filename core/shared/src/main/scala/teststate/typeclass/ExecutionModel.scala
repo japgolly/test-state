@@ -1,7 +1,8 @@
-package teststate
+package teststate.typeclass
 
+import acyclic.file
 import scala.annotation.tailrec
-import Or.{Left, Right}
+import teststate.data._
 
 trait ExecutionModel[M[_]] {
   final type F[A] = M[A]

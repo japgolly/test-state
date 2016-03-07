@@ -1,5 +1,6 @@
 package teststate
 
+/*
 import Action.{Composite, NonComposite}
 import Or.{Left, Right}
 
@@ -310,3 +311,4 @@ object Action {
   }
 
 }
+*/

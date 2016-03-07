@@ -1,7 +1,8 @@
 package teststate.cp3
 
 import acyclic.file
-import teststate.OS
+import teststate.data._
+import teststate.typeclass._
 import Profunctor.ToOps._
 import Types._
 
