@@ -11,5 +11,5 @@ object Types {
   type Points    [O, S, E] = CheckShape[Point    , O, S, E]
   type Arounds   [O, S, E] = CheckShape[Around   , O, S, E]
   type Invariants[O, S, E] = CheckShape[Invariant, O, S, E]
-}
 
+}

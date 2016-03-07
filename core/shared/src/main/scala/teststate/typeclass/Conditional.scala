@@ -24,6 +24,12 @@ object Conditional {
         override def when(m: I => Tri[E, A], f: I => Boolean) =
           i => if (f(i)) m(i) else Skipped
       }
+
+    implicit def conditionalFnToOption[I, A]: Conditional[I => Option[A], I] =
+      new Conditional[I => Option[A], I] {
+        override def when(m: I => Option[A], f: I => Boolean) =
+          i => if (f(i)) m(i) else None
+      }
   }
 
   trait ToOps {

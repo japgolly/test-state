@@ -1,8 +1,11 @@
-package teststate
+package teststate.core
 
-/*
+import acyclic.file
 import Action.{Composite, NonComposite}
-import Or.{Left, Right}
+import teststate.data._
+import teststate.typeclass._
+import teststate.vector1
+import CoreExports._
 
 sealed trait Action[F[_], R, O, S, E] {
   type This[f[_], r, o, s, e] <: Action[f, r, o, s, e]
@@ -13,7 +16,7 @@ sealed trait Action[F[_], R, O, S, E] {
 
   def nameMod(f: Name => Name): This[F, R, O, S, E]
 
-  def addCheck(c: Check.Around[O, S, E]): This[F, R, O, S, E]
+  def addCheck(c: Arounds[O, S, E]): This[F, R, O, S, E]
 
   final def skip: This[F, R, O, S, E] =
     when(_ => false)
@@ -46,16 +49,16 @@ sealed trait Action[F[_], R, O, S, E] {
   def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]): This[F, R, OO, S, E]
 
 //  final def group(name: Name): Action.Group[F, R, O, S, Err] =
-//    Action.Group(name, _ => Some(this), Check.Around.empty)
+//    Action.Group(name, _ => Some(this), Sack.empty)
 
   // TODO hmmm, Action should just get the updateState methods from DSL
   def modS(f: S => S)(implicit em: ExecutionModel[F]): This[F, R, O, S, E]
 
-  final def withInvariants(is: Check[O, S, E])(implicit em: ExecutionModel[F], r: Recover[E]): TestContent[F, R, O, S, E] =
-    Test(this, is)(em, r)
-
-  final def withoutInvariants(implicit em: ExecutionModel[F], r: Recover[E]): TestContent[F, R, O, S, E] =
-    Test(this)(em, r)
+//  final def withInvariants(is: Invariants[O, S, E])(implicit em: ExecutionModel[F], r: Recover[E]): TestContent[F, R, O, S, E] =
+//    Test(this, is)(em, r)
+//
+//  final def withoutInvariants(implicit em: ExecutionModel[F], r: Recover[E]): TestContent[F, R, O, S, E] =
+//    Test(this)(em, r)
 }
 
 object Action {
@@ -72,7 +75,7 @@ object Action {
     Some(Single[F, R, O, S, E](
       name,
       _ => preparedFail(err),
-      Check.Around.empty))
+      Sack.empty))
 
   type Prepared[F[_], O, S, E] = Option[() => F[E Or (O => E Or S)]]
 
@@ -99,7 +102,7 @@ object Action {
     override def nameMod(f: Name => Name) =
       map(_ nameMod f)
 
-    override def addCheck(c: Check.Around[O, S, E]) =
+    override def addCheck(c: Arounds[O, S, E]) =
       map(_ addCheck c)
 
     override def when(f: ROS[R, O, S] => Boolean) =
@@ -124,7 +127,7 @@ object Action {
       map(_ pmapO f)
 
     def group(name: Name): Group[F, R, O, S, E] =
-      Group(name, _ => Some(this), Check.Around.empty)
+      Group(name, _ => Some(this), Sack.empty)
 
 //    def times(n: Int, name: String) =
 //      group(name).times(n)
@@ -148,12 +151,12 @@ object Action {
         (1 to n).iterator
           .map(i => nameMod(s => s"[$i/$n] ${s.value}"))
           .foldLeft(empty: Action[F, R, O, S, E])(_ >> _)),
-        Check.Around.empty)
+        Sack.empty)
   }
 
   final case class Group[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]],
                                            action: ROS[R, O, S] => Option[Action[F, R, O, S, E]],
-                                           check: Check.Around[O, S, E]) extends NonComposite[F, R, O, S, E] {
+                                           check: Arounds[O, S, E]) extends NonComposite[F, R, O, S, E] {
 
     override type This[f[_], r, o, s, e] = Group[f, r, o, s, e]
 
@@ -163,11 +166,11 @@ object Action {
     override def rename(newName: NameFn[ROS[R, O, S]]) =
       copy(name = newName)
 
-    override def addCheck(c: Check.Around[O, S, E]) =
+    override def addCheck(c: Arounds[O, S, E]) =
       copy(check = check & c)
 
     override def when(f: ROS[R, O, S] => Boolean) =
-      copy(action = wrapWithCond(f, action))
+      copy(action = action when f)
 
     override def modS(f: S => S)(implicit em: ExecutionModel[F]) =
       copy(action = action(_).map(_ modS f))
@@ -182,7 +185,7 @@ object Action {
       Group(
         name.cmap(_.mapOS(o, s)),
         ros => action(ros.mapOS(o, s)).map(_.mapOS(o, s, su)),
-        check.cmap(o, s))
+        check.mapOS(o, s))
 
     override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
       Group(
@@ -211,7 +214,7 @@ object Action {
 
   final case class Single[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]],
                                             run: ROS[R, O, S] => Prepared[F, O, S, E],
-                                            check: Check.Around[O, S, E]) extends NonComposite[F, R, O, S, E] {
+                                            check: Arounds[O, S, E]) extends NonComposite[F, R, O, S, E] {
 
     override type This[f[_], r, o, s, e] = Single[f, r, o, s, e]
 
@@ -221,11 +224,11 @@ object Action {
     override def rename(newName: NameFn[ROS[R, O, S]]) =
       copy(name = newName)
 
-    override def addCheck(c: Check.Around[O, S, E]) =
+    override def addCheck(c: Arounds[O, S, E]) =
       copy(check = check & c)
 
     override def when(f: ROS[R, O, S] => Boolean) =
-      copy(run = wrapWithCond(f, run))
+      copy(run = run when f)
 
     override def modS(m: S => S)(implicit em: ExecutionModel[F]) =
       copy(run = run(_).map(f => () => em.map(f())(_.map(_.andThen(_ map m)))))
@@ -240,7 +243,7 @@ object Action {
       Single[F, R, OO, SS, E](
         name.cmap(_.mapOS(o, s)),
         ros => run(ros.mapOS(o, s)).map(fn => () => em.map(fn())(_.map(f => (oo: OO) => f(o(oo)).map(s => su(ros.state, s))))),
-        check.cmap(o, s))
+        check.mapOS(o, s))
 
     override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) = Single[F, R, O, S, EE](
       name,
@@ -261,7 +264,7 @@ object Action {
 
   final case class SubTest[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]],
                                              action: Action[F, R, O, S, E],
-                                             invariants: Check[O, S, E]) extends NonComposite[F, R, O, S, E] {
+                                             invariants: Invariants[O, S, E]) extends NonComposite[F, R, O, S, E] {
     override type This[f[_], r, o, s, e] = SubTest[f, r, o, s, e]
 
     override def trans[G[_]](t: F ~~> G) =
@@ -270,7 +273,7 @@ object Action {
     override def rename(newName: NameFn[ROS[R, O, S]]) =
       copy(name = newName)
 
-    override def addCheck(c: Check.Around[O, S, E]) =
+    override def addCheck(c: Arounds[O, S, E]) =
       copy(action = action addCheck c)
 
     override def when(f: ROS[R, O, S] => Boolean) =
@@ -286,7 +289,7 @@ object Action {
       SubTest(
         name.cmap(_.mapOS(o, s)),
         action.mapOS(o, s, su),
-        invariants.cmap(o, s))
+        invariants.mapOS(o, s))
 
     override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
       SubTest(
@@ -311,4 +314,3 @@ object Action {
   }
 
 }
-*/

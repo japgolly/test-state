@@ -14,14 +14,14 @@ object CheckOps {
 
   final class Ops[C[_, _, _], O, S, E](c: C[O, S, E])(implicit tc: CheckOps[C]) {
 
-    def mapOS[X, Y](f: OS[X, Y] => OS[O, S]): C[X, Y, E] =
-      tc.mapOS(c)(f)
+    def mapOS[X, Y](o: X => O, s: Y => S): C[X, Y, E] =
+      tc.mapOS(c)(_.map(o, s))
 
     def mapO[X](f: X => O): C[X, S, E] =
-      mapOS(_ mapO f)
+      tc.mapOS(c)(_ mapO f)
 
     def mapS[X](f: X => S): C[O, X, E] =
-      mapOS(_ mapS f)
+      tc.mapOS(c)(_ mapS f)
   }
 
   trait Instances {
