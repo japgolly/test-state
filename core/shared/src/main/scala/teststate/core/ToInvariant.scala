@@ -20,8 +20,11 @@ object ToInvariant {
 
   implicit val aroundToInvariant: ToInvariant[Id, Around] =
     new ToInvariant[Id, Around] {
-      override def toInvariant[A, B](c: Around[A, B]) =
-        Invariant.Around(c)
+      override def toInvariant[A, B](a: Around[A, B]) =
+        a match {
+          case Around.Point(p, _) => Invariant.Point(p)
+          case Around.Delta(d)    => Invariant.Delta(d)
+        }
     }
 
   private def checksToInvariants[C[_, _]](implicit ci: ToInvariant[Id, C]): ToInvariant[CheckShapeA, C] =

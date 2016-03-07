@@ -63,17 +63,23 @@ object CheckOps {
           Point(c.name pmapO f, c.test pmapO f)
       }
 
+    implicit val checkOpsInstanceForDeltaA: CheckOps[CheckShape1[Around.DeltaA]#T] =
+      new SingleCheck[Around.DeltaA] {
+        override def pmapO[O, S, E, X](d: C[O, S, E])(f: X => E Or O): C[X, S, E] = {
+          val t = d.test
+          Around.DeltaA(
+            d.name pmapO f,
+            d.before pmapO f,
+            (xs, a: d.A) => xs.mapOE(f).test(t(_, a)).leftOption)
+        }
+      }
+
     implicit val checkOpsInstanceForAround: CheckOps[CheckShape1[Around]#T] =
       new SingleCheck[Around] {
         override def pmapO[O, S, E, X](c: C[O, S, E])(f: X => E Or O): C[X, S, E] =
           c match {
             case Around.Point(p, w) => Around.Point(p pmapO f, w)
-            case Around.Delta(n, d) =>
-              val t = d.test
-              Around.Delta(n pmapO f,
-                Around.DeltaA(
-                  d.before pmapO f,
-                  (xs, a: d.A) => xs.mapOE(f).test(t(_, a)).leftOption))
+            case Around.Delta(d)    => Around.Delta(d pmapO f)
           }
       }
 
@@ -81,8 +87,8 @@ object CheckOps {
       new SingleCheck[Invariant] {
         override def pmapO[O, S, E, X](c: C[O, S, E])(f: X => E Or O): C[X, S, E] =
           c match {
-            case Invariant.Point (p) => Invariant.Point (p pmapO f)
-            case Invariant.Around(p) => Invariant.Around(p pmapO f)
+            case Invariant.Point(x) => Invariant.Point(x pmapO f)
+            case Invariant.Delta(x) => Invariant.Delta(x pmapO f)
           }
       }
 

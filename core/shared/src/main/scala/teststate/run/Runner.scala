@@ -42,34 +42,34 @@ object Runner {
     def ++(s: History[E])       = copy(history = history ++ s.steps)
   }
 
-  case class ChecksAround[F[_], O, S, E](before: F[Point       [OS[O, S], E]],
-                                         delta : F[Around.Delta[OS[O, S], E]],
-                                         after : F[Point       [OS[O, S], E]])
+  case class ChecksAround[F[_], O, S, E](befores: F[Point        [OS[O, S], E]],
+                                         deltas : F[Around.DeltaA[OS[O, S], E]],
+                                         aftersA: F[Point        [OS[O, S], E]],
+                                         aftersI: F[Point        [OS[O, S], E]])
 
-  def prepareChecksAround[O, S, E](// invariants: Invariants[O, S, E],
+  def prepareChecksAround[O, S, E](invariants: Invariants[O, S, E],
                                    arounds   : Arounds[O, S, E],
                                    input     : Right[OS[O, S]]): ChecksAround[List, O, S, E] = {
-    val bb = List.newBuilder[Point[OS[O, S], E]]
-    val ba = List.newBuilder[Point[OS[O, S], E]]
-    val bd = List.newBuilder[Around.Delta[OS[O, S], E]]
+    import Around.{Before, After, BeforeAndAfter}
 
-    val addAround: Around[OS[O, S], E] => Unit = {
-      case a: Around.Delta[OS[O, S], E] => bd += a; ()
-      case Around.Point(p, w) => w match {
-        case Around.Before         => bb += p; ()
-        case Around.After          => ba += p; ()
-        case Around.BeforeAndAfter => bb += p; ba += p; ()
-      }
+    val bs = List.newBuilder[Point[OS[O, S], E]]
+    val ds = List.newBuilder[Around.DeltaA[OS[O, S], E]]
+    val aa = List.newBuilder[Point[OS[O, S], E]]
+    val ai = List.newBuilder[Point[OS[O, S], E]]
+
+    invariants.foreach(input) {
+      case Invariant.Point(p) => ai += p; ()
+      case Invariant.Delta(d) => ds += d; ()
     }
 
-//    invariants.foreach(input) {
-//      case Invariant.Point (p) => ()
-//      case Invariant.Around(a) => addAround(a)
-//    }
+    arounds.foreach(input) {
+      case Around.Delta(d)                 => ds += d; ()
+      case Around.Point(p, BeforeAndAfter) => bs += p; aa += p; ()
+      case Around.Point(p, Before)         => bs += p; ()
+      case Around.Point(p, After)          => aa += p; ()
+    }
 
-    arounds.foreach(input)(addAround)
-
-    ChecksAround(bb.result(), bd.result(), ba.result())
+    ChecksAround(bs.result(), ds.result(), aa.result(), ai.result())
   }
 
   def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])
@@ -101,79 +101,78 @@ object Runner {
         val name = recover.name(nameFn, p.ros.some)
 
         prepare(p.ros) match {
-//          case Some(a) =>
-//
-//            val checks = prepareChecksAround(arounds, p.ros.rOS)
-//
-//            // Perform before
-//            val pre = {
-//              val b = History.newBuilder[E]
-//              b.addEach(checks.before)(_.check.name)(p.ros.sos, _.check.test(p.ros.os))
-//              b.group(PreName)
-//            }
-//
-//            if (pre.failed) {
-//              EM.pure(p :+ History.parent(name, pre))
-//
-//            } else {
-//
-//              // Perform around-pre
-//              val hcs = {
-//                val b = Vector.newBuilder[HalfCheck[O, S, E]]
-//                for (c0 <- checks.delta) {
-//                  val c = c0.aux
-//                  val r = recover.attempt(c.before(p.ros.os)).fold(Failed(_), identity)
-//                  b += HalfCheck(c)(r)
-//                }
-//                b.result()
-//              }
-//
-//              // Perform action
-//              val runF = run(a)
-//              EM.map(runF) { case (mkStep, ros2) =>
-//
-//                def addStep(s: History.Step[E]) =
-//                  p.copy(ros = ros2, history = p.history :+ s)
-//
-//                val step = mkStep(ActionName)
-//                val collapseIfNoPost = collapse && pre.isEmpty && step.steps.length == 1
-//                def collapsed = step.steps(0).copy(name = name)
-//                if (step.failed) {
-//
-//                  if (collapseIfNoPost)
-//                    addStep(collapsed)
-//                  else
-//                    addStep(History.parent(name, pre ++ step))
-//
-//                } else {
-//
-//                  // Post conditions
-//                  val post1 = {
-//                    val b = History.newBuilder[E]
-//                    //                  b.addEach(hcs)(_.check name omg.ros.sos, c => c.check.test(ros2.os, c.before_!)) // Perform around-post
-//                    b.addEach(hcs)(
-//                      c => c.check.name)(ros2.sos,
-//                      c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a))) // Perform around-post
-//                    b.addEach(checks.after)(_.check.name)(ros2.sos, _.check.test(ros2.os)) // Perform post
-//                    b.group(PostName)
-//                  }
-//
-//                  // Check invariants
-//                  val invs = {
-//                    val b = History.newBuilder[E]
-//                    b.addEach(invariantsPoints)(_.name)(ros2.sos, _.test(ros2.os))
-//                    b.group(InvariantsName)
-//                  }
-//
-//                  val post = post1 ++ invs
-//
-//                  if (collapseIfNoPost && post.isEmpty)
-//                    addStep(collapsed)
-//                  else
-//                    addStep(History.parent(name, pre ++ step ++ post))
-//                }
-//              }
-//            }
+          case Some(a) =>
+
+            val checks = prepareChecksAround(invariants, arounds, p.ros.rOS)
+
+            // Perform before
+            val pre = {
+              val b = History.newBuilder[E]
+              b.addEach(checks.befores)(_.name)(p.ros.sos, _.test(p.ros.os))
+              b.group(PreName)
+            }
+
+            if (pre.failed) {
+              EM.pure(p :+ History.parent(name, pre))
+
+            } else {
+
+              // Perform around-pre
+              val hcs = {
+                val b = Vector.newBuilder[HalfCheck[O, S, E]]
+                for (d0 <- checks.deltas) {
+                  val d = d0.aux
+                  val r = recover.attempt(d.before(p.ros.os)).fold(Failed(_), identity)
+                  b += HalfCheck(d)(r)
+                }
+                b.result()
+              }
+
+              // Perform action
+              val runF = run(a)
+              EM.map(runF) { case (mkStep, ros2) =>
+
+                def addStep(s: History.Step[E]) =
+                  p.copy(ros = ros2, history = p.history :+ s)
+
+                val step = mkStep(ActionName)
+                val collapseIfNoPost = collapse && pre.isEmpty && step.steps.length == 1
+                def collapsed = step.steps(0).copy(name = name)
+                if (step.failed) {
+
+                  if (collapseIfNoPost)
+                    addStep(collapsed)
+                  else
+                    addStep(History.parent(name, pre ++ step))
+
+                } else {
+
+                  // Post conditions
+                  val post1 = {
+                    val b = History.newBuilder[E]
+                    b.addEach(hcs)(
+                      c => c.check.name)(ros2.sos,
+                      c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a))) // Perform around-post
+                    b.addEach(checks.aftersA)(_.name)(ros2.sos, _.test(ros2.os)) // Perform post
+                    b.group(PostName)
+                  }
+
+                  // Check invariants
+                  val invs = {
+                    val b = History.newBuilder[E]
+                    b.addEach(checks.aftersI)(_.name)(ros2.sos, _.test(ros2.os))
+                    b.group(InvariantsName)
+                  }
+
+                  val post = post1 ++ invs
+
+                  if (collapseIfNoPost && post.isEmpty)
+                    addStep(collapsed)
+                  else
+                    addStep(History.parent(name, pre ++ step ++ post))
+                }
+              }
+            }
 
           case None =>
             EM.pure(p :+ History.Step(name, Skip))
@@ -193,45 +192,45 @@ object Runner {
           p.queue.head match {
 
             // ==============================================================================
-//            case Action.Single(nameFn, run, check) =>
-//              val omg2F =
-//                checkAround(nameFn, check & invariantsAround, true, p)(run) { act =>
-//
-//                  def ret(ros: ROS, r: Result[E], hs: History.Steps[E] = Vector.empty) =
-//                    ((n: Name) => History(History.Step(n, r) +: hs), ros)
-//
-//                  EM.map(EM.recover(act())) {
-//                    case Right(nextStateFn) =>
-//                      observe(test) match {
-//                        case Right(obs2) =>
-//                          recover.attempt(nextStateFn(obs2)) match {
-//                            case Right(Right(state2)) =>
-//                              val ros2 = new ROS(refFn, obs2, state2)
-//                              ret(ros2, Pass)
-//                            case Right(Left(e)) =>
-//                              ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
-//                            case Left(e) =>
-//                              ret(ros, Pass, vector1(History.Step(UpdateState, Fail(e))))
-//                          }
-//                        case Left(e) =>
-//                          ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
-//                      }
-//                    case Left(e) =>
-//                      ret(ros, Fail(e))
-//                  }
-//
-//                }
-//              continue(omg2F)
-//
-//            // ==============================================================================
-//            case Action.Group(nameFn, actionFn, check) =>
-//              val omg2F =
-//                checkAround(nameFn, check & invariantsAround, false, p)(actionFn)(children =>
-//                  EM.map(start(children, ros))(omgC =>
-//                    ((_: Name) => omgC.history, omgC.ros))
-//                )
-//              continue(omg2F)
-//
+            case Action.Single(nameFn, run, check) =>
+              val omg2F =
+                checkAround(nameFn, check, true, p)(run) { act =>
+
+                  def ret(ros: ROS, r: Result[E], hs: History.Steps[E] = Vector.empty) =
+                    ((n: Name) => History(History.Step(n, r) +: hs), ros)
+
+                  EM.map(EM.recover(act())) {
+                    case Right(nextStateFn) =>
+                      observe(test) match {
+                        case Right(obs2) =>
+                          recover.attempt(nextStateFn(obs2)) match {
+                            case Right(Right(state2)) =>
+                              val ros2 = new ROS(refFn, obs2, state2)
+                              ret(ros2, Pass)
+                            case Right(Left(e)) =>
+                              ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
+                            case Left(e) =>
+                              ret(ros, Pass, vector1(History.Step(UpdateState, Fail(e))))
+                          }
+                        case Left(e) =>
+                          ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
+                      }
+                    case Left(e) =>
+                      ret(ros, Fail(e))
+                  }
+
+                }
+              continue(omg2F)
+
+            // ==============================================================================
+            case Action.Group(nameFn, actionFn, check) =>
+              val omg2F =
+                checkAround(nameFn, check, false, p)(actionFn)(children =>
+                  EM.map(start(children, ros))(omgC =>
+                    ((_: Name) => omgC.history, omgC.ros))
+                )
+              continue(omg2F)
+
             // ==============================================================================
             case Action.SubTest(name, action, subInvariants) =>
               val t = new Test(new TestContent(action, invariants & subInvariants), test.observe)
@@ -255,8 +254,8 @@ object Runner {
         val invariantsPoints = {
           val b = Vector.newBuilder[Point[OS[O, S], E]]
           invariants.foreach(ros.rOS) {
-            case Invariant.Point(p)  => b += p; ()
-            case Invariant.Around(_) => ()
+            case Invariant.Point(p) => b += p; ()
+            case Invariant.Delta(_) => ()
           }
           b.result()
         }
