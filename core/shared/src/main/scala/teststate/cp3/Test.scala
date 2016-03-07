@@ -53,10 +53,13 @@ abstract class AbstractTest {
 
 abstract class Test extends AbstractTest {
   import Types._
-  import CheckOps.Instances._
-  import CheckOps.ToOps._
-  import Conditional.Implicits._
-  import PCompose._
+
+  object XXX
+    extends PCompose.Implicits
+       with CheckOps.Implicits
+       with Conditional.Implicits
+
+  import XXX._
 
   // mapO
   test[Points    [O, S, E]](_ mapO o21).expect[Points    [O2, S, E]]

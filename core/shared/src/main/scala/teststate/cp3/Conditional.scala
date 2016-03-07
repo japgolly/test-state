@@ -6,7 +6,7 @@ trait Conditional[M, I] {
 
 object Conditional {
 
-  class Ops[M, I](m: M)(implicit c: Conditional[M, I]) {
+  final class Ops[M, I](m: M)(implicit c: Conditional[M, I]) {
 
     def when(f: I => Boolean): M =
       c.when(m, f)

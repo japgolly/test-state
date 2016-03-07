@@ -4,23 +4,29 @@ import teststate.{TriResult, NameFn}
 import teststate.{cp3 => ^}
 import Profunctor.ToOps._
 import Conditional.Implicits._
+import ToInvariant.Id
 
 final case class Point[I, E](name: NameFn[I], test: I => TriResult[E, Unit])
 
 object Point {
-  implicit val pointInstanceProfunctor: Profunctor[Point] =
-    new Profunctor[Point] {
+  implicit val pointInstance: Profunctor[Point] with ToInvariant[Id, Point] =
+    new Profunctor[Point] with ToInvariant[Id, Point]{
+
       override def dimap[A, B, C, D](p: Point[A, B])(g: C => A, f: B => D): Point[C, D] =
         Point(p.name cmap g, c => p.test(g(c)) mapE f)
+
+      override def toInvariant[A, B](c: Point[A, B]) =
+        Invariant.Point(c)
     }
 
-    implicit def pointInstanceConditional[I, E]: Conditional[Point[I, E], I] =
-      new Conditional[Point[I, E], I] {
-        override def when(m: Point[I, E], f: I => Boolean) =
-          Point(m.name, m.test when f)
-      }
+  implicit def pointInstanceConditional[I, E]: Conditional[Point[I, E], I] =
+    new Conditional[Point[I, E], I] {
+      override def when(m: Point[I, E], f: I => Boolean) =
+        Point(m.name, m.test when f)
+    }
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 sealed abstract class Around[I, E]
 object Around {
@@ -51,8 +57,9 @@ object Around {
       override val test   = _test
     }
 
-  implicit val aroundInstanceProfunctor: Profunctor[Around] =
-    new Profunctor[Around] {
+  implicit val aroundInstance: Profunctor[Around] with ToInvariant[Id, Around] =
+    new Profunctor[Around] with ToInvariant[Id, Around] {
+
       override def dimap[A, B, C, D](around: Around[A, B])(g: C => A, f: B => D): Around[C, D] =
         around match {
           case Point(p, w) => Point(p.dimap(g, f), w)
@@ -62,6 +69,9 @@ object Around {
               (c, a) => d.test(g(c), a) map f)
             Delta(n cmap g, da)
         }
+
+      override def toInvariant[A, B](c: Around[A, B]) =
+        Invariant.Around(c)
     }
 
   implicit def aroundInstanceConditional[I, E]: Conditional[Around[I, E], I] =
@@ -74,6 +84,7 @@ object Around {
     }
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 sealed abstract class Invariant[I, E]
 object Invariant {

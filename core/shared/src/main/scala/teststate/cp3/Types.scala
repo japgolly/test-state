@@ -11,4 +11,7 @@ object Types {
   type Arounds   [O, S, E] = CheckShape[Around   , O, S, E]
   type Invariants[O, S, E] = CheckShape[Invariant, O, S, E]
 
+  implicit def autoWidenChecksToInvariants[C[_, _], A, E](c: CheckShapeA[C, A, E])
+                                                         (implicit t: ToInvariant[CheckShapeA, C]): CheckShapeA[Invariant, A, E] =
+    t.toInvariant(c)
 }
