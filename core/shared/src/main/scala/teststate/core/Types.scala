@@ -5,6 +5,8 @@ import teststate.data._
 
 object Types {
 
+  type CheckShape1[C[_, _]] = ({  type T[O, S, E] = C[OS[O, S], E]  })
+
   type CheckShapeA[C[_, _], A,    E] = (E Or A) Sack (C[A, E])
   type CheckShape [C[_, _], O, S, E] = CheckShapeA[C, OS[O, S], E]
 
