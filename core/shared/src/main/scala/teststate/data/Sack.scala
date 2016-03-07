@@ -3,8 +3,38 @@ package teststate.data
 import acyclic.file
 import teststate.typeclass._
 import Profunctor.ToOps.toProfunctorOps
+import Sack._
 
-sealed abstract class Sack[-I, +A]
+sealed abstract class Sack[-I, +A] {
+
+  // Note: Result is flat, coproudcts are resolved and flattened; their names discarded.
+  final def foreach(i: I)(f: A => Unit): Unit = {
+    def go(s: Sack[I, A]): Unit =
+      this match {
+        case Value(a)        => f(a)
+        case Product(ss)     => ss foreach go
+        case CoProduct(_, p) => go(p(i))
+      }
+    go(this)
+  }
+
+  // Note: Result is flat, coproudcts are resolved and flattened; their names discarded.
+  def open(i: I): Vector[A] = {
+    val b = Vector.newBuilder[A]
+    foreach(i) { a => b += a; () }
+    b.result()
+  }
+
+//  // Note: Result is flat, coproudcts are resolved and flattened; their names discarded.
+//  def collect[B](i: I)(pf: PartialFunction[A, B]): Vector[B] = {
+//    val b = Vector.newBuilder[B]
+//    val pf2 = pf andThen { a => b += a; () }
+//    val nada = (_: Any) => ()
+//    foreach(i)(pf2.applyOrElse(_, nada))
+//    b.result()
+//  }
+}
+
 object Sack {
 
   final case class Value[+A](value: A) extends Sack[Any, A]

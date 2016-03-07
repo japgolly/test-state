@@ -1,10 +1,12 @@
 package teststate.core
 
 import acyclic.file
+import teststate.data.Name
 import teststate.typeclass.Conditional
 
 trait CoreExports
-  extends CheckOps   .Implicits
+  extends Name.Implicits
+     with CheckOps   .Implicits
      with Conditional.Implicits
      with PCompose   .Implicits {
 

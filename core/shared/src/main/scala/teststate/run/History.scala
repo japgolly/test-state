@@ -162,7 +162,7 @@ object History {
         r += h.result
       }
 
-    def addEach[A, B](as: Vector[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit =
+    def addEach[A, B](as: TraversableOnce[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit =
       for (a <- as) {
         val n = recover.name(nameFn(a), nameInput)
         val r = recover.recover(test(a).toResult, Fail(_))
