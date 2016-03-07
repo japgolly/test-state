@@ -8,7 +8,8 @@ trait CoreExports
   extends Name.Implicits
      with CheckOps   .Implicits
      with Conditional.Implicits
-     with PCompose   .Implicits {
+     with PCompose   .Implicits
+     with PointOps   .Implicits {
 
   type Points    [O, S, E] = Types.Points    [O, S, E]
   type Arounds   [O, S, E] = Types.Arounds   [O, S, E]

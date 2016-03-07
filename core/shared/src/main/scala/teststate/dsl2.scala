@@ -1,8 +1,12 @@
 package teststate
 
-/*
+import acyclic.file
+import teststate.core._
+import teststate.data._
+import teststate.run.Test
+import teststate.typeclass._
+import CoreExports._
 import Dsl.{Types, ActionB}
-import Or.{Left, Right}
 
 object Dsl {
   def apply[F[_]: ExecutionModel, R, O, S, E] =
@@ -15,19 +19,18 @@ object Dsl {
   @inline def future[R, O, S, E](implicit ec: ExecutionContext) =
     apply[Future, R, O, S, E]
 
+  // TODO Rename DSL types like Point1, Around1, etc
   trait Types[F[_], R, O, S, E] {
-    final type OS          = teststate.OS[O, S]
-    final type ROS         = teststate.ROS[R, O, S]
-    final type Action      = teststate.Action[F, R, O, S, E]
-    final type Check       = teststate.Check[O, S, E]
-    final type CheckAround = teststate.Check.Around[O, S, E]
-    final type Point1      = teststate.Check.Point.Single[O, S, E]
-    final type Around1     = teststate.Check.Around.Dunno[O, S, E]
-    final type Action1     = teststate.Action.Single[F, R, O, S, E]
-    final type NameFn      = teststate.NameFn[OS]
-    final type ActionFn    = ROS => teststate.Action.Prepared[F, O, S, E]
-    final type TestContent = teststate.TestContent[F, R, O, S, E]
-    final type Test        = teststate.Test[F, R, O, S, E]
+    final type OS          = teststate.data.OS[O, S]
+    final type ROS         = teststate.data.ROS[R, O, S]
+    final type NameFn      = teststate.data.NameFn[OS]
+    final type Point1      = Points[O, S, E]
+    final type Around1     = Arounds[O, S, E]
+    final type Action      = teststate.core.Action[F, R, O, S, E]
+    final type Action1     = teststate.core.Action.Single[F, R, O, S, E]
+    final type ActionFn    = ROS => teststate.core.Action.Prepared[F, O, S, E]
+    final type TestContent = teststate.run.TestContent[F, R, O, S, E]
+    final type Test        = teststate.run.Test[F, R, O, S, E]
   }
 
   final class ActionB[F[_], R, O, S, E](actionName: => String)(implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
@@ -35,7 +38,7 @@ object Dsl {
     private def build(fn: (ROS => F[Option[E]]) => ActionFn): ActionB2[F, R, O, S, E] =
       new ActionB2(act => Action.Single[F, R, O, S, E](
         actionName,
-        fn(act), Check.Around.empty))
+        fn(act), Sack.empty))
 
     def updateState(nextState: S => S) =
       updateStateO(s => _ => nextState(s))
@@ -67,10 +70,10 @@ object Dsl {
 final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
 
   def point(name: NameFn, test: OS => Option[E]): Point1 =
-    Check.Point.Single(name, Tri failedOption test(_))
+    Sack Value Point(name, Tri failedOption test(_))
 
   def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around1 =
-    Check.Around.Dunno(name, os => Passed(before(os)), test)
+    Sack Value Around.Delta(Around.DeltaA(name, os => Passed(before(os)), test))
 
   private def strErrorFn(implicit ev: String =:= E): Any => E = _ => ""
   private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E = (_,_) => ""
@@ -115,7 +118,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     Action.empty
 
   def emptyTest(implicit r: Recover[E]): TestContent =
-    emptyAction.withoutInvariants
+    Test(emptyAction)(EM, r)
 
   def action(actionName: => String) =
     new ActionB[F, R, O, S, E](actionName)
@@ -177,10 +180,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           NameFn(NameUtils.equalFn(focusName, positive, expect)),
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
 
-      def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]) =
+      def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
         equal(before).before & equal(after).after
 
-      def beforeAndAfterF(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]) =
+      def beforeAndAfterF(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
         equalF(before).before & equalF(after).after
 
       private def mkAround(name: NameFn, f: (A, A) => Option[E]) =
@@ -308,7 +311,6 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       new ObsAndState(focusName, f compose fo, f compose fs)
   }
 }
-*/
 
 // TODO Runner should print state & obs on failure, each assertion needn't. It should print S and/or S' depending on the type of check (pre and/or post) that failed.
 
