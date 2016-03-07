@@ -19,11 +19,11 @@ object PCompose {
   trait LowPriInstances {
     import Types._
 
-    implicit def checksPolyPCompose[C[_, _], D[_, _], A, E](implicit c: ToInvariant[CheckShapeA, C],
-                                                                     d: ToInvariant[CheckShapeA, D],
-                                                                     i: PCompose.Mono[CheckShapeA[Invariant, A, E]])
+    implicit def checksPolyPCompose[C[-_, _], D[-_, _], A, E](implicit c: ToInvariant[CheckShapeA, C],
+                                                                       d: ToInvariant[CheckShapeA, D],
+                                                                       i: PCompose.Mono[CheckShapeA[Invariant, A, E]])
         : PCompose[CheckShapeA[C, A, E], CheckShapeA[D, A, E], CheckShapeA[Invariant, A, E]] = {
-      type F[X[_, _]] = CheckShapeA[X, A, E]
+      type F[X[-_, _]] = CheckShapeA[X, A, E]
       new PCompose[F[C], F[D], F[Invariant]] {
         override def compose(fc: F[C], fd: F[D]) =
           i.compose(c toInvariant fc, d toInvariant fd)
@@ -46,7 +46,7 @@ object PCompose {
           }
       }
 
-    implicit def checkPComposeAddOps[C[_, _], A, B]: AddOps[CheckShapeA[C, A, B]] =
+    implicit def checkPComposeAddOps[C[-_, _], A, B]: AddOps[CheckShapeA[C, A, B]] =
       AddOps
   }
 

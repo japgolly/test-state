@@ -7,7 +7,7 @@ import teststate.{core => ^}
 import Profunctor.ToOps._
 import Conditional.Implicits._
 
-final case class Point[I, E](name: NameFn[I], test: I => Tri[E, Unit])
+final case class Point[-I, E](name: NameFn[I], test: I => Tri[E, Unit])
 
 object Point {
   implicit val pointInstance: Profunctor[Point] =
@@ -25,7 +25,7 @@ object Point {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-sealed abstract class Around[I, E]
+sealed abstract class Around[-I, E]
 object Around {
 
   sealed abstract class When
@@ -33,15 +33,15 @@ object Around {
   case object After          extends When
   case object BeforeAndAfter extends When
 
-  final case class Point[I, E](point: ^.Point[I, E], when: When) extends Around[I, E]
+  final case class Point[-I, E](point: ^.Point[I, E], when: When) extends Around[I, E]
 
   // This is a wrapper around DeltaA because when DeltaA extends Around directly, scalac bugs cause it to sometimes be
   // omitted from pattern-matching exhaustiveness analysis.
-  final case class Delta[I, E](delta: DeltaA[I, E]) extends Around[I, E]
+  final case class Delta[-I, E](delta: DeltaA[I, E]) extends Around[I, E]
 
-  type DeltaAux[I, E, AA] = DeltaA[I, E] {type A = AA}
+  type DeltaAux[-I, E, AA] = DeltaA[I, E] {type A = AA}
 
-  sealed abstract class DeltaA[I, E] {
+  sealed abstract class DeltaA[-I, E] {
     type A
     val name: NameFn[I]
     val before: I => Tri[E, A]
@@ -97,10 +97,10 @@ object Around {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-sealed abstract class Invariant[I, E]
+sealed abstract class Invariant[-I, E]
 object Invariant {
-  final case class Point[I, E](point: ^.Point        [I, E]) extends Invariant[I, E]
-  final case class Delta[I, E](delta: ^.Around.DeltaA[I, E]) extends Invariant[I, E]
+  final case class Point[-I, E](point: ^.Point        [I, E]) extends Invariant[I, E]
+  final case class Delta[-I, E](delta: ^.Around.DeltaA[I, E]) extends Invariant[I, E]
 
   implicit val invariantInstanceProfunctor: Profunctor[Invariant] =
     new Profunctor[Invariant] {

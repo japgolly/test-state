@@ -5,12 +5,12 @@ import teststate.typeclass._
 import Profunctor.ToOps._
 import Types.CheckShapeA
 
-trait ToInvariant[F[_[_, _], _, _], C[_, _]] {
+trait ToInvariant[F[_[-_, _], _, _], C[-_, _]] {
   def toInvariant[A, B](c: F[C, A, B]): F[Invariant, A, B]
 }
 
 object ToInvariant {
-  type Id[C[_, _], A, B] = C[A, B]
+  type Id[C[-_, _], A, B] = C[A, B]
 
   implicit val pointToInvariant: ToInvariant[Id, Point] =
     new ToInvariant[Id, Point] {
@@ -27,7 +27,7 @@ object ToInvariant {
         }
     }
 
-  private def checksToInvariants[C[_, _]](implicit ci: ToInvariant[Id, C]): ToInvariant[CheckShapeA, C] =
+  private def checksToInvariants[C[-_, _]](implicit ci: ToInvariant[Id, C]): ToInvariant[CheckShapeA, C] =
     new ToInvariant[CheckShapeA, C] {
       override def toInvariant[A, B](c: CheckShapeA[C, A, B]): CheckShapeA[Invariant, A, B] =
         c.rmap(_ map ci.toInvariant)

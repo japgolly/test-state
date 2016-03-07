@@ -48,7 +48,7 @@ object CheckOps {
       _.mapOE(f).toTriFlatMap(fn)
   }
 
-  abstract class SingleCheck[D[_, _] : Profunctor] extends CheckOps[CheckShape1[D]#T] {
+  abstract class SingleCheck[D[-_, _] : Profunctor] extends CheckOps[CheckShape1[D]#T] {
     final type C[O, S, E] = CheckShape1[D]#T[O, S, E]
 
     override def map_OS[O, S, E, X, Y](c: C[O, S, E])(f: OS[X, Y] => OS[O, S]): C[X, Y, E] =
@@ -92,7 +92,7 @@ object CheckOps {
           }
       }
 
-    private def checkOpsInstanceForChecks[C[_, _]](implicit sub: CheckOps[CheckShape1[C]#T]): CheckOps[CheckShape[C, ?, ?, ?]] =
+    private def checkOpsInstanceForChecks[C[-_, _]](implicit sub: CheckOps[CheckShape1[C]#T]): CheckOps[CheckShape[C, ?, ?, ?]] =
       new CheckOps[CheckShape[C, ?, ?, ?]] {
         import Sack._
 
@@ -122,7 +122,7 @@ object CheckOps {
     implicit def aroundsToCheckOps   [O, S, E](c: Arounds   [O, S, E]): Ops[Arounds   , O, S, E] = new Ops(c)
     implicit def invariantsToCheckOps[O, S, E](c: Invariants[O, S, E]): Ops[Invariants, O, S, E] = new Ops(c)
 
-    implicit def checkToCheckOps[C[_, _], O, S, E](c: C[OS[O, S], E])(implicit tc: CheckOps[CheckShape1[C]#T]): Ops[CheckShape1[C]#T, O, S, E] =
+    implicit def checkToCheckOps[C[-_, _], O, S, E](c: C[OS[O, S], E])(implicit tc: CheckOps[CheckShape1[C]#T]): Ops[CheckShape1[C]#T, O, S, E] =
       new Ops[CheckShape1[C]#T, O, S, E](c)
   }
 
