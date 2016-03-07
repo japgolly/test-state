@@ -1,7 +1,6 @@
 package teststate.cp3
 
 import acyclic.file
-import teststate._
 import language.reflectiveCalls
 import scala.annotation.implicitNotFound
 
@@ -22,10 +21,6 @@ abstract class AbstractTest {
   def s21: S2 => S
   def e12: E => E2
   def e21: E2 => E
-
-//  def pl: (E2 Or OS[O2, S2]) => (E Or OS[O, S])
-//  def pr[C[-a, +b] <: Check[a, b]]: C[OS[O, S], E] => C[OS[O2, S2], E2]
-//  def prA: Check.Delta.Aux[OS[O, S], E, A] => Check.Delta.Aux[OS[O2, S2], E2, A]
 
   @implicitNotFound(msg = "\n\nExpected: ${From}\n  Actual: ${To}\n\n")
   sealed abstract class =:=[From, To] extends (From => To) with Serializable
@@ -52,19 +47,25 @@ abstract class AbstractTest {
   }
 }
 
-abstract class Test extends AbstractTest {
-  import Types._
+// TODO Temp
+trait Exports
+  extends CheckOps.Implicits
+     with Conditional.Implicits
+     with PCompose.Implicits {
 
-  object XXX
-    extends PCompose.Implicits
-       with CheckOps.Implicits
-       with Conditional.Implicits
+  type Points    [O, S, E] = Types.Points    [O, S, E]
+  type Arounds   [O, S, E] = Types.Arounds   [O, S, E]
+  type Invariants[O, S, E] = Types.Invariants[O, S, E]
 
-  import XXX._
-
+  import Types.CheckShapeA
   implicit def autoWidenChecksToInvariants[C[_, _], A, E](c: CheckShapeA[C, A, E])
                                                          (implicit t: ToInvariant[CheckShapeA, C]): CheckShapeA[Invariant, A, E] =
     t.toInvariant(c)
+}
+
+abstract class Test extends AbstractTest {
+  object XXX extends Exports
+  import XXX._
 
   // mapO
   test[Points    [O, S, E]](_ mapO o21).expect[Points    [O2, S, E]]
