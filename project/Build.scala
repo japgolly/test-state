@@ -12,6 +12,7 @@ object TestState extends Build {
     final val Scala211      = "2.11.7"
     final val MTest         = "0.3.1"
     final val MacroParadise = "2.1.0"
+    final val KindProjector = "0.7.1"
   }
 
   def scalacFlags = Seq(
@@ -38,7 +39,8 @@ object TestState extends Build {
       shellPrompt in ThisBuild := ((s: State) => Project.extract(s).currentRef.project + "> "),
       triggeredMessage         := Watched.clearWhenTriggered,
       incOptions               := incOptions.value.withNameHashing(true),
-      updateOptions            := updateOptions.value.withCachedResolution(true))
+      updateOptions            := updateOptions.value.withCachedResolution(true),
+      addCompilerPlugin("org.spire-math" %% "kind-projector" % Ver.KindProjector))
     .configure(
       addCommandAliases(
         "/"   -> "project root",
