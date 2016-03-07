@@ -46,9 +46,14 @@ object CheckOps {
   }
 
   trait ToOps {
-    implicit def toCheckOps[C[_, _, _], O, S, E](c: C[O, S, E])(implicit tc: CheckOps[C]): Ops[C, O, S, E] =
-      new Ops[C, O, S, E](c)(tc)
+    // implicit def toCheckOps[C[_, _, _], O, S, E](c: C[O, S, E])(implicit tc: CheckOps[C]): Ops[C, O, S, E] =
+    //   new Ops[C, O, S, E](c)(tc)
   }
 
-  trait Implicits extends Instances with ToOps
+  trait Implicits extends Instances with ToOps {
+    // ToOps works but IntelliJ highlights everything red as usual so ↓ for a nicer experience
+    implicit def pointsToCheckOps    [O, S, E](c: Points    [O, S, E]): Ops[Points    , O, S, E] = new Ops(c)
+    implicit def aroundsToCheckOps   [O, S, E](c: Arounds   [O, S, E]): Ops[Arounds   , O, S, E] = new Ops(c)
+    implicit def invariantsToCheckOps[O, S, E](c: Invariants[O, S, E]): Ops[Invariants, O, S, E] = new Ops(c)
+  }
 }
