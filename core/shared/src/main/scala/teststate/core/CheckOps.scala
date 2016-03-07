@@ -97,13 +97,20 @@ object CheckOps {
         import Sack._
 
         override def map_OS[O, S, E, X, Y](c: CheckShape[C, O, S, E])(f: OS[X, Y] => OS[O, S]): CheckShape[C, X, Y, E] =
-          c.dimap(_ map f, _ map_OS f)
+          c.dimap(f, _ map (_ map_OS f))
 
         override def pmapO[O, S, E, X](m: CheckShape[C, O, S, E])(f: X => E Or O): CheckShape[C, X, S, E] =
           m match {
-            case Value(c)        => Value(c pmapO f)
-            case Product(cs)     => Product(cs map (pmapO(_)(f)))
-            case CoProduct(n, p) => CoProduct(n.cmap(_ pmapO f), i => pmapO(p(i pmapO f))(f))
+            case Value(o)        => Value(o map (_ pmapO f))
+            case Product(ss)     => Product(ss map (pmapO(_)(f)))
+            case CoProduct(n, p) =>
+              CoProduct(
+                n pmapO f,
+                _.mapOE(f) match {
+                  case Right(os) => pmapO(p(os))(f)
+                  case Left(e)   => Value(Left(NamedError(n(None), e)))
+                }
+            )
           }
       }
 

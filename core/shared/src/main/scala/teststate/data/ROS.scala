@@ -11,9 +11,6 @@ final class ROS[+Ref, +Obs, +State](refFn: () => Ref, val obs: Obs, val state: S
   val os: OS[Obs, State] =
     OS(obs, state)
 
-  val rOS: Right[OS[Obs, State]] =
-    Right(os)
-
   val sos: Some[OS[Obs, State]] =
     Some(os)
 

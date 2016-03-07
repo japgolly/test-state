@@ -1,7 +1,7 @@
 package teststate.typeclass
 
 import acyclic.file
-import teststate.data.{Skipped, Tri}
+import teststate.data.{Or, Skipped, Tri}
 
 trait Conditional[M, I] {
   def when(m: M, f: I => Boolean): M
@@ -29,6 +29,12 @@ object Conditional {
       new Conditional[I => Option[A], I] {
         override def when(m: I => Option[A], f: I => Boolean) =
           i => if (f(i)) m(i) else None
+      }
+
+    implicit def conditionalRight[L, R, I](implicit c: Conditional[R, I]): Conditional[L Or R, I] =
+      new Conditional[L Or R, I] {
+        override def when(m: L Or R, f: I => Boolean) =
+          m.map(c.when(_, f))
       }
   }
 

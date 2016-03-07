@@ -71,11 +71,14 @@ object Dsl {
 
 final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
 
+  private def sack1[A](a: A) =
+    Sack.Value(Right(a))
+
   def point(name: NameFn, test: OS => Option[E]): Point1 =
-    Sack Value Point(name, Tri failedOption test(_))
+    sack1(Point(name, Tri failedOption test(_)))
 
   def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around1 =
-    Sack Value Around.Delta(Around.DeltaA(name, os => Passed(before(os)), test))
+    sack1(Around.Delta(Around.DeltaA(name, os => Passed(before(os)), test)))
 
   private def strErrorFn(implicit ev: String =:= E): Any => E = _ => ""
   private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E = (_,_) => ""

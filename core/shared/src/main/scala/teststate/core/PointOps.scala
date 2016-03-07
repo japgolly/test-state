@@ -10,7 +10,7 @@ object PointOps {
 
   final class Ops[O, S, E](private val p: Points[O, S, E]) extends AnyVal {
     private def toAround(when: When): Arounds[O, S, E] =
-      p.rmap(Around.Point(_, when))
+      p.rmap(_ map (Around.Point(_, when)))
 
     def before: Arounds[O, S, E] =
       toAround(Before)

@@ -42,34 +42,40 @@ object Runner {
     def ++(s: History[E])       = copy(history = history ++ s.steps)
   }
 
-  case class ChecksAround[F[_], O, S, E](befores: F[Point        [OS[O, S], E]],
+  private type CheckNE[C[_, _], O, S, E] = NamedError[E] Or C[OS[O, S], E]
+
+  case class UnpackChecks[F[_], O, S, E](befores: F[Point        [OS[O, S], E]],
                                          deltas : F[Around.DeltaA[OS[O, S], E]],
                                          aftersA: F[Point        [OS[O, S], E]],
-                                         aftersI: F[Point        [OS[O, S], E]])
+                                         aftersI: F[Point        [OS[O, S], E]],
+                                         errors : F[NamedError[E]])
 
-  def prepareChecksAround[O, S, E](invariants: Invariants[O, S, E],
-                                   arounds   : Arounds[O, S, E],
-                                   input     : Right[OS[O, S]]): ChecksAround[List, O, S, E] = {
+  def unpackChecks[O, S, E](invariants: Invariants[O, S, E],
+                            arounds   : Arounds[O, S, E],
+                            input     : OS[O, S]): UnpackChecks[List, O, S, E] = {
     import Around.{Before, After, BeforeAndAfter}
 
     val bs = List.newBuilder[Point[OS[O, S], E]]
     val ds = List.newBuilder[Around.DeltaA[OS[O, S], E]]
     val aa = List.newBuilder[Point[OS[O, S], E]]
     val ai = List.newBuilder[Point[OS[O, S], E]]
+    val es = List.newBuilder[NamedError[E]]
 
     invariants.foreach(input) {
-      case Invariant.Point(p) => ai += p; ()
-      case Invariant.Delta(d) => ds += d; ()
+      case Right(Invariant.Point(p)) => ai += p; ()
+      case Right(Invariant.Delta(d)) => ds += d; ()
+      case Left(e)                   => es += e; ()
     }
 
     arounds.foreach(input) {
-      case Around.Delta(d)                 => ds += d; ()
-      case Around.Point(p, BeforeAndAfter) => bs += p; aa += p; ()
-      case Around.Point(p, Before)         => bs += p; ()
-      case Around.Point(p, After)          => aa += p; ()
+      case Right(Around.Delta(d)                ) => ds += d; ()
+      case Right(Around.Point(p, BeforeAndAfter)) => bs += p; aa += p; ()
+      case Right(Around.Point(p, Before)        ) => bs += p; ()
+      case Right(Around.Point(p, After)         ) => aa += p; ()
+      case Left(e)                                => es += e; ()
     }
 
-    ChecksAround(bs.result(), ds.result(), aa.result(), ai.result())
+    UnpackChecks(bs.result(), ds.result(), aa.result(), ai.result(), es.result())
   }
 
   def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])
@@ -103,11 +109,12 @@ object Runner {
         prepare(p.ros) match {
           case Some(a) =>
 
-            val checks = prepareChecksAround(invariants, arounds, p.ros.rOS)
+            val checks = unpackChecks(invariants, arounds, p.ros.os)
 
             // Perform before
             val pre = {
               val b = History.newBuilder[E]
+              checks.errors foreach b.addNE
               b.addEach(checks.befores)(_.name)(p.ros.sos, _.test(p.ros.os))
               b.group(PreName)
             }
@@ -252,10 +259,11 @@ object Runner {
         val ros = initROS
 
         val invariantsPoints = {
-          val b = Vector.newBuilder[Point[OS[O, S], E]]
-          invariants.foreach(ros.rOS) {
-            case Invariant.Point(p) => b += p; ()
-            case Invariant.Delta(_) => ()
+          val b = Vector.newBuilder[CheckNE[Point, O, S, E]]
+          invariants.foreach(ros.os) {
+            case Right(Invariant.Point(p)) => b += Right(p); ()
+            case Right(Invariant.Delta(_)) => ()
+            case e@Left(_)                 => b += e; ()
           }
           b.result()
         }
@@ -266,7 +274,7 @@ object Runner {
           else {
             val children = {
               val b = History.newBuilder[E]
-              b.addEach(invariantsPoints)(_.name)(ros.sos, _ test ros.os)
+              b.addEachNE(invariantsPoints)(_.name)(ros.sos, _ test ros.os)
               b.history()
             }
             History(History.parent(InitialState, children))

@@ -30,7 +30,7 @@ object ToInvariant {
   private def checksToInvariants[C[_, _]](implicit ci: ToInvariant[Id, C]): ToInvariant[CheckShapeA, C] =
     new ToInvariant[CheckShapeA, C] {
       override def toInvariant[A, B](c: CheckShapeA[C, A, B]): CheckShapeA[Invariant, A, B] =
-        c.rmap(ci.toInvariant)
+        c.rmap(_ map ci.toInvariant)
     }
 
   implicit val pointsToInvariants: ToInvariant[CheckShapeA, Point] =
