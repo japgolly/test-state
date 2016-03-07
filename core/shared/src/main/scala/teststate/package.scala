@@ -2,8 +2,6 @@ import teststate.data.Name
 
 package object teststate extends Name.Implicits {
 
-//  implicit def sadfhasdlfkj[F[_], R, O, S, E](b: Dsl.ActionB[F, R, O, S, E]) = b.noStateUpdate
-
   trait HasErrorString {
     def errorString: String
   }

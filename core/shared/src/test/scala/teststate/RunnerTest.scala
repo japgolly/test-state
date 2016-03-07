@@ -1,7 +1,12 @@
 package teststate
 
-import teststate.TestUtil._
 import utest._
+import teststate.data._
+import teststate.core._
+import teststate.run._
+import teststate.typeclass._
+import teststate.TestUtil._
+import CoreExports._
 
 object RunnerTest extends TestSuite {
   implicit def euqlA[A]: Equal[A] = Equal.byUnivEq
@@ -86,20 +91,19 @@ object RunnerTest extends TestSuite {
         val test = Test(nop, badPoint.before).observe(_.s)
         testHistory(test.run((), newState),
           """
-            |✘ NOP
-            |  ✘ Pre-conditions
-            |    ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+            |✘ Initial state.
+            |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
           """.stripMargin)
       }
 
+      // Point-invariants don't distinguish between before/after.
+      // All point-invariants are run both before and after actions.
       'after {
         val test = Test(nop, badPoint.after).observe(_.s)
         testHistory(test.run((), newState),
           """
-            |✘ NOP
-            |  ✓ Action
-            |  ✘ Post-conditions
-            |    ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+            |✘ Initial state.
+            |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
           """.stripMargin)
       }
 

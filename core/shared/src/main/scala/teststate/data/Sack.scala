@@ -10,7 +10,7 @@ sealed abstract class Sack[-I, +A] {
   // Note: Result is flat, coproudcts are resolved and flattened; their names discarded.
   final def foreach(i: I)(f: A => Unit): Unit = {
     def go(s: Sack[I, A]): Unit =
-      this match {
+      s match {
         case Value(a)        => f(a)
         case Product(ss)     => ss foreach go
         case CoProduct(_, p) => go(p(i))

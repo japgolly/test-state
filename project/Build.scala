@@ -52,6 +52,7 @@ object TestState extends Build {
         "c"   -> "compile",
         "tc"  -> "test:compile",
         "t"   -> "test",
+        "to"  -> "test-only",
         "cc"  -> ";clean;compile",
         "ctc" -> ";clean;test:compile",
         "ct"  -> ";clean;test"))

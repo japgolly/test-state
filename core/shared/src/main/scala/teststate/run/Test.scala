@@ -1,6 +1,6 @@
 package teststate.run
 
-import acyclic.file
+// import acyclic.file
 import teststate.data._
 import teststate.typeclass._
 import teststate.core._
@@ -37,9 +37,6 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
   def addInvariants(i: Invariants[Obs, State, Err]): TestContent[F, Ref, Obs, State, Err] =
     new TestContent(action, invariants & i)
 
-//  def addCheck(c: Check.Around[Obs, State, Err]): TestContent[F, Ref, Obs, State, Err] =
-//    new TestContent(action addCheck c, invariants)
-
   def asAction(name: NameFn[ROS[Ref, Obs, State]]) =
     Action.SubTest(name, action, invariants)
 
@@ -67,11 +64,11 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
 //  def mapE[E](f: Err => E): Test[F, Ref, Obs, State, E] =
 //    new Test(content mapE f, observe mapE f)
 
-//  def run(initialState: State, ref: => Ref): F[History[Err]] =
-//    Runner.run(this)(initialState, ref)
+  def run(initialState: State, ref: => Ref): F[History[Err]] =
+    Runner.run(this)(initialState, ref)
 
-//  def addCheck(c: Check.Around[Obs, State, Err]): Test[F, Ref, Obs, State, Err] =
-//    new Test(content addCheck c, invariants, observe)
+  def addInvariants(i: Invariants[Obs, State, Err]): Test[F, Ref, Obs, State, Err] =
+    new Test(content addInvariants i, observe)
 }
 
 object Test {

@@ -26,6 +26,7 @@ object Dsl {
     final type NameFn      = teststate.data.NameFn[OS]
     final type Point1      = Points[O, S, E]
     final type Around1     = Arounds[O, S, E]
+    final type Check       = Invariants[O, S, E]
     final type Action      = teststate.core.Action[F, R, O, S, E]
     final type Action1     = teststate.core.Action.Single[F, R, O, S, E]
     final type ActionFn    = ROS => teststate.core.Action.Prepared[F, O, S, E]
@@ -33,6 +34,7 @@ object Dsl {
     final type Test        = teststate.run.Test[F, R, O, S, E]
   }
 
+  implicit def sadfhasdlfkj[F[_], R, O, S, E](b: Dsl.ActionB[F, R, O, S, E]) = b.noStateUpdate
   final class ActionB[F[_], R, O, S, E](actionName: => String)(implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
 
     private def build(fn: (ROS => F[Option[E]]) => ActionFn): ActionB2[F, R, O, S, E] =
