@@ -1,8 +1,9 @@
-package teststate.cp3
+package teststate.test
 
 import acyclic.file
 import teststate.data._
 import teststate.typeclass._
+import teststate.core._
 import language.reflectiveCalls
 import scala.annotation.implicitNotFound
 

@@ -1,9 +1,9 @@
-package teststate.cp3
+package teststate.core
 
 import acyclic.file
 import teststate.data._
 import teststate.typeclass._
-import teststate.{cp3 => ^}
+import teststate.{core => ^}
 import Profunctor.ToOps._
 import Conditional.Implicits._
 

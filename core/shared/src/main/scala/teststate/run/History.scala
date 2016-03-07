@@ -1,9 +1,10 @@
-package teststate
+package teststate.run
 
-import scala.annotation.elidable
 import acyclic.file
+import scala.annotation.elidable
 import teststate.data._
-import teststate.typeclass._
+import teststate.typeclass.{Recover, ShowError}
+import teststate.vector1
 import History.{Options, Step, Steps}
 
 final class History[+E](val steps: Steps[E], val result: Result[E]) {
