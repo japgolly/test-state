@@ -549,6 +549,31 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
+    'duplicates {
+      'invariants {
+        test(action, checkPoint & checkPoint)(
+          """
+            |✓ Initial state.
+            |  ✓ Check stuff.
+            |✓ Press button.
+            |  ✓ Action
+            |  ✓ Invariants
+            |    ✓ Check stuff.
+            |✓ All pass.
+          """.stripMargin)
+      }
+      'delta {
+        test(action.addCheck(checkAround).addCheck(checkAround), emptyInvariants)(
+          """
+            |✓ Press button.
+            |  ✓ Action
+            |  ✓ Post-conditions
+            |    ✓ Button count increased.
+            |✓ All pass.
+          """.stripMargin)
+      }
+    }
+
     // action combinators
 
   }

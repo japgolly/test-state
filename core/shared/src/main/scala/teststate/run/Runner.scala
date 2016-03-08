@@ -1,6 +1,7 @@
 package teststate.run
 
 // import acyclic.file
+import scala.collection.mutable
 import teststate.data._
 import teststate.typeclass._
 import teststate.core._
@@ -48,6 +49,29 @@ object Runner {
   def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[E] Or B => Unit)(implicit r: Recover[E]): Unit =
     s.foreach(a)((n, t) => f(Left(NamedError(n, r apply t))))(f)
 
+  final class RefEq[+A <: AnyRef](val value: A) {
+    override def hashCode = value.hashCode
+    override def equals(x: Any) = x match {
+      case y: RefEq[AnyRef] => value eq y.value
+      case _                => false
+    }
+  }
+
+  final class UniqueListBuilder[A <: AnyRef] {
+    private val set = mutable.LinkedHashSet.empty[RefEq[A]]
+
+    def +=(a: A): Unit = {
+      set add new RefEq(a)
+      ()
+    }
+
+    def iterator(): Iterator[A] =
+      set.iterator.map(_.value)
+
+    def result(): List[A] =
+      iterator().toList
+  }
+
   case class UnpackChecks[F[_], O, S, E](befores: F[Point        [OS[O, S], E]],
                                          deltas : F[Around.DeltaA[OS[O, S], E]],
                                          aftersA: F[Point        [OS[O, S], E]],
@@ -61,27 +85,38 @@ object Runner {
 
     import Around.{Before, After, BeforeAndAfter}
 
-    val bs = List.newBuilder[Point[OS[O, S], E]]
-    val ds = List.newBuilder[Around.DeltaA[OS[O, S], E]]
-    val aa = List.newBuilder[Point[OS[O, S], E]]
-    val ai = List.newBuilder[Point[OS[O, S], E]]
-    val es = List.newBuilder[NamedError[E]]
+    type Builder[A <: AnyRef] = UniqueListBuilder[A]
+
+    def newBuilder[A <: AnyRef]: Builder[A] =
+      new UniqueListBuilder[A]
+
+    def add[A <: AnyRef](b: Builder[A], a: A): Unit =
+      b += a
+
+    def result[A <: AnyRef](r: Builder[A]): List[A] =
+      r.result()
+
+    val bs = newBuilder[Point        [OS[O, S], E]]
+    val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
+    val aa = newBuilder[Point        [OS[O, S], E]]
+    val ai = newBuilder[Point        [OS[O, S], E]]
+    val es = newBuilder[NamedError[E]]
 
     foreachSackE(invariants)(input) {
-      case Right(Invariant.Point(p)) => ai += p; ()
-      case Right(Invariant.Delta(d)) => ds += d; ()
-      case Left(e)                   => es += e; ()
+      case Right(Invariant.Point(p)) => add(ai, p)
+      case Right(Invariant.Delta(d)) => add(ds, d)
+      case Left(e)                   => add(es, e)
     }
 
     foreachSackE(arounds)(input) {
-      case Right(Around.Delta(d)                ) => ds += d; ()
-      case Right(Around.Point(p, BeforeAndAfter)) => bs += p; aa += p; ()
-      case Right(Around.Point(p, Before)        ) => bs += p; ()
-      case Right(Around.Point(p, After)         ) => aa += p; ()
-      case Left(e)                                => es += e; ()
+      case Right(Around.Delta(d)                ) => add(ds, d)
+      case Right(Around.Point(p, BeforeAndAfter)) => add(bs, p); add(aa, p)
+      case Right(Around.Point(p, Before)        ) => add(bs, p)
+      case Right(Around.Point(p, After)         ) => add(aa, p)
+      case Left(e)                                => add(es, e)
     }
 
-    UnpackChecks(bs.result(), ds.result(), aa.result(), ai.result(), es.result())
+    UnpackChecks(result(bs), result(ds), result(aa), result(ai), result(es))
   }
 
   def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])
@@ -116,8 +151,6 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
         EM pure h
     }
   }
-
-  // TODO Remove duplicate checks by reference
 
   private def checkAround[N, A](nameFn    : NameFn[ROS],
                                 invariants: Invariants[O, S, E],
@@ -290,13 +323,17 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
       val ros = initROS
 
       val invariantsPoints = {
-        val b = Vector.newBuilder[CheckNE[Point, O, S, E]]
+        val ps = new UniqueListBuilder[Point[OS[O, S], E]]
+        val es = new UniqueListBuilder[NamedError[E]]
         foreachSackE(invariants)(ros.os) {
-          case Right(Invariant.Point(p)) => b += Right(p); ()
+          case Right(Invariant.Point(p)) => ps += p
           case Right(Invariant.Delta(_)) => ()
-          case e@Left(_)                 => b += e; ()
+          case Left(e)                   => es += e
         }
-        b.result()
+        type T = CheckNE[Point, O, S, E]
+        val pi = ps.iterator().map[T](Right(_))
+        val ei = es.iterator().map[T](Left(_))
+        (pi ++ ei).toList
       }
 
       val firstSteps: H =
