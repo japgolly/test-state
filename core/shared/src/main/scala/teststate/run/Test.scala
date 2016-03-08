@@ -29,10 +29,10 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
       action.unzoomS(s, su),
       invariants.mapS(s))
 
-//  def mapE[E](f: Err => E): TestContent[F, Ref, Obs, State, E] =
-//    new TestContent(
-//      action mapE f,
-//      invariants mapE f)(executionModel, recover map f)
+  def mapE[E](f: Err => E): TestContent[F, Ref, Obs, State, E] =
+    new TestContent(
+      action mapE f,
+      invariants mapE f)(executionModel, recover map f)
 
   def addInvariants(i: Invariants[Obs, State, Err]): TestContent[F, Ref, Obs, State, Err] =
     new TestContent(action, invariants & i)
@@ -61,8 +61,8 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
   def mapS[SS](s: SS => State, su: (SS, State) => SS): Test[F, Ref, Obs, SS, Err] =
     new Test(content.mapS(s, su), observe)
 
-//  def mapE[E](f: Err => E): Test[F, Ref, Obs, State, E] =
-//    new Test(content mapE f, observe mapE f)
+  def mapE[E](f: Err => E): Test[F, Ref, Obs, State, E] =
+    new Test(content mapE f, observe mapE f)
 
   def run(initialState: State, ref: => Ref): F[History[Err]] =
     Runner.run(this)(initialState, ref)

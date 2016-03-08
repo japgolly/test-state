@@ -44,7 +44,7 @@ sealed trait Action[F[_], R, O, S, E] {
 
   def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]): This[F, R, OO, SS, E]
 
-//  def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]): This[F, R, O, S, EE]
+  def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]): This[F, R, O, S, EE]
 
   def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]): This[F, R, OO, S, E]
 
@@ -125,8 +125,8 @@ object Action {
     override def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F]) =
       map(_.mapOS(o, s, su))
 
-//    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
-//      map(_ mapE f)
+    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
+      map(_ mapE f)
 
     override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) =
       map(_ pmapO f)
@@ -192,11 +192,11 @@ object Action {
         ros => action(ros.mapOS(o, s)).map(_.mapOS(o, s, su)),
         check.mapOS(o, s))
 
-//    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
-//      Group(
-//        name,
-//        action(_) map (_ mapE f),
-//        check mapE f)
+    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
+      Group(
+        name,
+        action(_) map (_ mapE f),
+        check mapE f)
 
     override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) =
       Group(
@@ -250,10 +250,10 @@ object Action {
         ros => run(ros.mapOS(o, s)).map(fn => () => em.map(fn())(_.map(f => (oo: OO) => f(o(oo)).map(s => su(ros.state, s))))),
         check.mapOS(o, s))
 
-//    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) = Single[F, R, O, S, EE](
-//      name,
-//      run(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))),
-//      check mapE f)
+    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) = Single[F, R, O, S, EE](
+      name,
+      run(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))),
+      check mapE f)
 
     override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) = Single[F, R, OO, S, E](
       name pmapO f,
@@ -296,11 +296,11 @@ object Action {
         action.mapOS(o, s, su),
         invariants.mapOS(o, s))
 
-//    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
-//      SubTest(
-//        name,
-//        action mapE f,
-//        invariants mapE f)
+    override def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F]) =
+      SubTest(
+        name,
+        action mapE f,
+        invariants mapE f)
 
     override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) =
       SubTest(
