@@ -61,6 +61,13 @@ object OutputTest extends TestSuite {
             |  ✓ Check more stuff.
             |✓ All pass.
           """.stripMargin)
+
+        'coproduct - t(*.choose("Who knows?!", _ => checkPoint))(
+          """
+            |✓ Initial state.
+            |  ✓ Check stuff.
+            |✓ All pass.
+          """.stripMargin)
       }
       'fail {
         'single - t(checkPointF)(
@@ -81,6 +88,12 @@ object OutputTest extends TestSuite {
             |✘ Initial state.
             |  ✓ Check stuff.
             |  ✘ Check failure. -- Shit broke!
+          """.stripMargin)
+
+        'coproduct - t(*.chooseE("Who knows?!", _ => Left("Computer says no.")))(
+          """
+            |✘ Initial state.
+            |  ✘ Who knows?! -- Computer says no.
           """.stripMargin)
       }
     }

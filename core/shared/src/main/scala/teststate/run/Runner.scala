@@ -6,6 +6,7 @@ import teststate.typeclass._
 import teststate.core._
 import teststate.vector1
 import CoreExports._
+import Types.SackE
 
 object Runner {
 
@@ -44,6 +45,9 @@ object Runner {
 
   private type CheckNE[C[_, _], O, S, E] = NamedError[E] Or C[OS[O, S], E]
 
+  def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[E] Or B => Unit)(implicit r: Recover[E]): Unit =
+    s.foreach(a)((n, t) => f(Left(NamedError(n, r apply t))))(f)
+
   case class UnpackChecks[F[_], O, S, E](befores: F[Point        [OS[O, S], E]],
                                          deltas : F[Around.DeltaA[OS[O, S], E]],
                                          aftersA: F[Point        [OS[O, S], E]],
@@ -52,7 +56,9 @@ object Runner {
 
   def unpackChecks[O, S, E](invariants: Invariants[O, S, E],
                             arounds   : Arounds[O, S, E],
-                            input     : OS[O, S]): UnpackChecks[List, O, S, E] = {
+                            input     : OS[O, S])
+                           (implicit r: Recover[E]): UnpackChecks[List, O, S, E] = {
+
     import Around.{Before, After, BeforeAndAfter}
 
     val bs = List.newBuilder[Point[OS[O, S], E]]
@@ -61,13 +67,13 @@ object Runner {
     val ai = List.newBuilder[Point[OS[O, S], E]]
     val es = List.newBuilder[NamedError[E]]
 
-    invariants.foreach(input) {
+    foreachSackE(invariants)(input) {
       case Right(Invariant.Point(p)) => ai += p; ()
       case Right(Invariant.Delta(d)) => ds += d; ()
       case Left(e)                   => es += e; ()
     }
 
-    arounds.foreach(input) {
+    foreachSackE(arounds)(input) {
       case Right(Around.Delta(d)                ) => ds += d; ()
       case Right(Around.Point(p, BeforeAndAfter)) => bs += p; aa += p; ()
       case Right(Around.Point(p, Before)        ) => bs += p; ()
@@ -260,7 +266,7 @@ object Runner {
 
         val invariantsPoints = {
           val b = Vector.newBuilder[CheckNE[Point, O, S, E]]
-          invariants.foreach(ros.os) {
+          foreachSackE(invariants)(ros.os) {
             case Right(Invariant.Point(p)) => b += Right(p); ()
             case Right(Invariant.Delta(_)) => ()
             case e@Left(_)                 => b += e; ()

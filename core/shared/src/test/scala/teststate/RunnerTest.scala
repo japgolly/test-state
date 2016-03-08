@@ -127,6 +127,15 @@ object RunnerTest extends TestSuite {
           """.stripMargin)
       }
 
+      'coproduct - {
+        val test = Test(nop, *.choose("Who knows?!", _ => sys error "NO!")).observe(_.s)
+        testHistory(test.run((), newState),
+        """
+          |✘ Initial state.
+          |  ✘ Who knows?! -- Caught exception: java.lang.RuntimeException: NO!
+        """.stripMargin)
+      }
+
       'obs1 {
         val test = Test(nop).observe(_ => sys error "NO!")
         testHistory(test.run((), newState),

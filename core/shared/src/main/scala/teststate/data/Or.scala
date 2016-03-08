@@ -27,6 +27,12 @@ sealed abstract class Or[+A, +B] extends Product with Serializable {
   final def bimap[C, D](l: A => C, r: B => D): C Or D =
     fold(a => Left(l(a)), b => Right(r(b)))
 
+  final def recover[C >: B](f: A => C): C =
+    this match {
+      case Right(b) => b
+      case Left(a) => f(a)
+    }
+
   final def leftMap[C, D >: B](f: A => C): C Or D =
     this match {
       case r: Right[B] => r

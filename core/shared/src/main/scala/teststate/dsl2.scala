@@ -7,6 +7,7 @@ import teststate.run.Test
 import teststate.typeclass._
 import CoreExports._
 import Dsl.{Types, ActionB}
+import Types.CheckShape
 
 object Dsl {
   def apply[F[_]: ExecutionModel, R, O, S, E] =
@@ -74,6 +75,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   private def sack1[A](a: A) =
     Sack.Value(Right(a))
 
+  private def sackE(ne: NamedError[E]) =
+    Sack.Value(Left(ne))
+
   def point(name: NameFn, test: OS => Option[E]): Point1 =
     sack1(Point(name, Tri failedOption test(_)))
 
@@ -96,8 +100,11 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def testAround(name: NameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around1 =
     around(name, identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
+  def choose[C[-_, _]](name: Name, f: OS => CheckShape[C, O, S, E]): CheckShape[C, O, S, E] =
+    Sack.CoProduct(name, f)
 
-
+  def chooseE[C[-_, _]](name: Name, f: OS => E Or CheckShape[C, O, S, E]): CheckShape[C, O, S, E] =
+    Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name, e))))
 
   def focus(focusName: => String) =
     new Focus(focusName)
