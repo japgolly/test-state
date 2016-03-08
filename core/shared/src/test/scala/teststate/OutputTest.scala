@@ -1,7 +1,12 @@
 package teststate
 
 import utest._
-import TestUtil._
+import teststate.data._
+import teststate.core._
+import teststate.run._
+import teststate.typeclass._
+import teststate.TestUtil._
+import CoreExports._
 
 object OutputTest extends TestSuite {
 
@@ -37,7 +42,7 @@ object OutputTest extends TestSuite {
 
   override def tests = TestSuite {
 
-    'empty - test(Action.empty, Check.empty)("- Nothing to do.")
+    'empty - test(Action.empty, Sack.empty)("- Nothing to do.")
 
     'invariants {
       def t(i: *.Check)(expect: String) = test(Action.empty, i)(expect)
@@ -54,6 +59,13 @@ object OutputTest extends TestSuite {
             |✓ Initial state.
             |  ✓ Check stuff.
             |  ✓ Check more stuff.
+            |✓ All pass.
+          """.stripMargin)
+
+        'coproduct - t(*.choose("Who knows?!", _ => checkPoint))(
+          """
+            |✓ Initial state.
+            |  ✓ Check stuff.
             |✓ All pass.
           """.stripMargin)
       }
@@ -77,11 +89,17 @@ object OutputTest extends TestSuite {
             |  ✓ Check stuff.
             |  ✘ Check failure. -- Shit broke!
           """.stripMargin)
+
+        'coproduct - t(*.chooseE("Who knows?!", _ => Left("Computer says no.")))(
+          """
+            |✘ Initial state.
+            |  ✘ Who knows?! -- Computer says no.
+          """.stripMargin)
       }
     }
 
     'action {
-      def t(a: *.Action)(expect: String) = test(a, Check.empty)(expect)
+      def t(a: *.Action)(expect: String) = test(a, Sack.empty)(expect)
       'pass {
         'simplest - t(action)(
           """
@@ -197,7 +215,7 @@ object OutputTest extends TestSuite {
     }
 
     'actionG {
-      def t(a: *.Action)(expect: String) = test(a, Check.empty)(expect)
+      def t(a: *.Action)(expect: String) = test(a, Sack.empty)(expect)
       'pass {
         'simple - t(actionG)(
           """
@@ -366,13 +384,13 @@ object OutputTest extends TestSuite {
           |✓ All pass.
         """.stripMargin)
 
-      'action - test(actionS, Check.empty)(
+      'action - test(actionS, Sack.empty)(
         """
           |- Press button.
           |- All skipped.
         """.stripMargin)
 
-      'actionBefore - test(action addCheck checkPoint.before.skip, Check.empty)(
+      'actionBefore - test(action addCheck checkPoint.before.skip, Sack.empty)(
         """
           |✓ Press button.
           |  - Pre-conditions
@@ -381,7 +399,7 @@ object OutputTest extends TestSuite {
           |✓ All pass.
         """.stripMargin)
 
-      'actionAround - test(action addCheck checkAround.skip, Check.empty)(
+      'actionAround - test(action addCheck checkAround.skip, Sack.empty)(
         """
           |✓ Press button.
           |  ✓ Action
@@ -390,7 +408,7 @@ object OutputTest extends TestSuite {
           |✓ All pass.
         """.stripMargin)
 
-      'actionAfter - test(action addCheck checkPoint.after.skip, Check.empty)(
+      'actionAfter - test(action addCheck checkPoint.after.skip, Sack.empty)(
         """
           |✓ Press button.
           |  ✓ Action
@@ -399,13 +417,13 @@ object OutputTest extends TestSuite {
           |✓ All pass.
         """.stripMargin)
 
-      'group - test(actionGS, Check.empty)(
+      'group - test(actionGS, Sack.empty)(
         """
           |- Groupiness.
           |- All skipped.
         """.stripMargin)
 
-      'group1 - test((actionS >> action2).group("Groupiness."), Check.empty)(
+      'group1 - test((actionS >> action2).group("Groupiness."), Sack.empty)(
         """
           |✓ Groupiness.
           |  - Press button.
@@ -413,7 +431,7 @@ object OutputTest extends TestSuite {
           |✓ All pass.
         """.stripMargin)
 
-      'group2 - test((action >> action2S).group("Groupiness."), Check.empty)(
+      'group2 - test((action >> action2S).group("Groupiness."), Sack.empty)(
         """
           |✓ Groupiness.
           |  ✓ Press button.
@@ -421,7 +439,7 @@ object OutputTest extends TestSuite {
           |✓ All pass.
         """.stripMargin)
 
-      'group12 - test((actionS >> action2S).group("Groupiness."), Check.empty)(
+      'group12 - test((actionS >> action2S).group("Groupiness."), Sack.empty)(
         """
           |- Groupiness.
           |  - Press button.

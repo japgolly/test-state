@@ -1,7 +1,11 @@
 package teststate
 
 import utest._
-import Or.{Left, Right}
+import teststate.data._
+import teststate.core._
+import teststate.run._
+import teststate.typeclass._
+import CoreExports._
 import Show.Implicits.showByToString
 
 object CoproductExample {
@@ -79,7 +83,7 @@ object CoproductExample {
 
     val testNum: Action[Id, Top, Obs, State, String] =
       Num.test.content
-        .cmapS[State](_.num, (s, n) => s.copy(num = n))
+        .mapS[State](_.num, (s, n) => s.copy(num = n))
         .pmapO[Obs] {
             case Left(i) => Right(i)
             case Right(_) => Left("Expected Int, got Txt.")
@@ -88,12 +92,12 @@ object CoproductExample {
             case x: Num => Right(x)
             case _      => Left("Expected Num, got Txt.")
           })
-        .addCheck(curType.state.assert.equal(Type.Num).before)
+        .addInvariants(curType.state.assert.equal(Type.Num).before)
         .asAction("Test Num")
 
     val testTxt: Action[Id, Top, Obs, State, String] =
       Txt.test.content
-        .cmapS[State](_.txt, (s, n) => s.copy(txt = n))
+        .mapS[State](_.txt, (s, n) => s.copy(txt = n))
         .pmapO[Obs] {
             case Right(t) => Right(t)
             case Left(_) => Left("Expected Int, got Txt.")
@@ -102,7 +106,7 @@ object CoproductExample {
             case x: Txt => Right(x)
             case _      => Left("Expected Txt, got Num.")
           })
-        .addCheck(curType.state.assert.equal(Type.Txt).before)
+        .addInvariants(curType.state.assert.equal(Type.Txt).before)
         .asAction("Test Text")
 
     val invariants =

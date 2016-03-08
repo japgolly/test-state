@@ -1,6 +1,7 @@
 package teststate
 
 import scala.io.AnsiColor._
+import teststate.typeclass.Equal
 
 object TestUtil extends TestUtil
 

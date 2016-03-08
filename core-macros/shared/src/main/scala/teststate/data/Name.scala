@@ -1,4 +1,6 @@
-package teststate
+package teststate.data
+
+import acyclic.file
 
 final class Name(init: () => String) {
   private[this] var thunk = init
@@ -37,10 +39,10 @@ object Name {
     import c.universe.{Name => _, _}
 
     def name(body: c.Expr[String]): c.Expr[Name] =
-      c.Expr[Name](q"_root_.teststate.Name($body)")
+      c.Expr[Name](q"_root_.teststate.data.Name($body)")
 
     def nameFn(body: c.Expr[String]): c.Expr[NameFn[Any]] =
-      c.Expr[NameFn[Any]](q"_root_.teststate.NameFn.const($body)")
+      c.Expr[NameFn[Any]](q"_root_.teststate.data.NameFn.const($body)")
 
 //    def nameFn2[A](body: c.Expr[A])(ev: c.Expr[A => Name]): c.Expr[NameFn[Any]] =
 //      c.Expr[NameFn[Any]](q"Function const $ev($body)")

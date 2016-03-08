@@ -1,6 +1,10 @@
-package teststate
+package teststate.run
 
+import acyclic.file
 import scala.annotation.elidable
+import teststate.data._
+import teststate.typeclass.{Recover, ShowError}
+import teststate.vector1
 import History.{Options, Step, Steps}
 
 final class History[+E](val steps: Steps[E], val result: Result[E]) {
@@ -53,9 +57,9 @@ final class History[+E](val steps: Steps[E], val result: Result[E]) {
 
     def appendResultFlag(r: Result[E]): Unit = {
       sb append (r match {
-        case Result.Pass    => options.onPass
-        case Result.Skip    => options.onSkip
-        case Result.Fail(_) => options.onFail
+        case Pass    => options.onPass
+        case Skip    => options.onSkip
+        case Fail(_) => options.onFail
       })
       ()
     }
@@ -158,11 +162,23 @@ object History {
         r += h.result
       }
 
-    def addEach[A, B](as: Vector[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => TriResult[E, Any])(implicit recover: Recover[E]): Unit =
-      for (a <- as) {
-        val n = recover.name(nameFn(a), nameInput)
-        val r = recover.recover(Result(test(a)), Result.Fail(_))
-        this += Step(n, r)
+    def add1[A, B](a: A)(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit = {
+      val n = recover.name(nameFn(a), nameInput)
+      val r = recover.recover(test(a).toResult, Fail(_))
+      this += Step(n, r)
+    }
+
+    def addNE(ne: NamedError[E]): Unit =
+      this += Step(ne.name, Fail(ne.error))
+
+    def addEach[A, B](as: TraversableOnce[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit =
+      for (a <- as)
+        add1(a)(nameFn)(nameInput, test)(recover)
+
+    def addEachNE[A, B](as: TraversableOnce[NamedError[E] Or A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit =
+      as foreach {
+        case Right(a) => add1(a)(nameFn)(nameInput, test)(recover)
+        case Left(ne) => addNE(ne)
       }
 
     def failed(): Boolean =
