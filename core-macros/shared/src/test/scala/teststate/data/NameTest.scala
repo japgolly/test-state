@@ -32,5 +32,19 @@ object NameTest extends TestSuite {
         assert(i == 1)
       }
     }
+
+    'pure {
+      'name {
+        val n: Name = "good"
+        assertMatch(n) { case _: Name.Now => () }
+      }
+      'nameFn {
+        val fn: NameFn[Unit] = "good"
+        val a = fn(None)
+        val b = fn(Some(()))
+        assertMatch(a) { case _: Name.Now => () }
+        assert(a eq b)
+      }
+    }
   }
 }

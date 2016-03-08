@@ -2,26 +2,39 @@ package teststate.data
 
 import acyclic.file
 
-final class Name(init: () => String) {
-  private[this] var thunk = init
-
-  lazy val value: String = {
-    val n = thunk()
-    thunk = null // dereference
-    n
-  }
-
-  def map(f: String => String): Name =
-    Name(f(value))
+abstract class Name {
+  def value: String
+  def map(f: String => String): Name
 }
 
 object Name {
 
+  final class Now(override val value: String) extends Name {
+    override def map(f: String => String): Name =
+      now(f(value))
+  }
+
+  final class Later(init: () => String) extends Name {
+    private[this] var thunk = init
+
+    override lazy val value: String = {
+      val n = thunk()
+      thunk = null // dereference
+      n
+    }
+
+    override def map(f: String => String): Name =
+      Name(f(value))
+  }
+
+  def now(value: String): Now =
+    new Now(value)
+
   def apply(n: => String): Name =
-    new Name(() => n)
+    new Later(() => n)
 
   def lazily(n: => Name): Name =
-    new Name(() => n.value) // TODO Being a bit lazy here
+    new Later(() => n.value)
 
   // TODO Is this needed? Just put in comp objects, no?
   trait Implicits {
@@ -41,7 +54,12 @@ object Name {
     import c.universe.{Name => _, _}
 
     def name(body: c.Expr[String]): c.Expr[Name] =
-      c.Expr[Name](q"_root_.teststate.data.Name($body)")
+      body match {
+        case Expr(Literal(Constant(s: String))) =>
+          c.Expr[Name](q"_root_.teststate.data.Name.now($s)")
+        case _ =>
+          c.Expr[Name](q"_root_.teststate.data.Name($body)")
+      }
 
     def nameFn(body: c.Expr[String]): c.Expr[NameFn[Any]] =
       c.Expr[NameFn[Any]](q"_root_.teststate.data.NameFn.const($body)")
@@ -65,9 +83,6 @@ final case class NameFn[-A](fn: Option[A] => Name) extends AnyVal {
 
   def comap[B](f: B => Option[A]): NameFn[B] =
     NameFn(ob => apply(ob flatMap f))
-
-  //    def pmapFnE[A, B](fn: Fn[A])(f: B => Nothing Or A): Fn[B] =
-  //      pmapFn(fn)(f(_).right.toOption) // TODO Use custom toOption after moving EitherExt into own package
 }
 
 object NameFn {

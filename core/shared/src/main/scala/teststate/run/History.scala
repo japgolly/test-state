@@ -165,7 +165,7 @@ object History {
     def add1[A, B](a: A)(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit = {
       val n = recover.name(nameFn(a), nameInput)
       val r = recover.recover(test(a).toResult, Fail(_))
-      this += Step(Name(n), r)
+      this += Step(n, r)
     }
 
     def addNE(ne: NamedError[E]): Unit =

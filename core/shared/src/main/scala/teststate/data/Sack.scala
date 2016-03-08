@@ -15,7 +15,7 @@ sealed abstract class Sack[-I, +A] {
         case Product(ss)     => ss foreach go
         case CoProduct(n, p) => Recover.id.attempt(p(i)) match {
           case Right(s) => go(s)
-          case Left(e)  => err(Name(Recover.recoverToString.name(n, Some(i))), e)
+          case Left(e)  => err(Recover.recoverToString.name(n, Some(i)), e)
         }
       }
     go(this)

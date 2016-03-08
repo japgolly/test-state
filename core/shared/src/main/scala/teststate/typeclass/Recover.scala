@@ -13,14 +13,17 @@ final case class Recover[+E](apply: Throwable => E) extends AnyVal {
   def attempt[A](a: => A): E Or A =
     recover(Right(a), Left(_))
 
-  def name[A](f: NameFn[A], a: Some[A]): String =
-    attempt(f(a).value) match {
-      case Right(n) => n
-      case Left(_) => attempt(f(None).value) match {
+  def name[A](f: NameFn[A], a: Some[A]): Name = {
+    val name: String =
+      attempt(f(a).value) match {
         case Right(n) => n
-        case Left(e) => "Name exception: " + e.toString
+        case Left(_)  => attempt(f(None).value) match {
+          case Right(n) => n
+          case Left(e)  => "Name exception: " + e.toString
+        }
       }
-    }
+    Name now name
+  }
 }
 
 object Recover {
