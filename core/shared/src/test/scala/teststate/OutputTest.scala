@@ -460,7 +460,14 @@ object OutputTest extends TestSuite {
         (set("E") >> set("F")).group("E & F").skip >>
         set("G")
 
-      test(a, i)(
+      val sub = Test(
+        mockAction("SubAction") addCheck mockAround("Sub around-check"),
+        mockPoint("Sub-invariant 1")
+      ) addInvariants mockPoint("Sub-invariant 2")
+
+      val all = a >> sub.asAction("SubTest")
+
+      test(all, i)(
         """
           |✓ Initial state.
           |  ✓ Invariant 1
@@ -523,6 +530,21 @@ object OutputTest extends TestSuite {
           |  ✓ Invariants
           |    ✓ Invariant 1
           |    ✓ Invariant 2
+          |✓ SubTest
+          |  ✓ Initial state.
+          |    ✓ Invariant 1
+          |    ✓ Invariant 2
+          |    ✓ Sub-invariant 1
+          |    ✓ Sub-invariant 2
+          |  ✓ SubAction
+          |    ✓ Action
+          |    ✓ Post-conditions
+          |      ✓ Sub around-check
+          |    ✓ Invariants
+          |      ✓ Invariant 1
+          |      ✓ Invariant 2
+          |      ✓ Sub-invariant 1
+          |      ✓ Sub-invariant 2
           |✓ All pass.
         """.stripMargin)
     }

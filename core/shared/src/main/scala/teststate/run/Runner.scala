@@ -86,236 +86,29 @@ object Runner {
 
   def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])
                            (initialState: S, ref: => R): F[History[E]] = {
+    val runner = new Runner[F, R, O, S, E]()(test.content.executionModel, test.content.recover)
+    runner.run(test)(initialState, () => ref)
+  }
+}
 
-    import test.content.{executionModel => EM, recover, invariants}
+private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], recover: Recover[E]) {
+  import Runner._
 
-    val refFn = () => ref
+  private type H    = History[E]
+  private type ROS  = teststate.data.ROS[R, O, S]
+  private type Test = teststate.run.Test[F, R, O, S, E]
+  private type P    = Progress[F, R, O, S, E]
 
-    type H    = History[E]
-    type ROS  = teststate.data.ROS[R, O, S]
-    type Test = teststate.run.Test[F, R, O, S, E]
-    type P    = Progress[F, R, O, S, E]
+  private def observe(test: Test, ref: R): E Or O =
+    recover.recover(test.observe.apply(ref), Left(_))
 
-    def observe(test: Test): E Or O =
-      recover.recover(test.observe.apply(ref), Left(_))
+  def run(test: Test)(initialState: S, refFn: () => R): F[History[E]] = {
+    val ref = refFn()
 
-    def subtest(test: Test, initROS: ROS, summariseFinalResult: Boolean): F[P] = {
-
-      // TODO Remove duplicate checks by reference
-      //    val invariants = test.content.invariants
-      //    val invariantsAround = test.content.invariants.getAround
-      //    val invariantsPoints = test.content.invariants.getPoint.getSingles
-
-      def checkAround[N, A](nameFn: NameFn[ROS], arounds: Arounds[O, S, E], collapse: Boolean, p: P)
-                           (prepare: ROS => Option[A])
-                           (run: A => F[(Name => H, ROS)]): F[P] = {
-
-        val name = recover.name(nameFn, p.ros.some)
-
-        prepare(p.ros) match {
-          case Some(a) =>
-
-            val checks = unpackChecks(invariants, arounds, p.ros.os)
-
-            // Perform before
-            val pre = {
-              val b = History.newBuilder[E]
-              checks.errors foreach b.addNE
-              b.addEach(checks.befores)(_.name)(p.ros.sos, _.test(p.ros.os))
-              b.group(PreName)
-            }
-
-            if (pre.failed) {
-              EM.pure(p :+ History.parent(name, pre))
-
-            } else {
-
-              // Perform around-pre
-              val hcs = {
-                val b = Vector.newBuilder[HalfCheck[O, S, E]]
-                for (d0 <- checks.deltas) {
-                  val d = d0.aux
-                  val r = recover.attempt(d.before(p.ros.os)).fold(Failed(_), identity)
-                  b += HalfCheck(d)(r)
-                }
-                b.result()
-              }
-
-              // Perform action
-              val runF = run(a)
-              EM.map(runF) { case (mkStep, ros2) =>
-
-                def addStep(s: History.Step[E]) =
-                  p.copy(ros = ros2, history = p.history :+ s)
-
-                val step = mkStep(ActionName)
-                val collapseIfNoPost = collapse && pre.isEmpty && step.steps.length == 1
-                def collapsed = step.steps(0).copy(name = name)
-                if (step.failed) {
-
-                  if (collapseIfNoPost)
-                    addStep(collapsed)
-                  else
-                    addStep(History.parent(name, pre ++ step))
-
-                } else {
-
-                  // Post conditions
-                  val post1 = {
-                    val b = History.newBuilder[E]
-                    b.addEach(hcs)(
-                      c => c.check.name)(ros2.sos,
-                      c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a))) // Perform around-post
-                    b.addEach(checks.aftersA)(_.name)(ros2.sos, _.test(ros2.os)) // Perform post
-                    b.group(PostName)
-                  }
-
-                  // Check invariants
-                  val invs = {
-                    val b = History.newBuilder[E]
-                    b.addEach(checks.aftersI)(_.name)(ros2.sos, _.test(ros2.os))
-                    b.group(InvariantsName)
-                  }
-
-                  val post = post1 ++ invs
-
-                  if (collapseIfNoPost && post.isEmpty)
-                    addStep(collapsed)
-                  else
-                    addStep(History.parent(name, pre ++ step ++ post))
-                }
-              }
-            }
-
-          case None =>
-            EM.pure(p :+ History.Step(name, Skip))
-        }
-      }
-
-      def start(a: Action[F, R, O, S, E], ros: ROS, history: H = History.empty) =
-        go(Progress(vector1(a), ros, history))
-
-      def go(p0: P): F[P] =
-        EM.tailrec(p0)(x => x.queue.isEmpty || x.failed) { p =>
-
-          def continue(r: F[P]): F[P] =
-            EM.map(r)(_.copy(queue = p.queue.tail))
-
-          import p.ros
-          p.queue.head match {
-
-            // ==============================================================================
-            case Action.Single(nameFn, run, check) =>
-              val omg2F =
-                checkAround(nameFn, check, true, p)(run) { act =>
-
-                  def ret(ros: ROS, r: Result[E], hs: History.Steps[E] = Vector.empty) =
-                    ((n: Name) => History(History.Step(n, r) +: hs), ros)
-
-                  EM.map(EM.recover(act())) {
-                    case Right(nextStateFn) =>
-                      observe(test) match {
-                        case Right(obs2) =>
-                          recover.attempt(nextStateFn(obs2)) match {
-                            case Right(Right(state2)) =>
-                              val ros2 = new ROS(refFn, obs2, state2)
-                              ret(ros2, Pass)
-                            case Right(Left(e)) =>
-                              ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
-                            case Left(e) =>
-                              ret(ros, Pass, vector1(History.Step(UpdateState, Fail(e))))
-                          }
-                        case Left(e) =>
-                          ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
-                      }
-                    case Left(e) =>
-                      ret(ros, Fail(e))
-                  }
-
-                }
-              continue(omg2F)
-
-            // ==============================================================================
-            case Action.Group(nameFn, actionFn, check) =>
-              val omg2F =
-                checkAround(nameFn, check, false, p)(actionFn)(children =>
-                  EM.map(start(children, ros))(omgC =>
-                    ((_: Name) => omgC.history, omgC.ros))
-                )
-              continue(omg2F)
-
-            // ==============================================================================
-            case Action.SubTest(name, action, subInvariants) =>
-              val t = new Test(new TestContent(action, invariants & subInvariants), test.observe)
-              val subomg = subtest(t, ros, false)
-              EM.map(subomg)(s =>
-                Progress(
-                  p.queue.tail,
-                  s.ros,
-                  p.history ++ History.maybeParent(name(ros.some), s.history)
-                ))
-
-            // ==============================================================================
-            case Action.Composite(actions) =>
-              EM.pure(p.copy(queue = p.queue.tail ++ actions.toVector))
-          }
-        }
-
-      val finalResult: F[P] = {
-        val ros = initROS
-
-        val invariantsPoints = {
-          val b = Vector.newBuilder[CheckNE[Point, O, S, E]]
-          foreachSackE(invariants)(ros.os) {
-            case Right(Invariant.Point(p)) => b += Right(p); ()
-            case Right(Invariant.Delta(_)) => ()
-            case e@Left(_)                 => b += e; ()
-          }
-          b.result()
-        }
-
-        val firstSteps: H =
-          if (invariantsPoints.isEmpty)
-            History.empty
-          else {
-            val children = {
-              val b = History.newBuilder[E]
-              b.addEachNE(invariantsPoints)(_.name)(ros.sos, _ test ros.os)
-              b.history()
-            }
-            History(History.parent(InitialState, children))
-          }
-
-        val fh: F[P] =
-          if (firstSteps.failed)
-            EM.pure(Progress[F, R, O, S, E](Vector.empty, ros, firstSteps))
-          else
-            start(test.content.action, ros, firstSteps)
-
-        EM.map(fh) { omg =>
-          import omg.{history => h}
-          val h2: H =
-            if (h.isEmpty)
-              History(History.Step("Nothing to do.", Skip))
-            else if (summariseFinalResult)
-              h.result match {
-                case Pass    => h :+ History.Step("All pass.", Pass)
-                case Skip    => h :+ History.Step("All skipped.", Skip)
-                case Fail(_) => h
-              }
-            else
-              h
-          omg.copy(history = h2)
-        }
-      }
-
-      finalResult
-    }
-
-    observe(test) match {
+    observe(test, ref) match {
       case Right(obs) =>
-        val ros = new ROS(refFn, obs, initialState)
-        EM.map(subtest(test, ros, true))(_.history)
+        val ros = new ROS(() => ref, obs, initialState)
+        EM.map(subtest(test, refFn, ros, true))(_.history)
 
       case Left(e) =>
         val s = History.Step(Observation, Fail(e))
@@ -323,5 +116,225 @@ object Runner {
         EM pure h
     }
   }
-}
 
+  // TODO Remove duplicate checks by reference
+
+  private def checkAround[N, A](nameFn    : NameFn[ROS],
+                                invariants: Invariants[O, S, E],
+                                arounds   : Arounds[O, S, E],
+                                collapse  : Boolean,
+                                p         : P)
+                               (prepare   : ROS => Option[A])
+                               (run       : A => F[(Name => H, ROS)]): F[P] = {
+
+    val name = recover.name(nameFn, p.ros.some)
+
+    prepare(p.ros) match {
+      case Some(a) =>
+
+        val checks = unpackChecks(invariants, arounds, p.ros.os)
+
+        // Perform before
+        val pre = {
+          val b = History.newBuilder[E]
+          checks.errors foreach b.addNE
+          b.addEach(checks.befores)(_.name)(p.ros.sos, _.test(p.ros.os))
+          b.group(PreName)
+        }
+
+        if (pre.failed) {
+          EM.pure(p :+ History.parent(name, pre))
+
+        } else {
+
+          // Perform around-pre
+          val hcs = {
+            val b = Vector.newBuilder[HalfCheck[O, S, E]]
+            for (d0 <- checks.deltas) {
+              val d = d0.aux
+              val r = recover.attempt(d.before(p.ros.os)).fold(Failed(_), identity)
+              b += HalfCheck(d)(r)
+            }
+            b.result()
+          }
+
+          // Perform action
+          val runF = run(a)
+          EM.map(runF) { case (mkStep, ros2) =>
+
+            def addStep(s: History.Step[E]) =
+              p.copy(ros = ros2, history = p.history :+ s)
+
+            val step = mkStep(ActionName)
+            val collapseIfNoPost = collapse && pre.isEmpty && step.steps.length == 1
+            def collapsed = step.steps(0).copy(name = name)
+            if (step.failed) {
+
+              if (collapseIfNoPost)
+                addStep(collapsed)
+              else
+                addStep(History.parent(name, pre ++ step))
+
+            } else {
+
+              // Post conditions
+              val post1 = {
+                val b = History.newBuilder[E]
+                b.addEach(hcs)(
+                  c => c.check.name)(ros2.sos,
+                  c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a))) // Perform around-post
+                b.addEach(checks.aftersA)(_.name)(ros2.sos, _.test(ros2.os)) // Perform post
+                b.group(PostName)
+              }
+
+              // Check invariants
+              val invs = {
+                val b = History.newBuilder[E]
+                b.addEach(checks.aftersI)(_.name)(ros2.sos, _.test(ros2.os))
+                b.group(InvariantsName)
+              }
+
+              val post = post1 ++ invs
+
+              if (collapseIfNoPost && post.isEmpty)
+                addStep(collapsed)
+              else
+                addStep(History.parent(name, pre ++ step ++ post))
+            }
+          }
+        }
+
+      case None =>
+        EM.pure(p :+ History.Step(name, Skip))
+    }
+  }
+
+  private def subtest(test: Test,
+                      refFn: () => R,
+                      initROS: ROS,
+                      summariseFinalResult: Boolean): F[P] = {
+
+    import test.content.invariants
+
+    def start(a: Action[F, R, O, S, E], ros: ROS, history: H = History.empty) =
+      go(Progress(vector1(a), ros, history))
+
+    def go(p0: P): F[P] =
+      EM.tailrec(p0)(x => x.queue.isEmpty || x.failed) { p =>
+
+        def continue(r: F[P]): F[P] =
+          EM.map(r)(_.copy(queue = p.queue.tail))
+
+        import p.ros
+        p.queue.head match {
+
+          // ==============================================================================
+          case Action.Single(nameFn, run, check) =>
+            val omg2F =
+              checkAround(nameFn, invariants, check, true, p)(run) { act =>
+
+                def ret(ros: ROS, r: Result[E], hs: History.Steps[E] = Vector.empty) =
+                  ((n: Name) => History(History.Step(n, r) +: hs), ros)
+
+                EM.map(EM.recover(act())) {
+                  case Right(nextStateFn) =>
+                    val ref = refFn()
+                    observe(test, ref) match {
+                      case Right(obs2) =>
+                        recover.attempt(nextStateFn(obs2)) match {
+                          case Right(Right(state2)) =>
+                            val ros2 = new ROS(() => ref, obs2, state2)
+                            ret(ros2, Pass)
+                          case Right(Left(e)) =>
+                            ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
+                          case Left(e) =>
+                            ret(ros, Pass, vector1(History.Step(UpdateState, Fail(e))))
+                        }
+                      case Left(e) =>
+                        ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
+                    }
+                  case Left(e) =>
+                    ret(ros, Fail(e))
+                }
+
+              }
+            continue(omg2F)
+
+          // ==============================================================================
+          case Action.Group(nameFn, actionFn, check) =>
+            val omg2F =
+              checkAround(nameFn, invariants, check, false, p)(actionFn)(children =>
+                EM.map(start(children, ros))(omgC =>
+                  ((_: Name) => omgC.history, omgC.ros))
+              )
+            continue(omg2F)
+
+          // ==============================================================================
+          case Action.SubTest(name, action, subInvariants) =>
+            val t = new Test(new TestContent(action, invariants & subInvariants), test.observe)
+            val subomg = subtest(t, refFn, ros, false)
+            EM.map(subomg)(s =>
+              Progress(
+                p.queue.tail,
+                s.ros,
+                p.history ++ History.maybeParent(name(ros.some), s.history)
+              ))
+
+          // ==============================================================================
+          case Action.Composite(actions) =>
+            EM.pure(p.copy(queue = p.queue.tail ++ actions.toVector))
+        }
+      }
+
+    val finalResult: F[P] = {
+      val ros = initROS
+
+      val invariantsPoints = {
+        val b = Vector.newBuilder[CheckNE[Point, O, S, E]]
+        foreachSackE(invariants)(ros.os) {
+          case Right(Invariant.Point(p)) => b += Right(p); ()
+          case Right(Invariant.Delta(_)) => ()
+          case e@Left(_)                 => b += e; ()
+        }
+        b.result()
+      }
+
+      val firstSteps: H =
+        if (invariantsPoints.isEmpty)
+          History.empty
+        else {
+          val children = {
+            val b = History.newBuilder[E]
+            b.addEachNE(invariantsPoints)(_.name)(ros.sos, _ test ros.os)
+            b.history()
+          }
+          History(History.parent(InitialState, children))
+        }
+
+      val fh: F[P] =
+        if (firstSteps.failed)
+          EM.pure(Progress[F, R, O, S, E](Vector.empty, ros, firstSteps))
+        else
+          start(test.content.action, ros, firstSteps)
+
+      EM.map(fh) { omg =>
+        import omg.{history => h}
+        val h2: H =
+          if (h.isEmpty)
+            History(History.Step("Nothing to do.", Skip))
+          else if (summariseFinalResult)
+            h.result match {
+              case Pass    => h :+ History.Step("All pass.", Pass)
+              case Skip    => h :+ History.Step("All skipped.", Skip)
+              case Fail(_) => h
+            }
+          else
+            h
+        omg.copy(history = h2)
+      }
+    }
+
+    finalResult
+  }
+
+}
