@@ -13,6 +13,8 @@ trait CheckOps[C[_, _, _]] {
   def map_OS[O, S, E, X, Y](c: C[O, S, E])(f: OS[X, Y] => OS[O, S]): C[X, Y, E]
 
   def pmapO[O, S, E, X](c: C[O, S, E])(f: X => E Or O): C[X, S, E]
+
+  def rename[O, S, E](c: C[O, S, E])(n: NameFn[OS[O, S]]): C[O, S, E]
 }
 
 object CheckOps {
@@ -36,6 +38,9 @@ object CheckOps {
 
     def pmapO[X](f: X => E Or O): C[X, S, E] =
       tc.pmapO(c)(f)
+
+    def rename(n: NameFn[OS[O, S]]): C[O, S, E] =
+      tc.rename(c)(n)
   }
 
   @inline implicit def NameFnOsExt[O, S](n: NameFn[OS[O, S]]): NameFnOsExt[O, S] = new NameFnOsExt(n.fn)
@@ -70,6 +75,9 @@ object CheckOps {
       new SingleCheck[Point] {
         override def pmapO[O, S, E, X](c: C[O, S, E])(f: X => E Or O): C[X, S, E] =
           Point(c.name pmapO f, c.test pmapO f)
+
+        override def rename[O, S, E](c: C[O, S, E])(n: NameFn[OS[O, S]]): C[O, S, E] =
+          Point(n, c.test)
       }
 
     implicit val checkOpsInstanceForDeltaA: CheckOps[CheckShape1[Around.DeltaA]#T] =
@@ -81,6 +89,9 @@ object CheckOps {
             d.before pmapO f,
             (xs, a: d.A) => xs.mapOE(f).test(t(_, a)).leftOption)
         }
+
+        override def rename[O, S, E](d: C[O, S, E])(n: NameFn[OS[O, S]]): C[O, S, E] =
+          Around.DeltaA(n, d.before, d.test)
       }
 
     implicit val checkOpsInstanceForAround: CheckOps[CheckShape1[Around]#T] =
@@ -90,6 +101,12 @@ object CheckOps {
             case Around.Point(p, w) => Around.Point(p pmapO f, w)
             case Around.Delta(d)    => Around.Delta(d pmapO f)
           }
+
+        override def rename[O, S, E](c: C[O, S, E])(n: NameFn[OS[O, S]]): C[O, S, E] =
+          c match {
+            case Around.Point(p, w) => Around.Point(p rename n, w)
+            case Around.Delta(d)    => Around.Delta(d rename n)
+          }
       }
 
     implicit val checkOpsInstanceForInvariant: CheckOps[CheckShape1[Invariant]#T] =
@@ -98,6 +115,12 @@ object CheckOps {
           c match {
             case Invariant.Point(x) => Invariant.Point(x pmapO f)
             case Invariant.Delta(x) => Invariant.Delta(x pmapO f)
+          }
+
+        override def rename[O, S, E](c: C[O, S, E])(n: NameFn[OS[O, S]]): C[O, S, E] =
+          c match {
+            case Invariant.Point(x) => Invariant.Point(x rename n)
+            case Invariant.Delta(x) => Invariant.Delta(x rename n)
           }
       }
 
@@ -124,6 +147,9 @@ object CheckOps {
                 }
             )
           }
+
+        override def rename[O, S, E](c: CheckShape[C, O, S, E])(n: NameFn[OS[O, S]]): CheckShape[C, O, S, E] =
+          c.rmap(_ map (_ rename n))
       }
 
     implicit val checkOpsInstanceForPoints     = checkOpsInstanceForChecks[Point    ]
