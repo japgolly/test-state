@@ -48,7 +48,7 @@ object CoproductExample {
   object Type {
     case object Num extends Type
     case object Txt extends Type
-    implicit val equality: Equal[Type] = Equal.byUnivEq
+    implicit val equality: Equal[Type] = Equal.by_==
   }
 
   class Top(initNum: Int, initTxt: String) {

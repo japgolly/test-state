@@ -5,7 +5,7 @@ import teststate.Exports._
 import teststate.TestUtil._
 
 object RunnerTest extends TestSuite {
-  implicit def euqlA[A]: Equal[A] = Equal.byUnivEq
+  implicit def euqlA[A]: Equal[A] = Equal.by_==
 
   class RecordVar(var s: Record) {
     def +=(n: String): Unit =

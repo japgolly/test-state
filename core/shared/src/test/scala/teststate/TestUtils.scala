@@ -76,5 +76,5 @@ trait TestUtil {
     if (expectDefined)
       assertEq(name, o.isDefined, true)
     else
-      assertEq(name, o, None)(Equal.byUnivEq)
+      assertEq(name, o, None)(Equal.by_==)
 }

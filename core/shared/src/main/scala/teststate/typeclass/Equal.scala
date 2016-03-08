@@ -9,17 +9,17 @@ object Equal {
   def apply[A](fn: (A, A) => Boolean): Equal[A] =
     new Equal(fn)
 
-  def byUnivEq[A]: Equal[A] =
+  def by_==[A]: Equal[A] =
     Equal(_ == _)
 
-  implicit val equalUnit   : Equal[Unit   ] = byUnivEq
-  implicit val equalChar   : Equal[Char   ] = byUnivEq
-  implicit val equalString : Equal[String ] = byUnivEq
-  implicit val equalBoolean: Equal[Boolean] = byUnivEq
-  implicit val equalInt    : Equal[Int    ] = byUnivEq
-  implicit val equalLong   : Equal[Long   ] = byUnivEq
-  implicit val equalShort  : Equal[Short  ] = byUnivEq
-  implicit val equalByte   : Equal[Byte   ] = byUnivEq
+  implicit val equalUnit   : Equal[Unit   ] = by_==
+  implicit val equalChar   : Equal[Char   ] = by_==
+  implicit val equalString : Equal[String ] = by_==
+  implicit val equalBoolean: Equal[Boolean] = by_==
+  implicit val equalInt    : Equal[Int    ] = by_==
+  implicit val equalLong   : Equal[Long   ] = by_==
+  implicit val equalShort  : Equal[Short  ] = by_==
+  implicit val equalByte   : Equal[Byte   ] = by_==
 
   implicit def equalOption[A](implicit e: Equal[A]): Equal[Option[A]] =
     Equal((a, b) => a match {
