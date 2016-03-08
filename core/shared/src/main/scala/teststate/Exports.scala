@@ -7,8 +7,8 @@ trait Exports extends core.CoreExports {
   type Action[F[_], R, O, S, E] = teststate.core.Action[F, R, O, S, E]
   val Action = teststate.core.Action
 
-  type Dsl[F[_], R, O, S, E] = teststate.Dsl[F, R, O, S, E]
-  val Dsl = teststate.Dsl
+  type Dsl[F[_], R, O, S, E] = teststate.dsl.Dsl[F, R, O, S, E]
+  val Dsl = teststate.dsl.Dsl
 
   type Recover[+E] = teststate.typeclass.Recover[E]
   val Recover = teststate.typeclass.Recover
@@ -24,6 +24,9 @@ trait Exports extends core.CoreExports {
 
   type ShowError[E] = teststate.typeclass.ShowError[E]
   val ShowError = teststate.typeclass.ShowError
+
+  type Name = teststate.data.Name
+  val Name = teststate.data.Name
 
   /*
   type Or[+A, +B] = teststate.data.Or[A, B]

@@ -1,11 +1,8 @@
 package teststate
 
 import utest._
-import teststate.data._
-import teststate.core._
-import teststate.run._
-import teststate.typeclass._
-import CoreExports._
+import teststate.Exports._
+import teststate.data.Id
 import Show.Implicits.showByToString
 
 object CoproductExample {
@@ -72,7 +69,7 @@ object CoproductExample {
 
   object Top {
     case class State(t: Type, num: Int, txt: String)
-    type Obs = Int Or String
+    type Obs = Int Either String
 
     val * = Dsl.sync[Top, Obs, State, String]
 

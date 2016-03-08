@@ -4,7 +4,6 @@ package teststate.run
 import teststate.data._
 import teststate.typeclass._
 import teststate.core._
-import teststate.vector1
 import CoreExports._
 import Types.SackE
 import Result.{Fail, Skip, Pass}

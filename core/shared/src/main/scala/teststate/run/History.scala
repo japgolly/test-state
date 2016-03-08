@@ -4,7 +4,6 @@ import acyclic.file
 import scala.annotation.elidable
 import teststate.data._
 import teststate.typeclass.{Recover, ShowError}
-import teststate.vector1
 import History.{Options, Step, Steps}
 import Result.{Fail, Skip, Pass}
 
@@ -166,7 +165,7 @@ object History {
     def add1[A, B](a: A)(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit = {
       val n = recover.name(nameFn(a), nameInput)
       val r = recover.recover(test(a).toResult, Fail(_))
-      this += Step(n, r)
+      this += Step(Name(n), r)
     }
 
     def addNE(ne: NamedError[E]): Unit =

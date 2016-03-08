@@ -33,6 +33,8 @@ object Name {
 //    implicit def nameFnFromFn[A](f: Option[A] => Name): NameFn[A] = Fn(f)
   }
 
+  object Implicits extends Implicits
+
   import scala.reflect.macros.blackbox.Context
 
   final class MacroImpls(val c: Context) {

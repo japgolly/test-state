@@ -4,7 +4,6 @@ import acyclic.file
 import Action.{Composite, NonComposite}
 import teststate.data._
 import teststate.typeclass._
-import teststate.vector1
 import CoreExports._
 
 sealed trait Action[F[_], R, O, S, E] {
@@ -149,7 +148,7 @@ object Action {
       rename(name map f)
 
     final override def nonCompositeActions: Vector[NonComposite[F, R, O, S, E]] =
-      vector1(this)
+      Vector.empty :+ this
 
     final def times(n: Int): Group[F, R, O, S, E] =
       Group(NameFn(i => s"${name(i).value} ($n times)"), _ => Some(

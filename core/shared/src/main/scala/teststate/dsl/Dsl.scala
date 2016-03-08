@@ -1,4 +1,4 @@
-package teststate
+package teststate.dsl
 
 import acyclic.file
 import teststate.core._

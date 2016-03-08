@@ -1,13 +1,9 @@
-package teststate
+package teststate.dsl
 
 import scala.annotation.tailrec
 import utest._
-import teststate.data._
-import teststate.core._
-import teststate.run._
-import teststate.typeclass._
+import teststate.Exports._
 import teststate.TestUtil._
-import CoreExports._
 import CollectionAssertions._
 
 object CollectionAssertionsTest extends TestSuite {
