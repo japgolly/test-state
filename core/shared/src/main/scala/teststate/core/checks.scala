@@ -6,6 +6,7 @@ import teststate.typeclass._
 import teststate.{core => ^}
 import Profunctor.ToOps._
 import Conditional.Implicits._
+import Show.ToOps._
 
 final case class Point[-I, E](name: NameFn[I], test: I => Tri[E, Unit])
 
@@ -21,6 +22,9 @@ object Point {
       override def when(m: Point[I, E], f: I => Boolean) =
         Point(m.name, m.test when f)
     }
+
+  implicit def pointInstanceShow[I, E]: Show[Point[I, E]] =
+    Show(_.name(None).value)
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -76,6 +80,9 @@ object Around {
         DeltaA(d.name, d.before when f, d.test)
     }
 
+  implicit def deltaAInstanceShow[I, E]: Show[DeltaA[I, E]] =
+    Show(_.name(None).value)
+
   implicit val aroundInstance: Profunctor[Around] =
     new Profunctor[Around] {
       override def dimap[A, B, C, D](around: Around[A, B])(g: C => A, f: B => D): Around[C, D] =
@@ -92,6 +99,12 @@ object Around {
           case Point(p, w) => Point(p when f, w)
           case Delta(d)    => Delta(d when f)
         }
+    }
+
+  implicit def aroundInstanceShow[I, E]: Show[Around[I, E]] =
+    Show {
+      case Point(p, _) => p.show
+      case Delta(d)    => d.show
     }
 }
 
@@ -118,6 +131,12 @@ object Invariant {
           case Point(x) => Point(x when f)
           case Delta(x) => Delta(x when f)
         }
+    }
+
+  implicit def invariantInstanceShow[I, E]: Show[Invariant[I, E]] =
+    Show {
+      case Point(x) => x.show
+      case Delta(x) => x.show
     }
 }
 

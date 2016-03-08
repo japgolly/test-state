@@ -61,6 +61,28 @@ sealed trait Action[F[_], R, O, S, E] {
 }
 
 object Action {
+
+  implicit def actionInstanceShow[F[_], R, O, S, E]: Show[Action[F, R, O, S, E]] =
+    Show { action =>
+      // Copied from Sack. Action will be changed to Sack later anyway
+      val sb = new StringBuilder
+      def add(s: String): Unit = {
+        if (sb.nonEmpty)
+          sb append '\n'
+        sb append s
+        ()
+      }
+      def go(a: Action[F, R, O, S, E]): Unit =
+        a match {
+          case Single (n, _, _) => add(n(None).value)
+          case Group  (n, _, _) => add(n(None).value)
+          case SubTest(n, _, _) => add(n(None).value)
+          case Composite(as)    => as foreach go
+        }
+      go(action)
+      sb.result()
+    }
+
   @inline implicit def NameFnRosExt[R, O, S](n: NameFn[ROS[R, O, S]]): NameFnRosExt[R, O, S] = new NameFnRosExt(n.fn)
   class NameFnRosExt[R, O, S](private val _n: Option[ROS[R, O, S]] => Name) extends AnyVal {
     def pmapO[X](f: X => Any Or O): NameFn[ROS[R, X, S]] = NameFn(_n).comap(_ mapOe f)

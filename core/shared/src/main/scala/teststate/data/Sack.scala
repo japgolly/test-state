@@ -55,5 +55,25 @@ object Sack {
       override def when(m: Sack[A, B], f: I => Boolean) =
         m.rmap(c.when(_, f))
     }
+
+  implicit def sackInstanceShow[A, B](implicit show: Show[B]): Show[Sack[A, B]] =
+    Show { sack =>
+      val sb = new StringBuilder
+      def add(s: String): Unit = {
+        if (sb.nonEmpty)
+          sb append '\n'
+        sb append s
+        ()
+      }
+      def go(s: Sack[A, B]): Unit =
+        s match {
+          case Value(b)        => add(show(b))
+          case Product(ss)     => ss foreach go
+          case CoProduct(n, _) => add(n(None).value)
+        }
+      go(sack)
+      sb.result()
+    }
+
 }
 

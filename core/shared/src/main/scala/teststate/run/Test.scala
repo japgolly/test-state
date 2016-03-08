@@ -47,6 +47,19 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
     new Test(this, Observe(f))
 }
 
+object TestContent {
+  implicit def testContentInstanceShow[F[_], R, O, S, E](implicit sa: Show[Action[F, R, O, S, E]],
+                                                         si: Show[Invariants[O, S, E]]): Show[TestContent[F, R, O, S, E]] =
+    Show(tc =>
+      s"""
+         |Invariants:
+         |${si.indent(tc.invariants)}
+         |Actions:
+         |${sa.indent(tc.action)}
+       """.stripMargin.trim
+    )
+}
+
 class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, State, Err],
                                        val observe: Observe[Ref, Obs, Err]) {
   def trans[G[_]: ExecutionModel](t: F ~~> G): Test[G, Ref, Obs, State, Err] =
@@ -76,4 +89,8 @@ object Test {
                                         invariants: Invariants[Obs, State, Err] = Sack.empty)
                                        (implicit em: ExecutionModel[F], recover: Recover[Err]) =
     new TestContent(action, invariants)(em, recover)
+
+  implicit def testInstanceShow[F[_], R, O, S, E](implicit s: Show[TestContent[F, R, O, S, E]]): Show[Test[F, R, O, S, E]] =
+    s.cmap(_.content)
+
 }

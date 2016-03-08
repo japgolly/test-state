@@ -77,5 +77,10 @@ abstract class ImplicitsTest extends AbstractTest {
   // fake subtyping
   test[Points [O, S, E]](c => c: Invariants[O, S, E])
   test[Arounds[O, S, E]](c => c: Invariants[O, S, E])
+
+  // show
+  test[Points    [O, S, E]](_.show).expect[String]
+  test[Arounds   [O, S, E]](_.show).expect[String]
+  test[Invariants[O, S, E]](_.show).expect[String]
 }
 

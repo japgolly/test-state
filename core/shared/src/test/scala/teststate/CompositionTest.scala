@@ -3,7 +3,7 @@ package teststate
 import utest._
 import teststate.Exports._
 import teststate.data.Id
-import Show.Implicits.showByToString
+import Show.OptionalImplicits.showByToString
 
 object CoproductExample {
 
