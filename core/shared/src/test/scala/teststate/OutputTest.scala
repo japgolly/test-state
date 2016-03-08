@@ -549,8 +549,6 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
-    // TODO test subtest-action output
-
     // action combinators
 
   }
