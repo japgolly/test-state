@@ -129,6 +129,12 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def emptyAction: Action =
     Action.empty
 
+  def emptyAround: Around1 =
+    Sack.empty
+
+  def emptyInvariant: Check =
+    Sack.empty
+
   def emptyTest(implicit r: Recover[E]): TestContent =
     Test(emptyAction)(EM, r)
 

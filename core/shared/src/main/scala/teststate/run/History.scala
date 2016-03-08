@@ -6,6 +6,7 @@ import teststate.data._
 import teststate.typeclass.{Recover, ShowError}
 import teststate.vector1
 import History.{Options, Step, Steps}
+import Result.{Fail, Skip, Pass}
 
 final class History[+E](val steps: Steps[E], val result: Result[E]) {
   override def toString = s"History($steps, $result)"

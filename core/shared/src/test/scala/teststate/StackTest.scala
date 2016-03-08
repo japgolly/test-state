@@ -3,11 +3,8 @@ package teststate
 import utest._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import teststate.data._
-import teststate.core._
-import teststate.run._
-import teststate.typeclass._
-import CoreExports._
+import teststate.data.Id
+import Exports._
 
 object StackTest extends TestSuite {
 
@@ -23,7 +20,7 @@ object StackTest extends TestSuite {
     val test = Test(as).observe(_ => ())
     val fh = test.run((), ())
     EM.map(fh) { h =>
-      assert(h.result == Pass)
+      assert(h.result == Result.Pass)
       assert(h.steps.length == size + 1)
       val end = time
       val t = (end - start).toDouble / 1000000000.0

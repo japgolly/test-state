@@ -7,6 +7,7 @@ import teststate.core._
 import teststate.vector1
 import CoreExports._
 import Types.SackE
+import Result.{Fail, Skip, Pass}
 
 object Runner {
 

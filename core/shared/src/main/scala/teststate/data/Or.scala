@@ -84,4 +84,7 @@ object Or {
 
   def liftLeft[A, B](o: Option[A], b: => B): A Or B =
     o.fold[A Or B](Right(b))(Left(_))
+
+  def fromScalaEither[A, B](e: A Either B): A Or B =
+    e.fold(Left(_), Right(_))
 }

@@ -49,7 +49,7 @@ abstract class AbstractTest {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 abstract class ImplicitsTest extends AbstractTest {
-  import teststate.core.CoreExports._
+  import teststate.Exports._
 
   // mapO
   test[Points    [O, S, E]](_ mapO o21).expect[Points    [O2, S, E]]
