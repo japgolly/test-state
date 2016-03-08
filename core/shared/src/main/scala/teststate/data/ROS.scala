@@ -4,28 +4,23 @@ import acyclic.file
 
 // TODO Fix this crap
 
-final class ROS[+Ref, +Obs, +State](refFn: () => Ref, val obs: Obs, val state: State) {
+final case class ROS[+R, +O, +S](ref: R, obs: O, state: S) {
+
   val some: Some[this.type] =
     Some(this)
 
-  val os: OS[Obs, State] =
+  val os: OS[O, S] =
     OS(obs, state)
 
-  val sos: Some[OS[Obs, State]] =
+  val sos: Some[OS[O, S]] =
     Some(os)
 
-  lazy val ref = refFn()
-
-  def setRef[R](ref: => R) = new ROS[R, Obs, State](() => ref, obs, state)
-  def copyOS[OO, SS](obs: OO = obs, state: SS = state) = new ROS[Ref, OO, SS](() => ref, obs, state)
-
-  def mapR[A](f: Ref => A) = new ROS(() => f(ref), obs, state)
-
-  def mapO[A](f: Obs   => A): ROS[Ref, A, State] = copyOS(obs = f(obs))
-  def mapS[A](f: State => A): ROS[Ref, Obs, A] = copyOS(state = f(state))
-  def mapOS[OO, SS](o: Obs => OO, s: State => SS): ROS[Ref, OO, SS] = copyOS(o(obs), s(state))
-  def mapOe[OO](f: Obs => Any Or OO): Option[ROS[Ref, OO, State]] = f(obs).toOptionMap(o => copyOS(obs = o))
-  def mapRe[RR](f: Ref => Any Or RR): Option[ROS[RR, Obs, State]] = f(ref).toOptionMap(setRef(_))
+  def mapR  [X]   (f: R => X)           : ROS[X, O, S]         = copy(ref = f(ref))
+  def mapO  [X]   (f: O => X)           : ROS[R, X, S]         = copy(obs = f(obs))
+  def mapS  [X]   (f: S => X)           : ROS[R, O, X]         = copy(state = f(state))
+  def mapOS [X, Y](o: O => X, s: S => Y): ROS[R, X, Y]         = ROS(ref, o(obs), s(state))
+  def mapOe [X]   (f: O => Any Or X)    : Option[ROS[R, X, S]] = f(obs).toOptionMap(o => copy(obs = o))
+  def mapRe [X]   (f: R => Any Or X)    : Option[ROS[X, O, S]] = f(ref).toOptionMap(r => copy(ref = r))
 }
 
 

@@ -223,7 +223,7 @@ object Action {
       Group(
         name pmapO f,
         ros => f(ros.obs) match {
-          case Right(o) => action(ros.copyOS(obs = o)).map(_ pmapO f)
+          case Right(o) => action(ros.copy(obs = o)).map(_ pmapO f)
           case Left(err) => someFailAction("Action requires correct observation.", err)
         },
         check pmapO f)
@@ -232,7 +232,7 @@ object Action {
       Group(
         name pmapR f,
         ros => f(ros.ref) match {
-          case Right(r) => action(ros setRef r).map(_ pmapR f)
+          case Right(r) => action(ros.copy(ref = r)).map(_ pmapR f)
           case Left(err) => someFailAction("Action requires correct reference.", err)
         },
         check)
@@ -279,12 +279,12 @@ object Action {
     override def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F]) = Single[F, R, OO, S, E](
       name pmapO f,
       ros => tryPrepare(f(ros.obs))(o =>
-        run(ros.copyOS(obs = o)).map(fn => () => em.map(fn())(_.map(g => (o: OO) => f(o) flatMap g)))),
+        run(ros.copy(obs = o)).map(fn => () => em.map(fn())(_.map(g => (o: OO) => f(o) flatMap g)))),
       check pmapO f)
 
     override def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F]) = Single[F, RR, O, S, E](
       name pmapR f,
-      ros => tryPrepare(f(ros.ref))(r => run(ros setRef r)),
+      ros => tryPrepare(f(ros.ref))(r => run(ros.copy(ref = r))),
       check)
   }
 

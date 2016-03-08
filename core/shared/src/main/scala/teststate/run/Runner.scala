@@ -104,10 +104,10 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
   def run(test: Test)(initialState: S, refFn: () => R): F[History[E]] = {
     val ref = refFn()
-
     observe(test, ref) match {
+
       case Right(obs) =>
-        val ros = new ROS(() => ref, obs, initialState)
+        val ros = new ROS(ref, obs, initialState)
         EM.map(subtest(test, refFn, ros, true))(_.history)
 
       case Left(e) =>
@@ -238,12 +238,12 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
                 EM.map(EM.recover(act())) {
                   case Right(nextStateFn) =>
-                    val ref = refFn()
-                    observe(test, ref) match {
+                    val ref2 = refFn()
+                    observe(test, ref2) match {
                       case Right(obs2) =>
                         recover.attempt(nextStateFn(obs2)) match {
                           case Right(Right(state2)) =>
-                            val ros2 = new ROS(() => ref, obs2, state2)
+                            val ros2 = new ROS(ref2, obs2, state2)
                             ret(ros2, Pass)
                           case Right(Left(e)) =>
                             ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
