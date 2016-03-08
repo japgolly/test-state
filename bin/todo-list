@@ -1,0 +1,12 @@
+#!/bin/bash
+cd "$(dirname "$(readlink -e "$0")")"/.. || exit 1
+
+[ -z "$colour" ] && colour=always
+
+find . -type f -name '*.scala' \
+  | sed -e 's|^\./||' \
+  | egrep -v '(target|project)/' \
+  | sort \
+  | xargs fgrep --color=$colour -n TODO \
+  | awk '{match($1,/([a-z_-]+)\/src/,a); if (NR > 1 && a[1] != p[1]) print ""; print} {match($1,/([a-z_-]+)\/src/,p)}'
+
