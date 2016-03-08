@@ -29,9 +29,6 @@ object Show {
   final class Ops[A](private val a: A)(implicit s: Show[A]) {
     def show: String =
       s(a)
-
-    def println(): Unit =
-      System.out.println(show)
   }
 
   def apply[A](f: A => String): Show[A] =
