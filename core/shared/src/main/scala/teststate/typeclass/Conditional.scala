@@ -14,6 +14,9 @@ object Conditional {
     def when(f: I => Boolean): M =
       c.when(m, f)
 
+    def unless(f: I => Boolean): M =
+      when(!f(_))
+
     def skip: M =
       when(_ => false)
   }
