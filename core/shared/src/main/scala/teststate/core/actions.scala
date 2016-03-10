@@ -114,6 +114,8 @@ object Action {
       case Left(err) => preparedFail(err)
     }
 
+  // ███████████████████████████████████████████████████████████████████████████████████████████████████████████████████
+
   final case class Composite[F[_], R, O, S, E](nonCompositeActions: Vector[NonComposite[F, R, O, S, E]])
     extends Action[F, R, O, S, E] {
 
@@ -159,6 +161,8 @@ object Action {
 //      group(name).times(n)
   }
 
+  // ███████████████████████████████████████████████████████████████████████████████████████████████████████████████████
+
   sealed abstract class NonComposite[F[_], R, O, S, E] extends Action[F, R, O, S, E] {
     override type This[f[_], r, o, s, e] <: NonComposite[f, r, o, s, e]
 
@@ -179,6 +183,8 @@ object Action {
           .foldLeft(empty: Action[F, R, O, S, E])(_ >> _)),
         Sack.empty)
   }
+
+  // ███████████████████████████████████████████████████████████████████████████████████████████████████████████████████
 
   final case class Group[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]],
                                            action: ROS[R, O, S] => Option[Action[F, R, O, S, E]],
@@ -238,6 +244,8 @@ object Action {
         check)
   }
 
+  // ███████████████████████████████████████████████████████████████████████████████████████████████████████████████████
+
   final case class Single[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]],
                                             run: ROS[R, O, S] => Prepared[F, O, S, E],
                                             check: Arounds[O, S, E]) extends NonComposite[F, R, O, S, E] {
@@ -287,6 +295,8 @@ object Action {
       ros => tryPrepare(f(ros.ref))(r => run(ros.copy(ref = r))),
       check)
   }
+
+  // ███████████████████████████████████████████████████████████████████████████████████████████████████████████████████
 
   final case class SubTest[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]],
                                              action: Action[F, R, O, S, E],
