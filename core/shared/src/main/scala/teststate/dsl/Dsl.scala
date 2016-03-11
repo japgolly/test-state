@@ -193,7 +193,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           NameUtils.equal(focusName, positive, expect),
           i => f.expectMaybeEqual(positive, ex = expect, actual = focusFn(i)))
 
-      def equalF(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
+      def equalBy(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
         point(
           NameFn(NameUtils.equalFn(focusName, positive, expect)),
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
@@ -201,8 +201,8 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
         equal(before).before & equal(after).after
 
-      def beforeAndAfterF(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
-        equalF(before).before & equalF(after).after
+      def beforeAndAfterBy(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
+        equalBy(before).before & equalBy(after).after
 
       private def mkAround(name: NameFn, f: (A, A) => Option[E]) =
         around(name, focusFn)((os, a) => f(a, focusFn(os)))
@@ -273,14 +273,14 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
             ExistenceOfAll.name(expect(os), focusName, allName))),
           os => ExistenceOfAll(expect(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
 
-      def equalF(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) = {
+      def equalBy(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) = {
         val d = EqualIncludingOrder(positive)
         point(
           NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])),
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
 
-      def equalIgnoringOrderF(expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
+      def equalIgnoringOrderBy(expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
         val d = EqualIgnoringOrder(positive)
         point(
           NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])
@@ -289,10 +289,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       }
 
       def equal(expect: A*)(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) =
-        equalF(Function const expect)(eq, sa, ev)
+        equalBy(Function const expect)(eq, sa, ev)
 
       def equalIgnoringOrder(expect: A*)(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) =
-        equalIgnoringOrderF(Function const expect)(sa, ev)
+        equalIgnoringOrderBy(Function const expect)(sa, ev)
 
     }
   }
