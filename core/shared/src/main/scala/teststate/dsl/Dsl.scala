@@ -273,14 +273,14 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
             ExistenceOfAll.name(expect(os), focusName, allName))),
           os => ExistenceOfAll(expect(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
 
-      def equal(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) = {
+      def equalF(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) = {
         val d = EqualIncludingOrder(positive)
         point(
           NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])),
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
 
-      def equalIgnoringOrder(expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
+      def equalIgnoringOrderF(expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
         val d = EqualIgnoringOrder(positive)
         point(
           NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])
@@ -288,11 +288,11 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
 
-      def equalConst(expect: A*)(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) =
-        equal(Function const expect)(eq, sa, ev)
+      def equal(expect: A*)(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) =
+        equalF(Function const expect)(eq, sa, ev)
 
-      def equalIgnoringOrderConst(expect: A*)(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) =
-        equalIgnoringOrder(Function const expect)(sa, ev)
+      def equalIgnoringOrder(expect: A*)(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) =
+        equalIgnoringOrderF(Function const expect)(sa, ev)
 
     }
   }
