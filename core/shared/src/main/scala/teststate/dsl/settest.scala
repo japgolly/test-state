@@ -38,12 +38,38 @@ object NameUtils {
     case None    => s"$focusName ${should(pos)} be <?>."
     case Some(i) => equal(focusName, pos, expect(i))
   }
+
+  def changeFn[I, A](focusName: String, pos: Boolean, verb: String, expectDel: I => TraversableOnce[A], expectAdd: I => TraversableOnce[A])(implicit sa: Show[A]): Option[I] => Name = {
+    case None    => s"$focusName ${should(pos)} $verb: <?>."
+    case Some(i) =>
+      val del = expectDel(i)
+      val add = expectAdd(i)
+      val as = del.toIterator.map("-" + sa(_)) ++ add.toIterator.map("+" + sa(_))
+      if (as.isEmpty)
+        s"$focusName ${should(!pos)} $verb."
+      else {
+        s"$focusName ${should(pos)} $verb: ${as mkString " "}."
+      }
+
+  }
 }
 
 object CollectionAssertions {
 
   private def formatSet(s: TraversableOnce[_]): String =
     s.mkString("", ", ", ".")
+
+  protected final def tallyElements[A](neg: TraversableOnce[A], pos: TraversableOnce[A]): mutable.HashMap[A, Int] = {
+    val m = mutable.HashMap.empty[A, Int]
+    def go(as: TraversableOnce[A], n: Int): Unit =
+      for (a <- as)
+        m.update(a, m.get(a).fold(n)(_ + n))
+    go(neg, -1)
+    go(pos, 1)
+    m
+  }
+
+  case class EA[@specialized(Int) A](expect: A, actual: A)
 
   // ===================================================================================================================
 
@@ -299,15 +325,8 @@ object CollectionAssertions {
 //    def name(subject: => String, expectName: => String): Name
     def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]): Option[EqualIgnoringOrder.Failure[A]]
 
-    protected final def prep[A](source: TraversableOnce[A], expect: TraversableOnce[A]) = {
-      val m = mutable.HashMap.empty[A, Int]
-      def go(as: TraversableOnce[A], n: Int): Unit =
-        for (a <- as)
-          m.update(a, m.get(a).fold(n)(_ + n))
-      go(expect, -1)
-      go(source, 1)
-      m
-    }
+    protected final def prep[A](source: TraversableOnce[A], expect: TraversableOnce[A]) =
+      tallyElements(expect, source)
 
     protected final def pass(m: mutable.HashMap[_, Int]): Boolean =
       m.valuesIterator.forall(_ == 0)
@@ -407,4 +426,72 @@ object CollectionAssertions {
       override def errorString = "Set members match."
     }
   }
+
+
+  // ===================================================================================================================
+
+  sealed abstract class ElemChanges {
+    import ElemChanges._
+
+    def apply[A](args: Args[A])(implicit s: Show[A]): Option[Failure[A]]
+
+    protected final def prep[A](args: Args[A]): Option[Map[A, EA[Int]]] = {
+      val actual = tallyElements(args.before, args.after)
+      val expect = tallyElements(args.expectDel, args.expectAdd)
+
+      var errors = Map.empty[A, EA[Int]]
+
+      for ((k, a) <- actual) {
+        val e = expect.getOrElse(k, 0)
+        if (a != e)
+          errors = errors.updated(k, EA(expect = e, actual = a))
+      }
+
+      for ((k, e) <- expect)
+        if (e != 0 && !actual.contains(k))
+          errors = errors.updated(k, EA(expect = e, actual = 0))
+
+      if (errors.isEmpty)
+        None
+      else
+        Some(errors)
+    }
+  }
+
+  object ElemChanges {
+    case class Args[A](before   : TraversableOnce[A],
+                       after    : TraversableOnce[A],
+                       expectDel: TraversableOnce[A],
+                       expectAdd: TraversableOnce[A])
+
+    def apply(positive: Boolean): ElemChanges =
+      if (positive) Pos else Neg
+
+    object Pos extends ElemChanges {
+      override def apply[A](args: Args[A])(implicit s: Show[A]) =
+        prep(args).map(Mismatch(_))
+    }
+
+    object Neg extends ElemChanges {
+      override def apply[A](args: Args[A])(implicit s: Show[A]) =
+        prep(args) match {
+          case Some(errors) => None
+          case None         => Some(Matched())
+        }
+    }
+
+    sealed trait Failure[A] extends HasErrorString with Product with Serializable
+
+    case class Mismatch[A](errors: Map[A, EA[Int]])(implicit s: Show[A]) extends Failure[A] {
+      override def errorString =
+        errors.iterator
+          .map { case (i, EA(e, a)) => s"${s(i)} moved by $a, expected $e." }
+          .mkString(" ")
+    }
+
+    case class Matched[A]() extends Failure[A] {
+      override def errorString = "Expected changes occurred."
+    }
+  }
+
 }

@@ -20,9 +20,9 @@ object CollectionAssertionsTest extends TestSuite {
   val bcd  = set("bcd")
   val abcd = set("abcd")
 
-  val n0 = 0 to 2
+  val data = {
+    val n0 = 0 to 2
 
-  val data =
     for {
       a1 <- n0
       b1 <- n0
@@ -43,10 +43,34 @@ object CollectionAssertionsTest extends TestSuite {
       add('b', b2)
       sb.result()
     }
-
+  }
   val dataSets = data.map(_.toSet)
 
+  val dataB = {
+    val n0 = 0 to 1
+
+    for {
+      a1 <- n0
+      b1 <- n0
+      c1 <- n0
+    } yield {
+      val sb = new StringBuilder
+      @tailrec def add(c: Char, n: Int): Unit =
+        if (n != 0) {
+        sb append c
+          add(c, n - 1)
+      }
+      add('a', a1)
+      add('b', b1)
+      add('c', c1)
+      sb.result()
+    }
+  }
+
+  val dataSetsB = dataB.map(_.toSet)
+
   type D = String
+  type DS = Set[Char]
 
   override def tests = TestSuite {
     'logic {
@@ -54,15 +78,15 @@ object CollectionAssertionsTest extends TestSuite {
       def test1(name: String, f: (Boolean, D) => Option[Any], expectPass: D => Boolean) =
         for (d <- data) {
           val e = expectPass(d)
-          val n = s"$name: [$d]"
+          def n = s"$name: [$d]"
           assertDefined(n, f(true, d), !e)
           assertDefined("¬" + n, f(false, d), e)
         }
 
-      def test2(name: String, f: (Boolean, D, Set[Char]) => Option[Any], expectPass: (D, Set[Char]) => Boolean) =
+      def test2(name: String, f: (Boolean, D, DS) => Option[Any], expectPass: (D, DS) => Boolean) =
         for {d <- data; s <- dataSets} {
           val e = expectPass(d, s)
-          val n = s"$name: [$d] $s"
+          def n = s"$name: [$d] $s"
           assertDefined(n, f(true, d, s), !e)
           assertDefined("¬" + n, f(false, d, s), e)
         }
@@ -70,9 +94,17 @@ object CollectionAssertionsTest extends TestSuite {
       def test2d(name: String, f: (Boolean, D, D) => Option[Any], expectPass: (D, D) => Boolean) =
         for {d <- data; s <- data} {
           val e = expectPass(d, s)
-          val n = s"$name: [$d] [$s]"
+          def n = s"$name: [$d] [$s]"
           assertDefined(n, f(true, d, s), !e)
           assertDefined("¬" + n, f(false, d, s), e)
+        }
+
+      def test4(name: String, f: (Boolean, DS, DS, DS, DS) => Option[Any], expectPass: (DS, DS, DS, DS) => Boolean) =
+        for {a <- dataSetsB; b <- dataSetsB; c <- dataSetsB; d <- dataSetsB} {
+          val e = expectPass(a, b, c, d)
+          def n = s"$name: [$a] [$b] [$c] [$d]"
+          assertDefined(n, f(true, a, b, c, d), !e)
+          assertDefined("¬" + n, f(false, a, b, c, d), e)
         }
 
       'containsAll  - test2("containsAll" , ContainsAll (_)(_, _), (d, s) => s.forall(d contains _))
@@ -85,7 +117,15 @@ object CollectionAssertionsTest extends TestSuite {
       'equalIgnoringOrder - test2d("equalIgnoringOrder", EqualIgnoringOrder(_)(_, _), (a, b) => a.sorted == b.sorted)
 
       'equalIncludingOrder - test2d("equalIncludingOrder", EqualIncludingOrder(_)(_, _), (a, b) => a == b)
+
+      'elemChanges - test4("elemChanges", (p, a, b, c, d) => ElemChanges(p)(ElemChanges.Args(a, b, c, d)),
+        (b, a, ed, ea) => {
+          val c = ea & ed
+          (ea -- c) == (a -- b) &&
+          (ed -- c) == (b -- a)
+        })
     }
+
 
     'text {
       def testNoName[F](f: F)(test: F => Option[HasErrorString], expectedError: String): Unit =
@@ -139,6 +179,24 @@ object CollectionAssertionsTest extends TestSuite {
 
       'equalIncludingOrderF - testNoName(EqualIncludingOrder(false))(
         _ ("qwe", "qwe"), "Set members match.")
+
+      'elemChanges {
+        'neg - testNoName(ElemChanges(false))(
+          _ (ElemChanges.Args[Int](Nil, Nil, Nil, Nil)), "Expected changes occurred.")
+
+        'ea - testNoName(ElemChanges(true))(
+          _ (ElemChanges.Args(Nil, Nil, Nil, 'a' :: Nil)), "'a' moved by 0, expected 1.")
+
+        'ed - testNoName(ElemChanges(true))(
+          _ (ElemChanges.Args(Nil, Nil, 'd' :: Nil, Nil)), "'d' moved by 0, expected -1.")
+
+        'aa - testNoName(ElemChanges(true))(
+          _ (ElemChanges.Args(Nil, 'a' :: Nil, Nil, Nil)), "'a' moved by 1, expected 0.")
+
+        'ad - testNoName(ElemChanges(true))(
+          _ (ElemChanges.Args('d' :: Nil, Nil, Nil, Nil)), "'d' moved by -1, expected 0.")
+      }
+
     }
   }
 }

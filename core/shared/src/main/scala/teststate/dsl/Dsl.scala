@@ -273,12 +273,20 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
             ExistenceOfAll.name(expect(os), focusName, allName))),
           os => ExistenceOfAll(expect(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
 
+
+      def equal(expect: A*)(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) =
+        equalBy(Function const expect)(eq, sa, ev)
+
       def equalBy(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) = {
         val d = EqualIncludingOrder(positive)
         point(
           NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])),
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
+
+
+      def equalIgnoringOrder(expect: A*)(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) =
+        equalIgnoringOrderBy(Function const expect)(sa, ev)
 
       def equalIgnoringOrderBy(expect: OS => TraversableOnce[A])(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
         val d = EqualIgnoringOrder(positive)
@@ -288,11 +296,23 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
 
-      def equal(expect: A*)(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) =
-        equalBy(Function const expect)(eq, sa, ev)
 
-      def equalIgnoringOrder(expect: A*)(implicit sa: Show[A], ev: EqualIgnoringOrder.Failure[A] => E) =
-        equalIgnoringOrderBy(Function const expect)(sa, ev)
+      def elemChanges(del: A*)(add: A*)(implicit sa: Show[A], ev: ElemChanges.Failure[A] => E) =
+        elemChangesBy(Function const del, Function const add)(sa, ev)
+
+      def elemChangesBy(del: OS => TraversableOnce[A], add: OS => TraversableOnce[A])(implicit sa: Show[A], ev: ElemChanges.Failure[A] => E) = {
+        val d = ElemChanges(positive)
+        around(
+          NameFn(NameUtils.changeFn(focusName, positive, "change", del, add)),
+          focusFn)(
+          (os, b) =>
+            d(ElemChanges.Args(
+              before    = b,
+              after     = focusFn(os),
+              expectDel = del(os),
+              expectAdd = add(os)
+            )).map(ev))
+      }
 
     }
   }
