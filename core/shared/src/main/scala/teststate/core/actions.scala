@@ -1,5 +1,6 @@
 package teststate.core
 
+/*
 import acyclic.file
 import Action.{Composite, NonComposite}
 import teststate.data._
@@ -350,3 +351,4 @@ object Action {
   }
 
 }
+*/

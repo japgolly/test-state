@@ -16,6 +16,8 @@ trait CoreExports
   type Arounds   [-O, -S, E] = Types.Arounds   [O, S, E]
   type Invariants[-O, -S, E] = Types.Invariants[O, S, E]
 
+  type Actions[F[_], R, O, S, E] = Action.Actions[F, R, O, S, E]
+
   import Types._
   implicit def autoWidenChecksToInvariants[C[-_, _], A, E](c: CheckShapeA[C, A, E])(implicit t: ToInvariant[CheckShapeA, C]): CheckShapeA[Invariant, A, E] =
     t.toInvariant(c)

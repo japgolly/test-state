@@ -28,7 +28,7 @@ object Dsl {
     final type Point1      = Points[O, S, E]
     final type Around1     = Arounds[O, S, E]
     final type Check       = Invariants[O, S, E]
-    final type Action      = teststate.core.Action[F, R, O, S, E]
+    final type Action      = Actions[F, R, O, S, E]
     final type Action1     = teststate.core.Action.Single[F, R, O, S, E]
     final type ActionFn    = ROS => teststate.core.Action.Prepared[F, O, S, E]
     final type TestContent = teststate.run.TestContent[F, R, O, S, E]
