@@ -29,7 +29,7 @@ object Dsl {
     final type Around1     = Arounds[O, S, E]
     final type Check       = Invariants[O, S, E]
     final type Action      = Actions[F, R, O, S, E]
-    final type Action1     = teststate.core.Action.Single[F, R, O, S, E]
+    final type Action1     = Actions[F, R, O, S, E]
     final type ActionFn    = ROS => teststate.core.Action.Prepared[F, O, S, E]
     final type TestContent = teststate.run.TestContent[F, R, O, S, E]
     final type Test        = teststate.run.Test[F, R, O, S, E]
@@ -127,7 +127,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   // ===================================================================================================================
 
   def emptyAction: Action =
-    Action.empty
+    Sack.empty
 
   def emptyAround: Around1 =
     Sack.empty

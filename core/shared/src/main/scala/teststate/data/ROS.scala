@@ -21,6 +21,8 @@ final case class ROS[+R, +O, +S](ref: R, obs: O, state: S) {
   def mapOS [X, Y](o: O => X, s: S => Y): ROS[R, X, Y]         = ROS(ref, o(obs), s(state))
   def mapOe [X]   (f: O => Any Or X)    : Option[ROS[R, X, S]] = f(obs).toOptionMap(o => copy(obs = o))
   def mapRe [X]   (f: R => Any Or X)    : Option[ROS[X, O, S]] = f(ref).toOptionMap(r => copy(ref = r))
+  def mapRE [E, X](f: R => E Or X)      : E Or ROS[X, O, S]    = f(ref).map(ROS(_, obs, state))
+  def mapOE [E, X](f: O => E Or X)      : E Or ROS[R, X, S]    = f(obs).map(ROS(ref, _, state))
 }
 
 

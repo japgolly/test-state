@@ -8,7 +8,7 @@ import teststate.core._
 import CoreExports._
 import Types.SackE
 import Result.{Fail, Skip, Pass}
-
+/*
 object Runner {
 
   trait HalfCheck[O, S, Err] {
@@ -375,3 +375,4 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
   }
 
 }
+*/
