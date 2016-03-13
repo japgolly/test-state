@@ -25,8 +25,8 @@ def mapS[SS](s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F])
 def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F])
 def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F])
 def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F])
-
 def addCheck(c: Arounds[O, S, E])
+
 def modS(f: S => S)(implicit em: ExecutionModel[F])
 
 
@@ -51,6 +51,9 @@ trait ActionOps[A[_[_], _, _, _, _]] {
   def pmapR[F[_], R, O, S, E, X](x: A[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]): A[F, X, O, S, E]
 
   def pmapO[F[_], R, O, S, E, X](x: A[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]): A[F, R, X, S, E]
+}
+
+trait ActionOps2[A[_[_], _, _, _, _]] {
 
   def renameBy[F[_], R, O, S, E](a: A[F, R, O, S, E])(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]): A[F, R, O, S, E]
 
@@ -86,6 +89,9 @@ object ActionOps {
 
     def pmapO[X](f: X => E Or O)(implicit em: ExecutionModel[F]) =
       tc.pmapO(a)(f)
+  }
+
+  final class Ops2[A[_[_], _, _, _, _], F[_], R, O, S, E](private val a: A[F, R, O, S, E])(implicit tc: ActionOps2[A]) {
 
     def renameBy(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]) =
       tc.renameBy(a)(f)
@@ -117,10 +123,11 @@ object ActionOps {
   private def _times[F[_], R, O, S, E](n: Int, name: NameFn[ROS[R, O, S]], make: (Name => Name) => Actions[F,R,O,S,E]) = {
     val name2 = _timesName(n, name)
     val body = Some(_timesBody(n, make))
-    Group[F, R, O, S, E](name2, _ => body, Sack.empty)
+    val g = Group[F, R, O, S, E](_ => body)
+    Outer(name2, g, Sack.empty)
   }
 
-  @inline implicit class ActionExt[F[_], R, O, S, E](private val self: Action[F, R, O, S, E]) extends AnyVal {
+  @inline implicit class ActionOuterExt[F[_], R, O, S, E](private val self: Outer[F, R, O, S, E]) extends AnyVal {
     @inline def lift: Actions[F, R, O, S, E] =
       Sack.Value(Right(self))
   }
@@ -132,7 +139,7 @@ object ActionOps {
   }
 
   private def failAction[F[_], R, O, S, E](name: Name, err: E)(implicit em: ExecutionModel[F]) =
-    Single[F, R, O, S, E](name, _ => preparedFail(err), Sack.empty)
+    Outer(name, Single[F, R, O, S, E](_ => preparedFail(err)), Sack.empty)
 
   private def someFailActions[F[_], R, O, S, E](name: Name, err: E)(implicit em: ExecutionModel[F]): Some[Actions[F, R, O, S, E]] =
     Some(failAction(name, err).lift)
@@ -148,8 +155,8 @@ object ActionOps {
 
 
   trait LP {
-    implicit def actionsInstanceActionOps: ActionOps[Actions]
-    implicit def actionInstanceActionOps: ActionOps[Action]
+    implicit def actionsInstanceActionOps: ActionOps[Actions] with ActionOps2[Actions]
+//    implicit def actionInstanceActionOps: ActionOps[Action]
 
 //    implicit def actionsToActionOps[F[_], R, O, S, E](a: Actions[F, R, O, S, E]): Ops[Actions, F, R, O, S, E] =
 //      new Ops[Actions, F, R, O, S, E](a)(actionsInstanceActionOps)
@@ -158,8 +165,11 @@ object ActionOps {
 //      new Ops[A, F, R, O, S, E](a)(tc)
 
     import Types.SackE
-    implicit def actionSackToActionOps[F[_], R, O, S, E](a: SackE[ROS[R, O, S], Action[F, R, O, S, E], E]): Ops[Actions, F, R, O, S, E] =
+    implicit def actionSackToActionOps[F[_], R, O, S, E](a: SackE[ROS[R, O, S], Outer[F, R, O, S, E], E]): Ops[Actions, F, R, O, S, E] =
       new Ops[Actions, F, R, O, S, E](a)
+
+    implicit def actionSackToActionOps2[F[_], R, O, S, E](a: SackE[ROS[R, O, S], Outer[F, R, O, S, E], E]): Ops2[Actions, F, R, O, S, E] =
+      new Ops2[Actions, F, R, O, S, E](a)
 
 //    implicit def actionToActionOps[F[_], R, O, S, E](a: Action[F, R, O, S, E]): Ops[Action, F, R, O, S, E] =
 //      new Ops[Action, F, R, O, S, E](a)(actionInstanceActionOps)
@@ -167,108 +177,113 @@ object ActionOps {
 
   trait Instances extends LP {
 
-    implicit val actionInstanceActionOps: ActionOps[Action] =
-      new ActionOps[Action] {
+    implicit val actionInnerInstanceActionOps: ActionOps[Inner] =
+      new ActionOps[Inner] {
 
-        override def trans[F[_], R, O, S, E, G[_]](x: Action[F, R, O, S, E])(t: F ~~> G) =
+        override def trans[F[_], R, O, S, E, G[_]](x: Inner[F, R, O, S, E])(t: F ~~> G) =
           x match {
             case a: Single [F, R, O, S, E] => a.copy(run = a.run(_).map(f => () => t(f())))
             case a: Group  [F, R, O, S, E] => a.copy(action = a.action(_).map(_ trans t))
             case a: SubTest[F, R, O, S, E] => a.copy(action = a.action trans t)
           }
 
-        override def mapR[F[_], R, O, S, E, X](x: Action[F, R, O, S, E])(f: X => R) =
+        override def mapR[F[_], R, O, S, E, X](x: Inner[F, R, O, S, E])(f: X => R) =
           x match {
-            case Single (n, r, c)    => Single (n.cmap(_ mapR f), i => r(i mapR f), c)
-            case Group  (n, a, c)    => Group  (n.cmap(_ mapR f), i => a(i mapR f).map(_ mapR f), c)
-            case SubTest(n, a, i, c) => SubTest(n.cmap(_ mapR f), a mapR f, i, c)
+            case Single (r)    => Single (i => r(i mapR f))
+            case Group  (a)    => Group  (i => a(i mapR f).map(_ mapR f))
+            case SubTest(a, i) => SubTest(a mapR f, i)
           }
 
-        override def mapOS[F[_], R, O, S, E, X, Y](action: Action[F, R, O, S, E])(f: X => O, g: Y => S)(h: (Y, S) => Y)(implicit em: ExecutionModel[F]) =
+        override def mapOS[F[_], R, O, S, E, X, Y](action: Inner[F, R, O, S, E])(f: X => O, g: Y => S)(h: (Y, S) => Y)(implicit em: ExecutionModel[F]) =
           action match {
-            case Single (n, r, c) =>
-              Single (
-                n.cmap(_.mapOS(f, g)),
-                i => r(i.mapOS(f, g)).map(fn => () => em.map(fn())(_.map(j => (x: X) => j(f(x)).map(s => h(i.state, s))))),
-                c.mapOS(f, g))
-            case Group  (n, a, c)    => Group  (n.cmap(_.mapOS(f, g)), i => a(i.mapOS(f, g)).map(_.mapOS(f, g)(h)), c.mapOS(f, g))
-            case SubTest(n, a, i, c) => SubTest(n.cmap(_.mapOS(f, g)), a.mapOS(f, g)(h), i.mapOS(f, g), c.mapOS(f, g))
+
+            case Single(r) =>
+              Single(i =>
+                r(i.mapOS(f, g)).map(fn => () =>
+                  em.map(fn())(_.map(j => (x: X) => j(f(x)).map(s => h(i.state, s))))))
+
+            case Group(a) =>
+              Group(i => a(i.mapOS(f, g)).map(_.mapOS(f, g)(h)))
+
+            case SubTest(a, i) =>
+              SubTest(a.mapOS(f, g)(h), i.mapOS(f, g))
           }
 
-        override def mapE[F[_], R, O, S, E, X](action: Action[F, R, O, S, E])(f: E => X)(implicit em: ExecutionModel[F]) =
+        override def mapE[F[_], R, O, S, E, X](action: Inner[F, R, O, S, E])(f: E => X)(implicit em: ExecutionModel[F]) =
           action match {
-            case Single(n, r, c) =>
-              Single (
-                n,
-                r(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))),
-                c mapE f)
-            case Group  (n, a, c) => Group  (n, a(_).map(_ mapE f), c mapE f)
-            case SubTest(n, a, i, c) => SubTest(n, a mapE f, i mapE f, c mapE f)
+            case Single (r)    => Single(r(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))))
+            case Group  (a)    => Group(a(_).map(_ mapE f))
+            case SubTest(a, i) => SubTest(a mapE f, i mapE f)
           }
 
-        override def pmapR[F[_], R, O, S, E, X](x: Action[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]) =
+        override def pmapR[F[_], R, O, S, E, X](x: Inner[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]) =
           x match {
-            case Single(n, run, c) =>
-              Single(
-                n pmapR f,
-                ros => tryPrepare(f(ros.ref))(r => run(ros.copy(ref = r))),
-                c)
+            case Single(run) =>
+              Single(ros => tryPrepare(f(ros.ref))(r => run(ros.copy(ref = r))))
 
-            case Group(n, a, c) =>
+            case Group(a) =>
               Group(
-                n pmapR f,
                 ros => f(ros.ref) match {
                   case Right(r) => a(ros.copy(ref = r)).map(_ pmapR f)
                   case Left(e)  => someFailActions("Action requires correct reference.", e)
-                },
-                c)
+                })
 
-            case SubTest(n, a, i, c) =>
-              SubTest(n pmapR f, a pmapR f, i, c)
+            case SubTest(a, i) =>
+              SubTest(a pmapR f, i)
           }
 
-        override def pmapO[F[_], R, O, S, E, X](action: Action[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
+        override def pmapO[F[_], R, O, S, E, X](action: Inner[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
           action match {
-            case Single(n, run, c) =>
+            case Single(run) =>
               Single(
-                n pmapO f,
                 ros => tryPrepare(f(ros.obs))(o =>
-                  run(ros.copy(obs = o)).map(fn => () => em.map(fn())(_.map(g => (x: X) => f(x) flatMap g)))),
-                c pmapO f)
+                  run(ros.copy(obs = o)).map(fn => () => em.map(fn())(_.map(g => (x: X) => f(x) flatMap g)))))
 
-            case Group(n, a, c) =>
+            case Group(a) =>
               Group(
-                n pmapO f,
                 ros => f(ros.obs) match {
                   case Right(o) => a(ros.copy(obs = o)).map(_ pmapO f)
                   case Left(err) => someFailActions("Action requires correct observation.", err)
-                },
-                c pmapO f)
+                })
 
-            case SubTest(n, a, i, c) =>
-              SubTest(n pmapO f, a pmapO f, i pmapO f, c pmapO f)
-          }
-
-        override def renameBy[F[_], R, O, S, E](x: Action[F, R, O, S, E])(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]) =
-          x match {
-            case a: Single [F, R, O, S, E] => a.copy(name = f(a.name))
-            case a: Group  [F, R, O, S, E] => a.copy(name = f(a.name))
-            case a: SubTest[F, R, O, S, E] => a.copy(name = f(a.name))
-          }
-
-        override def times[F[_], R, O, S, E](a: Action[F, R, O, S, E])(n: Int) =
-          _times(n, a.name, a.nameMod(_).lift)
-
-        override def addCheck[F[_], R, O, S, E](x: Action[F, R, O, S, E])(c: Arounds[O, S, E]) =
-          x match {
-            case a: Single [F, R, O, S, E] => a.copy(check = a.check & c)
-            case a: Group  [F, R, O, S, E] => a.copy(check = a.check & c)
-            case a: SubTest[F, R, O, S, E] => a.copy(check = a.check & c)
+            case SubTest(a, i) =>
+              SubTest(a pmapO f, i pmapO f)
           }
       }
 
-    implicit lazy val actionsInstanceActionOps: ActionOps[Actions] =
-      new ActionOps[Actions] {
+    implicit val actionOuterInstanceActionOps: ActionOps[Outer] with ActionOps2[Outer] =
+      new ActionOps[Outer] with ActionOps2[Outer] {
+
+        override def trans[F[_], R, O, S, E, G[_]](x: Outer[F, R, O, S, E])(t: F ~~> G) =
+          Outer(x.name, x.inner trans t, x.check)
+
+        override def mapR[F[_], R, O, S, E, X](x: Outer[F, R, O, S, E])(f: X => R) =
+          Outer(x.name.cmap(_ mapR f), x.inner mapR f, x.check)
+
+        override def mapOS[F[_], R, O, S, E, X, Y](x: Outer[F, R, O, S, E])(f: X => O, g: Y => S)(h: (Y, S) => Y)(implicit em: ExecutionModel[F]) =
+          Outer(x.name.cmap(_.mapOS(f, g)), x.inner.mapOS(f, g)(h), x.check.mapOS(f, g))
+
+        override def mapE[F[_], R, O, S, E, X](x: Outer[F, R, O, S, E])(f: E => X)(implicit em: ExecutionModel[F]) =
+          Outer(x.name, x.inner mapE f, x.check mapE f)
+
+        override def pmapR[F[_], R, O, S, E, X](x: Outer[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]) =
+          Outer(x.name pmapR f, x.inner pmapR f, x.check)
+
+        override def pmapO[F[_], R, O, S, E, X](x: Outer[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
+          Outer(x.name pmapO f, x.inner pmapO f, x.check pmapO f)
+
+        override def renameBy[F[_], R, O, S, E](x: Outer[F, R, O, S, E])(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]) =
+          Outer(f(x.name), x.inner, x.check)
+
+        override def times[F[_], R, O, S, E](a: Outer[F, R, O, S, E])(n: Int) =
+          _times(n, a.name, a.nameMod(_).lift)
+
+        override def addCheck[F[_], R, O, S, E](x: Outer[F, R, O, S, E])(c: Arounds[O, S, E]) =
+          Outer(x.name, x.inner, x.check & c)
+      }
+
+    implicit lazy val actionsInstanceActionOps: ActionOps[Actions] with ActionOps2[Actions] =
+      new ActionOps[Actions] with ActionOps2[Actions] {
         import Sack._
 
         override def trans[F[_], R, O, S, E, G[_]](a: Actions[F, R, O, S, E])(t: F ~~> G) =
@@ -301,9 +316,6 @@ object ActionOps {
                 _.mapOE(f).fold(e => Sack Value Left(NamedError(n(None), e)), p(_) pmapO f))
           }
 
-        override def addCheck[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(c: Arounds[O, S, E]) =
-          x.rmap(_ map (_ addCheck c))
-
         override def renameBy[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]) =
           x match {
             case Value(v)        => Value(v map (_ renameBy f))
@@ -320,15 +332,23 @@ object ActionOps {
               if (slen == 1)
                 ss.head times n
               else {
-                val g = Group(s"$slen actions.", Function const Some(actions), Sack.empty): Action[F, R, O, S, E]
-                g.times(n).lift
+                val a = Some(actions)
+                val i = Group[F, R, O, S, E](_ => a)
+                val o = Outer(s"$slen actions.", i, Sack.empty)
+                o.times(n).lift
                 //_times(n, s"$slen actions.", f => Product(ss map (_ nameMod f))).lift
               }
           }
+
+        override def addCheck[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(c: Arounds[O, S, E]) =
+          x.rmap(_ map (_ addCheck c))
       }
 
     implicit def toActionOps[A[_[_], _, _, _, _], F[_], R, O, S, E](a: A[F, R, O, S, E])(implicit tc: ActionOps[A]): Ops[A, F, R, O, S, E] =
       new Ops(a)(tc)
+
+    implicit def toActionOps2[A[_[_], _, _, _, _], F[_], R, O, S, E](a: A[F, R, O, S, E])(implicit tc: ActionOps2[A]): Ops2[A, F, R, O, S, E] =
+      new Ops2(a)(tc)
 
 
     //    def x = (_: Actions[Option, Unit, Unit, Unit, Unit]) renameBy identity
