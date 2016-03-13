@@ -26,7 +26,6 @@ def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F])
 def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F])
 def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F])
 def addCheck(c: Arounds[O, S, E])
-
 def modS(f: S => S)(implicit em: ExecutionModel[F])
 
 
@@ -51,6 +50,8 @@ trait ActionOps[A[_[_], _, _, _, _]] {
   def pmapR[F[_], R, O, S, E, X](x: A[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]): A[F, X, O, S, E]
 
   def pmapO[F[_], R, O, S, E, X](x: A[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]): A[F, R, X, S, E]
+
+  def modS[F[_], R, O, S, E](x: A[F, R, O, S, E])(f: O => S => E Or S)(implicit em: ExecutionModel[F]): A[F, R, O, S, E]
 }
 
 trait ActionOps2[A[_[_], _, _, _, _]] {
@@ -89,6 +90,15 @@ object ActionOps {
 
     def pmapO[X](f: X => E Or O)(implicit em: ExecutionModel[F]) =
       tc.pmapO(a)(f)
+
+    def modS(f: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+      tc.modS(a)(f)
+
+    def updateState(f: OS[O, S] => S)(implicit em: ExecutionModel[F]) =
+      tryUpdateState(i => Right(f(i)))
+
+    def tryUpdateState(f: OS[O, S] => E Or S)(implicit em: ExecutionModel[F]) =
+      modS(o => s => f(OS(o, s)))
   }
 
   final class Ops2[A[_[_], _, _, _, _], F[_], R, O, S, E](private val a: A[F, R, O, S, E])(implicit tc: ActionOps2[A]) {
@@ -249,6 +259,18 @@ object ActionOps {
             case SubTest(a, i) =>
               SubTest(a pmapO f, i pmapO f)
           }
+
+        override def modS[F[_], R, O, S, E](x: Inner[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+          x match {
+            case Single(run) =>
+              Single[F, R, O, S, E](
+                run(_).map(f => () => em.map(f())(
+                  _.map(g => (o: O) => g(o) flatMap m(o))
+                )))
+
+            case Group(a)      => Group(a(_).map(_ modS m))
+            case SubTest(a, i) => SubTest(a modS m, i)
+          }
       }
 
     implicit val actionOuterInstanceActionOps: ActionOps[Outer] with ActionOps2[Outer] =
@@ -271,6 +293,9 @@ object ActionOps {
 
         override def pmapO[F[_], R, O, S, E, X](x: Outer[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
           Outer(x.name pmapO f, x.inner pmapO f, x.check pmapO f)
+
+        override def modS[F[_], R, O, S, E](x: Outer[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+          Outer(x.name, x.inner modS m, x.check)
 
         override def renameBy[F[_], R, O, S, E](x: Outer[F, R, O, S, E])(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]) =
           Outer(f(x.name), x.inner, x.check)
@@ -315,6 +340,9 @@ object ActionOps {
               CoProduct(n pmapO f,
                 _.mapOE(f).fold(e => Sack Value Left(NamedError(n(None), e)), p(_) pmapO f))
           }
+
+        override def modS[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+          x.rmap(_.map(_ modS m))
 
         override def renameBy[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]) =
           x match {
