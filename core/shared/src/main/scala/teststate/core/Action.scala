@@ -27,6 +27,12 @@ object Action {
   def empty[F[_], R, O, S, E]: Actions[F, R, O, S, E] =
     Sack.empty
 
+  def liftOuter[F[_], R, O, S, E](outer: Outer[F, R, O, S, E]): Actions[F, R, O, S, E] =
+    Sack Value Right(outer)
+
+  def liftInner[F[_], R, O, S, E](inner: Inner[F, R, O, S, E])(name: NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] =
+    liftOuter(Outer(name, inner, Sack.empty))
+
   implicit def actionOuterInstanceShow[F[_], R, O, S, E]: Show[Outer[F, R, O, S, E]] =
     Show(_.name(None).value)
 

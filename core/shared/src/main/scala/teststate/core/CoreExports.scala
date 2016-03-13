@@ -26,6 +26,8 @@ trait CoreExports
   def emptyArounds   [E]: Arounds   [Any, Any, E] = Sack.empty
   def emptyInvariants[E]: Invariants[Any, Any, E] = Sack.empty
 
+  def emptyAction[F[_], R, O, S, E]: Actions[F, R, O, S, E] = Sack.empty
+
   import teststate.data._
   implicit def checksInstanceShow[C[- _, _], A, E](implicit sc: Show[C[A, E]]): Show[CheckShapeA[C, A, E]] = {
     val showValues = Show[NamedError[E] Or C[A, E]](_.fold(_.name.value, sc.apply))

@@ -3,39 +3,9 @@ package teststate.core
 import acyclic.file
 import teststate.data._
 import teststate.typeclass._
-//import Types._
 import Action.{Actions => _, _}
 import Profunctor.ToOps._
 import CoreExports._
-
-/*
-
-+ Conditional
-
-Action Ops
-==========
-def trans[G[_]](t: F ~~> G)
-def nameMod(f: Name => Name)
-def rename(newName: NameFn[ROS[R, O, S]])
-def times(n: Int)
-def mapR[RR](f: RR => R)
-def mapOS[OO, SS](o: OO => O, s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F])
-def mapO[X](g: X => O)(implicit em: ExecutionModel[F])
-def mapS[SS](s: SS => S, su: (SS, S) => SS)(implicit em: ExecutionModel[F])
-def mapE[EE](f: E => EE)(implicit em: ExecutionModel[F])
-def pmapR[RR](f: RR => E Or R)(implicit em: ExecutionModel[F])
-def pmapO[OO](f: OO => E Or O)(implicit em: ExecutionModel[F])
-def addCheck(c: Arounds[O, S, E])
-def modS(f: S => S)(implicit em: ExecutionModel[F])
-
-
-Actions Ops
-===========
-
-def >>(next: Action[F, R, O, S, E])
-def andThen(next: Action[F, R, O, S, E])
-
-*/
 
 trait ActionOps[A[_[_], _, _, _, _]] {
 
@@ -147,7 +117,7 @@ object ActionOps {
 
   @inline implicit class ActionOuterExt[F[_], R, O, S, E](private val self: Outer[F, R, O, S, E]) extends AnyVal {
     @inline def lift: Actions[F, R, O, S, E] =
-      Sack.Value(Right(self))
+      Action.liftOuter(self)
   }
 
   @inline implicit def NameFnRosExt[R, O, S](n: NameFn[ROS[R, O, S]]): NameFnRosExt[R, O, S] = new NameFnRosExt(n.fn)
@@ -171,29 +141,21 @@ object ActionOps {
       case Left(err) => preparedFail(err)
     }
 
-
-  trait LP {
+  trait ImplicitsLowPri {
     implicit def actionsInstanceActionOps: ActionOps[Actions] with ActionOps2[Actions]
-//    implicit def actionInstanceActionOps: ActionOps[Action]
 
-//    implicit def actionsToActionOps[F[_], R, O, S, E](a: Actions[F, R, O, S, E]): Ops[Actions, F, R, O, S, E] =
-//      new Ops[Actions, F, R, O, S, E](a)(actionsInstanceActionOps)
-
-//    implicit def toActionOps2[A[_[_], _, _, _, _], F[_], R, O, S, E, X <: A[F, R, O, S, E]](a: X)(implicit tc: ActionOps[A]): Ops[A, F, R, O, S, E] =
-//      new Ops[A, F, R, O, S, E](a)(tc)
+    // Scalac doesn't realise shapes are Actions
 
     import Types.SackE
+
     implicit def actionSackToActionOps[F[_], R, O, S, E](a: SackE[ROS[R, O, S], Outer[F, R, O, S, E], E]): Ops[Actions, F, R, O, S, E] =
       new Ops[Actions, F, R, O, S, E](a)
 
     implicit def actionSackToActionOps2[F[_], R, O, S, E](a: SackE[ROS[R, O, S], Outer[F, R, O, S, E], E]): Ops2[Actions, F, R, O, S, E] =
       new Ops2[Actions, F, R, O, S, E](a)
-
-//    implicit def actionToActionOps[F[_], R, O, S, E](a: Action[F, R, O, S, E]): Ops[Action, F, R, O, S, E] =
-//      new Ops[Action, F, R, O, S, E](a)(actionInstanceActionOps)
   }
 
-  trait Instances extends LP {
+  trait Implicits extends ImplicitsLowPri {
 
     implicit val actionInnerInstanceActionOps: ActionOps[Inner] =
       new ActionOps[Inner] {
@@ -386,13 +348,8 @@ object ActionOps {
     implicit def toActionOps2[A[_[_], _, _, _, _], F[_], R, O, S, E](a: A[F, R, O, S, E])(implicit tc: ActionOps2[A]): Ops2[A, F, R, O, S, E] =
       new Ops2(a)(tc)
 
-    //    def x = (_: Actions[Option, Unit, Unit, Unit, Unit]) renameBy identity
-
     implicit def toActionOps3[F[_], R, O, S, E](a: Actions[F, R, O, S, E]): Ops3[F, R, O, S, E] =
       new Ops3(a)
-  }
-
-  trait ToOps {
   }
 
 }
