@@ -36,14 +36,8 @@ object PCompose {
 
     implicit def checksMonoPCompose[A, B]: PCompose[Sack[A, B], Sack[A, B], Sack[A, B]] =
       new PCompose[Sack[A, B], Sack[A, B], Sack[A, B]] {
-        import Sack._
         override def compose(a: Sack[A, B], b: Sack[A, B]) =
-          (a, b) match {
-            case (Product(p), Product(q)) => Product(p ++ q)
-            case (p         , Product(q)) => Product(p +: q)
-            case (Product(p), q         ) => Product(p :+ q)
-            case (p         , q         ) => Product(Vector.empty :+ p :+ q)
-          }
+          Sack.append(a, b)
       }
 
     implicit def checkPComposeAddOps[C[-_, _], A, B]: AddOps[CheckShapeA[C, A, B]] =

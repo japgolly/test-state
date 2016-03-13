@@ -32,6 +32,14 @@ object Sack {
 
   val empty = Product(Vector.empty)
 
+  def append[A, B](a: Sack[A, B], b: Sack[A, B]): Sack[A, B] =
+    (a, b) match {
+      case (Product(p), Product(q)) => Product(p ++ q)
+      case (p         , Product(q)) => Product(p +: q)
+      case (Product(p), q         ) => Product(p :+ q)
+      case (p         , q         ) => Product(Vector.empty :+ p :+ q)
+    }
+
   implicit val sackInstanceProfunctor: Profunctor[Sack] =
     new Profunctor[Sack] {
 

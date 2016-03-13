@@ -121,6 +121,14 @@ object ActionOps {
       tc.addCheck(a)(c)
   }
 
+  final class Ops3[F[_], R, O, S, E](private val self: Actions[F, R, O, S, E]) extends AnyVal {
+    def >>(next: Actions[F, R, O, S, E]): Actions[F, R, O, S, E] =
+      Sack.append(self, next)
+
+    @inline def andThen(next: Actions[F, R, O, S, E]): Actions[F, R, O, S, E] =
+      >>(next)
+  }
+
   private def _timesName[F[_], R, O, S, E](n: Int, name: NameFn[ROS[R, O, S]]) =
     NameFn[ROS[R, O, S]](i => s"${name(i).value} ($n times)")
 
@@ -378,8 +386,10 @@ object ActionOps {
     implicit def toActionOps2[A[_[_], _, _, _, _], F[_], R, O, S, E](a: A[F, R, O, S, E])(implicit tc: ActionOps2[A]): Ops2[A, F, R, O, S, E] =
       new Ops2(a)(tc)
 
-
     //    def x = (_: Actions[Option, Unit, Unit, Unit, Unit]) renameBy identity
+
+    implicit def toActionOps3[F[_], R, O, S, E](a: Actions[F, R, O, S, E]): Ops3[F, R, O, S, E] =
+      new Ops3(a)
   }
 
   trait ToOps {
