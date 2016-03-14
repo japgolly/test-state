@@ -20,17 +20,15 @@ object Dsl {
   @inline def future[R, O, S, E](implicit ec: ExecutionContext) =
     apply[Future, R, O, S, E]
 
-  // TODO Rename DSL types like Point1, Around1, etc
+  // TODO Rename DSL types like {Point,Around}{,s}, etc
   trait Types[F[_], R, O, S, E] {
     final type OS          = teststate.data.OS[O, S]
     final type ROS         = teststate.data.ROS[R, O, S]
     final type NameFn      = teststate.data.NameFn[OS]
-    final type Point1      = Points[O, S, E]
-    final type Around1     = Arounds[O, S, E]
-    final type Check       = Invariants[O, S, E]
+    final type Point       = Points[O, S, E]
+    final type Around      = Arounds[O, S, E]
+    final type Invariant   = Invariants[O, S, E]
     final type Action      = Actions[F, R, O, S, E]
-    final type Action1     = Actions[F, R, O, S, E]
-    final type ActionFn    = ROS => teststate.core.Action.Prepared[F, O, S, E]
     final type TestContent = teststate.run.TestContent[F, R, O, S, E]
     final type Test        = teststate.run.Test[F, R, O, S, E]
   }
@@ -55,26 +53,26 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   private def sackE(ne: NamedError[E]) =
     Sack.Value(Left(ne))
 
-  def point(name: NameFn, test: OS => Option[E]): Point1 =
+  def point(name: NameFn, test: OS => Option[E]): Point =
     sack1(Point(name, Tri failedOption test(_)))
 
-  def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around1 =
+  def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around =
     sack1(Around.Delta(Around.DeltaA(name, os => Passed(before(os)), test)))
 
   private def strErrorFn(implicit ev: String =:= E): Any => E = _ => ""
   private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E = (_,_) => ""
 
 
-  def test(name: NameFn, testFn: OS => Boolean)(implicit ev: String =:= E): Point1 =
+  def test(name: NameFn, testFn: OS => Boolean)(implicit ev: String =:= E): Point =
     test(name, testFn, strErrorFn)
 
-  def test(name: NameFn, testFn: OS => Boolean, error: OS => E): Point1 =
+  def test(name: NameFn, testFn: OS => Boolean, error: OS => E): Point =
     point(name, os => if (testFn(os)) None else Some(error(os)))
 
-  def testAround(name: NameFn, testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around1 =
+  def testAround(name: NameFn, testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around =
     testAround(name, testFn, strErrorFn2)
 
-  def testAround(name: NameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around1 =
+  def testAround(name: NameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around =
     around(name, identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
   def choose[C[-_, _]](name: Name, f: OS => CheckShape[C, O, S, E]): CheckShape[C, O, S, E] =
@@ -106,10 +104,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def emptyAction: Action =
     Sack.empty
 
-  def emptyAround: Around1 =
+  def emptyAround: Around =
     Sack.empty
 
-  def emptyInvariant: Check =
+  def emptyInvariant: Invariant =
     Sack.empty
 
   def emptyTest(implicit r: Recover[E]): TestContent =
@@ -128,31 +126,31 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     private def suffix(desc: String): String => String =
       _ + " " + desc
 
-    def test(descSuffix: String, testFn: A => Boolean)(implicit ev: String =:= E): Point1 =
+    def test(descSuffix: String, testFn: A => Boolean)(implicit ev: String =:= E): Point =
       test(suffix(descSuffix), testFn)
 
-    def test(descSuffix: String, testFn: A => Boolean, error: A => E): Point1 =
+    def test(descSuffix: String, testFn: A => Boolean, error: A => E): Point =
       test(suffix(descSuffix), testFn, error)
 
-    def test(desc: String => String, testFn: A => Boolean)(implicit ev: String =:= E): Point1 =
+    def test(desc: String => String, testFn: A => Boolean)(implicit ev: String =:= E): Point =
       test(desc, testFn, strErrorFn)
 
-    def test(desc: String => String, testFn: A => Boolean, error: A => E): Point1 =
+    def test(desc: String => String, testFn: A => Boolean, error: A => E): Point =
       Dsl.this.test(
         desc(focusName),
         testFn compose focusFn,
         error compose focusFn)
 
-    def testAround(descSuffix: String, testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around1 =
+    def testAround(descSuffix: String, testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around =
       testAround(suffix(descSuffix), testFn)
 
-    def testAround(descSuffix: String, testFn: (A, A) => Boolean, error: (A, A) => E): Around1 =
+    def testAround(descSuffix: String, testFn: (A, A) => Boolean, error: (A, A) => E): Around =
       testAround(suffix(descSuffix), testFn, error)
 
-    def testAround(desc: String => String, testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around1 =
+    def testAround(desc: String => String, testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around =
       testAround(desc, testFn, strErrorFn2)
 
-    def testAround(desc: String => String, testFn: (A, A) => Boolean, error: (A, A) => E): Around1 =
+    def testAround(desc: String => String, testFn: (A, A) => Boolean, error: (A, A) => E): Around =
       around(desc(focusName), focusFn)((os, a1) => {
         val a2 = focusFn(os)
         if (testFn(a1, a2)) None else Some(error(a1, a2))
@@ -165,26 +163,26 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def not = new AssertOps(!positive)
 
-      def equal(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
+      def equal(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
         point(
           NameUtils.equal(focusName, positive, expect),
           i => f.expectMaybeEqual(positive, ex = expect, actual = focusFn(i)))
 
-      def equalBy(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
+      def equalBy(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
         point(
           NameFn(NameUtils.equalFn(focusName, positive, expect)),
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
 
-      def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
+      def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
         equal(before).before & equal(after).after
 
-      def beforeAndAfterBy(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
+      def beforeAndAfterBy(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
         equalBy(before).before & equalBy(after).after
 
       private def mkAround(name: NameFn, f: (A, A) => Option[E]) =
         around(name, focusFn)((os, a) => f(a, focusFn(os)))
 
-      def changesTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around1 =
+      def changesTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
         mkAround(
           NameFn(NameUtils.equalFn(focusName, positive, expect compose focusFn)),
           (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
@@ -309,7 +307,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def not = new AssertOps(!positive)
 
-      def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Point1 =
+      def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
         point(
           NameFn(NameUtils.equalFn(focusName, positive, i => fe(i))),
           os => f.expectMaybeEqual(positive, ex = fe(os), actual = fa(os)))

@@ -30,7 +30,7 @@ object OutputTest extends TestSuite {
   val checkAround  = mockAround("Button count increased.")
   val checkAroundF = *.around("Button count increased.", _ => ())((_, _) => Some("2 != 3"))
 
-  def test(a: *.Action, i: *.Check)(expect: String): Unit = {
+  def test(a: *.Action, i: *.Invariant)(expect: String): Unit = {
     val h = Test(a, i).observe(_ => ()).run((), ())
     val actual = h.format(options).trim
     assertEq(actual = actual, expect.trim)
@@ -41,7 +41,7 @@ object OutputTest extends TestSuite {
     'empty - test(emptyAction, emptyInvariants)("- Nothing to do.")
 
     'invariants {
-      def t(i: *.Check)(expect: String) = test(emptyAction, i)(expect)
+      def t(i: *.Invariant)(expect: String) = test(emptyAction, i)(expect)
       'pass {
         'simplest - t(checkPoint)(
           """
