@@ -61,13 +61,19 @@ object ActionOps {
     def pmapO[X](f: X => E Or O)(implicit em: ExecutionModel[F]) =
       tc.pmapO(a)(f)
 
-    def modS(f: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+    private[core] def modS(f: O => S => E Or S)(implicit em: ExecutionModel[F]) =
       tc.modS(a)(f)
 
-    def updateState(f: OS[O, S] => S)(implicit em: ExecutionModel[F]) =
-      tryUpdateState(i => Right(f(i)))
+    def updateState(f: S => S)(implicit em: ExecutionModel[F]) =
+      tryUpdateState(s => Right(f(s)))
 
-    def tryUpdateState(f: OS[O, S] => E Or S)(implicit em: ExecutionModel[F]) =
+    def tryUpdateState(f: S => E Or S)(implicit em: ExecutionModel[F]) =
+      modS(_ => f)
+
+    def updateStateBy(f: OS[O, S] => S)(implicit em: ExecutionModel[F]) =
+      tryUpdateStateBy(i => Right(f(i)))
+
+    def tryUpdateStateBy(f: OS[O, S] => E Or S)(implicit em: ExecutionModel[F]) =
       modS(o => s => f(OS(o, s)))
   }
 
