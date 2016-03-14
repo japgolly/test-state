@@ -28,45 +28,22 @@ object Dsl {
     final type Point1      = Points[O, S, E]
     final type Around1     = Arounds[O, S, E]
     final type Check       = Invariants[O, S, E]
-    final type Action      = teststate.core.Action[F, R, O, S, E]
-    final type Action1     = teststate.core.Action.Single[F, R, O, S, E]
+    final type Action      = Actions[F, R, O, S, E]
+    final type Action1     = Actions[F, R, O, S, E]
     final type ActionFn    = ROS => teststate.core.Action.Prepared[F, O, S, E]
     final type TestContent = teststate.run.TestContent[F, R, O, S, E]
     final type Test        = teststate.run.Test[F, R, O, S, E]
   }
 
-  implicit def sadfhasdlfkj[F[_], R, O, S, E](b: Dsl.ActionB[F, R, O, S, E]) = b.noStateUpdate
-  final class ActionB[F[_], R, O, S, E](actionName: => String)(implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
-
-    private def build(fn: (ROS => F[Option[E]]) => ActionFn): ActionB2[F, R, O, S, E] =
-      new ActionB2(act => Action.Single[F, R, O, S, E](
-        actionName,
-        fn(act), Sack.empty))
-
-    def updateState(nextState: S => S) =
-      updateStateO(s => _ => nextState(s))
-
-    def updateStateO(nextState: S => O => S) =
-      build(act => i => Some(() =>
-        EM.map(act(i))(Or.liftLeft(_, o => Right(nextState(i.state)(o))))
-      ))
-
-    def updateState2(f: S => E Or S) =
-      build(act => i => Some(() =>
-        EM.map(act(i))(Or.liftLeft(_) >> f(i.state).map(s => Function const Right(s)))
-      ))
-
-    def noStateUpdate =
-      updateStateO(s => _ => s)
-  }
-
-  final class ActionB2[F[_], R, O, S, E](build: (ROS[R, O, S] => F[Option[E]]) => Action.Single[F, R, O, S, E])(implicit EM: ExecutionModel[F]) {
+  final class ActionB[F[_], R, O, S, E](actionName: NameFn[ROS[R, O, S]])(implicit EM: ExecutionModel[F]) {
 
     def act[U](f: ROS[R, O, S] => F[U]) =
-      build(f.andThen(EM.map(_)(_ => None)))
+      actTry(f.andThen(EM.map(_)(_ => None)))
 
-    def actTry(f: ROS[R, O, S] => F[Option[E]]) =
-      build(f)
+    def actTry(f: ROS[R, O, S] => F[Option[E]]): Actions[F, R, O, S, E] = {
+      val a = Action.Single[F, R, O , S, E](i => Some(() => EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(i.state)))))
+      Action.liftInner(a)(actionName)
+    }
   }
 }
 
@@ -127,7 +104,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   // ===================================================================================================================
 
   def emptyAction: Action =
-    Action.empty
+    Sack.empty
 
   def emptyAround: Around1 =
     Sack.empty

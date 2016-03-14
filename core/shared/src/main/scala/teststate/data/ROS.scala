@@ -15,21 +15,19 @@ final case class ROS[+R, +O, +S](ref: R, obs: O, state: S) {
   val sos: Some[OS[O, S]] =
     Some(os)
 
-  def mapR  [X]   (f: R => X)           : ROS[X, O, S]         = copy(ref = f(ref))
-  def mapO  [X]   (f: O => X)           : ROS[R, X, S]         = copy(obs = f(obs))
-  def mapS  [X]   (f: S => X)           : ROS[R, O, X]         = copy(state = f(state))
-  def mapOS [X, Y](o: O => X, s: S => Y): ROS[R, X, Y]         = ROS(ref, o(obs), s(state))
-  def mapOe [X]   (f: O => Any Or X)    : Option[ROS[R, X, S]] = f(obs).toOptionMap(o => copy(obs = o))
-  def mapRe [X]   (f: R => Any Or X)    : Option[ROS[X, O, S]] = f(ref).toOptionMap(r => copy(ref = r))
+  def mapR  [X]   (f: R => X)           : ROS[X, O, S]      = copy(ref = f(ref))
+  def mapO  [X]   (f: O => X)           : ROS[R, X, S]      = copy(obs = f(obs))
+  def mapS  [X]   (f: S => X)           : ROS[R, O, X]      = copy(state = f(state))
+  def mapOS [X, Y](o: O => X, s: S => Y): ROS[R, X, Y]      = ROS(ref, o(obs), s(state))
+  def emapR [E, X](f: R => E Or X)      : E Or ROS[X, O, S] = f(ref).map(ROS(_, obs, state))
+  def emapO [E, X](f: O => E Or X)      : E Or ROS[R, X, S] = f(obs).map(ROS(ref, _, state))
 }
 
 
 final case class OS[+O, +S](obs: O, state: S) {
-  def map[OO, SS](o: O => OO, s: S => SS) = OS(o(obs), s(state))
-  def mapO[A](f: O => A) = OS(f(obs), state)
-//    def mapOo[A](f: O => Option[A]) = f(obs).map(OS(_, state))
-  def mapOe[OO](f: O => Any Or OO): Option[OS[OO, S]] = f(obs).toOptionMap(OS(_, state))
-  def mapOE[E, OO](f: O => E Or OO): E Or OS[OO, S] = f(obs).map(OS(_, state))
-  def mapS[SS](f: S => SS) = OS(obs, f(state))
+  def map  [OO, SS](o: O => OO, s: S => SS): OS[OO, SS]     = OS(o(obs), s(state))
+  def mapO [A]     (f: O => A)             : OS[A, S]       = OS(f(obs), state)
+  def mapS [SS]    (f: S => SS)            : OS[O, SS]      = OS(obs, f(state))
+  def emapO[E, OO] (f: O => E Or OO)       : E Or OS[OO, S] = f(obs).map(OS(_, state))
 }
 

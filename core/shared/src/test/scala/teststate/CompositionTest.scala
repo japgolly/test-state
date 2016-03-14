@@ -17,7 +17,7 @@ object CoproductExample {
     val txt = *.focus("Txt value").obsAndState(identity, identity)
 
     def add(a: String) =
-      *.action("Add").updateState(_ + a).act(_.ref.txt += a)
+      *.action("Add").act(_.ref.txt += a).updateState(_ + a)
         .addCheck(txt.assert.equal.beforeAndAfter)
 
     val test = Test(add("x").times(2)).observe(_.txt)
@@ -33,7 +33,7 @@ object CoproductExample {
     val num = *.focus("Number value").obsAndState(identity, identity)
 
     def add(a: Int) =
-      *.action("Add").updateState(_ + a).act(_.ref.num += a)
+      *.action("Add").act(_.ref.num += a).updateState(_ + a)
         .addCheck(num.assert.equal.beforeAndAfter)
 
     val test = Test(add(2).times(2)).observe(_.num)
@@ -78,7 +78,7 @@ object CoproductExample {
       case Right(_) => Type.Txt
     }, _.t)
 
-    val testNum: Action[Id, Top, Obs, State, String] =
+    val testNum: Actions[Id, Top, Obs, State, String] =
       Num.test.content
         .mapS[State](_.num, (s, n) => s.copy(num = n))
         .pmapO[Obs] {
@@ -92,7 +92,7 @@ object CoproductExample {
         .addInvariants(curType.state.assert.equal(Type.Num).before)
         .asAction("Test Num")
 
-    val testTxt: Action[Id, Top, Obs, State, String] =
+    val testTxt: Actions[Id, Top, Obs, State, String] =
       Txt.test.content
         .mapS[State](_.txt, (s, n) => s.copy(txt = n))
         .pmapO[Obs] {
@@ -110,7 +110,7 @@ object CoproductExample {
       curType.assert.equal
 
     val swapTypes =
-      *.action("Swap types").updateState(s => s.copy(t = s.t.swap)).act(_.ref.swap())
+      *.action("Swap types").act(_.ref.swap()).updateStateBy(i => i.state.copy(t = i.state.t.swap))
 
     val actions =
       testNum >> swapTypes >> testTxt

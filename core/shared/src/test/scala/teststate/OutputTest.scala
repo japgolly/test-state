@@ -38,10 +38,10 @@ object OutputTest extends TestSuite {
 
   override def tests = TestSuite {
 
-    'empty - test(Action.empty, emptyInvariants)("- Nothing to do.")
+    'empty - test(emptyAction, emptyInvariants)("- Nothing to do.")
 
     'invariants {
-      def t(i: *.Check)(expect: String) = test(Action.empty, i)(expect)
+      def t(i: *.Check)(expect: String) = test(emptyAction, i)(expect)
       'pass {
         'simplest - t(checkPoint)(
           """

@@ -5,16 +5,17 @@ import teststate.data._
 import teststate.typeclass._
 import teststate.core._
 import CoreExports._
+import CoreExports2._
 
 // TODO Maybe better: Script | Plan | TestCase
-class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, State, Err],
+class TestContent[F[_], Ref, Obs, State, Err](val action: Actions[F, Ref, Obs, State, Err],
                                               val invariants: Invariants[Obs, State, Err])
                                              (implicit val executionModel: ExecutionModel[F], val recover: Recover[Err]) {
   def trans[G[_]: ExecutionModel](t: F ~~> G): TestContent[G, Ref, Obs, State, Err] =
     new TestContent(action trans t, invariants)
 
   def mapR[R2](f: R2 => Ref): TestContent[F, R2, Obs, State, Err] =
-    new TestContent(action cmapR f, invariants)
+    new TestContent(action mapR f, invariants)
 
   def pmapR[R2](f: R2 => Err Or Ref): TestContent[F, R2, Obs, State, Err] =
     new TestContent(action pmapR f, invariants)
@@ -26,7 +27,7 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
 
   def mapS[SS](s: SS => State, su: (SS, State) => SS): TestContent[F, Ref, Obs, SS, Err] =
     new TestContent(
-      action.unzoomS(s, su),
+      action.mapS(s)(su),
       invariants.mapS(s))
 
   def mapE[E](f: Err => E): TestContent[F, Ref, Obs, State, E] =
@@ -37,8 +38,8 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
   def addInvariants(i: Invariants[Obs, State, Err]): TestContent[F, Ref, Obs, State, Err] =
     new TestContent(action, invariants & i)
 
-  def asAction(name: NameFn[ROS[Ref, Obs, State]]) =
-    Action.SubTest(name, action, invariants)
+  def asAction(name: NameFn[ROS[Ref, Obs, State]]): Actions[F, Ref, Obs, State, Err] =
+    Action.liftInner(Action.SubTest(action, invariants))(name)
 
   def observe(f: Ref => Obs) =
     observeTry(r => Right(f(r)))
@@ -48,7 +49,7 @@ class TestContent[F[_], Ref, Obs, State, Err](val action: Action[F, Ref, Obs, St
 }
 
 object TestContent {
-  implicit def testContentInstanceShow[F[_], R, O, S, E](implicit sa: Show[Action[F, R, O, S, E]],
+  implicit def testContentInstanceShow[F[_], R, O, S, E](implicit sa: Show[Actions[F, R, O, S, E]],
                                                          si: Show[Invariants[O, S, E]]): Show[TestContent[F, R, O, S, E]] =
     Show(tc =>
       s"""
@@ -85,7 +86,7 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
 }
 
 object Test {
-  def apply[F[_], Ref, Obs, State, Err](action: Action[F, Ref, Obs, State, Err],
+  def apply[F[_], Ref, Obs, State, Err](action: Actions[F, Ref, Obs, State, Err],
                                         invariants: Invariants[Obs, State, Err] = Sack.empty)
                                        (implicit em: ExecutionModel[F], recover: Recover[Err]) =
     new TestContent(action, invariants)(em, recover)

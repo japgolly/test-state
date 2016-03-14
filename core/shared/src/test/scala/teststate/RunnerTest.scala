@@ -179,7 +179,7 @@ object RunnerTest extends TestSuite {
       }
 
       'nextState {
-        val test = Test(*.action("Merf").updateState(_ => sys error "BERF").act(_ => ())).observe(_.s)
+        val test = Test(*.action("Merf").act(_ => ()).updateStateBy(_ => sys error "BERF")).observe(_.s)
         testHistory(test.run((), newState),
           """
             |✘ Merf
@@ -201,7 +201,10 @@ object RunnerTest extends TestSuite {
     'modS {
       var i = 9
       val * = Dsl.sync[Unit, Int, Int, String]
-      val inc = *.action("inc").updateState(_ + 8).act(_ => i = i + 1).modS(_ - 3).modS(_ - 4)
+      val inc = *.action("inc").act(_ => i = i + 1)
+        .updateState(_ + 8)
+        .updateStateBy(_.state - 3)
+        .updateState(_ - 4)
       val h = Test(inc.times(3)).observe(_ => i).run(i, ())
       assertEq(h.failure, None)
       assertEq(i, 12)

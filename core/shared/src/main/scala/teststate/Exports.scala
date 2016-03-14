@@ -2,10 +2,7 @@ package teststate
 
 import teststate.data.Or
 
-trait Exports extends core.CoreExports {
-
-  type Action[F[_], R, O, S, E] = teststate.core.Action[F, R, O, S, E]
-  val Action = teststate.core.Action
+trait Exports extends core.CoreExports with core.CoreExports2 {
 
   type Dsl[F[_], R, O, S, E] = teststate.dsl.Dsl[F, R, O, S, E]
   val Dsl = teststate.dsl.Dsl

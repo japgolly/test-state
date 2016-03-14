@@ -46,17 +46,17 @@ object CheckOps {
   @inline implicit def NameFnOsExt[O, S](n: NameFn[OS[O, S]]): NameFnOsExt[O, S] = new NameFnOsExt(n.fn)
   class NameFnOsExt[O, S](private val _n: Option[OS[O, S]] => Name) extends AnyVal {
     def pmapO[X](f: X => Any Or O): NameFn[OS[X, S]] =
-      NameFn(_n).comap(_ mapOe f)
+      NameFn(_n).comap(_.emapO(f).toOption)
   }
 
   @inline implicit class EitherOsExt[E, O, S](private val e: E Or OS[O, S]) extends AnyVal {
     def pmapO[X](f: O => E Or X): E Or OS[X, S] =
-      e flatMap(_ mapOE f)
+      e flatMap(_ emapO f)
   }
 
   @inline implicit class OsToTriFnExt[O, S, E, A](private val fn: OS[O, S] => Tri[E, A]) extends AnyVal {
     def pmapO[X](f: X => E Or O): OS[X, S] => Tri[E, A] =
-      _.mapOE(f).toTriFlatMap(fn)
+      _.emapO(f).toTriFlatMap(fn)
   }
 
   abstract class SingleCheck[D[-_, _] : Profunctor] extends CheckOps[CheckShape1[D]#T] {
@@ -87,7 +87,7 @@ object CheckOps {
           Around.DeltaA(
             d.name pmapO f,
             d.before pmapO f,
-            (xs, a: d.A) => xs.mapOE(f).test(t(_, a)).leftOption)
+            (xs, a: d.A) => xs.emapO(f).test(t(_, a)).leftOption)
         }
 
         override def rename[O, S, E](d: C[O, S, E])(n: NameFn[OS[O, S]]): C[O, S, E] =
@@ -141,7 +141,7 @@ object CheckOps {
             case CoProduct(n, p) =>
               CoProduct(
                 n pmapO f,
-                _.mapOE(f) match {
+                _.emapO(f) match {
                   case Right(os) => pmapO(p(os))(f)
                   case Left(e)   => Value(Left(NamedError(n(None), e)))
                 }
