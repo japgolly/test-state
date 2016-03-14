@@ -1,0 +1,78 @@
+digraph G {
+
+rankdir=BT node[style=filled]
+
+/*
+subgraph cluster_data {
+  style=filled fillcolor="#fff2f2" node[fillcolor="#ffcccc"]
+  Tri
+  Sack
+  OS
+  ROS
+  Result
+  Id
+  Or
+  Name
+  NamedError
+}
+subgraph cluster_tc {
+  style=filled fillcolor="#f4fff4" node[fillcolor="#bbffbb"]
+  ShowError
+  Show
+  Recover
+  Profunctor
+  NT [label="~~>"]
+  ExecutionModel
+  Equal
+  Conditional
+}
+subgraph cluster_core {
+  style=filled fillcolor="#f2f2ff" node[fillcolor="#ccccff"]
+  Action
+  ActionOps
+  CheckOps
+  Check
+  Types
+  CoreExports
+  CoreExports2
+  PCompose
+  ToInvariant
+  PointOps
+}
+*/
+
+subgraph cluster_core {
+  style=filled fillcolor="#f2f2ff" node[fillcolor="#ccccff"]
+  Tri
+  Sack
+  OS
+  ROS
+  Result
+  Id
+  Or
+  Name
+  NamedError
+}
+
+Tri -> Result
+Sack -> Name,Recover,Profunctor,Conditional,Show
+ROS -> OS
+Or -> Tri
+NamedError -> Name
+
+Recover -> Or,Name
+ExecutionModel -> Or,Recover,Id,NT
+Conditional -> Tri,Or
+
+Action -> Or,ROS,Types,Name,Sack,Conditional,Show
+ActionOps -> NT,ExecutionModel,ROS,Name,Types,Or,OS,Sack,Action,Profunctor
+CheckOps -> Profunctor,OS,Or,Name,Types,Check
+Check -> Profunctor,Conditional,Show,Name,Tri
+Types -> Sack,NamedError,Or,OS,Check
+CoreExports -> Name,CheckOps,Conditional,PCompose,PointOps,Show,Action,Sack
+CoreExports2 -> ActionOps
+PCompose -> Types,ToInvariant,Sack
+ToInvariant -> Profunctor,Types,Check
+PointOps -> Profunctor,Types,Check
+
+}
