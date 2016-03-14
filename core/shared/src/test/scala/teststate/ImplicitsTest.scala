@@ -5,6 +5,8 @@ import scala.annotation.implicitNotFound
 
 abstract class AbstractTest {
   trait A
+  trait F[_]
+  trait R
   trait O {
     def bool: Boolean
   }
@@ -20,6 +22,8 @@ abstract class AbstractTest {
   def s21: S2 => S
   def e12: E => E2
   def e21: E2 => E
+
+  implicit def fem: teststate.typeclass.ExecutionModel[F]
 
   @implicitNotFound(msg = "\n\nExpected: ${From}\n  Actual: ${To}\n\n")
   sealed abstract class =:=[From, To] extends (From => To) with Serializable
@@ -50,6 +54,10 @@ abstract class AbstractTest {
 
 abstract class ImplicitsTest extends AbstractTest {
   import teststate.Exports._
+
+  // ===================================================================================================================
+  // Checks
+  // ===================================================================================================================
 
   // mapO
   test[Points    [O, S, E]](_ mapO o21).expect[Points    [O2, S, E]]
@@ -82,5 +90,21 @@ abstract class ImplicitsTest extends AbstractTest {
   test[Points    [O, S, E]](_.show).expect[String]
   test[Arounds   [O, S, E]](_.show).expect[String]
   test[Invariants[O, S, E]](_.show).expect[String]
+
+  // ===================================================================================================================
+  // Actions
+  // ===================================================================================================================
+
+  // Conditional
+  test[Actions[F, R, O, S, E]](_.when(_.obs.bool)).expect[Actions[F, R, O, S, E]]
+
+  // ActionOps1
+  test[Actions[F, R, O, S, E]](_ mapO o21).expect[Actions[F, R, O2, S, E]]
+
+  // ActionOps2
+  test[Actions[F, R, O, S, E]](_ times 3).expect[Actions[F, R, O, S, E]]
+
+  // ActionOps3
+  testAA[Actions[F, R, O, S, E]](_ >> _).expect[Actions[F, R, O, S, E]]
 }
 

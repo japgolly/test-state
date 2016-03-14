@@ -97,6 +97,12 @@ object ActionOps {
 
     @inline def andThen(next: Actions[F, R, O, S, E]): Actions[F, R, O, S, E] =
       >>(next)
+
+    def group(name: NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] = {
+      val i = Group[F, R, O, S, E](Function const Some(self))
+      val o = Outer(name, i, Sack.empty)
+      o.lift
+    }
   }
 
   private def _timesName[F[_], R, O, S, E](n: Int, name: NameFn[ROS[R, O, S]]) =

@@ -347,9 +347,11 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                 // TODO Doesn't checkAround!!
                 val t = new Test(new TestContent(action, invariants & subInvariants), test.observe)
                 val subP = subtest(t, refFn, ros, false)
-                EM.map(subP)(p2 =>
-                  nextProgress(
-                    p2 ++ History.maybeParent(nameFn(ros.some), p2.history)
+                EM.map(subP)(s =>
+                  Progress.prepareNext(
+                    queue.tail,
+                    s.ros,
+                    p.history ++ History.maybeParent(nameFn(ros.some), s.history)
                   ))
             }
 
