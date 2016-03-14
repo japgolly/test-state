@@ -7,6 +7,11 @@ import Sack._
 
 sealed abstract class Sack[-I, +A] {
 
+//  should be def isEmpty(i: I): Boolean
+//  def isEmpty: Boolean
+//
+//  final def nonEmpty = !isEmpty
+
   // Note: Result is flat, coproudcts are resolved and flattened; their names discarded.
   final def foreach(i: I)(err: (Name, Throwable) => Unit)(f: A => Unit): Unit = {
     def go(s: Sack[I, A]): Unit =
@@ -24,15 +29,26 @@ sealed abstract class Sack[-I, +A] {
 
 object Sack {
 
-  final case class Value[+A](value: A) extends Sack[Any, A]
+  final case class Value[+A](value: A) extends Sack[Any, A] {
+//    override def isEmpty = false
+  }
 
-  final case class Product[-I, +A](contents: Vector[Sack[I, A]]) extends Sack[I, A]
+  final case class Product[-I, +A](contents: Vector[Sack[I, A]]) extends Sack[I, A] {
+//    override def isEmpty = contents.isEmpty
+  }
 
-  final case class CoProduct[-I, +A](name: NameFn[I], produce: I => Sack[I, A]) extends Sack[I, A]
+  final case class CoProduct[-I, +A](name: NameFn[I], produce: I => Sack[I, A]) extends Sack[I, A] {
+//    override def isEmpty = false
+  }
 
   val empty = Product(Vector.empty)
 
   def append[A, B](a: Sack[A, B], b: Sack[A, B]): Sack[A, B] =
+//    if (a.isEmpty)
+//      b
+//    else if (b.isEmpty)
+//      a
+//    else
     (a, b) match {
       case (Product(p), Product(q)) => Product(p ++ q)
       case (p         , Product(q)) => Product(p +: q)

@@ -78,8 +78,8 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
   def mapE[E](f: Err => E): Test[F, Ref, Obs, State, E] =
     new Test(content mapE f, observe mapE f)
 
-//  def run(initialState: State, ref: => Ref): F[History[Err]] =
-//    Runner.run(this)(initialState, ref)
+  def run(initialState: State, ref: => Ref): F[History[Err]] =
+    Runner.run(this)(initialState, ref)
 
   def addInvariants(i: Invariants[Obs, State, Err]): Test[F, Ref, Obs, State, Err] =
     new Test(content addInvariants i, observe)
