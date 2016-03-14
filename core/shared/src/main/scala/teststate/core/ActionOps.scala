@@ -128,8 +128,8 @@ object ActionOps {
 
   @inline implicit def NameFnRosExt[R, O, S](n: NameFn[ROS[R, O, S]]): NameFnRosExt[R, O, S] = new NameFnRosExt(n.fn)
   class NameFnRosExt[R, O, S](private val _n: Option[ROS[R, O, S]] => Name) extends AnyVal {
-    def pmapO[X](f: X => Any Or O): NameFn[ROS[R, X, S]] = NameFn(_n).comap(_ mapOe f)
-    def pmapR[X](f: X => Any Or R): NameFn[ROS[X, O, S]] = NameFn(_n).comap(_ mapRe f)
+    def pmapO[X](f: X => Any Or O): NameFn[ROS[R, X, S]] = NameFn(_n).comap(_.emapO(f).toOption)
+    def pmapR[X](f: X => Any Or R): NameFn[ROS[X, O, S]] = NameFn(_n).comap(_.emapR(f).toOption)
   }
 
   private def failAction[F[_], R, O, S, E](name: Name, err: E)(implicit em: ExecutionModel[F]) =
@@ -305,7 +305,7 @@ object ActionOps {
             case Product(ss)     => Product(ss map (_ pmapR f))
             case CoProduct(n, p) =>
               CoProduct(n pmapR f,
-                _.mapRE(f).fold(e => Sack Value Left(NamedError(n(None), e)), p(_) pmapR f))
+                _.emapR(f).fold(e => Sack Value Left(NamedError(n(None), e)), p(_) pmapR f))
           }
 
         override def pmapO[F[_], R, O, S, E, X](x: Actions[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
@@ -314,7 +314,7 @@ object ActionOps {
             case Product(ss)     => Product(ss map (_ pmapO f))
             case CoProduct(n, p) =>
               CoProduct(n pmapO f,
-                _.mapOE(f).fold(e => Sack Value Left(NamedError(n(None), e)), p(_) pmapO f))
+                _.emapO(f).fold(e => Sack Value Left(NamedError(n(None), e)), p(_) pmapO f))
           }
 
         override def modS[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
