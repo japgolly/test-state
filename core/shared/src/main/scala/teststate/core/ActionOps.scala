@@ -333,25 +333,34 @@ object ActionOps {
             case CoProduct(n, p) => CoProduct(f(n), p)
           }
 
+        def groupComposite[F[_], R, O, S, E](ss: Vector[Actions[F, R, O, S, E]]) = {
+          val l = ss.length
+          val a = Some(Sack.Product(ss))
+          val i = Group[F, R, O, S, E](_ => a)
+          val o = Outer(s"$l actions.", i, Sack.empty)
+          o
+        }
+
         override def times[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(n: Int) =
           actions match {
             case Value(v)         => Value(v map (_ times n))
             case CoProduct(nf, p) => _times(n, nf, f => CoProduct(nf map f, p)).lift
             case Product(ss)      =>
-              val slen = ss.length
-              if (slen == 1)
+              if (ss.length == 1)
                 ss.head times n
               else {
-                val a = Some(actions)
-                val i = Group[F, R, O, S, E](_ => a)
-                val o = Outer(s"$slen actions.", i, Sack.empty)
-                o.times(n).lift
+                groupComposite(ss).times(n).lift
                 //_times(n, s"$slen actions.", f => Product(ss map (_ nameMod f))).lift
               }
           }
 
         override def addCheck[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(c: Arounds[O, S, E]) =
-          x.rmap(_ map (_ addCheck c))
+          x match {
+            case Product(ss) if ss.length != 1 =>
+              groupComposite(ss).addCheck(c).lift
+            case _ =>
+              x.rmap(_ map (_ addCheck c))
+          }
       }
 
     implicit def toActionOps[A[_[_], _, _, _, _], F[_], R, O, S, E](a: A[F, R, O, S, E])(implicit tc: ActionOps[A]): Ops[A, F, R, O, S, E] =

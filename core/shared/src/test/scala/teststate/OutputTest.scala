@@ -55,7 +55,43 @@ object OutputTest extends TestSuite {
 
   override def tests = TestSuite {
 
-    'empty - test(emptyAction, emptyInvariants)("- Nothing to do.")
+    'empty {
+      'empty - test(emptyAction, emptyInvariants)("- Nothing to do.")
+
+      'before - test(emptyAction addCheck checkPoint.before, emptyInvariants)(
+        """
+          |✓ 0 actions.
+          |  ✓ Pre-conditions
+          |    ✓ Check stuff.
+          |✓ All pass.
+        """.stripMargin)
+
+      'after - test(emptyAction addCheck checkPoint.after, emptyInvariants)(
+        """
+          |✓ 0 actions.
+          |  ✓ Post-conditions
+          |    ✓ Check stuff.
+          |✓ All pass.
+        """.stripMargin)
+
+      'around - test(emptyAction addCheck checkAround, emptyInvariants)(
+        """
+          |✓ 0 actions.
+          |  ✓ Post-conditions
+          |    ✓ Button count increased.
+          |✓ All pass.
+        """.stripMargin)
+
+      'beforeAfter - test(emptyAction addCheck checkPoint.after addCheck checkPoint2.before, emptyInvariants)(
+        """
+          |✓ 0 actions.
+          |  ✓ Pre-conditions
+          |    ✓ Check more stuff.
+          |  ✓ Post-conditions
+          |    ✓ Check stuff.
+          |✓ All pass.
+        """.stripMargin)
+    }
 
     'invariants {
       def t(i: *.Invariant)(expect: String) = test(emptyAction, i)(expect)
@@ -225,6 +261,51 @@ object OutputTest extends TestSuite {
             |    ✘ Check failure. -- Shit broke!
           """.stripMargin)
       }
+    }
+
+    'product {
+      val a2 = action >> action2
+      'before - test(a2 addCheck checkPoint.before, emptyInvariants)(
+        """
+          |✓ 2 actions.
+          |  ✓ Pre-conditions
+          |    ✓ Check stuff.
+          |  ✓ Press button.
+          |  ✓ Pull lever.
+          |✓ All pass.
+        """.stripMargin)
+
+      'after - test(a2 addCheck checkPoint.after, emptyInvariants)(
+        """
+          |✓ 2 actions.
+          |  ✓ Press button.
+          |  ✓ Pull lever.
+          |  ✓ Post-conditions
+          |    ✓ Check stuff.
+          |✓ All pass.
+        """.stripMargin)
+
+      'around - test(a2 addCheck checkAround, emptyInvariants)(
+        """
+          |✓ 2 actions.
+          |  ✓ Press button.
+          |  ✓ Pull lever.
+          |  ✓ Post-conditions
+          |    ✓ Button count increased.
+          |✓ All pass.
+        """.stripMargin)
+
+      'beforeAfter - test(a2 addCheck checkPoint.after addCheck checkPoint2.before, emptyInvariants)(
+        """
+          |✓ 2 actions.
+          |  ✓ Pre-conditions
+          |    ✓ Check more stuff.
+          |  ✓ Press button.
+          |  ✓ Pull lever.
+          |  ✓ Post-conditions
+          |    ✓ Check stuff.
+          |✓ All pass.
+        """.stripMargin)
     }
 
     'actionG {
