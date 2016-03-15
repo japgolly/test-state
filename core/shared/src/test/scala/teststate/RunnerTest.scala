@@ -243,39 +243,50 @@ object RunnerTest extends TestSuite {
 
     'choice {
       'invariant {
-        val * = Dsl.sync[Unit, Unit, Boolean, String]
-        val a = *.action("A").act(_ => ()).updateState(!_)
-        val i1 = *.test("IT", _ => true)
-        val i0 = *.test("IF", _ => true)
-        val i = *.chooseInvariant("I", x => if (x.state) i1 else i0)
-        val t = Test(a >> a, i).observe(_ => ())
-        testHistory(t.run(true, ()),
+        var v = true
+        val * = Dsl.sync[Unit, Boolean, Boolean, String]
+        val a = *.action("A").act(_ => v = !v).updateState(!_)
+        val i00 = *.test("IFF", _ => true)
+        val i11 = *.test("ITT", _ => true)
+        val i01 = *.test("IFT", _ => false)
+        val i10 = *.test("ITF", _ => false)
+        val i = *.chooseInvariant("I", x => (x.obs, x.state) match {
+          case (true,  true ) => i11
+          case (false, false) => i00
+          case (true , false) => i10
+          case (false, true ) => i01
+        })
+        val t = Test(a >> a, i).observe(_ => v)
+
+        v = true
+        testHistory(t.run(v, ()),
           """
             |✓ Initial state.
-            |  ✓ IT
+            |  ✓ ITT
             |✓ A
             |  ✓ Action
             |  ✓ Invariants
-            |    ✓ IF
+            |    ✓ IFF
             |✓ A
             |  ✓ Action
             |  ✓ Invariants
-            |    ✓ IT
+            |    ✓ ITT
             |✓ All pass.
           """.stripMargin, showChildren = true)
 
-        testHistory(t.run(false, ()),
+        v = false
+        testHistory(t.run(v, ()),
           """
             |✓ Initial state.
-            |  ✓ IF
+            |  ✓ IFF
             |✓ A
             |  ✓ Action
             |  ✓ Invariants
-            |    ✓ IT
+            |    ✓ ITT
             |✓ A
             |  ✓ Action
             |  ✓ Invariants
-            |    ✓ IF
+            |    ✓ IFF
             |✓ All pass.
           """.stripMargin, showChildren = true)
       }
