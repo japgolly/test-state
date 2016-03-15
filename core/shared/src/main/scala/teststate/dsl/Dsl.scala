@@ -332,7 +332,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   }
 
   final class ObsAndState[A](focusName: => String, fo: O => A, fs: S => A)(implicit showA: Show[A])
-      extends BiFocus(focusName, fa = i => fs(i.state), fe = i => fo(i.obs)) {
+      extends BiFocus(focusName, fa = i => fo(i.obs), fe = i => fs(i.state)) {
 
     def obs   = new FocusValue(focusName, os => fo(os.obs))
     def state = new FocusValue(focusName, os => fs(os.state))

@@ -30,6 +30,8 @@ object OutputTest extends TestSuite {
   val checkAround  = mockAround("Button count increased.")
   val checkAroundF = *.around("Button count increased.", _ => ())((_, _) => Some("2 != 3"))
 
+  val checkOS = *.focus("Hurp").obsAndState(_ => 1, _ => 1).assert.equal
+
   val i12 = mockPoint("Invariant 1") & mockPoint("Invariant 2")
 
   val sub1 =
@@ -662,6 +664,38 @@ object OutputTest extends TestSuite {
             |    ✓ Button count increased.
             |✓ All pass.
           """.stripMargin)
+      }
+    }
+
+    'obsAndState {
+      'pass - test(action addCheck checkOS.after, emptyInvariants)(
+        """
+          |✓ Press button.
+          |  ✓ Action
+          |  ✓ Post-conditions
+          |    ✓ Hurp should be 1.
+          |✓ All pass.
+        """.stripMargin)
+
+      'fail - {
+        // These CCs ensure correctness via .observe and .run
+        case class State(s: Int)
+        case class Obs(o: Int)
+        val * = Dsl.sync[Unit, Obs, State, String]
+        val checkOSFail = *.focus("Evil").obsAndState(_.o, _.s).assert.equal
+        val action = *.action("Press button.").act(_ => ())
+        val h = Test(action addCheck checkOSFail.after, emptyInvariants)
+          .observe(_ => Obs(777))
+          .run(State(666), ())
+        val actual = h.format(options).trim
+        val expect =
+          """
+            |✘ Press button.
+            |  ✓ Action
+            |  ✘ Post-conditions
+            |    ✘ Evil should be 666. -- Expected 666, not 777.
+          """.stripMargin
+        assertEq(actual = actual, expect.trim)
       }
     }
 
