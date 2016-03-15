@@ -3,10 +3,8 @@ package teststate.core
 import acyclic.file
 import CoreExports._
 import CoreExports2._
-import teststate.core.Types.CheckShape
-import teststate.data.{Or, OS}
-import teststate.typeclass.{~~>, ExecutionModel}
-
+import teststate.data.Or
+import teststate.typeclass.{Recover, ~~>, ExecutionModel}
 import Transformer._
 
 case class Transformer
@@ -16,7 +14,7 @@ case class Transformer
    invariant: Invariants   [O, S, E] => Invariants     [O2, S2, E2],
    point    : Points       [O, S, E] => Points         [O2, S2, E2],
    around   : Arounds      [O, S, E] => Arounds        [O2, S2, E2])
-  (implicit f1: ExecutionModel[F], f2: ExecutionModel[F2]) {
+  (implicit val f1: ExecutionModel[F], val f2: ExecutionModel[F2]) {
 
   def mapF[X[_]](f: F2 ~~> X)(implicit x: ExecutionModel[X]) =
     Transformer[F, R, O, S, E, X, R2, O2, S2, E2](

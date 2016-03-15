@@ -9,8 +9,8 @@ import CoreExports2._
 
 // TODO Maybe better: Script | Plan | TestCase
 class TestContent[F[_], R, O, S, E](val action: Actions[F, R, O, S, E],
-                                              val invariants: Invariants[O, S, E])
-                                             (implicit val executionModel: ExecutionModel[F], val recover: Recover[E]) {
+                                    val invariants: Invariants[O, S, E])
+                                   (implicit val executionModel: ExecutionModel[F], val recover: Recover[E]) {
   def trans[G[_]: ExecutionModel](t: F ~~> G): TestContent[G, R, O, S, E] =
     new TestContent(action trans t, invariants)
 
@@ -34,6 +34,9 @@ class TestContent[F[_], R, O, S, E](val action: Actions[F, R, O, S, E],
     new TestContent(
       action mapE f,
       invariants mapE f)(executionModel, recover map f)
+
+  def lift[F2[_], R2, O2, S2, E2](implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2], r: Recover[E2]): TestContent[F2, R2, O2, S2, E2] =
+    new TestContent(t action action, t invariant invariants)(t.f2, r)
 
   def addInvariants(i: Invariants[O, S, E]): TestContent[F, R, O, S, E] =
     new TestContent(action, invariants & i)
@@ -78,11 +81,11 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
   def mapE[E](f: Err => E): Test[F, Ref, Obs, State, E] =
     new Test(content mapE f, observe mapE f)
 
-  def run(initialState: State, ref: => Ref): F[History[Err]] =
-    Runner.run(this)(initialState, ref)
-
   def addInvariants(i: Invariants[Obs, State, Err]): Test[F, Ref, Obs, State, Err] =
     new Test(content addInvariants i, observe)
+
+  def run(initialState: State, ref: => Ref): F[History[Err]] =
+    Runner.run(this)(initialState, ref)
 }
 
 object Test {
