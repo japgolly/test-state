@@ -7,40 +7,45 @@ import Sack._
 
 sealed abstract class Sack[-I, +A] {
 
-//  should be def isEmpty(i: I): Boolean
-//  def isEmpty: Boolean
-//
-//  final def nonEmpty = !isEmpty
+//  def isEmpty(i: I): Boolean
+
+  /** Whether this is provably empty.
+    *
+    * A coproduct could return an empty set for some inputs but it isn't provable and so isn't considered empty.
+    */
+  def isEmpty: Boolean
+
+  final def nonEmpty = !isEmpty
 }
 
 object Sack {
 
   final case class Value[+A](value: A) extends Sack[Any, A] {
-//    override def isEmpty = false
+    override def isEmpty = false
   }
 
   final case class Product[-I, +A](contents: Vector[Sack[I, A]]) extends Sack[I, A] {
-//    override def isEmpty = contents.isEmpty
+    override def isEmpty = contents.isEmpty
   }
 
   final case class CoProduct[-I, +A](name: NameFn[I], produce: I => Sack[I, A]) extends Sack[I, A] {
-//    override def isEmpty = false
+    override def isEmpty = false
   }
 
   val empty = Product(Vector.empty)
 
   def append[A, B](a: Sack[A, B], b: Sack[A, B]): Sack[A, B] =
-//    if (a.isEmpty)
-//      b
-//    else if (b.isEmpty)
-//      a
-//    else
-    (a, b) match {
-      case (Product(p), Product(q)) => Product(p ++ q)
-      case (p         , Product(q)) => Product(p +: q)
-      case (Product(p), q         ) => Product(p :+ q)
-      case (p         , q         ) => Product(Vector.empty :+ p :+ q)
-    }
+    if (a.isEmpty)
+      b
+    else if (b.isEmpty)
+      a
+    else
+      (a, b) match {
+        case (Product(p), Product(q)) => Product(p ++ q)
+        case (p         , Product(q)) => Product(p +: q)
+        case (Product(p), q         ) => Product(p :+ q)
+        case (p         , q         ) => Product(Vector.empty :+ p :+ q)
+      }
 
   implicit val sackInstanceProfunctor: Profunctor[Sack] =
     new Profunctor[Sack] {
