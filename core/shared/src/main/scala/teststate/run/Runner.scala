@@ -195,13 +195,13 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
     val name = recover.name(nameFn, p.ros.some)
 
-    val checks = unpackChecks(invariants, arounds, p.ros.os)
+    val checksPre = unpackChecks(invariants, arounds, p.ros.os)
 
     // Perform before
     val pre = {
       val b = History.newBuilder[E]
-      checks.errors foreach b.addNE
-      b.addEach(checks.befores)(_.name)(p.ros.sos, _.test(p.ros.os))
+      checksPre.errors foreach b.addNE
+      b.addEach(checksPre.befores)(_.name)(p.ros.sos, _.test(p.ros.os))
       b.group(PreName)
     }
 
@@ -213,7 +213,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
       // Perform around-pre
       val hcs = {
         val b = Vector.newBuilder[HalfCheck[O, S, E]]
-        for (d0 <- checks.deltas) {
+        for (d0 <- checksPre.deltas) {
           val d = d0.aux
           val r = recover.attempt(d.before(p.ros.os)).fold(Failed(_), identity)
           b += HalfCheck(d)(r)
@@ -238,20 +238,27 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
         } else {
 
+          // TODO This didn't work out as planned - redo unpackChecks stuff
+          // Also: only need to do if a corproduct was detected, else can reuse
+          val checksPostA = unpackChecks(Sack.empty, arounds, ros2.os)
+          val checksPostI = unpackChecks(invariants, Sack.empty, ros2.os)
+
           // Post conditions
           val post1 = {
             val b = History.newBuilder[E]
+            checksPostA.errors foreach b.addNE
             b.addEach(hcs)(
               c => c.check.name)(ros2.sos,
               c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a))) // Perform around-post
-            b.addEach(checks.aftersA)(_.name)(ros2.sos, _.test(ros2.os)) // Perform post
+            b.addEach(checksPostA.aftersA)(_.name)(ros2.sos, _.test(ros2.os)) // Perform post
             b.group(PostName)
           }
 
           // Check invariants
           val invs = {
             val b = History.newBuilder[E]
-            b.addEach(checks.aftersI)(_.name)(ros2.sos, _.test(ros2.os))
+            checksPostI.errors foreach b.addNE
+            b.addEach(checksPostI.aftersI)(_.name)(ros2.sos, _.test(ros2.os))
             b.group(InvariantsName)
           }
 

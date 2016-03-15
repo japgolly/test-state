@@ -42,8 +42,12 @@ object RunnerTest extends TestSuite {
 
   def newState = new RecordVar(Record(Vector.empty))
 
-  def testHistory(h: History[String], expect: String, normalise: String => String = identity): Unit = {
-    val actual = normalise(h.format(History.Options.uncolored).trim)
+  def testHistory(h: History[String], expect: String,
+                  normalise: String => String = identity,
+                  showChildren: Boolean = false): Unit = {
+    var ho = History.Options.uncolored
+    if (showChildren) ho = ho.alwaysShowChildren
+    val actual = normalise(h.format(ho).trim)
     assertEq(actual = actual, normalise(expect.trim))
   }
 
@@ -236,5 +240,46 @@ object RunnerTest extends TestSuite {
         assertEq(i, 0)
       }
     }
+
+    'choice {
+      'invariant {
+        val * = Dsl.sync[Unit, Unit, Boolean, String]
+        val a = *.action("A").act(_ => ()).updateState(!_)
+        val i1 = *.test("IT", _ => true)
+        val i0 = *.test("IF", _ => true)
+        val i = *.chooseInvariant("I", x => if (x.state) i1 else i0)
+        val t = Test(a >> a, i).observe(_ => ())
+        testHistory(t.run(true, ()),
+          """
+            |✓ Initial state.
+            |  ✓ IT
+            |✓ A
+            |  ✓ Action
+            |  ✓ Invariants
+            |    ✓ IF
+            |✓ A
+            |  ✓ Action
+            |  ✓ Invariants
+            |    ✓ IT
+            |✓ All pass.
+          """.stripMargin, showChildren = true)
+
+        testHistory(t.run(false, ()),
+          """
+            |✓ Initial state.
+            |  ✓ IF
+            |✓ A
+            |  ✓ Action
+            |  ✓ Invariants
+            |    ✓ IT
+            |✓ A
+            |  ✓ Action
+            |  ✓ Invariants
+            |    ✓ IF
+            |✓ All pass.
+          """.stripMargin, showChildren = true)
+      }
+    }
+
   }
 }
