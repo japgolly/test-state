@@ -8,43 +8,43 @@ import CoreExports._
 import CoreExports2._
 
 // TODO Maybe better: Script | Plan | TestCase
-class TestContent[F[_], Ref, Obs, State, Err](val action: Actions[F, Ref, Obs, State, Err],
-                                              val invariants: Invariants[Obs, State, Err])
-                                             (implicit val executionModel: ExecutionModel[F], val recover: Recover[Err]) {
-  def trans[G[_]: ExecutionModel](t: F ~~> G): TestContent[G, Ref, Obs, State, Err] =
+class TestContent[F[_], R, O, S, E](val action: Actions[F, R, O, S, E],
+                                              val invariants: Invariants[O, S, E])
+                                             (implicit val executionModel: ExecutionModel[F], val recover: Recover[E]) {
+  def trans[G[_]: ExecutionModel](t: F ~~> G): TestContent[G, R, O, S, E] =
     new TestContent(action trans t, invariants)
 
-  def mapR[R2](f: R2 => Ref): TestContent[F, R2, Obs, State, Err] =
+  def mapR[R2](f: R2 => R): TestContent[F, R2, O, S, E] =
     new TestContent(action mapR f, invariants)
 
-  def pmapR[R2](f: R2 => Err Or Ref): TestContent[F, R2, Obs, State, Err] =
+  def pmapR[R2](f: R2 => E Or R): TestContent[F, R2, O, S, E] =
     new TestContent(action pmapR f, invariants)
 
-  def pmapO[OO](g: OO => Err Or Obs): TestContent[F, Ref, OO, State, Err] =
-    new TestContent[F, Ref, OO, State, Err](
+  def pmapO[OO](g: OO => E Or O): TestContent[F, R, OO, S, E] =
+    new TestContent[F, R, OO, S, E](
       action.pmapO(g),
       invariants.pmapO(g))
 
-  def mapS[SS](s: SS => State, su: (SS, State) => SS): TestContent[F, Ref, Obs, SS, Err] =
+  def mapS[SS](s: SS => S, su: (SS, S) => SS): TestContent[F, R, O, SS, E] =
     new TestContent(
       action.mapS(s)(su),
       invariants.mapS(s))
 
-  def mapE[E](f: Err => E): TestContent[F, Ref, Obs, State, E] =
+  def mapE[EE](f: E => EE): TestContent[F, R, O, S, EE] =
     new TestContent(
       action mapE f,
       invariants mapE f)(executionModel, recover map f)
 
-  def addInvariants(i: Invariants[Obs, State, Err]): TestContent[F, Ref, Obs, State, Err] =
+  def addInvariants(i: Invariants[O, S, E]): TestContent[F, R, O, S, E] =
     new TestContent(action, invariants & i)
 
-  def asAction(name: NameFn[ROS[Ref, Obs, State]]): Actions[F, Ref, Obs, State, Err] =
+  def asAction(name: NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] =
     Action.liftInner(Action.SubTest(action, invariants))(name)
 
-  def observe(f: Ref => Obs) =
+  def observe(f: R => O) =
     observeTry(r => Right(f(r)))
 
-  def observeTry(f: Ref => Err Or Obs) =
+  def observeTry(f: R => E Or O) =
     new Test(this, Observe(f))
 }
 
@@ -93,5 +93,4 @@ object Test {
 
   implicit def testInstanceShow[F[_], R, O, S, E](implicit s: Show[TestContent[F, R, O, S, E]]): Show[Test[F, R, O, S, E]] =
     s.cmap(_.content)
-
 }
