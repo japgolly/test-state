@@ -11,20 +11,6 @@ sealed abstract class Sack[-I, +A] {
 //  def isEmpty: Boolean
 //
 //  final def nonEmpty = !isEmpty
-
-  // Note: Result is flat, coproudcts are resolved and flattened; their names discarded.
-  final def foreach(i: I)(err: (Name, Throwable) => Unit)(f: A => Unit): Unit = {
-    def go(s: Sack[I, A]): Unit =
-      s match {
-        case Value(a)        => f(a)
-        case Product(ss)     => ss foreach go
-        case CoProduct(n, p) => Recover.id.attempt(p(i)) match {
-          case Right(s) => go(s)
-          case Left(e)  => err(Recover.recoverToString.name(n, Some(i)), e)
-        }
-      }
-    go(this)
-  }
 }
 
 object Sack {

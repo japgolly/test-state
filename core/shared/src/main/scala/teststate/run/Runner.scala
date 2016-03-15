@@ -35,8 +35,26 @@ object Runner {
   val UpdateState  = "Update expected state"
   val InitialState = "Initial state."
 
-  def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[E] Or B => Unit)(implicit r: Recover[E]): Unit =
-    s.foreach(a)((n, t) => f(Left(NamedError(n, r apply t))))(f)
+
+  final def foreachSack[I, A](sack: Sack[I, A])(i: I)(err: (Name, Throwable) => Unit)(f: A => Unit): Boolean = {
+    var coproductFound = false
+    def go(s: Sack[I, A]): Unit =
+      s match {
+        case Sack.Value(a)        => f(a)
+        case Sack.Product(ss)     => ss foreach go
+        case Sack.CoProduct(n, p) =>
+          coproductFound = true
+          Recover.id.attempt(p(i)) match {
+            case Right(s) => go(s)
+            case Left(e)  => err(Recover.recoverToString.name(n, Some(i)), e)
+          }
+      }
+    go(sack)
+    coproductFound
+  }
+
+  def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[E] Or B => Unit)(implicit r: Recover[E]) =
+    foreachSack(s)(a)((n, t) => f(Left(NamedError(n, r apply t))))(f)
 
   private case class ActionQueue[F[_], R, O, S, E](head: NamedError[E] Or Action.Outer[F, R, O, S, E],
                                                    tail: Actions[F, R, O, S, E])
@@ -106,11 +124,12 @@ object Runner {
       iterator().toList
   }
 
-  case class UnpackChecks[F[_], O, S, E](befores: F[Point        [OS[O, S], E]],
-                                         deltas : F[Around.DeltaA[OS[O, S], E]],
-                                         aftersA: F[Point        [OS[O, S], E]],
-                                         aftersI: F[Point        [OS[O, S], E]],
-                                         errors : F[NamedError[E]])
+  case class UnpackChecks[F[_], O, S, E](befores       : F[Point        [OS[O, S], E]],
+                                         deltas        : F[Around.DeltaA[OS[O, S], E]],
+                                         aftersA       : F[Point        [OS[O, S], E]],
+                                         aftersI       : F[Point        [OS[O, S], E]],
+                                         errors        : F[NamedError[E]],
+                                         coproductFound: Boolean)
 
   def unpackChecks[O, S, E](invariants: Invariants[O, S, E],
                             arounds   : Arounds[O, S, E],
@@ -136,21 +155,23 @@ object Runner {
     val ai = newBuilder[Point        [OS[O, S], E]]
     val es = newBuilder[NamedError[E]]
 
-    foreachSackE(invariants)(input) {
-      case Right(Invariant.Point(p)) => add(ai, p)
-      case Right(Invariant.Delta(d)) => add(ds, d)
-      case Left(e)                   => add(es, e)
-    }
+    val coproductFoundI =
+      foreachSackE(invariants)(input) {
+        case Right(Invariant.Point(p)) => add(ai, p)
+        case Right(Invariant.Delta(d)) => add(ds, d)
+        case Left(e)                   => add(es, e)
+      }
 
-    foreachSackE(arounds)(input) {
-      case Right(Around.Delta(d)                ) => add(ds, d)
-      case Right(Around.Point(p, BeforeAndAfter)) => add(bs, p); add(aa, p)
-      case Right(Around.Point(p, Before)        ) => add(bs, p)
-      case Right(Around.Point(p, After)         ) => add(aa, p)
-      case Left(e)                                => add(es, e)
-    }
+    val coproductFoundA =
+      foreachSackE(arounds)(input) {
+        case Right(Around.Delta(d)                ) => add(ds, d)
+        case Right(Around.Point(p, BeforeAndAfter)) => add(bs, p); add(aa, p)
+        case Right(Around.Point(p, Before)        ) => add(bs, p)
+        case Right(Around.Point(p, After)         ) => add(aa, p)
+        case Left(e)                                => add(es, e)
+      }
 
-    UnpackChecks(result(bs), result(ds), result(aa), result(ai), result(es))
+    UnpackChecks(result(bs), result(ds), result(aa), result(ai), result(es), coproductFoundI || coproductFoundA)
   }
 
   def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])
@@ -239,9 +260,11 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
         } else {
 
           // TODO This didn't work out as planned - redo unpackChecks stuff
-          // Also: only need to do if a corproduct was detected, else can reuse
-          val checksPostA = unpackChecks(Sack.empty, arounds, ros2.os)
-          val checksPostI = unpackChecks(invariants, Sack.empty, ros2.os)
+          var checksPostA, checksPostI = checksPre
+          if (checksPre.coproductFound) {
+            checksPostA = unpackChecks(Sack.empty, arounds, ros2.os)
+            checksPostI = unpackChecks(invariants, Sack.empty, ros2.os)
+          }
 
           // Post conditions
           val post1 = {
