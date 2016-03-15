@@ -30,6 +30,21 @@ object OutputTest extends TestSuite {
   val checkAround  = mockAround("Button count increased.")
   val checkAroundF = *.around("Button count increased.", _ => ())((_, _) => Some("2 != 3"))
 
+  val i12 = mockPoint("Invariant 1") & mockPoint("Invariant 2")
+
+  val sub1 =
+    Test(
+      mockAction("SubAction!") addCheck mockAround("Sub around-check"),
+      mockPoint("Sub-invariant 1"))
+      .addInvariants(mockPoint("Sub-invariant 2"))
+      .asAction("SubTest!")
+
+  val sub2 =
+    sub1
+      .addCheck(mockPoint("Sub-pre").before)
+      .addCheck(mockPoint("Sub-post").after)
+      .addCheck(mockAround("Sub-delta"))
+
   def test(a: *.Action, i: *.Invariant)(expect: String): Unit = {
     val h = Test(a, i).observe(_ => ()).run((), ())
     val actual = h.format(options).trim
@@ -444,6 +459,68 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
+    'subtest {
+      'simple - test(sub1, emptyInvariants)(
+        """
+          |✓ SubTest!
+          |  ✓ Initial state.
+          |    ✓ Sub-invariant 1
+          |    ✓ Sub-invariant 2
+          |  ✓ SubAction!
+          |    ✓ Action
+          |    ✓ Post-conditions
+          |      ✓ Sub around-check
+          |    ✓ Invariants
+          |      ✓ Sub-invariant 1
+          |      ✓ Sub-invariant 2
+          |✓ All pass.
+        """.stripMargin)
+
+      'withInvariants - test(sub1, i12)(
+        """
+          |✓ Initial state.
+          |  ✓ Invariant 1
+          |  ✓ Invariant 2
+          |✓ SubTest!
+          |  ✓ Initial state.
+          |    ✓ Invariant 1
+          |    ✓ Invariant 2
+          |    ✓ Sub-invariant 1
+          |    ✓ Sub-invariant 2
+          |  ✓ SubAction!
+          |    ✓ Action
+          |    ✓ Post-conditions
+          |      ✓ Sub around-check
+          |    ✓ Invariants
+          |      ✓ Invariant 1
+          |      ✓ Invariant 2
+          |      ✓ Sub-invariant 1
+          |      ✓ Sub-invariant 2
+          |✓ All pass.
+        """.stripMargin)
+
+      'withChecks - test(sub2, emptyInvariants)(
+        """
+          |✓ SubTest!
+          |  ✓ Pre-conditions
+          |    ✓ Sub-pre
+          |  ✓ Initial state.
+          |    ✓ Sub-invariant 1
+          |    ✓ Sub-invariant 2
+          |  ✓ SubAction!
+          |    ✓ Action
+          |    ✓ Post-conditions
+          |      ✓ Sub around-check
+          |    ✓ Invariants
+          |      ✓ Sub-invariant 1
+          |      ✓ Sub-invariant 2
+          |  ✓ Post-conditions
+          |    ✓ Sub-delta
+          |    ✓ Sub-post
+          |✓ All pass.
+        """.stripMargin)
+    }
+
     'bulk {
       def set(n: String) =
         mockAction(n)
@@ -453,25 +530,34 @@ object OutputTest extends TestSuite {
           .addCheck(mockPoint ("Post "   + n + 2).after)
           .addCheck(mockAround("Around " + n + 1))
           .addCheck(mockAround("Around " + n + 2))
-      val i = mockPoint("Invariant 1") & mockPoint("Invariant 2")
       val a =
         set("A") >>
         (set("B") >> set("C").skip >> set("D")).group("B ~ D") >>
         (set("E") >> set("F")).group("E & F").skip >>
         set("G")
 
-      val sub = Test(
-        mockAction("SubAction") addCheck mockAround("Sub around-check"),
-        mockPoint("Sub-invariant 1")
-      ) addInvariants mockPoint("Sub-invariant 2")
+      val all = sub1 >> a >> sub2
 
-      val all = a >> sub.asAction("SubTest")
-
-      test(all, i)(
+      test(all, i12)(
         """
           |✓ Initial state.
           |  ✓ Invariant 1
           |  ✓ Invariant 2
+          |✓ SubTest!
+          |  ✓ Initial state.
+          |    ✓ Invariant 1
+          |    ✓ Invariant 2
+          |    ✓ Sub-invariant 1
+          |    ✓ Sub-invariant 2
+          |  ✓ SubAction!
+          |    ✓ Action
+          |    ✓ Post-conditions
+          |      ✓ Sub around-check
+          |    ✓ Invariants
+          |      ✓ Invariant 1
+          |      ✓ Invariant 2
+          |      ✓ Sub-invariant 1
+          |      ✓ Sub-invariant 2
           |✓ A
           |  ✓ Pre-conditions
           |    ✓ Pre A1
@@ -530,13 +616,15 @@ object OutputTest extends TestSuite {
           |  ✓ Invariants
           |    ✓ Invariant 1
           |    ✓ Invariant 2
-          |✓ SubTest
+          |✓ SubTest!
+          |  ✓ Pre-conditions
+          |    ✓ Sub-pre
           |  ✓ Initial state.
           |    ✓ Invariant 1
           |    ✓ Invariant 2
           |    ✓ Sub-invariant 1
           |    ✓ Sub-invariant 2
-          |  ✓ SubAction
+          |  ✓ SubAction!
           |    ✓ Action
           |    ✓ Post-conditions
           |      ✓ Sub around-check
@@ -545,6 +633,9 @@ object OutputTest extends TestSuite {
           |      ✓ Invariant 2
           |      ✓ Sub-invariant 1
           |      ✓ Sub-invariant 2
+          |  ✓ Post-conditions
+          |    ✓ Sub-delta
+          |    ✓ Sub-post
           |✓ All pass.
         """.stripMargin)
     }
