@@ -2,6 +2,7 @@ package teststate.external_package
 
 import language.reflectiveCalls
 import scala.annotation.implicitNotFound
+import utest.compileError
 
 abstract class AbstractTest {
   trait A
@@ -27,7 +28,7 @@ abstract class AbstractTest {
 
   implicit def fem: teststate.typeclass.ExecutionModel[F]
 
-  implicit def transformer: teststate.core.Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]
+  implicit val transformer: teststate.core.Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]
 
   @implicitNotFound(msg = "\n\nExpected: ${Expect}\n  Actual: ${Src}\n  .")
   sealed abstract class Became[Src, Expect] extends (Src => Expect) with Serializable
@@ -119,5 +120,15 @@ abstract class ImplicitsTest extends AbstractTest {
   test[Arounds         [O, S, E]](_.lift).expect[Arounds           [O2, S2, E2]]
   test[Invariants      [O, S, E]](_.lift).expect[Invariants        [O2, S2, E2]]
   test[Actions   [F, R, O, S, E]](_.lift).expect[Actions   [F2, R2, O2, S2, E2]]
+
+  compileError("(x: Actions   [F, R, O, S, E]) => x: Actions   [F2, R2, O2, S2, E2]")
+  compileError("(x: Points          [O, S, E]) => x: Points            [O2, S2, E2]")
+  compileError("(x: Arounds         [O, S, E]) => x: Arounds           [O2, S2, E2]")
+  compileError("(x: Invariants      [O, S, E]) => x: Invariants        [O2, S2, E2]")
+  import transformer.Auto._
+                (x: Actions   [F, R, O, S, E]) => x: Actions   [F2, R2, O2, S2, E2]
+                (x: Points          [O, S, E]) => x: Points            [O2, S2, E2]
+                (x: Arounds         [O, S, E]) => x: Arounds           [O2, S2, E2]
+                (x: Invariants      [O, S, E]) => x: Invariants        [O2, S2, E2]
 }
 
