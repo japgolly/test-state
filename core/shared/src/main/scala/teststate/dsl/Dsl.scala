@@ -7,7 +7,7 @@ import teststate.run.Test
 import teststate.typeclass._
 import CoreExports._
 import Dsl.{Types, ActionB}
-import Types.CheckShape
+import Types.SackE
 
 object Dsl {
   def apply[F[_]: ExecutionModel, R, O, S, E] =
@@ -31,8 +31,6 @@ object Dsl {
     final type Action      = Actions[F, R, O, S, E]
     final type TestContent = teststate.run.TestContent[F, R, O, S, E]
     final type Test        = teststate.run.Test[F, R, O, S, E]
-
-    final type Checks[C[-_, _]] = CheckShape[C, O, S, E]
   }
 
   final class ActionB[F[_], R, O, S, E](actionName: NameFn[ROS[R, O, S]])(implicit EM: ExecutionModel[F]) {
@@ -77,17 +75,25 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def testAround(name: NameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around =
     around(name, identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
-  def chooseCheck[C[-_, _]](name: Name, f: OS => Checks[C]): Checks[C] =
+
+  def chooseInvariant   (n: Name, f: OS => Invariant)     : Invariant = choose(n, f)
+  def tryChooseInvariant(n: Name, f: OS => E Or Invariant): Invariant = tryChoose(n, f)
+
+  def choosePoint   (n: Name, f: OS => Point)     : Point = choose(n, f)
+  def tryChoosePoint(n: Name, f: OS => E Or Point): Point = tryChoose(n, f)
+
+  def chooseAround   (n: Name, f: OS => Around)     : Around = choose(n, f)
+  def tryChooseAround(n: Name, f: OS => E Or Around): Around = tryChoose(n, f)
+
+  def chooseAction   (n: Name, f: ROS => Action)     : Action = choose(n, f)
+  def tryChooseAction(n: Name, f: ROS => E Or Action): Action = tryChoose(n, f)
+
+  private def choose[A, B](name: Name, f: A => Sack[A, B]): Sack[A, B] =
     Sack.CoProduct(name, f)
 
-  def tryChooseCheck[C[-_, _]](name: Name, f: OS => E Or Checks[C]): Checks[C] =
+  private def tryChoose[A, B](name: Name, f: A => E Or SackE[A, B, E]): SackE[A, B, E] =
     Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name, e))))
 
-  def chooseAction(name: Name, f: ROS => Action): Action =
-    Sack.CoProduct(name, f)
-
-  def tryChooseAction(name: Name, f: ROS => E Or Action): Action =
-    Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name, e))))
 
   def focus(focusName: => String) =
     new Focus(focusName)

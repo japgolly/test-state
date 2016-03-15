@@ -7,17 +7,20 @@ import utest.compileError
 abstract class AbstractTest {
   trait A
   trait F[_]
-  trait F2[_]
   trait R
-  trait R2
-  trait O {
-    def bool: Boolean
-  }
-  trait O2
   trait S
-  trait S2
   trait E
+  trait O { def bool: Boolean; def int: Int}
+  trait F2[_]
+  trait R2
+  trait O2
+  trait S2
   trait E2
+  trait F3[_]
+  trait R3
+  trait O3
+  trait S3
+  trait E3
   type OS1 = teststate.data.OS[O, S]
   def o12: O => O2
   def o21: O2 => O
@@ -27,8 +30,6 @@ abstract class AbstractTest {
   def e21: E2 => E
 
   implicit def fem: teststate.typeclass.ExecutionModel[F]
-
-  implicit val transformer: teststate.core.Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]
 
   @implicitNotFound(msg = "\n\nExpected: ${Expect}\n  Actual: ${Src}\n  .")
   sealed abstract class Became[Src, Expect] extends (Src => Expect) with Serializable
@@ -53,6 +54,10 @@ abstract class AbstractTest {
       def expectB  (implicit ev: R Became B) = ()
     }
   }
+
+  def testExpr[A](a: A) = test[A](identity[A])
+
+  val dsl: teststate.dsl.Dsl[F, R, O, S, E]
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -116,19 +121,40 @@ abstract class ImplicitsTest extends AbstractTest {
   // Transformers
   // ===================================================================================================================
 
-  test[Points          [O, S, E]](_.lift).expect[Points            [O2, S2, E2]]
-  test[Arounds         [O, S, E]](_.lift).expect[Arounds           [O2, S2, E2]]
-  test[Invariants      [O, S, E]](_.lift).expect[Invariants        [O2, S2, E2]]
-  test[Actions   [F, R, O, S, E]](_.lift).expect[Actions   [F2, R2, O2, S2, E2]]
+  abstract class Transformers1 {
+    implicit val transformer: teststate.core.Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]
 
-//  compileError("(x: Actions   [F, R, O, S, E]) => x: Actions   [F2, R2, O2, S2, E2]")
-//  compileError("(x: Points          [O, S, E]) => x: Points            [O2, S2, E2]")
-//  compileError("(x: Arounds         [O, S, E]) => x: Arounds           [O2, S2, E2]")
-//  compileError("(x: Invariants      [O, S, E]) => x: Invariants        [O2, S2, E2]")
-//  import transformer.Auto._
-//                (x: Actions   [F, R, O, S, E]) => x: Actions   [F2, R2, O2, S2, E2]
-//                (x: Points          [O, S, E]) => x: Points            [O2, S2, E2]
-//                (x: Arounds         [O, S, E]) => x: Arounds           [O2, S2, E2]
-//                (x: Invariants      [O, S, E]) => x: Invariants        [O2, S2, E2]
+    test[Points          [O, S, E]](_.lift).expect[Points            [O2, S2, E2]]
+    test[Arounds         [O, S, E]](_.lift).expect[Arounds           [O2, S2, E2]]
+    test[Invariants      [O, S, E]](_.lift).expect[Invariants        [O2, S2, E2]]
+    test[Actions   [F, R, O, S, E]](_.lift).expect[Actions   [F2, R2, O2, S2, E2]]
+
+//    compileError("(x: Actions   [F, R, O, S, E]) => x: Actions   [F2, R2, O2, S2, E2]")
+//    compileError("(x: Points          [O, S, E]) => x: Points            [O2, S2, E2]")
+//    compileError("(x: Arounds         [O, S, E]) => x: Arounds           [O2, S2, E2]")
+//    compileError("(x: Invariants      [O, S, E]) => x: Invariants        [O2, S2, E2]")
+//    import transformer.Auto._
+//                  (x: Actions   [F, R, O, S, E]) => x: Actions   [F2, R2, O2, S2, E2]
+//                  (x: Points          [O, S, E]) => x: Points            [O2, S2, E2]
+//                  (x: Arounds         [O, S, E]) => x: Arounds           [O2, S2, E2]
+//                  (x: Invariants      [O, S, E]) => x: Invariants        [O2, S2, E2]
+
+  }
+
+  abstract class Transformers2 {
+    implicit val t2: teststate.core.Transformer[F2, R2, O2, S2, E2, F, R, O, S, E]
+    implicit val t3: teststate.core.Transformer[F3, R3, O3, S3, E3, F, R, O, S, E]
+    val i2: Invariants[O2, S2, E2]
+    val i3: Invariants[O3, S3, E3]
+
+    val i = dsl.chooseInvariant("blah", _.obs.int match {
+      case 2 => i2.lift
+      case 3 => i3.lift
+      case _ => emptyInvariants
+    })
+
+    testExpr(i).expect[Invariants[O, S, E]]
+  }
+
 }
 
