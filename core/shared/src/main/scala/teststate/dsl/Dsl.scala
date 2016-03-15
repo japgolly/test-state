@@ -109,6 +109,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
   // ===================================================================================================================
 
+  val transformer: Transformer[F, R, O, S, E, F, R, O, S, E] =
+    Transformer.id[F, R, O, S, E]
+
   def emptyAction: Action =
     Sack.empty
 

@@ -6,7 +6,9 @@ import scala.annotation.implicitNotFound
 abstract class AbstractTest {
   trait A
   trait F[_]
+  trait F2[_]
   trait R
+  trait R2
   trait O {
     def bool: Boolean
   }
@@ -25,17 +27,19 @@ abstract class AbstractTest {
 
   implicit def fem: teststate.typeclass.ExecutionModel[F]
 
-  @implicitNotFound(msg = "\n\nExpected: ${From}\n  Actual: ${To}\n\n")
-  sealed abstract class =:=[From, To] extends (From => To) with Serializable
-  private[this] final val singleton_=:= = new =:=[Any,Any] { def apply(x: Any): Any = x }
-  object =:= {
-     implicit def tpEquals[A]: A =:= A = singleton_=:=.asInstanceOf[A =:= A]
+  implicit def transformer: teststate.core.Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]
+
+  @implicitNotFound(msg = "\n\nExpected: ${Expect}\n  Actual: ${Src}\n  .")
+  sealed abstract class Became[Src, Expect] extends (Src => Expect) with Serializable
+  private[this] final val singleton_Became = new Became[Any,Any] { def apply(x: Any): Any = x }
+  object Became {
+     implicit def tpEquals[A]: A Became A = singleton_Became.asInstanceOf[A Became A]
   }
 
   def test[A] = new {
     def apply[R](f: A => R) = new {
-      def expect[E] (implicit ev: R =:= E) = ()
-      def expectSelf(implicit ev: R =:= A) = ()
+      def expect[E] (implicit ev: R Became E) = ()
+      def expectSelf(implicit ev: R Became A) = ()
     }
   }
 
@@ -43,9 +47,9 @@ abstract class AbstractTest {
 
   def test2[A, B] = new {
     def apply[R](f: (A, B) => R) = new {
-      def expect[E](implicit ev: E =:= R) = ()
-      def expectA  (implicit ev: A =:= R) = ()
-      def expectB  (implicit ev: B =:= R) = ()
+      def expect[E](implicit ev: R Became E) = ()
+      def expectA  (implicit ev: R Became A) = ()
+      def expectB  (implicit ev: R Became B) = ()
     }
   }
 }
@@ -106,5 +110,14 @@ abstract class ImplicitsTest extends AbstractTest {
 
   // ActionOps3
   testAA[Actions[F, R, O, S, E]](_ >> _).expect[Actions[F, R, O, S, E]]
+
+  // ===================================================================================================================
+  // Transformers
+  // ===================================================================================================================
+
+  test[Points          [O, S, E]](_.lift).expect[Points            [O2, S2, E2]]
+  test[Arounds         [O, S, E]](_.lift).expect[Arounds           [O2, S2, E2]]
+  test[Invariants      [O, S, E]](_.lift).expect[Invariants        [O2, S2, E2]]
+  test[Actions   [F, R, O, S, E]](_.lift).expect[Actions   [F2, R2, O2, S2, E2]]
 }
 
