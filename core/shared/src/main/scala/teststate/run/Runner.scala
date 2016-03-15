@@ -295,51 +295,45 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
       EM.tailrec(p0)(x => x.queue.isEmpty || x.failed) { p =>
         val queue = p.queue.get
 
-        def nextProgress(p: P): P =
-          Progress.prepareNext(queue.tail, p.ros, p.history)
-
-        def continue(r: F[P]): F[P] =
-          EM.map(r)(nextProgress)
-
         import p.ros
-        queue.head match {
+        val processNextStep: F[P] = queue.head match {
           case Right(Action.Outer(nameFn, innerAction, check)) =>
 
             innerAction match {
+
               // ==============================================================================
               case Action.Single(run) =>
-                val omg2F =
-                  checkAround(nameFn, invariants, check, true, p)(run) { act =>
+                checkAround(nameFn, invariants, check, true, p)(run) { act =>
 
-                    def ret(ros: ROS, r: Result[E], hs: History.Steps[E] = Vector.empty) =
-                      ((n: Name) => History(History.Step(n, r) +: hs), ros)
+                  def ret(ros: ROS, r: Result[E]): (Name => H, ROS) =
+                    (n => History(vector1(History.Step(n, r))), ros)
 
-                    EM.map(EM.recover(act())) {
-                      case Right(nextStateFn) =>
-                        val ref2 = refFn()
-                        observe(test, ref2) match {
-                          case Right(obs2) =>
-                            recover.attempt(nextStateFn(obs2)) match {
-                              case Right(Right(state2)) => ret(new ROS(ref2, obs2, state2), Pass)
-                              case Right(Left(e))       => ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
-                              case Left(e)              => ret(ros, Pass, vector1(History.Step(UpdateState, Fail(e))))
-                            }
-                          case Left(e) => ret(ros, Pass, vector1(History.Step(Observation, Fail(e))))
-                        }
-                      case Left(e) => ret(ros, Fail(e))
-                    }
+                  def rets(ros: ROS, r: Result[E], hs: History.Step[E]): (Name => H, ROS) =
+                    (n => History(vector1(History.Step(n, r)) :+ hs), ros)
 
+                  EM.map(EM.recover(act())) {
+                    case Right(nextStateFn) =>
+                      val ref2 = refFn()
+                      observe(test, ref2) match {
+                        case Right(obs2) =>
+                          recover.attempt(nextStateFn(obs2)) match {
+                            case Right(Right(state2)) => ret(new ROS(ref2, obs2, state2), Pass)
+                            case Right(Left(e))       => rets(ros, Pass, History.Step(Observation, Fail(e)))
+                            case Left(e)              => rets(ros, Pass, History.Step(UpdateState, Fail(e)))
+                          }
+                        case Left(e) => rets(ros, Pass, History.Step(Observation, Fail(e)))
+                      }
+                    case Left(e) => ret(ros, Fail(e))
                   }
-                continue(omg2F)
+
+                }
 
               // ==============================================================================
               case Action.Group(actionFn) =>
-                val omg2F =
-                  checkAround(nameFn, invariants, check, false, p)(actionFn)(children =>
-                    EM.map(start(children, ros))(omgC =>
-                      ((_: Name) => omgC.history, omgC.ros))
-                  )
-                continue(omg2F)
+                checkAround(nameFn, invariants, check, false, p)(actionFn)(children =>
+                  EM.map(start(children, ros))(omgC =>
+                    ((_: Name) => omgC.history, omgC.ros))
+                )
 
               // ==============================================================================
               case Action.SubTest(action, subInvariants) =>
@@ -348,17 +342,14 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                   val subP = subtest(t, refFn, ros, false)
                   EM.map(subP)(s => (s.history, s.ros))
                 })
-                EM.map(omg2F)(s =>
-                  Progress.prepareNext(
-                    queue.tail,
-                    s.ros,
-                    p.history ++ s.history // History.maybeParent(nameFn(ros.some), s.history)
-                  ))
+                EM.map(omg2F)(s => s.copy(history = p.history ++ s.history))
             }
 
           case Left(NamedError(n, e)) =>
-            EM.pure(nextProgress(p :+ History.Step(n, Fail(e))))
+            EM.pure(p :+ History.Step(n, Fail(e)))
         }
+
+        EM.map(processNextStep)(p => Progress.prepareNext(queue.tail, p.ros, p.history))
       }
 
     val finalResult: F[P] = {
