@@ -114,17 +114,17 @@ case class Transformer
       _.pmapO(f) |> point    ,
       _.pmapO(f) |> around   )
 
-  object Auto {
+//  object Auto {
 //    implicit def autoTransformActions   [F[_], R, O, S, E, F2[_], R2, O2, S2, E2](a: Actions[F, R, O, S, E])(implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Actions   [F2, R2, O2, S2, E2] = a.lift
 //    implicit def autoTransformInvariants[F[_], R, O, S, E, F2[_], R2, O2, S2, E2](a: Invariants[O, S, E])   (implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Invariants[O2, S2, E2] = a.lift
 //    implicit def autoTransformPoints    [F[_], R, O, S, E, F2[_], R2, O2, S2, E2](a: Points    [O, S, E])   (implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Points    [O2, S2, E2] = a.lift
 //    implicit def autoTransformArounds   [F[_], R, O, S, E, F2[_], R2, O2, S2, E2](a: Arounds   [O, S, E])   (implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Arounds   [O2, S2, E2] = a.lift
-
-    implicit def autoTransformActions   (x: Actions[F, R, O, S, E]): Actions   [F2, R2, O2, S2, E2] = action   (x)
-    implicit def autoTransformInvariants(x: Invariants[O, S, E])   : Invariants[O2, S2, E2]         = invariant(x)
-    implicit def autoTransformPoints    (x: Points    [O, S, E])   : Points    [O2, S2, E2]         = point    (x)
-    implicit def autoTransformArounds   (x: Arounds   [O, S, E])   : Arounds   [O2, S2, E2]         = around   (x)
-  }
+//
+//    implicit def autoTransformActions   (x: Actions[F, R, O, S, E]): Actions   [F2, R2, O2, S2, E2] = action   (x)
+//    implicit def autoTransformInvariants(x: Invariants[O, S, E])   : Invariants[O2, S2, E2]         = invariant(x)
+//    implicit def autoTransformPoints    (x: Points    [O, S, E])   : Points    [O2, S2, E2]         = point    (x)
+//    implicit def autoTransformArounds   (x: Arounds   [O, S, E])   : Arounds   [O2, S2, E2]         = around   (x)
+//  }
 }
 
 object Transformer {
@@ -155,7 +155,6 @@ object Transformer {
 
   trait ToOps {
     implicit def toActionTransformerOps[F[_], R, O, S, E](a: Actions[F, R, O, S, E]): ActionOps[F, R, O, S, E] = new ActionOps(a)
-
     implicit def toInvariantsTransformerOps[O, S, E](a: Invariants[O, S, E]): InvariantsOps[O, S, E] = new InvariantsOps(a)
     implicit def toPointsTransformerOps    [O, S, E](a: Points    [O, S, E]): PointsOps    [O, S, E] = new PointsOps    (a)
     implicit def toAroundsTransformerOps   [O, S, E](a: Arounds   [O, S, E]): AroundsOps   [O, S, E] = new AroundsOps   (a)
