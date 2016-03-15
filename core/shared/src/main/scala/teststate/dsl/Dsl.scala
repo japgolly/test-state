@@ -31,6 +31,8 @@ object Dsl {
     final type Action      = Actions[F, R, O, S, E]
     final type TestContent = teststate.run.TestContent[F, R, O, S, E]
     final type Test        = teststate.run.Test[F, R, O, S, E]
+
+    final type Checks[C[-_, _]] = CheckShape[C, O, S, E]
   }
 
   final class ActionB[F[_], R, O, S, E](actionName: NameFn[ROS[R, O, S]])(implicit EM: ExecutionModel[F]) {
@@ -75,10 +77,16 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def testAround(name: NameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around =
     around(name, identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
-  def choose[C[-_, _]](name: Name, f: OS => CheckShape[C, O, S, E]): CheckShape[C, O, S, E] =
+  def chooseCheck[C[-_, _]](name: Name, f: OS => Checks[C]): Checks[C] =
     Sack.CoProduct(name, f)
 
-  def chooseE[C[-_, _]](name: Name, f: OS => E Or CheckShape[C, O, S, E]): CheckShape[C, O, S, E] =
+  def tryChooseCheck[C[-_, _]](name: Name, f: OS => E Or Checks[C]): Checks[C] =
+    Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name, e))))
+
+  def chooseAction(name: Name, f: ROS => Action): Action =
+    Sack.CoProduct(name, f)
+
+  def tryChooseAction(name: Name, f: ROS => E Or Action): Action =
     Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name, e))))
 
   def focus(focusName: => String) =

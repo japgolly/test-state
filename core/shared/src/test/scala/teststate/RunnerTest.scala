@@ -124,7 +124,7 @@ object RunnerTest extends TestSuite {
       }
 
       'coproduct - {
-        val test = Test(nop, *.choose("Who knows?!", _ => sys error "NO!")).observe(_.s)
+        val test = Test(nop, *.chooseCheck("Who knows?!", _ => sys error "NO!")).observe(_.s)
         testHistory(test.run((), newState),
         """
           |✘ Initial state.

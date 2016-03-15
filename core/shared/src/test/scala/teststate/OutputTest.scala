@@ -73,7 +73,7 @@ object OutputTest extends TestSuite {
             |✓ All pass.
           """.stripMargin)
 
-        'coproduct - t(*.choose("Who knows?!", _ => checkPoint))(
+        'coproduct - t(*.chooseCheck("Who knows?!", _ => checkPoint))(
           """
             |✓ Initial state.
             |  ✓ Check stuff.
@@ -101,7 +101,7 @@ object OutputTest extends TestSuite {
             |  ✘ Check failure. -- Shit broke!
           """.stripMargin)
 
-        'coproduct - t(*.chooseE("Who knows?!", _ => Left("Computer says no.")))(
+        'coproduct - t(*.tryChooseCheck("Who knows?!", _ => Left("Computer says no.")))(
           """
             |✘ Initial state.
             |  ✘ Who knows?! -- Computer says no.
