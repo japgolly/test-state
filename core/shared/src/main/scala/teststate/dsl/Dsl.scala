@@ -261,8 +261,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def existenceOfAll(allName: => String, expect: OS => Boolean, all: OS => Set[A])
                         (implicit sa: Show[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) =
         point(
-          NameFn(_.fold[Name](s"$focusName: Existence of $allName.")(os =>
-            ExistenceOfAll.name(expect(os), focusName, allName))),
+          ExistenceOfAll.nameFn(expect, focusName, allName),
           os => ExistenceOfAll(expect(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
 
 

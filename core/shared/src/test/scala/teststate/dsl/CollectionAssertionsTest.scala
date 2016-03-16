@@ -197,6 +197,12 @@ object CollectionAssertionsTest extends TestSuite {
           _ (ElemChanges.Args('d' :: Nil, Nil, Nil, Nil)), "'d' moved by -1, expected 0.")
       }
 
+      'existenceOfAll {
+        val nameFn = ExistenceOfAll.nameFn(identity[Boolean], "Bag", "books")
+        'nameA - assertEq(nameFn(None)       .value, "Bag: possible existence of books.")
+        'nameT - assertEq(nameFn(Some(true)) .value, "Bag should contain all books.")
+        'nameF - assertEq(nameFn(Some(false)).value, "Bag shouldn't contain any books.")
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 package teststate.dsl
 
 import acyclic.file
-import teststate.data.Name
+import teststate.data.{NameFn, Name}
 import teststate.typeclass._
 import scala.collection.mutable
 import Name.Implicits._
@@ -305,12 +305,18 @@ object CollectionAssertions {
   // ∀/∃ ⊆ ⊇ ⊂ ⊃ ⊄ ⊅ ⊈ ⊉
 
   object ExistenceOfAll {
-    def name(expect: => Boolean, subject: => String, allNames: => String): Name =
+    def name(expect: Boolean, subject: => String, allNames: => String): Name =
       Name.lazily(
         if (expect)
           ContainsAll.Pos.name(subject, allNames)
         else
           ContainsNone.name(subject, allNames))
+
+    def nameFn[I](expect: I => Boolean, subject: => String, allNames: => String): NameFn[I] =
+      NameFn {
+        case None    => s"$subject: possible existence of $allNames."
+        case Some(i) => name(expect(i), subject, allNames)
+      }
 
     def apply[A: Show](expect: Boolean, source: TraversableOnce[A], all: Set[A]): Option[Either[ContainsAny.FoundSome[A], ContainsAll.Missing[A]]] =
       if (expect)
