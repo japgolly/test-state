@@ -258,9 +258,12 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           os => d(focusFn(os), query(os)).map(ev))
       }
 
-      def existenceOf(a: A)(expect: OS => Boolean)
-                     (implicit sa: Show[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) =
-        existenceOfAllBy(sa(a), Function const Set(a))(expect)
+      def existenceOf(query: A)(expect: OS => Boolean)
+                     (implicit sa: Show[A], ea: Equal[A], ev: Exists.Failure[A] => E) =
+        point(
+          Exists.nameFn(expect, focusName, sa(query)),
+          os => Exists(expect(os))(focusFn(os), query).map(ev))
+
 
       def existenceOfAll(allName: => String)(all: A*)(expect: OS => Boolean)
                         (implicit sa: Show[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) =

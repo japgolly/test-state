@@ -141,7 +141,7 @@ object CollectionAssertionsTest extends TestSuite {
         _ ("abc", "cde".toSet), "Missing: 'd', 'e'.")
 
       'containsAllF - test(ContainsAll(false))(
-        _.name("A", "B"), "A should not contain all B.")(
+        _.name("A", "B"), "A shouldn't contain all B.")(
         _ ("abcde", "cd".toSet), "All members found.")
 
       'containsAnyP - test(ContainsAny(true))(
@@ -195,6 +195,13 @@ object CollectionAssertionsTest extends TestSuite {
 
         'ad - testNoName(ElemChanges(true))(
           _ (ElemChanges.Args('d' :: Nil, Nil, Nil, Nil)), "'d' moved by -1, expected 0.")
+      }
+
+      'exists {
+        val nameFn = Exists.nameFn(identity[Boolean], "Bag", "Malazan")
+        'nameA - assertEq(nameFn(None)       .value, "Bag: possible existence of Malazan.")
+        'nameT - assertEq(nameFn(Some(true)) .value, "Bag should contain Malazan.")
+        'nameF - assertEq(nameFn(Some(false)).value, "Bag shouldn't contain Malazan.")
       }
 
       'existenceOfAll {

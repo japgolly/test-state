@@ -140,6 +140,61 @@ object CollectionAssertions {
 
   // ===================================================================================================================
 
+  sealed abstract class Exists {
+    def name(subject: => String, queryName: => String): Name
+    def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Show[B]): Option[Exists.Failure[B]]
+    protected final def found[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B]) =
+      source.exists(a => eb.equal(query, a))
+  }
+
+  object Exists {
+    def name(expect: Boolean, subject: => String, queryName: => String): Name =
+      Name.lazily(apply(expect).name(subject, queryName))
+
+    def nameFn[I](expect: I => Boolean, subject: => String, queryName: => String): NameFn[I] =
+      NameFn {
+        case None    => s"$subject: possible existence of $queryName."
+        case Some(i) => name(expect(i), subject, queryName)
+      }
+
+    def apply(positive: Boolean): Exists =
+      if (positive) Pos else Neg
+
+    object Pos extends Exists {
+      override def name(subject: => String, queryName: => String): Name =
+        s"$subject should contain $queryName."
+
+      override def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Show[B]): Option[Missing[B]] =
+        if (found(source, query))
+          None
+        else
+          Some(Missing(query))
+    }
+
+    object Neg extends Exists {
+      override def name(subject: => String, queryName: => String): Name =
+        s"$subject shouldn't contain $queryName."
+
+      override def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Show[B]): Option[Present.type] =
+        if (found(source, query))
+          Some(Present)
+        else
+          None
+    }
+
+    sealed trait Failure[+A] extends HasErrorString with Product with Serializable
+
+    case class Missing[A](query: A)(implicit s: Show[A]) extends Failure[A] {
+      override def errorString = s"Not found: ${s(query)}"
+    }
+
+    case object Present extends Failure[Nothing] {
+      override def errorString = ""
+    }
+  }
+
+  // ===================================================================================================================
+
   sealed abstract class ContainsAll {
     def name(subject: => String, queryNames: => String): Name
     def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A, sb: Show[B]): Option[ContainsAll.Failure[B]]
@@ -170,7 +225,7 @@ object CollectionAssertions {
     /** ∃b. A ∌ b */
     object Neg extends ContainsAll {
       override def name(subject: => String, queryNames: => String): Name =
-        s"$subject should not contain all $queryNames."
+        s"$subject shouldn't contain all $queryNames."
 
       override def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A, sb: Show[B]): Option[AllPresent.type] =
         if (missing(source, query).isEmpty)
@@ -366,7 +421,7 @@ object CollectionAssertions {
 
     object Neg extends EqualIgnoringOrder {
 //      override def name(subject: => String, expectName: => String): Name =
-//        s"$subject should not equal $expectName ignoring order."
+//        s"$subject shouldn't equal $expectName ignoring order."
 
       override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]) =
         if (pass(prep(source, expect)))
