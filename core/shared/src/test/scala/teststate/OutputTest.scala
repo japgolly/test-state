@@ -780,6 +780,26 @@ object OutputTest extends TestSuite {
       }
     }
 
+    'existenceOfAround {
+      var is = List(1, 2, 3)
+      val * = Dsl.sync[Unit, List[Int], Boolean, String]
+      val a = *.action("Remove 2").act(_ => is = List(1, 3)).updateState(_ => false)
+      val c = *.focus("X").collection(_.obs).assert.existenceOf(2)(_.state)
+      val h = Test(a addCheck c.beforeAndAfter).observe(_ => is).run(true, ())
+      val actual = h.format(options).trim
+      val expect =
+        """
+          |✓ Remove 2
+          |  ✓ Pre-conditions
+          |    ✓ X should contain 2.
+          |  ✓ Action
+          |  ✓ Post-conditions
+          |    ✓ X shouldn't contain 2.
+          |✓ All pass.
+        """.stripMargin
+      assertEq(actual = actual, expect.trim)
+    }
+
     // action combinators
 
   }
