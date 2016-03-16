@@ -566,8 +566,6 @@ object OutputTest extends TestSuite {
           |  ✓ Invariant 2
           |✓ SubTest!
           |  ✓ Initial state.
-          |    ✓ Invariant 1
-          |    ✓ Invariant 2
           |    ✓ Sub-invariant 1
           |    ✓ Sub-invariant 2
           |  ✓ SubAction!
@@ -602,6 +600,225 @@ object OutputTest extends TestSuite {
           |    ✓ Sub-post
           |✓ All pass.
         """.stripMargin)
+
+      'chain - {
+        def sub(n: Int, hasAction: Boolean) =
+          Test(
+            if (hasAction) mockAction(s"SubAction $n") else *.emptyAction,
+            mockPoint(s"Sub #$n invariant")
+          ).asAction(s"Sub#$n")
+
+        val t = sub(1, false) >> sub(2, true) >> sub(3, false) >> sub(4, true)
+        test(t, mockPoint("Base invariant"))(
+          """
+            |✓ Initial state.
+            |  ✓ Base invariant
+            |✓ Sub#1
+            |  ✓ Sub #1 invariant
+            |✓ Sub#2
+            |  ✓ Initial state.
+            |    ✓ Sub #2 invariant
+            |  ✓ SubAction 2
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Base invariant
+            |      ✓ Sub #2 invariant
+            |✓ Sub#3
+            |  ✓ Sub #3 invariant
+            |✓ Sub#4
+            |  ✓ Initial state.
+            |    ✓ Sub #4 invariant
+            |  ✓ SubAction 4
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Base invariant
+            |      ✓ Sub #4 invariant
+            |✓ All pass.
+          """.stripMargin)
+      }
+
+      'nested - {
+        def sub(n: String, a: *.Action) =
+          Test(a, mockPoint("Invariant: " + n)).asAction("Subtest: " + n)
+
+        def nest(a0: Boolean, b: Boolean, a2: Boolean) = {
+          val n = "" //List(a0,b,a2).map(x => if (x) "1" else "0") mkString ""
+          val n1 = n + ".1"
+          val n2 = n + ".2"
+          var i = sub(n2, if (b) mockAction("Action: " + n2) else *.emptyAction)
+          if (a0) i <<= mockAction("Action: " + n1 + "-0")
+          if (a2) i >>= mockAction("Action: " + n1 + "-2")
+          sub(n1, i)
+        }
+
+        val bi = mockPoint("Invariant: Base")
+
+        // Verbose but I want to prove to myself I'm not making a logic error
+
+        "000" - test(nest(false, false, false), bi)(
+          """
+            |✓ Initial state.
+            |  ✓ Invariant: Base
+            |✓ Subtest: .1
+            |  ✓ Initial state.
+            |    ✓ Invariant: .1
+            |  ✓ Subtest: .2
+            |    ✓ Invariant: .2
+            |✓ All pass.
+          """.stripMargin)
+
+        "111" - test(nest(true, true, true), bi)(
+          """
+            |✓ Initial state.
+            |  ✓ Invariant: Base
+            |✓ Subtest: .1
+            |  ✓ Initial state.
+            |    ✓ Invariant: .1
+            |  ✓ Action: .1-0
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Invariant: Base
+            |      ✓ Invariant: .1
+            |  ✓ Subtest: .2
+            |    ✓ Initial state.
+            |      ✓ Invariant: .2
+            |    ✓ Action: .2
+            |      ✓ Action
+            |      ✓ Invariants
+            |        ✓ Invariant: Base
+            |        ✓ Invariant: .1
+            |        ✓ Invariant: .2
+            |  ✓ Action: .1-2
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Invariant: Base
+            |      ✓ Invariant: .1
+            |✓ All pass.
+          """.stripMargin)
+
+        "101" - test(nest(true, false, true), bi)(
+          """
+            |✓ Initial state.
+            |  ✓ Invariant: Base
+            |✓ Subtest: .1
+            |  ✓ Initial state.
+            |    ✓ Invariant: .1
+            |  ✓ Action: .1-0
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Invariant: Base
+            |      ✓ Invariant: .1
+            |  ✓ Subtest: .2
+            |    ✓ Invariant: .2
+            |  ✓ Action: .1-2
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Invariant: Base
+            |      ✓ Invariant: .1
+            |✓ All pass.
+          """.stripMargin)
+
+        "010" - test(nest(false, true, false), bi)(
+          """
+            |✓ Initial state.
+            |  ✓ Invariant: Base
+            |✓ Subtest: .1
+            |  ✓ Initial state.
+            |    ✓ Invariant: .1
+            |  ✓ Subtest: .2
+            |    ✓ Initial state.
+            |      ✓ Invariant: .2
+            |    ✓ Action: .2
+            |      ✓ Action
+            |      ✓ Invariants
+            |        ✓ Invariant: Base
+            |        ✓ Invariant: .1
+            |        ✓ Invariant: .2
+            |✓ All pass.
+          """.stripMargin)
+
+        "011" - test(nest(false, true, true), bi)(
+          """
+            |✓ Initial state.
+            |  ✓ Invariant: Base
+            |✓ Subtest: .1
+            |  ✓ Initial state.
+            |    ✓ Invariant: .1
+            |  ✓ Subtest: .2
+            |    ✓ Initial state.
+            |      ✓ Invariant: .2
+            |    ✓ Action: .2
+            |      ✓ Action
+            |      ✓ Invariants
+            |        ✓ Invariant: Base
+            |        ✓ Invariant: .1
+            |        ✓ Invariant: .2
+            |  ✓ Action: .1-2
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Invariant: Base
+            |      ✓ Invariant: .1
+            |✓ All pass.
+          """.stripMargin)
+
+        "100" - test(nest(true, false, false), bi)(
+          """
+            |✓ Initial state.
+            |  ✓ Invariant: Base
+            |✓ Subtest: .1
+            |  ✓ Initial state.
+            |    ✓ Invariant: .1
+            |  ✓ Action: .1-0
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Invariant: Base
+            |      ✓ Invariant: .1
+            |  ✓ Subtest: .2
+            |    ✓ Invariant: .2
+            |✓ All pass.
+          """.stripMargin)
+
+        "001" - test(nest(false, false, true), bi)(
+          """
+            |✓ Initial state.
+            |  ✓ Invariant: Base
+            |✓ Subtest: .1
+            |  ✓ Initial state.
+            |    ✓ Invariant: .1
+            |  ✓ Subtest: .2
+            |    ✓ Invariant: .2
+            |  ✓ Action: .1-2
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Invariant: Base
+            |      ✓ Invariant: .1
+            |✓ All pass.
+          """.stripMargin)
+
+        "110" - test(nest(true, true, false), bi)(
+          """
+            |✓ Initial state.
+            |  ✓ Invariant: Base
+            |✓ Subtest: .1
+            |  ✓ Initial state.
+            |    ✓ Invariant: .1
+            |  ✓ Action: .1-0
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Invariant: Base
+            |      ✓ Invariant: .1
+            |  ✓ Subtest: .2
+            |    ✓ Initial state.
+            |      ✓ Invariant: .2
+            |    ✓ Action: .2
+            |      ✓ Action
+            |      ✓ Invariants
+            |        ✓ Invariant: Base
+            |        ✓ Invariant: .1
+            |        ✓ Invariant: .2
+            |✓ All pass.
+          """.stripMargin)
+      }
     }
 
     'bulk {
@@ -628,8 +845,6 @@ object OutputTest extends TestSuite {
           |  ✓ Invariant 2
           |✓ SubTest!
           |  ✓ Initial state.
-          |    ✓ Invariant 1
-          |    ✓ Invariant 2
           |    ✓ Sub-invariant 1
           |    ✓ Sub-invariant 2
           |  ✓ SubAction!
@@ -703,8 +918,6 @@ object OutputTest extends TestSuite {
           |  ✓ Pre-conditions
           |    ✓ Sub-pre
           |  ✓ Initial state.
-          |    ✓ Invariant 1
-          |    ✓ Invariant 2
           |    ✓ Sub-invariant 1
           |    ✓ Sub-invariant 2
           |  ✓ SubAction!
