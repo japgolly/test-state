@@ -5,7 +5,10 @@ import teststate.data.Or
 trait Exports
   extends core.CoreExports
      with core.CoreExports2
-     with core.Transformer.ToOps {
+     with core.Transformer.ToOps
+     with typeclass.Equal.Implicits {
+
+  // TODO Decide on project name. Prefix ALL implicits values for Equal etc.
 
   type Dsl[F[_], R, O, S, E] = teststate.dsl.Dsl[F, R, O, S, E]
   val Dsl = teststate.dsl.Dsl
