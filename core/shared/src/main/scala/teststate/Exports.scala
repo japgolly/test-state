@@ -28,6 +28,9 @@ trait Exports
   type Name = teststate.data.Name
   val Name = teststate.data.Name
 
+  type NameFn[-A] = teststate.data.NameFn[A]
+  val NameFn = teststate.data.NameFn
+
   /*
   type Or[+A, +B] = teststate.data.Or[A, B]
   val Or = teststate.data.Or
