@@ -6,7 +6,7 @@ import teststate.data._
 import teststate.run.Test
 import teststate.typeclass._
 import CoreExports._
-import Dsl.{Types, ActionB}
+import Dsl.Types
 import Types.SackE
 
 object Dsl {
@@ -24,24 +24,14 @@ object Dsl {
   trait Types[F[_], R, O, S, E] {
     final type OS          = teststate.data.OS[O, S]
     final type ROS         = teststate.data.ROS[R, O, S]
-    final type NameFn      = teststate.data.NameFn[OS]
+    final type ANameFn     = teststate.data.NameFn[ROS]
+    final type CNameFn     = teststate.data.NameFn[OS]
     final type Point       = Points[O, S, E]
     final type Around      = Arounds[O, S, E]
     final type Invariant   = Invariants[O, S, E]
     final type Action      = Actions[F, R, O, S, E]
     final type TestContent = teststate.run.TestContent[F, R, O, S, E]
     final type Test        = teststate.run.Test[F, R, O, S, E]
-  }
-
-  final class ActionB[F[_], R, O, S, E](actionName: NameFn[ROS[R, O, S]])(implicit EM: ExecutionModel[F]) {
-
-    def act[U](f: ROS[R, O, S] => F[U]) =
-      actTry(f.andThen(EM.map(_)(_ => None)))
-
-    def actTry(f: ROS[R, O, S] => F[Option[E]]): Actions[F, R, O, S, E] = {
-      val a = Action.Single[F, R, O , S, E](i => Some(() => EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(i.state)))))
-      Action.liftInner(a)(actionName)
-    }
   }
 }
 
@@ -53,26 +43,26 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   private def sackE(ne: NamedError[E]) =
     Sack.Value(Left(ne))
 
-  def point(name: NameFn, test: OS => Option[E]): Point =
+  def point(name: CNameFn, test: OS => Option[E]): Point =
     sack1(Point(name, Tri failedOption test(_)))
 
-  def around[A](name: NameFn, before: OS => A)(test: (OS, A) => Option[E]): Around =
+  def around[A](name: CNameFn, before: OS => A)(test: (OS, A) => Option[E]): Around =
     sack1(Around.Delta(Around.DeltaA(name, os => Passed(before(os)), test)))
 
   private def strErrorFn(implicit ev: String =:= E): Any => E = _ => ""
   private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E = (_,_) => ""
 
 
-  def test(name: NameFn, testFn: OS => Boolean)(implicit ev: String =:= E): Point =
+  def test(name: CNameFn, testFn: OS => Boolean)(implicit ev: String =:= E): Point =
     test(name, testFn, strErrorFn)
 
-  def test(name: NameFn, testFn: OS => Boolean, error: OS => E): Point =
+  def test(name: CNameFn, testFn: OS => Boolean, error: OS => E): Point =
     point(name, os => if (testFn(os)) None else Some(error(os)))
 
-  def testAround(name: NameFn, testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around =
+  def testAround(name: CNameFn, testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around =
     testAround(name, testFn, strErrorFn2)
 
-  def testAround(name: NameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around =
+  def testAround(name: CNameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around =
     around(name, identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
 
@@ -130,8 +120,20 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def emptyTest(implicit r: Recover[E]): TestContent =
     Test(emptyAction)(EM, r)
 
-  def action(actionName: => String) =
-    new ActionB[F, R, O, S, E](actionName)
+  // ===================================================================================================================
+
+  def action(actionName: ANameFn) =
+    new ActionB(actionName)
+
+  final class ActionB(actionName: ANameFn) {
+    def act[U](f: ROS => F[U]) =
+      actTry(f.andThen(EM.map(_)(_ => None)))
+
+    def actTry(f: ROS => F[Option[E]]): Action = {
+      val a = Action.Single[F, R, O, S, E](i => Some(() => EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(i.state)))))
+      Action.liftInner(a)(actionName)
+    }
+  }
 
   // ===================================================================================================================
 
@@ -196,7 +198,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def beforeAndAfterBy(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
         equalBy(before).before & equalBy(after).after
 
-      private def mkAround(name: NameFn, f: (A, A) => Option[E]) =
+      private def mkAround(name: CNameFn, f: (A, A) => Option[E]) =
         around(name, focusFn)((os, a) => f(a, focusFn(os)))
 
       def changesTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
