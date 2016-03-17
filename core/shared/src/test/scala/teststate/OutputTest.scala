@@ -614,7 +614,8 @@ object OutputTest extends TestSuite {
             |✓ Initial state.
             |  ✓ Base invariant
             |✓ Sub#1
-            |  ✓ Sub #1 invariant
+            |  ✓ Initial state.
+            |    ✓ Sub #1 invariant
             |✓ Sub#2
             |  ✓ Initial state.
             |    ✓ Sub #2 invariant
@@ -624,7 +625,8 @@ object OutputTest extends TestSuite {
             |      ✓ Base invariant
             |      ✓ Sub #2 invariant
             |✓ Sub#3
-            |  ✓ Sub #3 invariant
+            |  ✓ Initial state.
+            |    ✓ Sub #3 invariant
             |✓ Sub#4
             |  ✓ Initial state.
             |    ✓ Sub #4 invariant
@@ -663,7 +665,8 @@ object OutputTest extends TestSuite {
             |  ✓ Initial state.
             |    ✓ Invariant: .1
             |  ✓ Subtest: .2
-            |    ✓ Invariant: .2
+            |    ✓ Initial state.
+            |      ✓ Invariant: .2
             |✓ All pass.
           """.stripMargin)
 
@@ -709,7 +712,8 @@ object OutputTest extends TestSuite {
             |      ✓ Invariant: Base
             |      ✓ Invariant: .1
             |  ✓ Subtest: .2
-            |    ✓ Invariant: .2
+            |    ✓ Initial state.
+            |      ✓ Invariant: .2
             |  ✓ Action: .1-2
             |    ✓ Action
             |    ✓ Invariants
@@ -774,7 +778,8 @@ object OutputTest extends TestSuite {
             |      ✓ Invariant: Base
             |      ✓ Invariant: .1
             |  ✓ Subtest: .2
-            |    ✓ Invariant: .2
+            |    ✓ Initial state.
+            |      ✓ Invariant: .2
             |✓ All pass.
           """.stripMargin)
 
@@ -786,7 +791,8 @@ object OutputTest extends TestSuite {
             |  ✓ Initial state.
             |    ✓ Invariant: .1
             |  ✓ Subtest: .2
-            |    ✓ Invariant: .2
+            |    ✓ Initial state.
+            |      ✓ Invariant: .2
             |  ✓ Action: .1-2
             |    ✓ Action
             |    ✓ Invariants
@@ -816,6 +822,23 @@ object OutputTest extends TestSuite {
             |        ✓ Invariant: Base
             |        ✓ Invariant: .1
             |        ✓ Invariant: .2
+            |✓ All pass.
+          """.stripMargin)
+      }
+
+      'singleActionName {
+        val t = Test(action addCheck checkPoint2.before, emptyInvariants).asAction("SubTest!")
+        test(t, checkPoint)(
+          """
+            |✓ Initial state.
+            |  ✓ Check stuff.
+            |✓ SubTest!
+            |  ✓ Press button.
+            |    ✓ Pre-conditions
+            |      ✓ Check more stuff.
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Check stuff.
             |✓ All pass.
           """.stripMargin)
       }

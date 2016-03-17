@@ -368,7 +368,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
               // ==============================================================================
               case Action.SubTest(action, subInvariants) =>
-                val omg2F = checkAround0(nameFn, Sack.empty, check, true, p.copy(history = History.empty), {
+                val omg2F = checkAround0(nameFn, Sack.empty, check, false, p.copy(history = History.empty), {
                   val t = new Test(new TestContent(action, subInvariants), test.observe)
                   val subP = subtest(t, invariants, refFn, ros, false)
                   EM.map(subP)(s => (s.history, s.ros))
