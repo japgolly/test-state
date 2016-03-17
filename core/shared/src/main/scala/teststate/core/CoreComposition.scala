@@ -3,7 +3,7 @@ package teststate.core
 import acyclic.file
 import teststate.data.Sack
 import teststate.typeclass.PolyComposable
-import PolyComposable.CanAnd
+import PolyComposable._
 import Types.CheckShapeA
 
 /**
@@ -25,17 +25,17 @@ object CoreComposition {
     implicit def checksPolyComposable[C[-_, _], D[-_, _], A, E](implicit
                                                                   c: ToInvariant[CheckShapeA, C],
                                                                   d: ToInvariant[CheckShapeA, D],
-                                                                  i: PolyComposable.Mono[CheckShapeA[Invariant, A, E]])
-        : PolyComposable[CheckShapeA[C, A, E], CheckShapeA[D, A, E], CheckShapeA[Invariant, A, E]] =
+                                                                  i: PolyComposable.Mono[AndOp, CheckShapeA[Invariant, A, E]])
+        : PolyComposable[AndOp, CheckShapeA[C, A, E], CheckShapeA[D, A, E], CheckShapeA[Invariant, A, E]] =
       PolyComposable((fc, fd) => i.compose(c toInvariant fc, d toInvariant fd))
   }
 
   trait Implicits extends P0 {
 
-    implicit def checksMonoComposable[A, B]: PolyComposable.Mono[Sack[A, B]] =
+    implicit def checksMonoComposable[A, B]: PolyComposable.Mono[AndOp, Sack[A, B]] =
       PolyComposable(Sack.append)
 
-    implicit def checksCanAnd[C[-_, _], A, B]: CanAnd[CheckShapeA[C, A, B]] = CanAnd
+    implicit def checksCanAnd[C[-_, _], A, B]: Can[AndOp, CheckShapeA[C, A, B]] = Can
   }
 
 }

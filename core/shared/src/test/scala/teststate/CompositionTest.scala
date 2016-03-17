@@ -2,23 +2,22 @@ package teststate
 
 import nyaya.prop._
 import nyaya.test.PropTest._
-import teststate.typeclass.PolyComposable
-import teststate.typeclass.PolyComposable.CanSeq
 import scalaz.std.string.stringInstance
 import utest._
+import teststate.typeclass.PolyComposable
 import Exports._
+import PolyComposable.{Can, SeqOp}
 import RandomData.*
 
 object CompositionTest extends TestSuite {
 
-
   def associativity[A, B, C, AB, BC](implicit
-                                     x1: PolyComposable[A, B, AB],
-                                     x2: PolyComposable[B, C, BC],
-                                     x3: PolyComposable[AB, C, *.Action],
-                                     x4: PolyComposable[A, BC, *.Action]) = {
+                                     x1: PolyComposable[SeqOp, A, B, AB],
+                                     x2: PolyComposable[SeqOp, B, C, BC],
+                                     x3: PolyComposable[SeqOp, AB, C, *.Action],
+                                     x4: PolyComposable[SeqOp, A, BC, *.Action]) = {
 
-    implicit def anyCanSeq[X]: CanSeq[X] = CanSeq
+    implicit def anyCanSeq[X]: Can[SeqOp, X] = Can
 
     def results(a: *.Action): String =
       "\n" + Test(a).observe(_ => ()).run((), ()).format(History.Options.uncolored)

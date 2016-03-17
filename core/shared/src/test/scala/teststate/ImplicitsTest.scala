@@ -119,14 +119,23 @@ abstract class ImplicitsTest extends AbstractTest {
 
   // compose (mono)
   testAA[Actions[F, R, O, S, E]](_ >> _).expect[Actions[F, R, O, S, E]]
+  compileError("testAA[Actions[F, R, O, S, E]](_ +> _)")
 
-  // compose (poly)
-                test2[Actions[F, R, O, S, E], Points       [O, S, E]](_ >> _).expect[Actions[F, R, O, S, E]]
-                test2[Actions[F, R, O, S, E], Arounds      [O, S, E]](_ >> _).expect[Actions[F, R, O, S, E]]
+  // >>
+  compileError("test2[Actions[F, R, O, S, E], Points       [O, S, E]](_ >> _)")
+  compileError("test2[Actions[F, R, O, S, E], Arounds      [O, S, E]](_ >> _)")
   compileError("test2[Actions[F, R, O, S, E], Invariants   [O, S, E]](_ >> _)")
-                test2[Points       [O, S, E], Actions[F, R, O, S, E]](_ >> _).expect[Actions[F, R, O, S, E]]
+  compileError("test2[Points       [O, S, E], Actions[F, R, O, S, E]](_ >> _)")
   compileError("test2[Arounds      [O, S, E], Actions[F, R, O, S, E]](_ >> _)")
   compileError("test2[Invariants   [O, S, E], Actions[F, R, O, S, E]](_ >> _)")
+
+  // +>
+                test2[Points       [O, S, E], Actions[F, R, O, S, E]](_ +> _).expect[Actions[F, R, O, S, E]]
+                test2[Actions[F, R, O, S, E], Points       [O, S, E]](_ +> _).expect[Actions[F, R, O, S, E]]
+                test2[Actions[F, R, O, S, E], Arounds      [O, S, E]](_ +> _).expect[Actions[F, R, O, S, E]]
+  compileError("test2[Actions[F, R, O, S, E], Invariants   [O, S, E]](_ +> _)")
+  compileError("test2[Arounds      [O, S, E], Actions[F, R, O, S, E]](_ +> _)")
+  compileError("test2[Invariants   [O, S, E], Actions[F, R, O, S, E]](_ +> _)")
 
   // ===================================================================================================================
   // Transformers
