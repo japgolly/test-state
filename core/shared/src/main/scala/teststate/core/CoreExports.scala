@@ -2,15 +2,16 @@ package teststate.core
 
 import acyclic.file
 import teststate.data.{Name, Sack}
-import teststate.typeclass.{Conditional, Show}
+import teststate.typeclass.{PolyComposable, Conditional, Show}
 
 trait CoreExports
   extends Name.Implicits
-     with CheckOps   .Implicits
-     with Conditional.Implicits
-     with PCompose   .Implicits
-     with PointOps   .Implicits
-     with Show       .Implicits {
+     with CheckOps       .Implicits
+     with Conditional    .Implicits
+     with PolyComposable .Implicits
+     with CoreComposition.Implicits
+     with PointOps       .Implicits
+     with Show           .Implicits {
 
   type Points    [-O, -S, E] = Types.Points    [O, S, E]
   type Arounds   [-O, -S, E] = Types.Arounds   [O, S, E]
