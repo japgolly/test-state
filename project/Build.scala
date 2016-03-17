@@ -14,6 +14,7 @@ object TestState extends Build {
     final val MTest         = "0.3.1"
     final val MacroParadise = "2.1.0"
     final val KindProjector = "0.7.1"
+    final val Nyaya         = "0.7.0"
   }
 
   def scalacFlags = Seq(
@@ -101,4 +102,9 @@ object TestState extends Build {
     .bothConfigure(commonSettings, publicationSettings(ghProject))
     .configure(utestSettings)
     .dependsOn(coreMacros)
+    .settings(
+      libraryDependencies ++= Seq(
+        "com.github.japgolly.nyaya" %%% "nyaya-gen"  % Ver.Nyaya % "test",
+        "com.github.japgolly.nyaya" %%% "nyaya-prop" % Ver.Nyaya % "test",
+        "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya % "test"))
 }
