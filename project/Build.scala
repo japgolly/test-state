@@ -50,6 +50,7 @@ object TestState extends Build {
         "L"   -> "root/publishLocal",
         "C"   -> "root/clean",
         "T"   -> ";root/clean;root/test",
+        "TL"  -> ";T;L",
         "c"   -> "compile",
         "tc"  -> "test:compile",
         "t"   -> "test",
