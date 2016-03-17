@@ -6,6 +6,18 @@ sealed abstract class Or[+A, +B] extends Product with Serializable {
   def fold[C](l: A => C, r: B => C): C
   def cata[C](l: Left[A] => C, r: Right[B] => C): C
 
+  final def isLeft: Boolean =
+    !isRight
+
+  final def isRight: Boolean =
+    this match {
+      case _: Right[B] => true
+      case _ => false
+    }
+
+  final def exists(f: B => Boolean): Boolean =
+    fold(_ => false, f)
+
   final def flatMap[C >: A, D](f: B => C Or D): C Or D =
     this match {
       case Right(b) => f(b)
