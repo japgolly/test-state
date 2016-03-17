@@ -5,7 +5,7 @@ import teststate.data.Or
 trait Exports
   extends core.CoreExports
      with core.CoreExports2
-     with core.Transformer.ToOps
+     with core.CoreExports3
      with typeclass.Equal.Implicits {
 
   // TODO Decide on project name. Prefix ALL implicits values for Equal etc.

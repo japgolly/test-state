@@ -98,30 +98,6 @@ object ActionOps {
   }
 
   final class Ops3[F[_], R, O, S, E](private val self: Actions[F, R, O, S, E]) extends AnyVal {
-    def >>(next: Actions[F, R, O, S, E]): Actions[F, R, O, S, E] =
-      Sack.append(self, next)
-
-    @inline def andThen(next: Actions[F, R, O, S, E]): Actions[F, R, O, S, E] =
-      >>(next)
-
-    @inline def <<(prev: Actions[F, R, O, S, E]): Actions[F, R, O, S, E] =
-      new Ops3(prev) >> self
-
-    @inline def precededBy(prev: Actions[F, R, O, S, E]): Actions[F, R, O, S, E] =
-      <<(prev)
-
-    // a >> b
-    // a andThen b
-    // a followedBy b
-    // a follows b
-    // a append b
-
-    // b << a
-    // b ??? a
-    // b precededBy a
-    // b precedes a
-    // b prepend a
-
     def group(name: NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] = {
       val i = Group[F, R, O, S, E](Function const Some(self))
       val o = Outer(name, i, Sack.empty)

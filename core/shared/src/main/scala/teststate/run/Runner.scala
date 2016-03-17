@@ -85,7 +85,7 @@ object Runner {
             as.length match {
               case 0 => None
               case 1 => queue(as.head, tail)
-              case _ => queue(as.head, Sack.Product(as.tail) >> tail)
+              case _ => queue(as.head, Sack.append(Sack.Product(as.tail), tail))
             }
 
           case Sack.CoProduct(n, p) =>
