@@ -33,6 +33,9 @@ object Action {
   def liftInner[F[_], R, O, S, E](inner: Inner[F, R, O, S, E])(name: NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] =
     liftOuter(Outer(name, inner, Sack.empty))
 
+  implicit def actionOuterInstanceNamedOps[F[_], R, O, S, E]: NamedOps[Outer[F, R, O, S, E], ROS[R, O, S]] =
+    NamedOps((a, f) => a.copy(name = f(a.name)))
+
   implicit def actionOuterInstanceShow[F[_], R, O, S, E]: Show[Outer[F, R, O, S, E]] =
     Show(_.name(None).value)
 

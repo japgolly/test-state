@@ -7,6 +7,7 @@ import teststate.typeclass.{PolyComposable, Conditional, Show}
 trait CoreExports
   extends Name.Implicits
      with CheckOps       .Implicits
+     with NamedOps       .Implicits
      with Conditional    .Implicits
      with PolyComposable .Implicits
      with CoreComposition.Implicits

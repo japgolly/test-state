@@ -26,8 +26,6 @@ trait ActionOps[A[_[_], _, _, _, _]] {
 
 trait ActionOps2[A[_[_], _, _, _, _]] {
 
-  def renameBy[F[_], R, O, S, E](a: A[F, R, O, S, E])(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]): A[F, R, O, S, E]
-
   def times[F[_], R, O, S, E](a: A[F, R, O, S, E])(n: Int): A[F, R, O, S, E]
 
   def addCheck[F[_], R, O, S, E](a: A[F, R, O, S, E])(c: Arounds[O, S, E]): A[F, R, O, S, E]
@@ -78,15 +76,6 @@ object ActionOps {
   }
 
   final class Ops2[A[_[_], _, _, _, _], F[_], R, O, S, E](private val a: A[F, R, O, S, E])(implicit tc: ActionOps2[A]) {
-
-    def renameBy(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]) =
-      tc.renameBy(a)(f)
-
-    def rename(newName: NameFn[ROS[R, O, S]]) =
-      renameBy(_ => newName)
-
-    def nameMod(f: Name => Name) =
-      renameBy(_ map f)
 
     def times(n: Int) = {
       require(n >= 0, "n in action.times(n) cannot be negative.")
@@ -273,9 +262,6 @@ object ActionOps {
         override def modS[F[_], R, O, S, E](x: Outer[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
           Outer(x.name, x.inner modS m, x.check)
 
-        override def renameBy[F[_], R, O, S, E](x: Outer[F, R, O, S, E])(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]) =
-          Outer(f(x.name), x.inner, x.check)
-
         override def times[F[_], R, O, S, E](a: Outer[F, R, O, S, E])(n: Int) =
           _times(n, a.name, a.nameMod(_).lift)
 
@@ -319,13 +305,6 @@ object ActionOps {
 
         override def modS[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
           x.rmap(_.map(_ modS m))
-
-        override def renameBy[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(f: NameFn[ROS[R, O, S]] => NameFn[ROS[R, O, S]]) =
-          x match {
-            case Value(v)        => Value(v map (_ renameBy f))
-            case Product(ss)     => Product(ss map (_ renameBy f))
-            case CoProduct(n, p) => CoProduct(f(n), p)
-          }
 
         def groupComposite[F[_], R, O, S, E](ss: Vector[Actions[F, R, O, S, E]]) = {
           val l = ss.length

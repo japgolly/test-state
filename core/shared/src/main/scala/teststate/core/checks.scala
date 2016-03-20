@@ -4,8 +4,9 @@ import acyclic.file
 import teststate.data._
 import teststate.typeclass._
 import teststate.{core => ^}
-import Profunctor.ToOps._
 import Conditional.Implicits._
+import NamedOps.ToOps._
+import Profunctor.ToOps._
 import Show.ToOps._
 
 final case class Point[-I, E](name: NameFn[I], test: I => Tri[E, Unit])
@@ -22,6 +23,9 @@ object Point {
       override def when(m: Point[I, E], f: I => Boolean) =
         Point(m.name, m.test when f)
     }
+
+  implicit def pointInstanceNamedOps[I, E]: NamedOps[Point[I, E], I] =
+    NamedOps((p, f) => p.copy(name = f(p.name)))
 
   implicit def pointInstanceShow[I, E]: Show[Point[I, E]] =
     Show(_.name(None).value)
@@ -80,6 +84,9 @@ object Around {
         DeltaA(d.name, d.before when f, d.test)
     }
 
+  implicit def deltaAInstanceNamedOps[I, E]: NamedOps[DeltaA[I, E], I] =
+    NamedOps((d, f) => DeltaA(f(d.name), d.before, d.test))
+
   implicit def deltaAInstanceShow[I, E]: Show[DeltaA[I, E]] =
     Show(_.name(None).value)
 
@@ -100,6 +107,12 @@ object Around {
           case Delta(d)    => Delta(d when f)
         }
     }
+
+  implicit def aroundInstanceNamedOps[I, E]: NamedOps[Around[I, E], I] =
+    NamedOps((a, f) => a match {
+      case Point(p, w) => Point(p renameBy f, w)
+      case Delta(d)    => Delta(d renameBy f)
+    })
 
   implicit def aroundInstanceShow[I, E]: Show[Around[I, E]] =
     Show {
@@ -132,6 +145,12 @@ object Invariant {
           case Delta(x) => Delta(x when f)
         }
     }
+
+  implicit def invariantInstanceNamedOps[I, E]: NamedOps[Invariant[I, E], I] =
+    NamedOps((i, f) => i match {
+      case Point(x) => Point(x renameBy f)
+      case Delta(x) => Delta(x renameBy f)
+    })
 
   implicit def invariantInstanceShow[I, E]: Show[Invariant[I, E]] =
     Show {

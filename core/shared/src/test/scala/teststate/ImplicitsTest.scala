@@ -101,21 +101,29 @@ abstract class ImplicitsTest extends AbstractTest {
   test[Arounds   [O, S, E]](_.show).expect[String]
   test[Invariants[O, S, E]](_.show).expect[String]
 
+  // NamedOps
+  test[Points    [O, S, E]](_ rename "").expectSelf
+  test[Arounds   [O, S, E]](_ rename "").expectSelf
+  test[Invariants[O, S, E]](_ rename "").expectSelf
+
   // ===================================================================================================================
   // Actions
   // ===================================================================================================================
 
   // Conditional
-  test[Actions[F, R, O, S, E]](_.when(_.obs.bool)).expect[Actions[F, R, O, S, E]]
+  test[Actions[F, R, O, S, E]](_.when(_.obs.bool)).expectSelf
+
+  // NamedOps
+  test[Actions[F, R, O, S, E]](_ rename "").expectSelf
 
   // ActionOps1
   test[Actions[F, R, O, S, E]](_ mapO o21).expect[Actions[F, R, O2, S, E]]
 
   // ActionOps2
-  test[Actions[F, R, O, S, E]](_ times 3).expect[Actions[F, R, O, S, E]]
+  test[Actions[F, R, O, S, E]](_ times 3).expectSelf
 
   // ActionOps3
-  test[Actions[F, R, O, S, E]](_.group("yay")).expect[Actions[F, R, O, S, E]]
+  test[Actions[F, R, O, S, E]](_.group("yay")).expectSelf
 
   // compose (mono)
   testAA[Actions[F, R, O, S, E]](_ >> _).expect[Actions[F, R, O, S, E]]
