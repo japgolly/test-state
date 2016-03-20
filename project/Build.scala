@@ -9,7 +9,7 @@ object TestState extends Build {
   private val ghProject = "test-state"
 
   object Ver {
-    final val Scala211      = "2.11.7"
+    final val Scala211      = "2.11.8"
     final val Acyclic       = "0.1.4"
     final val MTest         = "0.3.1"
     final val MacroParadise = "2.1.0"
