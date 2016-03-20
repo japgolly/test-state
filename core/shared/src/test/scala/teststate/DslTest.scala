@@ -44,6 +44,18 @@ object DslTest extends TestSuite {
 
   override def tests = TestSuite {
 
+    'changesTo {
+      'pos - testName(*.focus("Counter").value(_ => 7).assert.changesTo(_ + 1),
+        "Counter should be <?>.",
+        "Counter should be 8.")
+
+      'neg - testName(*.focus("Counter").value(_ => 7).assert.not.changesTo(_ + 1),
+        "Counter shouldn't be <?>.",
+        "Counter shouldn't be 8.")
+
+      // TODO Didn't catch. Try using changeTo in multiple actions and verify final history. Might be Name strictness.
+    }
+
     'incrementBy {
       'pos - testName(*.focus("Counter").value(_ => 7).assert.increaseBy(2),
         "Counter should increase by 2.",
