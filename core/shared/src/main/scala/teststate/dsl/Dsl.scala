@@ -209,6 +209,20 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def changeOccurs(implicit e: Equal[A], f: SomethingFailures[A, E]) =
         not.changesTo(identity)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "change"))
+
+      def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
+        changesTo(n.plus(_, a))(q, f)
+          .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)))
+
+      def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
+        changesTo(n.minus(_, a))(q, f)
+          .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
+
+      def increment(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
+        increaseBy(n.one)(n, q, f, s)
+
+      def decrement(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
+        decreaseBy(n.one)(n, q, f, s)
     }
   } // FocusValue
 
