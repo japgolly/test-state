@@ -13,6 +13,9 @@ object NamedOps {
     def rename(newName: NameFn[I]): A =
       renameBy(_ => newName)
 
+    def renameContextFree(n: Name): A =
+      renameBy(_ mapContextFree n)
+
     def nameMod(f: Name => Name): A =
       renameBy(_ map f)
   }

@@ -208,6 +208,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def changeOccurs(implicit e: Equal[A], f: SomethingFailures[A, E]) =
         not.changesTo(identity)
+          .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "change"))
     }
   } // FocusValue
 
@@ -321,7 +322,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def elemChangesBy(del: OS => TraversableOnce[A], add: OS => TraversableOnce[A])(implicit sa: Show[A], ev: ElemChanges.Failure[A] => E) = {
         val d = ElemChanges(positive)
         around(
-          NameFn(NameUtils.changeFn(focusName, positive, "change", del, add)),
+          NameFn(NameUtils.collChangeFn(focusName, positive, "change", del, add)),
           focusFn)(
           (os, b) =>
             d(ElemChanges.Args(

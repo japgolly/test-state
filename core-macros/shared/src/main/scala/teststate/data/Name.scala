@@ -83,6 +83,12 @@ final case class NameFn[-A](fn: Option[A] => Name) extends AnyVal {
 
   def comap[B](f: B => Option[A]): NameFn[B] =
     NameFn(ob => apply(ob flatMap f))
+
+  def mapContextFree(n: Name): NameFn[A] =
+    NameFn {
+      case s@Some(_) => fn(s)
+      case None      => n
+    }
 }
 
 object NameFn {
