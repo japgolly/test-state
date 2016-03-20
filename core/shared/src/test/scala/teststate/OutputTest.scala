@@ -367,6 +367,7 @@ object OutputTest extends TestSuite {
           """
             |✘ Groupiness.
             |  ✘ Press button! -- BUTTON'S BROKEN
+            |  - Pull lever.
           """.stripMargin)
 
         'before - t(a addCheck checkPoint.before)(
@@ -375,18 +376,21 @@ object OutputTest extends TestSuite {
             |  ✓ Pre-conditions
             |    ✓ Check stuff.
             |  ✘ Press button! -- BUTTON'S BROKEN
+            |  - Pull lever.
           """.stripMargin)
 
         'after - t(a addCheck checkPoint.after)(
           """
             |✘ Groupiness.
             |  ✘ Press button! -- BUTTON'S BROKEN
+            |  - Pull lever.
           """.stripMargin)
 
         'after - t(a addCheck checkAround)(
           """
             |✘ Groupiness.
             |  ✘ Press button! -- BUTTON'S BROKEN
+            |  - Pull lever.
           """.stripMargin)
 
         'beforeAfter - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
@@ -395,6 +399,7 @@ object OutputTest extends TestSuite {
             |  ✓ Pre-conditions
             |    ✓ Check stuff.
             |  ✘ Press button! -- BUTTON'S BROKEN
+            |  - Pull lever.
           """.stripMargin)
       }
       'fail2 {

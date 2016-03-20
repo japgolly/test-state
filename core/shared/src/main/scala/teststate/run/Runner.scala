@@ -207,14 +207,12 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
     }
   }
 
-  private def checkAround0(nameFn    : NameFn[ROS],
+  private def checkAround0(name      : Name,
                            invariants: Invariants[O, S, E],
                            arounds   : Arounds[O, S, E],
                            collapse  : Boolean,
                            p         : P,
                            run       : F[(H, ROS)]): F[P] = {
-
-    val name = recover.name(nameFn, p.ros.some)
 
     val checksPre = unpackChecks(invariants, arounds, p.ros.os)
 
@@ -296,7 +294,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
     }
   }
 
-  private def checkAround[A](nameFn    : NameFn[ROS],
+  private def checkAround[A](name      : Name,
                              invariants: Invariants[O, S, E],
                              arounds   : Arounds[O, S, E],
                              collapse  : Boolean,
@@ -305,9 +303,8 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                             (run       : A => F[(Name => H, ROS)]): F[P] =
     prepare(p.ros) match {
       case Some(a) =>
-        checkAround0(nameFn, invariants, arounds, collapse, p, EM.map(run(a))(x => (x._1(ActionName), x._2)))
+        checkAround0(name, invariants, arounds, collapse, p, EM.map(run(a))(x => (x._1(ActionName), x._2)))
       case None =>
-        val name = recover.name(nameFn, p.ros.some)
         EM.pure(p :+ History.Step(name, Skip))
     }
 
@@ -321,64 +318,72 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
       go(Progress.prepareNext(actions, ros, history))
 
     def go(p0: P): F[P] =
-      EM.tailrec(p0)(x => x.queue.isEmpty || x.failed) { p =>
+      EM.tailrec(p0)(_.queue.isEmpty) { p =>
         val queue = p.queue.get
-
         import p.ros
-        val invariants = nonInitialInvariants & test.content.invariants
 
-        val processNextStep: F[P] = queue.head match {
-          case Right(Action.Outer(nameFn, innerAction, check)) =>
+        val processNextStep: F[P] =
+          queue.head match {
+            case Right(Action.Outer(nameFn, innerAction, check)) =>
 
-            innerAction match {
+              val name = recover.name(nameFn, ros.some)
 
-              // ==============================================================================
-              case Action.Single(run) =>
-                checkAround(nameFn, invariants, check, true, p)(run) { act =>
+              if (p.failed)
+                EM.pure(p :+ History.Step(name, Skip))
 
-                  def ret(ros: ROS, r: Result[E]): (Name => H, ROS) =
-                    (n => History(vector1(History.Step(n, r))), ros)
+              else {
 
-                  def rets(ros: ROS, r: Result[E], hs: History.Step[E]): (Name => H, ROS) =
-                    (n => History(vector1(History.Step(n, r)) :+ hs), ros)
+                val invariants = nonInitialInvariants & test.content.invariants
+                innerAction match {
 
-                  EM.map(EM.recover(act())) {
-                    case Right(nextStateFn) =>
-                      val ref2 = refFn()
-                      observe(test, ref2) match {
-                        case Right(obs2) =>
-                          recover.attempt(nextStateFn(obs2)) match {
-                            case Right(Right(state2)) => ret(new ROS(ref2, obs2, state2), Pass)
-                            case Right(Left(e))       => rets(ros, Pass, History.Step(Observation, Fail(e)))
-                            case Left(e)              => rets(ros, Pass, History.Step(UpdateState, Fail(e)))
+                  // ==============================================================================
+                  case Action.Single(run) =>
+                    checkAround(name, invariants, check, true, p)(run) { act =>
+
+                      def ret(ros: ROS, r: Result[E]): (Name => H, ROS) =
+                        (n => History(vector1(History.Step(n, r))), ros)
+
+                      def rets(ros: ROS, r: Result[E], hs: History.Step[E]): (Name => H, ROS) =
+                        (n => History(vector1(History.Step(n, r)) :+ hs), ros)
+
+                      EM.map(EM.recover(act())) {
+                        case Right(nextStateFn) =>
+                          val ref2 = refFn()
+                          observe(test, ref2) match {
+                            case Right(obs2) =>
+                              recover.attempt(nextStateFn(obs2)) match {
+                                case Right(Right(state2)) => ret(new ROS(ref2, obs2, state2), Pass)
+                                case Right(Left(e))       => rets(ros, Pass, History.Step(Observation, Fail(e)))
+                                case Left(e)              => rets(ros, Pass, History.Step(UpdateState, Fail(e)))
+                              }
+                            case Left(e) => rets(ros, Pass, History.Step(Observation, Fail(e)))
                           }
-                        case Left(e) => rets(ros, Pass, History.Step(Observation, Fail(e)))
+                        case Left(e) => ret(ros, Fail(e))
                       }
-                    case Left(e) => ret(ros, Fail(e))
-                  }
 
+                    }
+
+                  // ==============================================================================
+                  case Action.Group(actionFn) =>
+                    checkAround(name, invariants, check, false, p)(actionFn)(children =>
+                      EM.map(start(children, ros))(omgC =>
+                        ((_: Name) => omgC.history, omgC.ros))
+                    )
+
+                  // ==============================================================================
+                  case Action.SubTest(action, subInvariants) =>
+                    val omg2F = checkAround0(name, Sack.empty, check, false, p.copy(history = History.empty), {
+                      val t = new Test(new TestContent(action, subInvariants), test.observe)
+                      val subP = subtest(t, invariants, refFn, ros, false)
+                      EM.map(subP)(s => (s.history, s.ros))
+                    })
+                    EM.map(omg2F)(s => s.copy(history = p.history ++ s.history))
                 }
-
-              // ==============================================================================
-              case Action.Group(actionFn) =>
-                checkAround(nameFn, invariants, check, false, p)(actionFn)(children =>
-                  EM.map(start(children, ros))(omgC =>
-                    ((_: Name) => omgC.history, omgC.ros))
-                )
-
-              // ==============================================================================
-              case Action.SubTest(action, subInvariants) =>
-                val omg2F = checkAround0(nameFn, Sack.empty, check, false, p.copy(history = History.empty), {
-                  val t = new Test(new TestContent(action, subInvariants), test.observe)
-                  val subP = subtest(t, invariants, refFn, ros, false)
-                  EM.map(subP)(s => (s.history, s.ros))
-                })
-                EM.map(omg2F)(s => s.copy(history = p.history ++ s.history))
             }
 
-          case Left(NamedError(n, e)) =>
-            EM.pure(p :+ History.Step(n, Fail(e)))
-        }
+            case Left(NamedError(n, e)) =>
+              EM.pure(p :+ History.Step(n, Fail(e)))
+          }
 
         EM.map(processNextStep)(p => Progress.prepareNext(queue.tail, p.ros, p.history))
       }
