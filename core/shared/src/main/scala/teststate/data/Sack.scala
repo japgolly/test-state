@@ -66,10 +66,7 @@ object Sack {
     }
 
   implicit def sackInstanceConditionalR[A, B, I](implicit c: Conditional[B, I]): Conditional[Sack[A, B], I] =
-    new Conditional[Sack[A, B], I] {
-      override def when(m: Sack[A, B], f: I => Boolean) =
-        m.rmap(c.when(_, f))
-    }
+    Conditional((s, f) => s.rmap(c.when(_, f)))
 
   implicit def sackInstanceShow[A, B](implicit show: Show[B]): Show[Sack[A, B]] =
     Show { sack =>

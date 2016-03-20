@@ -19,10 +19,7 @@ object Point {
     }
 
   implicit def pointInstanceConditional[I, E]: Conditional[Point[I, E], I] =
-    new Conditional[Point[I, E], I] {
-      override def when(m: Point[I, E], f: I => Boolean) =
-        Point(m.name, m.test when f)
-    }
+    Conditional((p, f) => Point(p.name, p.test when f))
 
   implicit def pointInstanceNamedOps[I, E]: NamedOps[Point[I, E], I] =
     NamedOps((p, f) => p.copy(name = f(p.name)))
@@ -79,10 +76,7 @@ object Around {
     }
 
   implicit def deltaAInstanceConditional[I, E]: Conditional[DeltaA[I, E], I] =
-    new Conditional[DeltaA[I, E], I] {
-      override def when(d: DeltaA[I, E], f: I => Boolean) =
-        DeltaA(d.name, d.before when f, d.test)
-    }
+    Conditional((d, f) => DeltaA(d.name, d.before when f, d.test))
 
   implicit def deltaAInstanceNamedOps[I, E]: NamedOps[DeltaA[I, E], I] =
     NamedOps((d, f) => DeltaA(f(d.name), d.before, d.test))
@@ -100,13 +94,10 @@ object Around {
     }
 
   implicit def aroundInstanceConditional[I, E]: Conditional[Around[I, E], I] =
-    new Conditional[Around[I, E], I] {
-      override def when(m: Around[I, E], f: I => Boolean) =
-        m match {
-          case Point(p, w) => Point(p when f, w)
-          case Delta(d)    => Delta(d when f)
-        }
-    }
+    Conditional((m, f) => m match {
+      case Point(p, w) => Point(p when f, w)
+      case Delta(d)    => Delta(d when f)
+    })
 
   implicit def aroundInstanceNamedOps[I, E]: NamedOps[Around[I, E], I] =
     NamedOps((a, f) => a match {
@@ -138,13 +129,10 @@ object Invariant {
     }
 
   implicit def invariantInstanceConditional[I, E]: Conditional[Invariant[I, E], I] =
-    new Conditional[Invariant[I, E], I] {
-      override def when(m: Invariant[I, E], f: I => Boolean) =
-        m match {
-          case Point(x) => Point(x when f)
-          case Delta(x) => Delta(x when f)
-        }
-    }
+    Conditional((m, f) => m match {
+      case Point(x) => Point(x when f)
+      case Delta(x) => Delta(x when f)
+    })
 
   implicit def invariantInstanceNamedOps[I, E]: NamedOps[Invariant[I, E], I] =
     NamedOps((i, f) => i match {

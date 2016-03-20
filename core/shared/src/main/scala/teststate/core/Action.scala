@@ -40,18 +40,12 @@ object Action {
     Show(_.name(None).value)
 
   implicit def actionInnerInstanceConditional[F[_], R, O, S, E]: Conditional[Inner[F, R, O, S, E], ROS[R, O, S]] =
-    new Conditional[Inner[F, R, O, S, E], ROS[R, O, S]] {
-      override def when(action: Inner[F, R, O, S, E], f: ROS[R, O, S] => Boolean) =
-        action match {
-          case a: Single [F, R, O, S, E] => a.copy(run = a.run when f)
-          case a: Group  [F, R, O, S, E] => a.copy(action = a.action when f)
-          case a: SubTest[F, R, O, S, E] => a.copy(action = a.action when f)
-        }
-    }
+    Conditional((m, f) => m match {
+      case a: Single [F, R, O, S, E] => a.copy(run = a.run when f)
+      case a: Group  [F, R, O, S, E] => a.copy(action = a.action when f)
+      case a: SubTest[F, R, O, S, E] => a.copy(action = a.action when f)
+    })
 
   implicit def actionOuterInstanceConditional[F[_], R, O, S, E]: Conditional[Outer[F, R, O, S, E], ROS[R, O, S]] =
-    new Conditional[Outer[F, R, O, S, E], ROS[R, O, S]] {
-      override def when(a: Outer[F, R, O, S, E], f: ROS[R, O, S] => Boolean) =
-        a.copy(inner = a.inner when f)
-    }
+    Conditional((a, f) => a.copy(inner = a.inner when f))
 }
