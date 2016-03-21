@@ -44,12 +44,12 @@ object DslTest extends TestSuite {
 
   override def tests = TestSuite {
 
-    'changesTo {
-      'pos - testName(*.focus("Counter").value(_ => 7).assert.changesTo(_ + 1),
+    'changeTo {
+      'pos - testName(*.focus("Counter").value(_ => 7).assert.changeTo(_ + 1),
         "Counter should be <?>.",
         "Counter should be 8.")
 
-      'neg - testName(*.focus("Counter").value(_ => 7).assert.not.changesTo(_ + 1),
+      'neg - testName(*.focus("Counter").value(_ => 7).assert.not.changeTo(_ + 1),
         "Counter shouldn't be <?>.",
         "Counter shouldn't be 8.")
 

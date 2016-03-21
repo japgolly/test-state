@@ -161,7 +161,7 @@ object RunnerTest extends TestSuite {
         }
         val * = Dsl.sync[Unit, Yar, Unit, String]
         val a = *.action("NOP").act(_ => ())
-          .addCheck(*.focus("Blah").value(_.obs.b).assert.changeOccurs)
+          .addCheck(*.focus("Blah").value(_.obs.b).assert.change)
         val test = Test(a).observe(_ => new Yar)
         val error = "<EXPECTED>"
         def fixExpectedException(s: String): String =

@@ -201,21 +201,24 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       private def mkAround(name: CNameFn, f: (A, A) => Option[E]) =
         around(name, focusFn)((os, a) => f(a, focusFn(os)))
 
-      def changesTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
+      def changeTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
         mkAround(
           NameFn(NameUtils.equalFn(focusName, positive, expect compose focusFn)),
           (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
 
-      def changeOccurs(implicit e: Equal[A], f: SomethingFailures[A, E]) =
-        not.changesTo(identity)
+      def change(implicit e: Equal[A], f: SomethingFailures[A, E]) =
+        not.changeTo(identity)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "change"))
 
+      def noChange(implicit e: Equal[A], f: SomethingFailures[A, E]) =
+        not.change
+
       def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
-        changesTo(n.plus(_, a))(q, f)
+        changeTo(n.plus(_, a))(q, f)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)))
 
       def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
-        changesTo(n.minus(_, a))(q, f)
+        changeTo(n.minus(_, a))(q, f)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
 
       def increment(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
@@ -398,15 +401,15 @@ object Exampe {
   implicit def ea[A]: Equal[A] = ???
   val * = Dsl.sync[Unit, Unit, Unit, String]
 
-  *.focus("stuff").value(_ => 0).assert.changeOccurs
+  *.focus("stuff").value(_ => 0).assert.change
 
   *.focus("stuff").value(_ => 0).assert.equal(3).before
   *.focus("stuff").value(_ => 0).assert.beforeAndAfter(1, 2)
-  *.focus("stuff").value(_ => 0).assert.changesTo(_ + 1)
+  *.focus("stuff").value(_ => 0).assert.changeTo(_ + 1)
 
   *.focus("stuff").value(_ => 0).assert.not.equal(3).before
   *.focus("stuff").value(_ => 0).assert.not.beforeAndAfter(1, 2)
-  *.focus("stuff").value(_ => 0).assert.not.changesTo(_ + 1)
+  *.focus("stuff").value(_ => 0).assert.not.changeTo(_ + 1)
 
 //  *.focus("stuff").collection(_ => List(1)).
 }
