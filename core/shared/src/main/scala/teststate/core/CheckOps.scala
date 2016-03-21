@@ -77,7 +77,7 @@ object CheckOps {
         override def pmapO[O, S, E, X](d: C[O, S, E])(f: X => E Or O): C[X, S, E] = {
           val t = d.test
           Around.DeltaA(
-            d.name pmapO f,
+            d.name.comap(_.emap(_ emapO f).toOption),
             d.before pmapO f,
             (xs, a: d.A) => xs.emapO(f).test(t(_, a)).leftOption)
         }

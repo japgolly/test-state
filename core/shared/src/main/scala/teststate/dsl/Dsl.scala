@@ -26,6 +26,7 @@ object Dsl {
     final type ROS         = teststate.data.ROS[R, O, S]
     final type ANameFn     = teststate.data.NameFn[ROS]
     final type CNameFn     = teststate.data.NameFn[OS]
+    final type ArNameFn    = teststate.data.NameFn[BeforeAfter[OS]]
     final type Point       = Points[O, S, E]
     final type Around      = Arounds[O, S, E]
     final type Invariant   = Invariants[O, S, E]
@@ -46,7 +47,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def point(name: CNameFn, test: OS => Option[E]): Point =
     sack1(Point(name, Tri failedOption test(_)))
 
-  def around[A](name: CNameFn, before: OS => A)(test: (OS, A) => Option[E]): Around =
+  def around[A](name: ArNameFn, before: OS => A)(test: (OS, A) => Option[E]): Around =
     sack1(Around.Delta(Around.DeltaA(name, os => Passed(before(os)), test)))
 
   private def strErrorFn(implicit ev: String =:= E): Any => E = _ => ""
@@ -59,10 +60,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def test(name: CNameFn, testFn: OS => Boolean, error: OS => E): Point =
     point(name, os => if (testFn(os)) None else Some(error(os)))
 
-  def testAround(name: CNameFn, testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around =
+  def testAround(name: ArNameFn, testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around =
     testAround(name, testFn, strErrorFn2)
 
-  def testAround(name: CNameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around =
+  def testAround(name: ArNameFn, testFn: (OS, OS) => Boolean, error: (OS, OS) => E): Around =
     around(name, identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
 
@@ -198,12 +199,12 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def beforeAndAfterBy(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
         equalBy(before).before & equalBy(after).after
 
-      private def mkAround(name: CNameFn, f: (A, A) => Option[E]) =
+      private def mkAround(name: ArNameFn, f: (A, A) => Option[E]) =
         around(name, focusFn)((os, a) => f(a, focusFn(os)))
 
       def changeTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
         mkAround(
-          NameFn(NameUtils.equalFn(focusName, positive, expect compose focusFn)),
+          NameFn(NameUtils.equalFn(focusName, positive, i => expect(focusFn(i.before)))),
           (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
 
       def change(implicit e: Equal[A], f: SomethingFailures[A, E]) =

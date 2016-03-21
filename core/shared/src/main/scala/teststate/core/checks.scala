@@ -34,9 +34,8 @@ sealed abstract class Around[-I, E]
 object Around {
 
   sealed abstract class When
-  case object Before         extends When
-  case object After          extends When
-  case object BeforeAndAfter extends When
+  case object Before extends When
+  case object After  extends When
 
   final case class Point[-I, E](point: ^.Point[I, E], when: When) extends Around[I, E]
 
@@ -48,14 +47,14 @@ object Around {
 
   sealed abstract class DeltaA[-I, E] {
     type A
-    val name: NameFn[I]
+    val name: NameFn[BeforeAfter[I]]
     val before: I => Tri[E, A]
     val test: (I, A) => Option[E]
 
     final def aux: DeltaAux[I, E, A] = this
   }
 
-  def DeltaA[I, E, AA](_name: NameFn[I], _before: I => Tri[E, AA], _test: (I, AA) => Option[E]): DeltaAux[I, E, AA] =
+  def DeltaA[I, E, AA](_name: NameFn[BeforeAfter[I]], _before: I => Tri[E, AA], _test: (I, AA) => Option[E]): DeltaAux[I, E, AA] =
     new DeltaA[I, E] {
       override type A     = AA
       override val name   = _name
@@ -69,7 +68,7 @@ object Around {
         val b = d.before
         val t = d.test
         DeltaA[C, D, d.A](
-          d.name cmap g,
+          d.name cmap (_ map g),
           c => b(g(c)) mapE f,
           (c, a) => t(g(c), a) map f)
       }
@@ -78,7 +77,7 @@ object Around {
   implicit def deltaAInstanceConditional[I, E]: Conditional[DeltaA[I, E], I] =
     Conditional((d, f) => DeltaA(d.name, d.before when f, d.test))
 
-  implicit def deltaAInstanceNamedOps[I, E]: NamedOps[DeltaA[I, E], I] =
+  implicit def deltaAInstanceNamedOps[I, E]: NamedOps[DeltaA[I, E], BeforeAfter[I]] =
     NamedOps((d, f) => DeltaA(f(d.name), d.before, d.test))
 
   implicit def deltaAInstanceShow[I, E]: Show[DeltaA[I, E]] =
@@ -99,10 +98,11 @@ object Around {
       case Delta(d)    => Delta(d when f)
     })
 
-  implicit def aroundInstanceNamedOps[I, E]: NamedOps[Around[I, E], I] =
+  implicit def aroundInstanceNamedOps[I, E]: NamedOps[Around[I, E], BeforeAfter[I]] =
     NamedOps((a, f) => a match {
-      case Point(p, w) => Point(p renameBy f, w)
-      case Delta(d)    => Delta(d renameBy f)
+      case Point(p, Before) => Point(p renameBy f.thruBefore, Before)
+      case Point(p, After ) => Point(p renameBy f.thruAfter , After)
+      case Delta(d)         => Delta(d renameBy f)
     })
 
   implicit def aroundInstanceShow[I, E]: Show[Around[I, E]] =
@@ -137,7 +137,9 @@ object Invariant {
   implicit def invariantInstanceNamedOps[I, E]: NamedOps[Invariant[I, E], I] =
     NamedOps((i, f) => i match {
       case Point(x) => Point(x renameBy f)
-      case Delta(x) => Delta(x renameBy f)
+      case Delta(x) =>
+        // Hmmmm......
+        Delta(x renameBy (n => f(n.cmap(BeforeAfter.same)).cmap(_.before)))
     })
 
   implicit def invariantInstanceShow[I, E]: Show[Invariant[I, E]] =

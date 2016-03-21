@@ -2,7 +2,7 @@ package teststate
 
 import utest._
 import teststate.core.Around
-import teststate.data.{OS, Sack, Left, Right}
+import teststate.data._
 import teststate.Exports._
 import teststate.TestUtil._
 
@@ -39,7 +39,7 @@ object DslTest extends TestSuite {
   def testName[O, S, E](c: Arounds[O, S, E], expectF: String, expectC: String): Unit = {
     val n = extractAroundDelta1(c).name
     assertEq(n(None).value, expectF)
-    assertEq(n(Some(null)).value, expectC)
+    assertEq(n(Some(BeforeAfter(null, null))).value, expectC)
   }
 
   override def tests = TestSuite {

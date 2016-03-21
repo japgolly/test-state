@@ -42,6 +42,15 @@ object NamedOps {
         }
       )
 
+    implicit def sackInstanceNamedOpsBA[A, B, I](implicit nb: NamedOps[B, BeforeAfter[A]]): NamedOps[Sack[A, B], BeforeAfter[A]] =
+      NamedOps((s, f) =>
+        s match {
+          case Sack.Value(b)        => Sack.Value(nb.renameBy(b, f))
+          case Sack.Product(ss)     => Sack.Product(ss map (_ renameBy f))
+          case Sack.CoProduct(n, p) => Sack.CoProduct(f.thruBefore(n), p)
+        }
+      )
+
     implicit def namedErrorOrXInstanceNamedOps[A, I, E](implicit n: NamedOps[A, I]): NamedOps[NamedError[E] Or A, I] =
       NamedOps((o, f) => o.map(n.renameBy(_, f)))
   }

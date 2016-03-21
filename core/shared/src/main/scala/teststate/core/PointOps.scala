@@ -1,8 +1,9 @@
 package teststate.core
 
 import acyclic.file
+import teststate.data.Sack
 import teststate.typeclass._
-import Around.{When, Before, BeforeAndAfter, After}
+import Around.{When, Before, After}
 import Profunctor.ToOps._
 import Types._
 
@@ -19,7 +20,7 @@ object PointOps {
       toAround(After)
 
     def beforeAndAfter: Arounds[O, S, E] =
-      toAround(BeforeAndAfter)
+      Sack.append(before, after)
   }
 
   trait Implicits {

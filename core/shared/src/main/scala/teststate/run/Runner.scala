@@ -136,7 +136,7 @@ object Runner {
                             input     : OS[O, S])
                            (implicit r: Recover[E]): UnpackChecks[List, O, S, E] = {
 
-    import Around.{Before, After, BeforeAndAfter}
+    import Around.{Before, After}
 
     type Builder[A <: AnyRef] = UniqueListBuilder[A]
 
@@ -164,11 +164,10 @@ object Runner {
 
     val coproductFoundA =
       foreachSackE(arounds)(input) {
-        case Right(Around.Delta(d)                ) => add(ds, d)
-        case Right(Around.Point(p, BeforeAndAfter)) => add(bs, p); add(aa, p)
-        case Right(Around.Point(p, Before)        ) => add(bs, p)
-        case Right(Around.Point(p, After)         ) => add(aa, p)
-        case Left(e)                                => add(es, e)
+        case Right(Around.Delta(d)        ) => add(ds, d)
+        case Right(Around.Point(p, Before)) => add(bs, p)
+        case Right(Around.Point(p, After )) => add(aa, p)
+        case Left(e)                        => add(es, e)
       }
 
     UnpackChecks(result(bs), result(ds), result(aa), result(ai), result(es), coproductFoundI || coproductFoundA)
@@ -269,7 +268,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
             val b = History.newBuilder[E]
             checksPostA.errors foreach b.addNE
             b.addEach(hcs)(
-              c => c.check.name)(ros2.sos,
+              c => c.check.name)(Some(BeforeAfter(p.ros.os, ros2.os)),
               c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a))) // Perform around-post
             b.addEach(checksPostA.aftersA)(_.name)(ros2.sos, _.test(ros2.os)) // Perform post
             b.group(PostName)

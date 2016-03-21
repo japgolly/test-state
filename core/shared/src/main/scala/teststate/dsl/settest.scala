@@ -1,7 +1,7 @@
 package teststate.dsl
 
 import acyclic.file
-import teststate.data.{NameFn, Name}
+import teststate.data.{BeforeAfter, NameFn, Name}
 import teststate.typeclass._
 import scala.collection.mutable
 import Name.Implicits._
@@ -42,9 +42,9 @@ object NameUtils {
     case Some(i) => equal(focusName, pos, expect(i))
   }
 
-  def collChangeFn[I, A](focusName: String, pos: Boolean, verb: String, expectDel: I => TraversableOnce[A], expectAdd: I => TraversableOnce[A])(implicit sa: Show[A]): Option[I] => Name = {
+  def collChangeFn[I, A](focusName: String, pos: Boolean, verb: String, expectDel: I => TraversableOnce[A], expectAdd: I => TraversableOnce[A])(implicit sa: Show[A]): Option[BeforeAfter[I]] => Name = {
     case None    => s"$focusName ${should(pos)} $verb: <?>."
-    case Some(i) =>
+    case Some(BeforeAfter(i, _)) =>
       val del = expectDel(i)
       val add = expectAdd(i)
       val as = del.toIterator.map("-" + sa(_)) ++ add.toIterator.map("+" + sa(_))
