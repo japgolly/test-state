@@ -1,6 +1,8 @@
 package teststate.core
 
+import acyclic.file
 import teststate.data._
+import Name.Implicits._
 
 case class NamedOps[A, I](renameBy: (A, NameFn[I] => NameFn[I]) => A) extends AnyVal
 
@@ -18,6 +20,12 @@ object NamedOps {
 
     def nameMod(f: Name => Name): A =
       renameBy(_ map f)
+
+    def prefix(p: => String): A =
+      nameMod(p + _.value)
+
+    def suffix(s: => String): A =
+      nameMod(_.value + s)
   }
 
   trait ToOps {
