@@ -145,6 +145,14 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     }
   }
 
+  def print(f: ROS => Any): Action =
+    print("Print <?>.", f)
+
+  def print(name: => ANameFn, f: ROS => Any): Action =
+    action(name).act(i => EM.point {
+      println(f(i))
+    })
+
   // ===================================================================================================================
 
   final class FocusValue[A](focusName: => String, focusFn: OS => A)(implicit showA: Show[A]) {

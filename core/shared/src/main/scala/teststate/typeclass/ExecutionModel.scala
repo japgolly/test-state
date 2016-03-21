@@ -6,6 +6,7 @@ import teststate.data._
 
 trait ExecutionModel[M[_]] {
   final type F[A] = M[A]
+  def point[A](a: => A): F[A]
   def pure[A](a: A): F[A]
   def map[A, B](fa: F[A])(f: A => B): F[B]
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
@@ -28,7 +29,8 @@ object ExecutionModel {
 
   implicit val Immediate: ExecutionModel[Id] =
     new ExecutionModel[Id] {
-      override def pure   [A]   (a: A)             = a
+      override def point  [A]   (a: => A)         = a
+      override def pure   [A]   (a: A)            = a
       override def map    [A, B](a: A)(f: A => B) = f(a)
       override def flatMap[A, B](a: A)(f: A => B) = f(a)
       override def tailrec[A](start: A)(stop: A => Boolean)(rec: A => A): A = {
@@ -50,6 +52,7 @@ object ExecutionModel {
 
   implicit def scalaFuture(implicit ec: ExecutionContext): ExecutionModel[Future] =
     new AlreadyStackSafe[Future] {
+      override def point  [A]   (a: => A)                = Future(a)
       override def pure   [A]   (a: A)                   = Future successful a
       override def map    [A, B](fa: F[A])(f: A => B)    = fa.map(f)
       override def flatMap[A, B](fa: F[A])(f: A => F[B]) = fa.flatMap(f)
