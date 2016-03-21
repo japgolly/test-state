@@ -236,11 +236,18 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def value(implicit s: Show[C[A]]) =
       new FocusValue[C[A]](focusName, focusFn)
 
+    def valueBy[B](f: C[A] => B)(implicit s: Show[B]) =
+      new FocusValue[B](focusName, f compose focusFn)
+
+    def size = valueBy(_.size)
+
     def assert: AssertOps = new AssertOps(true)
     def assert(positive: Boolean): AssertOps = new AssertOps(positive)
 
     final class AssertOps(positive: Boolean) {
       def not = new AssertOps(!positive)
+
+      //def size = valueBy(_.size).assert(positive)
 
       private def wrapExp1[I](f: I => Boolean): I => Boolean =
         if (positive) f else f.andThen(!_)
