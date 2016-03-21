@@ -127,11 +127,20 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     new ActionB(actionName)
 
   final class ActionB(actionName: ANameFn) {
-    def act[U](f: ROS => F[U]) =
+    def act[U](f: ROS => F[U]): Action =
       actTry(f.andThen(EM.map(_)(_ => None)))
 
-    def actTry(f: ROS => F[Option[E]]): Action = {
-      val a = Action.Single[F, R, O, S, E](i => Some(() => EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(i.state)))))
+    def actTry(f: ROS => F[Option[E]]): Action =
+      full(i => EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(i.state))))
+
+    def update(f: ROS => F[S]): Action =
+      updateBy(i => EM.map(f(i))(Function.const))
+
+    def updateBy(f: ROS => F[O => S]): Action =
+      full(i => EM.map(f(i))(os => Right(os.andThen(Right(_)))))
+
+    def full[U](f: ROS => F[E Or (O => E Or S)]): Action = {
+      val a = Action.Single[F, R, O, S, E](i => Some(() => f(i)))
       Action.liftInner(a)(actionName)
     }
   }
