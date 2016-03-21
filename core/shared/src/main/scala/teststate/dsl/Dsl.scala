@@ -149,6 +149,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
   final class FocusValue[A](focusName: => String, focusFn: OS => A)(implicit showA: Show[A]) {
 
+    def rename(n: => String) = new FocusValue[A](n, focusFn)
+    def run = focusFn
+
     def map[B: Show](f: A => B): FocusValue[B] =
       new FocusValue(focusName, f compose focusFn)
 
@@ -242,6 +245,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   // ===================================================================================================================
 
   final class FocusColl[C[X] <: TraversableOnce[X], A](focusName: => String, focusFn: OS => C[A]) {
+
+    def rename(n: => String) = new FocusColl[C, A](n, focusFn)
+    def run = focusFn
 
     def map[D[X] <: TraversableOnce[X], B: Show](f: C[A] => D[B]): FocusColl[D, B] =
       new FocusColl(focusName, f compose focusFn)
