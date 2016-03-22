@@ -248,10 +248,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
         changeTo(n.minus(_, a))(q, f)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
 
-      def increment(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
+      def increment(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
         increaseBy(n.one)(n, q, f, s)
 
-      def decrement(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
+      def decrement(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Show[A]) =
         decreaseBy(n.one)(n, q, f, s)
     }
   } // FocusValue
