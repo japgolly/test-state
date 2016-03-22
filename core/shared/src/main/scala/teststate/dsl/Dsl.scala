@@ -196,8 +196,14 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
         if (testFn(a1, a2)) None else Some(error(a1, a2))
       })
 
-    def assert: AssertOps = new AssertOps(true)
-    def assert(positive: Boolean): AssertOps = new AssertOps(positive)
+    def assertB(positive: Boolean): AssertOps =
+      new AssertOps(positive)
+
+    def assert: AssertOps =
+      new AssertOps(true)
+
+    @inline def assert(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
+      assert.equal(expect)(e, f)
 
     final class AssertOps(positive: Boolean) {
 
@@ -268,8 +274,14 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
     def size = valueBy(_.size)
 
-    def assert: AssertOps = new AssertOps(true)
-    def assert(positive: Boolean): AssertOps = new AssertOps(positive)
+    def assertB(positive: Boolean): AssertOps =
+      new AssertOps(positive)
+
+    def assert: AssertOps =
+      new AssertOps(true)
+
+    @inline def assert(expect: A*)(implicit eq: Equal[A], sa: Show[A], ev: CollectionAssertions.EqualIncludingOrder.Failure[A] => E): Point =
+      assert.equal(expect: _*)(eq, sa, ev)
 
     final class AssertOps(positive: Boolean) {
       def not = new AssertOps(!positive)
@@ -392,8 +404,11 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def map[B: Show](f: A => B): BiFocus[B] =
       new BiFocus(focusName, f compose fa, f compose fe)
 
-    def assert: AssertOps = new AssertOps(true)
-    def assert(positive: Boolean): AssertOps = new AssertOps(positive)
+    def assertB(positive: Boolean): AssertOps =
+      new AssertOps(positive)
+
+    def assert: AssertOps =
+      new AssertOps(true)
 
     final class AssertOps(positive: Boolean) {
 
