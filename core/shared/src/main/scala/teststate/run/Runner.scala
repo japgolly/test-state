@@ -13,14 +13,14 @@ import Result.{Fail, Skip, Pass}
 
 object Runner {
 
-  trait HalfCheck[O, S, Err] {
+  trait HalfCheck[O, S, E] {
     type A
-    val check: Around.DeltaAux[OS[O, S], Err, A]
-    val before: Tri[Err, A]
+    val check: Around.DeltaAux[OS[O, S], E, A]
+    val before: Tri[Failure[E], A]
   }
 
-  def HalfCheck[O, S, Err, a](_check: Around.DeltaAux[OS[O, S], Err, a])(_before: Tri[Err, a]): HalfCheck[O, S, Err] =
-    new HalfCheck[O, S, Err] {
+  def HalfCheck[O, S, E, a](_check: Around.DeltaAux[OS[O, S], E, a])(_before: Tri[Failure[E], a]): HalfCheck[O, S, E] =
+    new HalfCheck[O, S, E] {
       override type A = a
       override val check = _check
       override val before = _before
@@ -46,34 +46,34 @@ object Runner {
           coproductFound = true
           Recover.id.attempt(p(i)) match {
             case Right(s) => go(s)
-            case Left(e)  => err(Recover.recoverToString.name(n, Some(i)), e)
+            case Left(e)  => err(Recover.recoverToString.name(n, Some(i)), e.failure)
           }
       }
     go(sack)
     coproductFound
   }
 
-  def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[E] Or B => Unit)(implicit r: Recover[E]) =
-    foreachSack(s)(a)((n, t) => f(Left(NamedError(n, r apply t))))(f)
+  def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[Failure[E]] Or B => Unit)(implicit r: Recover[E]) =
+    foreachSack(s)(a)((n, t) => f(Left(NamedError(n, r(t)))))(f)
 
-  private case class ActionQueue[F[_], R, O, S, E](head: NamedError[E] Or Action.Outer[F, R, O, S, E],
+  private case class ActionQueue[F[_], R, O, S, E](head: NamedError[Failure[E]] Or Action.Outer[F, R, O, S, E],
                                                    tail: Actions[F, R, O, S, E])
 
   private case class Progress[F[_], R, O, S, E](queue  : Option[ActionQueue[F, R, O, S, E]],
                                                 ros    : ROS[R, O, S],
-                                                history: History[E]) {
-    def failure: Option[E] = history.failure
-    def failed : Boolean   = history.failed
+                                                history: History[Failure[E]]) {
+    def failure: Option[Failure[E]] = history.failure
+    def failed : Boolean            = history.failed
 
-    def :+(s: History.Step[E])  = copy(history = history :+ s)
-    def ++(s: History.Steps[E]) = copy(history = history ++ s)
-    def ++(s: History[E])       = copy(history = history ++ s.steps)
+    def :+(s: History.Step[Failure[E]])  = copy(history = history :+ s)
+    def ++(s: History.Steps[Failure[E]]) = copy(history = history ++ s)
+    def ++(s: History[Failure[E]])       = copy(history = history ++ s.steps)
   }
 
   private object Progress {
     def prepareNext[F[_], R, O, S, E](actions: Actions[F, R, O, S, E],
                                       ros    : ROS[R, O, S],
-                                      history: History[E])(implicit r: Recover[E]): Progress[F, R, O, S, E] = {
+                                      history: History[Failure[E]])(implicit r: Recover[E]): Progress[F, R, O, S, E] = {
 
       @tailrec
       def queue(subject: Actions[F, R, O, S, E], tail: Actions[F, R, O, S, E]): Option[ActionQueue[F, R, O, S, E]] =
@@ -99,7 +99,7 @@ object Runner {
     }
   }
 
-  private type CheckNE[C[_, _], O, S, E] = NamedError[E] Or C[OS[O, S], E]
+  private type CheckNE[C[_, _], O, S, E] = NamedError[Failure[E]] Or C[OS[O, S], E]
 
   final class RefEq[+A <: AnyRef](val value: A) {
     override def hashCode = value.hashCode
@@ -128,7 +128,7 @@ object Runner {
                                          deltas        : F[Around.DeltaA[OS[O, S], E]],
                                          aftersA       : F[Point        [OS[O, S], E]],
                                          aftersI       : F[Point        [OS[O, S], E]],
-                                         errors        : F[NamedError[E]],
+                                         errors        : F[NamedError[Failure[E]]],
                                          coproductFound: Boolean)
 
   def unpackChecks[O, S, E](invariants: Invariants[O, S, E],
@@ -153,7 +153,7 @@ object Runner {
     val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
     val aa = newBuilder[Point        [OS[O, S], E]]
     val ai = newBuilder[Point        [OS[O, S], E]]
-    val es = newBuilder[NamedError[E]]
+    val es = newBuilder[NamedError[Failure[E]]]
 
     val coproductFoundI =
       foreachSackE(invariants)(input) {
@@ -178,6 +178,15 @@ object Runner {
     val runner = new Runner[F, R, O, S, E]()(test.content.executionModel, test.content.recover)
     runner.run(test)(initialState, () => ref)
   }
+
+  @inline implicit class RunnerTriExt[E, A](private val self: Tri[E, A]) extends AnyVal {
+    def noCause: Tri[Failure[E], A] =
+      self.mapE(Failure NoCause _)
+  }
+  @inline implicit class RunnerOptionExt[E](private val self: Option[E]) extends AnyVal {
+    def noCause: Option[Failure[E]] =
+      self.map(Failure NoCause _)
+  }
 }
 
 /**
@@ -186,13 +195,14 @@ object Runner {
 private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], recover: Recover[E]) {
   import Runner._
 
-  private type H    = History[E]
+  private type FE   = Failure[E]
+  private type H    = History[FE]
   private type ROS  = teststate.data.ROS[R, O, S]
   private type Test = teststate.run.Test[F, R, O, S, E]
   private type P    = Progress[F, R, O, S, E]
 
-  private def observe(test: Test, ref: R): E Or O =
-    recover.recover(test.observe.apply(ref), Left(_))
+  private def observe(test: Test, ref: R): FE Or O =
+    recover.recover(test.observe.apply(ref).leftMap(Failure NoCause _), Left(_))
 
   private var stats: Stats.Mutable = _
 
@@ -234,7 +244,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
     val pre = {
       val b = History.newBuilder[E](stats)
       checksPre.errors foreach b.addNE
-      b.addEach(checksPre.befores)(_.name)(p.ros.sos, _.test(p.ros.os))
+      b.addEach(checksPre.befores)(_.name)(p.ros.sos, _.test(p.ros.os).noCause)
       b.group(PreName)
     }
 
@@ -248,7 +258,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
         val b = Vector.newBuilder[HalfCheck[O, S, E]]
         for (d0 <- checksPre.deltas) {
           val d = d0.aux
-          val r = recover.attempt(d.before(p.ros.os)).fold(Failed(_), identity)
+          val r = recover.attempt(d.before(p.ros.os)).fold[Tri[FE, d.A]](Failed(_), _.noCause)
           b += HalfCheck(d)(r)
         }
         b.result()
@@ -257,7 +267,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
       // Perform action
       EM.map(run) { case (step, ros2) =>
 
-        def addStep(s: History.Step[E]) =
+        def addStep(s: History.Step[FE]) =
           p.copy(ros = ros2, history = p.history :+ s)
 
         val collapseIfNoPost = collapse && pre.isEmpty && step.steps.length == 1
@@ -284,8 +294,8 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
             checksPostA.errors foreach b.addNE
             b.addEach(hcs)(
               c => c.check.name)(Some(BeforeAfter(p.ros.os, ros2.os)),
-              c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a))) // Perform around-post
-            b.addEach(checksPostA.aftersA)(_.name)(ros2.sos, _.test(ros2.os)) // Perform post
+              c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a).noCause)) // Perform around-post
+            b.addEach(checksPostA.aftersA)(_.name)(ros2.sos, _.test(ros2.os).noCause) // Perform post
             b.group(PostName)
           }
 
@@ -293,7 +303,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
           val invs = {
             val b = History.newBuilder[E](stats)
             checksPostI.errors foreach b.addNE
-            b.addEach(checksPostI.aftersI)(_.name)(ros2.sos, _.test(ros2.os))
+            b.addEach(checksPostI.aftersI)(_.name)(ros2.sos, _.test(ros2.os).noCause)
             b.group(InvariantsName)
           }
 
@@ -354,14 +364,15 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                   case Action.Single(run) =>
                     checkAround(name, invariants, check, true, p)(run) { act =>
 
-                      def ret(ros: ROS, r: Result[E]): (Name => H, ROS) =
+                      def ret(ros: ROS, r: Result[FE]): (Name => H, ROS) =
                         (n => History(vector1(History.Step(n, r))), ros)
 
-                      def rets(ros: ROS, r: Result[E], hs: History.Step[E]): (Name => H, ROS) =
+                      def rets(ros: ROS, r: Result[FE], hs: History.Step[FE]): (Name => H, ROS) =
                         (n => History(vector1(History.Step(n, r)) :+ hs), ros)
 
                       stats.actions += 1
-                      EM.map(EM.recover(act())) {
+                      def act2 = EM.map(act())(_.leftMap(Failure NoCause _)): F[FE Or (O => E Or S)]
+                      EM.map(EM.recover(act2)) {
 
                         case Right(nextStateFn) =>
                           val ref2 = refFn()
@@ -369,7 +380,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                             case Right(obs2) =>
                               recover.attempt(nextStateFn(obs2)) match {
                                 case Right(Right(state2)) => ret(new ROS(ref2, obs2, state2), Pass)
-                                case Right(Left(e))       => rets(ros, Pass, History.Step(Observation, Fail(e)))
+                                case Right(Left(e))       => rets(ros, Pass, History.Step(Observation, Fail(Failure NoCause e)))
                                 case Left(e)              => rets(ros, Pass, History.Step(UpdateState, Fail(e)))
                               }
                             case Left(e) =>
@@ -411,7 +422,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
       val invariantsPoints = {
         val ps = new UniqueListBuilder[Point[OS[O, S], E]]
-        val es = new UniqueListBuilder[NamedError[E]]
+        val es = new UniqueListBuilder[NamedError[FE]]
         foreachSackE(test.content.invariants)(ros.os) {
           case Right(Invariant.Point(p)) => ps += p
           case Right(Invariant.Delta(_)) => ()
@@ -429,7 +440,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
         else {
           val children = {
             val b = History.newBuilder[E](stats)
-            b.addEachNE(invariantsPoints)(_.name)(ros.sos, _ test ros.os)
+            b.addEachNE(invariantsPoints)(_.name)(ros.sos, _.test(ros.os).noCause)
             b.history()
           }
           History(History.parent(InitialState, children))

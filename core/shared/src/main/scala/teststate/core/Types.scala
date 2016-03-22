@@ -5,7 +5,7 @@ import teststate.data._
 
 object Types {
 
-  type SackE[-A, +B, +E] = Sack[A, NamedError[E] Or B]
+  type SackE[-A, +B, +E] = Sack[A, NamedError[Failure[E]] Or B]
 
   type CheckShape1[C[-_, _]] = ({  type T[-O, -S, E] = C[OS[O, S], E]  })
 

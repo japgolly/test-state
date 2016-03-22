@@ -1,6 +1,7 @@
 package teststate
 
 import utest._
+import teststate.data.Failure
 import teststate.Exports.{assertionSettings => _, _}
 import teststate.TestUtil._
 
@@ -66,6 +67,28 @@ object RunnerTest extends TestSuite {
         """.stripMargin, showChildren = false)
       assertEq(actual = v.s, Record(Vector("A1", "A2", "A3", "A4")))
     }
+
+    'failureReason {
+      'action {
+        val e = new RuntimeException("hurr")
+        val test = Test(*.action("A").act(_ => throw e)).observe(_.s)
+        val r = test.run((), newState)
+        r.failureReason match {
+          case Some(Failure.WithCause(_, f)) => assert(e eq f)
+          case x => fail("Got: " + x)
+        }
+      }
+      'after {
+        val e = new RuntimeException("hurr")
+        val test = Test(*.action("A").act(_ => ()) +> *.test("x", _ => throw e)).observe(_.s)
+        val r = test.run((), newState)
+        r.failureReason match {
+          case Some(Failure.WithCause(_, f)) => assert(e eq f)
+          case x => fail("Got: " + x)
+        }
+      }
+    }
+
 
     'catch {
 

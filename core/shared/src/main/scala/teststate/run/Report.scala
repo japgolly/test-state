@@ -2,25 +2,36 @@ package teststate.run
 
 // import acyclic.file
 import scala.annotation.elidable
+import teststate.data.Failure
 import teststate.typeclass.ShowError
 import Report._
 
-case class Report[+E](history: History[E], stats: Stats) {
+case class Report[+E](history: History[Failure[E]], stats: Stats) {
 
   @inline def failure = history.failure
   @inline def failed = history.failed
   @inline def result = history.result
 
+  def failureReason[e >: E](implicit showError: ShowError[e]): Option[Failure[String]] =
+    failure.map(_ map (err =>
+      (history.rootFailurePath.lastOption, Option(showError show err).filter(_.nonEmpty)) match {
+        case (Some(f), Some(e)) => s"${f.name.value} -- $e"
+        case (Some(f), None   ) => f.name.value
+        case (None   , Some(e)) => e
+        case (None   , None   ) => "Failed without an error message."
+      }
+    ))
+
   @elidable(elidable.ASSERTION)
   def assert[EE >: E]()(implicit as: AssertionSettings, se: ShowError[EE]): Unit =
-    history.failureReason(se) match {
+    failureReason(se) match {
 
       case None =>
         as.onPass.print[EE](this)
 
-      case Some(e) =>
+      case Some(fe) =>
         as.onFail.print[EE](this)
-        throw new AssertionError(e)
+        throw fe.cause getOrElse new AssertionError(fe.failure)
     }
 
   def format[EE >: E](implicit as: AssertionSettings, s: ShowError[EE]): String =

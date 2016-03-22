@@ -83,6 +83,7 @@ object CheckOps {
         }
       }
 
+
     implicit val checkOpsInstanceForAround: CheckOps[CheckShape1[Around]#T] =
       new SingleCheck[Around] {
         override def pmapO[O, S, E, X](c: C[O, S, E])(f: X => E Or O): C[X, S, E] =
@@ -106,7 +107,7 @@ object CheckOps {
         import Sack._
 
         override def mapE[O, S, E, F](c: CheckShape[C, O, S, E])(f: E => F): CheckShape[C, O, S, F] =
-          c.rmap(_.bimap(_ map f, _ mapE f))
+          c.rmap(_.bimap(_ map (_ map f), _ mapE f))
 
         override def map_OS[O, S, E, X, Y](c: CheckShape[C, O, S, E])(f: OS[X, Y] => OS[O, S]): CheckShape[C, X, Y, E] =
           c.dimap(f, _ map (_ map_OS f))
@@ -120,7 +121,7 @@ object CheckOps {
                 n pmapO f,
                 _.emapO(f) match {
                   case Right(os) => pmapO(p(os))(f)
-                  case Left(e)   => Value(Left(NamedError(n(None), e)))
+                  case Left(e)   => Value(Left(NamedError(n(None), Failure NoCause e)))
                 }
             )
           }

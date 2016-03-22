@@ -42,16 +42,6 @@ final class History[+E](val steps: Steps[E], val result: Result[E]) {
       this
     else
       f(this)
-
-  def failureReason[e >: E](implicit showError: ShowError[e]): Option[String] =
-    failure.map(e =>
-      (rootFailurePath.lastOption, Option(showError show e).filter(_.nonEmpty)) match {
-        case (Some(f), Some(e)) => s"${f.name.value} -- $e"
-        case (Some(f), None   ) => f.name.value
-        case (None   , Some(e)) => e
-        case (None   , None   ) => "Failed without an error message."
-      }
-    )
 }
 
 
@@ -88,33 +78,34 @@ object History {
 
   def newBuilder[E](stats: Stats.Mutable) = new Builder[E](stats)
   final class Builder[E](stats: Stats.Mutable) {
-    private val b = Vector.newBuilder[Step[E]]
-    private var r = Result.empty[E]
+    type FE = Failure[E]
+    private val b = Vector.newBuilder[Step[FE]]
+    private var r = Result.empty[FE]
 
-    def +=(s: Step[E]): Unit = {
+    def +=(s: Step[FE]): Unit = {
       b += s
       r += s.result
       if (s.result != Skip)
         stats.checks += 1
     }
 
-    def ++=(h: History[E]): Unit =
+    def ++=(h: History[FE]): Unit =
       h.steps foreach (this += _)
 
-    def add1[A, B](a: A)(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit = {
+    def add1[A, B](a: A)(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit recover: Recover[E]): Unit = {
       val n = recover.name(nameFn(a), nameInput)
       val r = recover.recover(test(a).toResult, Fail(_))
       this += Step(n, r)
     }
 
-    def addNE(ne: NamedError[E]): Unit =
+    def addNE(ne: NamedError[FE]): Unit =
       this += Step(ne.name, Fail(ne.error))
 
-    def addEach[A, B](as: TraversableOnce[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit =
+    def addEach[A, B](as: TraversableOnce[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit recover: Recover[E]): Unit =
       for (a <- as)
         add1(a)(nameFn)(nameInput, test)(recover)
 
-    def addEachNE[A, B](as: TraversableOnce[NamedError[E] Or A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit =
+    def addEachNE[A, B](as: TraversableOnce[NamedError[FE] Or A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit recover: Recover[E]): Unit =
       as foreach {
         case Right(a) => add1(a)(nameFn)(nameInput, test)(recover)
         case Left(ne) => addNE(ne)
@@ -123,16 +114,16 @@ object History {
     def failed(): Boolean =
       r.failure.isDefined
 
-    def result(): Result[E] =
+    def result(): Result[FE] =
       r
 
-    def steps(): Steps[E] =
+    def steps(): Steps[FE] =
       b.result()
 
-    def history(): History[E] =
+    def history(): History[FE] =
       History(steps(), result())
 
-    def group(name: Name): History[E] =
+    def group(name: Name): History[FE] =
       History.maybeParent(name, history())
   }
 }

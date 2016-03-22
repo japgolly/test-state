@@ -3,14 +3,17 @@ package teststate.typeclass
 import acyclic.file
 import teststate.data._
 
-final case class Recover[+E](apply: Throwable => E) extends AnyVal {
+final case class Recover[+E](toE: Throwable => E) extends AnyVal {
   def map[EE](f: E => EE): Recover[EE] =
-    Recover(f compose apply)
+    Recover(f compose toE)
 
-  def recover[A](a: => A, ko: E => A): A =
+  def apply(t: Throwable): Failure.WithCause[E] =
+    Failure.WithCause(toE(t), t)
+
+  def recover[A](a: => A, ko: Failure.WithCause[E] => A): A =
     try a catch { case t: Throwable => ko(apply(t)) }
 
-  def attempt[A](a: => A): E Or A =
+  def attempt[A](a: => A): Failure.WithCause[E] Or A =
     recover(Right(a), Left(_))
 
   def name[A](f: NameFn[A], a: Some[A]): Name = {
@@ -43,4 +46,3 @@ object Recover {
       "Caught exception: " + t.toString
     }
 }
-

@@ -283,7 +283,7 @@ object ActionOps {
           x.dimap(_.mapOS(f, g), _ map (_.mapOS(f, g)(h)))
 
         override def mapE[F[_], R, O, S, E, X](x: Actions[F, R, O, S, E])(f: E => X)(implicit em: ExecutionModel[F]) =
-          x.rmap(_.bimap(_ map f, _ mapE f))
+          x.rmap(_.bimap(_ map (_ map f), _ mapE f))
 
         override def pmapR[F[_], R, O, S, E, X](x: Actions[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]) =
           x match {
@@ -291,7 +291,7 @@ object ActionOps {
             case Product(ss)     => Product(ss map (_ pmapR f))
             case CoProduct(n, p) =>
               CoProduct(n pmapR f,
-                _.emapR(f).fold(e => Sack Value Left(NamedError(n(None), e)), p(_) pmapR f))
+                _.emapR(f).fold(e => Sack Value Left(NamedError(n(None), Failure NoCause e)), p(_) pmapR f))
           }
 
         override def pmapO[F[_], R, O, S, E, X](x: Actions[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
@@ -300,7 +300,7 @@ object ActionOps {
             case Product(ss)     => Product(ss map (_ pmapO f))
             case CoProduct(n, p) =>
               CoProduct(n pmapO f,
-                _.emapO(f).fold(e => Sack Value Left(NamedError(n(None), e)), p(_) pmapO f))
+                _.emapO(f).fold(e => Sack Value Left(NamedError(n(None), Failure NoCause e)), p(_) pmapO f))
           }
 
         override def modS[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =

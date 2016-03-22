@@ -41,7 +41,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   private def sack1[A](a: A) =
     Sack.Value(Right(a))
 
-  private def sackE(ne: NamedError[E]) =
+  private def sackE(ne: NamedError[Failure[E]]) =
     Sack.Value(Left(ne))
 
   def point(name: CNameFn, test: OS => Option[E]): Point =
@@ -83,7 +83,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     Sack.CoProduct(name, f)
 
   private def tryChoose[A, B](name: Name, f: A => E Or SackE[A, B, E]): SackE[A, B, E] =
-    Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name, e))))
+    Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name, Failure NoCause e))))
 
 
   def focus(focusName: => String) =

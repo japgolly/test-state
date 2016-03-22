@@ -2,7 +2,7 @@ package teststate.run
 
 import scala.Console._
 import scala.concurrent.duration.FiniteDuration
-import teststate.data.Result
+import teststate.data.{Failure, Result}
 import teststate.typeclass.ShowError
 import History.{Step, Steps}
 import Result.{Fail, Skip, Pass}
@@ -34,7 +34,7 @@ object ReportFormat {
         }
       }
 
-      def appendResultFlag(r: Result[E]): Unit = {
+      def appendResultFlag(r: Result[Any]): Unit = {
         sb append (r match {
           case Pass    => s.onPass
           case Skip    => s.onSkip
@@ -43,13 +43,13 @@ object ReportFormat {
         ()
       }
 
-      def showHistory(h: History[E], indent: Int): Unit =
+      def showHistory(h: History[Failure[E]], indent: Int): Unit =
         showSteps(h.steps, indent)
 
-      def showSteps(steps: Steps[E], indent: Int): Unit =
+      def showSteps(steps: Steps[Failure[E]], indent: Int): Unit =
         steps foreach (showStep(_, indent))
 
-      def showStep(step: Step[E], indent: Int): Unit = {
+      def showStep(step: Step[Failure[E]], indent: Int): Unit = {
         val showChildren = step.children.steps.nonEmpty && s.showChildren(step.children)
         val error = if (showChildren) None else step.result.failure
 
@@ -58,7 +58,7 @@ object ReportFormat {
         sb append ' '
         sb append step.name.value
         for (err <- error) {
-          val e = se.show(err)
+          val e = se.show(err.failure)
           if (e.nonEmpty) {
             sb append " -- "
             sb append e

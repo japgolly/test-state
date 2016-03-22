@@ -32,7 +32,7 @@ trait CoreExports
 
   import teststate.data._
   implicit def checksInstanceShow[C[- _, _], A, E](implicit sc: Show[C[A, E]]): Show[CheckShapeA[C, A, E]] = {
-    val showValues = Show[NamedError[E] Or C[A, E]](_.fold(_.name.value, sc.apply))
+    val showValues = Show[NamedError[Failure[E]] Or C[A, E]](_.fold(_.name.value, sc.apply))
     Sack sackInstanceShow showValues
   }
 }
