@@ -2,6 +2,7 @@ package teststate.run
 
 // import acyclic.file
 import scala.annotation.elidable
+import scala.util.control.NonFatal
 import teststate.data.Failure
 import teststate.typeclass.ShowError
 import Report._
@@ -31,7 +32,20 @@ case class Report[+E](history: History[Failure[E]], stats: Stats) {
 
       case Some(fe) =>
         as.onFail.print[EE](this)
-        throw fe.cause getOrElse new AssertionError(fe.failure)
+
+        throw fe.cause match {
+          case Some(NonFatal(e)) =>
+            e
+
+          case Some(e) =>
+            // Because UndefinedBehaviourErrors (and presumably other fatal errors) freeze Scala.JS
+            val x = new RuntimeException(e.getMessage)
+            x.setStackTrace(e.getStackTrace)
+            x
+
+          case None =>
+            new AssertionError(fe.failure)
+        }
     }
 
   def format[EE >: E](implicit as: AssertionSettings, s: ShowError[EE]): String =
