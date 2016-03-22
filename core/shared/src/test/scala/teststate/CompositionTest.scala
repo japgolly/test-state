@@ -5,7 +5,8 @@ import nyaya.test.PropTest._
 import scalaz.std.string.stringInstance
 import utest._
 import teststate.typeclass.PolyComposable
-import Exports._
+import teststate.Exports._
+import teststate.TestUtil._
 import PolyComposable.{Can, SeqOp}
 import RandomData.*
 
@@ -20,7 +21,7 @@ object CompositionTest extends TestSuite {
     implicit def anyCanSeq[X]: Can[SeqOp, X] = Can
 
     def results(a: *.Action): String =
-      "\n" + Test(a).observe(_ => ()).run((), ()).format(History.Options.uncolored)
+      "\n" + Test(a).observe(_ => ()).run((), ()).format(inspectionFormat)
 
     Prop.equal[(A, B, C)]("associativity")(
       { case (a, b, c) => results((a >> b) >> c) },
@@ -32,9 +33,8 @@ object CompositionTest extends TestSuite {
       import CoproductExample._
       import Top._
       val top = new Top(7, "e")
-      val h = test.run(State(Type.Num, 7, "e"), top)
-      h.assert(History.Options.colored)
-      // println(h.format(History.Options.colored.alwaysShowChildren))
+      val r = test.run(State(Type.Num, 7, "e"), top)
+      r.assert()
     }
 
     import RandomData._

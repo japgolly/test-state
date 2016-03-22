@@ -14,6 +14,20 @@ case class ActualExpect[A](actual: A, expect: A) {
 
 trait TestUtil {
 
+  val inspectionBaseSettings =
+    Report.Format.Default
+      .uncoloured
+      .copy(stats = Report.Format.Default.StatsFormat.withoutTime)
+
+  val inspectionFormatOnlyFailedChildren =
+    inspectionBaseSettings.onlyShowFailedChildren.apply
+
+  val inspectionFormat =
+    inspectionBaseSettings.alwaysShowChildren.apply
+
+  val inspectionAS =
+    Report.AssertionSettings.uniform(inspectionFormat)
+
   def assertEq[A: Equal](actual: A, expect: A): Unit =
     assertEq(null, actual, expect)
 
@@ -77,4 +91,18 @@ trait TestUtil {
       assertEq(name, o.isDefined, true)
     else
       assertEq(name, o, None)(Equal.by_==)
+
+  val trim = (_: String).trim
+  val stringIdFn = (s: String) => s
+
+  def assertRun[E](r           : Report[E],
+                   expect      : String,
+                   showChildren: Boolean          = true,
+                   normalise   : String => String = stringIdFn)
+                  (implicit s  : ShowError[E]): Unit = {
+    val n = normalise compose trim
+    val f = if (showChildren) inspectionFormat else inspectionFormatOnlyFailedChildren
+    val actual = r.format(f)(s)
+    assertEq(actual = n(actual), n(expect))
+  }
 }

@@ -174,12 +174,15 @@ object Runner {
   }
 
   def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])
-                           (initialState: S, ref: => R): F[History[E]] = {
+                           (initialState: S, ref: => R): F[Report[E]] = {
     val runner = new Runner[F, R, O, S, E]()(test.content.executionModel, test.content.recover)
     runner.run(test)(initialState, () => ref)
   }
 }
 
+/**
+  * Internal use only. Not thread-safe (due to mutable stats). Don't expose.
+  */
 private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], recover: Recover[E]) {
   import Runner._
 
@@ -191,20 +194,32 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
   private def observe(test: Test, ref: R): E Or O =
     recover.recover(test.observe.apply(ref), Left(_))
 
-  def run(test: Test)(initialState: S, refFn: () => R): F[History[E]] = {
-    val ref = refFn()
-    observe(test, ref) match {
+  private var stats: Stats.Mutable = _
 
-      case Right(obs) =>
-        val ros = new ROS(ref, obs, initialState)
-        EM.map(subtest(test, Sack.empty, refFn, ros, true))(_.history)
+  def run(test: Test)(initialState: S, refFn: () => R): F[Report[E]] =
+    EM flatten EM.point {
+      stats = new Stats.Mutable
+      stats.startTimer()
+      val ref = refFn()
 
-      case Left(e) =>
-        val s = History.Step(Observation, Fail(e))
-        val h = History(History.parent(InitialState, History(s)))
-        EM pure h
+      val history: F[H] =
+        observe(test, ref) match {
+
+          case Right(obs) =>
+            val ros = new ROS(ref, obs, initialState)
+            EM.map(subtest(test, Sack.empty, refFn, ros, true))(_.history)
+
+          case Left(e) =>
+            val s = History.Step(Observation, Fail(e))
+            val h = History(History.parent(InitialState, History(s)))
+            EM pure h
+        }
+
+      EM.map(history) { h =>
+        stats.stopTimer()
+        Report(h, stats.result())
+      }
     }
-  }
 
   private def checkAround0(name      : Name,
                            invariants: Invariants[O, S, E],
@@ -217,7 +232,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
     // Perform before
     val pre = {
-      val b = History.newBuilder[E]
+      val b = History.newBuilder[E](stats)
       checksPre.errors foreach b.addNE
       b.addEach(checksPre.befores)(_.name)(p.ros.sos, _.test(p.ros.os))
       b.group(PreName)
@@ -265,7 +280,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
           // Post conditions
           val post1 = {
-            val b = History.newBuilder[E]
+            val b = History.newBuilder[E](stats)
             checksPostA.errors foreach b.addNE
             b.addEach(hcs)(
               c => c.check.name)(Some(BeforeAfter(p.ros.os, ros2.os)),
@@ -276,7 +291,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
           // Check invariants
           val invs = {
-            val b = History.newBuilder[E]
+            val b = History.newBuilder[E](stats)
             checksPostI.errors foreach b.addNE
             b.addEach(checksPostI.aftersI)(_.name)(ros2.sos, _.test(ros2.os))
             b.group(InvariantsName)
@@ -345,7 +360,9 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                       def rets(ros: ROS, r: Result[E], hs: History.Step[E]): (Name => H, ROS) =
                         (n => History(vector1(History.Step(n, r)) :+ hs), ros)
 
+                      stats.actions += 1
                       EM.map(EM.recover(act())) {
+
                         case Right(nextStateFn) =>
                           val ref2 = refFn()
                           observe(test, ref2) match {
@@ -355,8 +372,10 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                                 case Right(Left(e))       => rets(ros, Pass, History.Step(Observation, Fail(e)))
                                 case Left(e)              => rets(ros, Pass, History.Step(UpdateState, Fail(e)))
                               }
-                            case Left(e) => rets(ros, Pass, History.Step(Observation, Fail(e)))
+                            case Left(e) =>
+                              rets(ros, Pass, History.Step(Observation, Fail(e)))
                           }
+
                         case Left(e) => ret(ros, Fail(e))
                       }
 
@@ -409,7 +428,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
           History.empty
         else {
           val children = {
-            val b = History.newBuilder[E]
+            val b = History.newBuilder[E](stats)
             b.addEachNE(invariantsPoints)(_.name)(ros.sos, _ test ros.os)
             b.history()
           }

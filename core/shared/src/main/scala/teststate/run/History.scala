@@ -1,10 +1,9 @@
 package teststate.run
 
 import acyclic.file
-import scala.annotation.elidable
 import teststate.data._
 import teststate.typeclass.{Recover, ShowError}
-import History.{Options, Step, Steps}
+import History.{Step, Steps}
 import Result.{Fail, Skip, Pass}
 
 final class History[+E](val steps: Steps[E], val result: Result[E]) {
@@ -44,58 +43,6 @@ final class History[+E](val steps: Steps[E], val result: Result[E]) {
     else
       f(this)
 
-  def format[e >: E](options: Options)(implicit showError: ShowError[e]): String = {
-    val sb = new StringBuilder
-
-    def appendIndent(indent: Int): Unit = {
-      var i = indent
-      while (i > 0) {
-        sb append options.indent
-        i -= 1
-      }
-    }
-
-    def appendResultFlag(r: Result[E]): Unit = {
-      sb append (r match {
-        case Pass    => options.onPass
-        case Skip    => options.onSkip
-        case Fail(_) => options.onFail
-      })
-      ()
-    }
-
-    def showHistory(h: History[E], indent: Int): Unit =
-      showSteps(h.steps, indent)
-
-    def showSteps(steps: Steps[E], indent: Int): Unit =
-      steps foreach (showStep(_, indent))
-
-    def showStep(step: Step[E], indent: Int): Unit = {
-      val showChildren = step.children.steps.nonEmpty && options.showChildren(step.children)
-      val error = if (showChildren) None else step.result.failure
-
-      appendIndent(indent)
-      appendResultFlag(step.result)
-      sb append ' '
-      sb append step.name.value
-      for (err <- error) {
-        val e = showError.show(err)
-        if (e.nonEmpty) {
-          sb append " -- "
-          sb append e
-        }
-      }
-      sb append options.eol
-
-      if (showChildren)
-        showHistory(step.children, indent + 1)
-    }
-
-    showHistory(this, 0)
-
-    sb.result()
-  }
-
   def failureReason[e >: E](implicit showError: ShowError[e]): Option[String] =
     failure.map(e =>
       (rootFailurePath.lastOption, Option(showError show e).filter(_.nonEmpty)) match {
@@ -105,13 +52,6 @@ final class History[+E](val steps: Steps[E], val result: Result[E]) {
         case (None   , None   ) => "Failed without an error message."
       }
     )
-
-  @elidable(elidable.ASSERTION)
-  def assert[e >: E](options: Options)(implicit showError: ShowError[e]): Unit =
-    for (err <- failureReason[e]) {
-      println(format[e](options))
-      throw new AssertionError(err)
-    }
 }
 
 
@@ -146,21 +86,20 @@ object History {
   def apply[E](steps: Steps[E], result: Result[E]): History[E] =
     new History(steps, result)
 
-  def newBuilder[E] = new Builder[E]
-  final class Builder[E] {
+  def newBuilder[E](stats: Stats.Mutable) = new Builder[E](stats)
+  final class Builder[E](stats: Stats.Mutable) {
     private val b = Vector.newBuilder[Step[E]]
     private var r = Result.empty[E]
 
     def +=(s: Step[E]): Unit = {
       b += s
       r += s.result
+      if (s.result != Skip)
+        stats.checks += 1
     }
 
     def ++=(h: History[E]): Unit =
-      if (h.nonEmpty) {
-        b ++= h.steps
-        r += h.result
-      }
+      h.steps foreach (this += _)
 
     def add1[A, B](a: A)(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[E, Any])(implicit recover: Recover[E]): Unit = {
       val n = recover.name(nameFn(a), nameInput)
@@ -195,40 +134,5 @@ object History {
 
     def group(name: Name): History[E] =
       History.maybeParent(name, history())
-  }
-
-  case class Options(indent: String,
-                     onPass: String,
-                     onSkip: String,
-                     onFail: String,
-                     eol: String,
-                     showChildren: History[Any] => Boolean) {
-
-    def alwaysShowChildren =
-      copy(showChildren = _ => true)
-
-    def onlyShowFailedChildren =
-      copy(showChildren = _.failure.isDefined)
-  }
-
-  object Options {
-
-    val uncolored = Options(
-      indent       = "  ",
-      onPass       = "✓", // ✓ ✔
-      onSkip       = "-", // ⇣ ↶ ↷
-      onFail       = "✘", // ✗ ✘
-      eol          = "\n",
-      showChildren = _.failure.isDefined)
-
-    import scala.Console._
-
-    val colored = Options(
-      indent       = "  ",
-      onPass       = BOLD + GREEN + uncolored.onPass + RESET + WHITE,
-      onSkip       = BOLD + YELLOW + uncolored.onSkip + BLACK,
-      onFail       = RED + uncolored.onFail + BOLD,
-      eol          = RESET + uncolored.eol,
-      showChildren = uncolored.showChildren)
   }
 }

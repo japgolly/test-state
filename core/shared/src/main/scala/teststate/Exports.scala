@@ -50,14 +50,19 @@ trait Exports
   type Test[F[_], R, O, S, E] = teststate.run.Test[F, R, O, S, E]
   val Test = teststate.run.Test
 
-  type History[+E] = teststate.run.History[E]
-  val History = teststate.run.History
-
   type Result[+E] = teststate.data.Result[E]
   val Result = teststate.data.Result
 
+  type Report[+E] = teststate.run.Report[E]
+  val Report = teststate.run.Report
+
   implicit def testStateOrFromScalaEither[A, B](e: A Either B): A Or B =
     Or fromScalaEither e
+
+  // TODO Separate Defaults ↓ from Exports ↑
+
+  implicit def assertionSettings: Report.AssertionSettings =
+    Report.AssertionSettings.coloured
 }
 
 object Exports extends Exports

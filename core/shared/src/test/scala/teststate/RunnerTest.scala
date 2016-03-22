@@ -1,11 +1,11 @@
 package teststate
 
 import utest._
-import teststate.Exports._
+import teststate.Exports.{assertionSettings => _, _}
 import teststate.TestUtil._
 
 object RunnerTest extends TestSuite {
-  implicit def euqlA[A]: Equal[A] = Equal.by_==
+  implicit def equal[A]: Equal[A] = Equal.by_==
 
   class RecordVar(var s: Record) {
     def +=(n: String): Unit =
@@ -42,15 +42,6 @@ object RunnerTest extends TestSuite {
 
   def newState = new RecordVar(Record(Vector.empty))
 
-  def testHistory(h: History[String], expect: String,
-                  normalise: String => String = identity,
-                  showChildren: Boolean = false): Unit = {
-    var ho = History.Options.uncolored
-    if (showChildren) ho = ho.alwaysShowChildren
-    val actual = normalise(h.format(ho).trim)
-    assertEq(actual = actual, normalise(expect.trim))
-  }
-
   def delayCrash[A, B](successfulInvocations: Int)(f: A => B): A => B = {
     var i = 0
     a => {
@@ -65,13 +56,14 @@ object RunnerTest extends TestSuite {
   override def tests = TestSuite {
     'pass {
       val v = newState
-      testHistory(test.run((), v),
+      assertRun(test.run((), v),
         """
           |✓ A1
           |✓ A2
           |✓ A34
           |✓ All pass.
-        """.stripMargin)
+          |Performed 4 actions, 9 checks.
+        """.stripMargin, showChildren = false)
       assertEq(actual = v.s, Record(Vector("A1", "A2", "A3", "A4")))
     }
 
@@ -81,18 +73,20 @@ object RunnerTest extends TestSuite {
 
       'action {
         val test = Test(*.action("A").act(_ => sys error "Crash!")).observe(_.s)
-        testHistory(test.run((), newState),
+        assertRun(test.run((), newState),
           """
             |✘ A -- Caught exception: java.lang.RuntimeException: Crash!
+            |Performed 1 action, 0 checks.
           """.stripMargin)
       }
 
       'before {
         val test = Test(nop, badPoint.before).observe(_.s)
-        testHistory(test.run((), newState),
+        assertRun(test.run((), newState),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+            |Performed 0 actions, 1 check.
           """.stripMargin)
       }
 
@@ -100,58 +94,64 @@ object RunnerTest extends TestSuite {
       // All point-invariants are run both before and after actions.
       'after {
         val test = Test(nop, badPoint.after).observe(_.s)
-        testHistory(test.run((), newState),
+        assertRun(test.run((), newState),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+            |Performed 0 actions, 1 check.
           """.stripMargin)
       }
 
       'around {
         val test = Test(nop, *.focus("").value(_ => 0).testAround(_ => "what?", (_: Any, _: Any) => sys error "Crashhh!")).observe(_.s)
-        testHistory(test.run((), newState),
+        assertRun(test.run((), newState),
           """
             |✘ NOP
             |  ✓ Action
             |  ✘ Post-conditions
             |    ✘ what? -- Caught exception: java.lang.RuntimeException: Crashhh!
+            |Performed 1 action, 1 check.
           """.stripMargin)
       }
 
       'invariants {
         val test = Test(nop, badPoint).observe(_.s)
-        testHistory(test.run((), newState),
+        assertRun(test.run((), newState),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+            |Performed 0 actions, 1 check.
           """.stripMargin)
       }
 
       'coproduct - {
         val test = Test(nop, *.chooseInvariant("Who knows?!", _ => sys error "NO!")).observe(_.s)
-        testHistory(test.run((), newState),
+        assertRun(test.run((), newState),
         """
           |✘ Initial state.
           |  ✘ Who knows?! -- Caught exception: java.lang.RuntimeException: NO!
+          |Performed 0 actions, 1 check.
         """.stripMargin)
       }
 
       'obs1 {
         val test = Test(nop).observe(_ => sys error "NO!")
-        testHistory(test.run((), newState),
+        assertRun(test.run((), newState),
           """
             |✘ Initial state.
             |  ✘ Observation -- Caught exception: java.lang.RuntimeException: NO!
+            |Performed 0 actions, 0 checks.
           """.stripMargin)
       }
 
       'obs2 {
         val test = Test(nop).observe(delayCrash(1)(_.s))
-        testHistory(test.run((), newState),
+        assertRun(test.run((), newState),
           """
             |✘ NOP
             |  ✓ Action
             |  ✘ Observation -- Caught exception: java.lang.RuntimeException: NO MORE!
+            |Performed 1 action, 0 checks.
           """.stripMargin)
       }
 
@@ -172,23 +172,25 @@ object RunnerTest extends TestSuite {
             "scala.scalajs.runtime.UndefinedBehaviorError: An undefined behavior was detected: undefined is not an instance of java.lang.Boolean"
           ).foldLeft(s)(_.replace(_, error))
 
-        testHistory(test.run((), ()),
+        assertRun(test.run((), ()),
           """
             |✘ NOP
             |  ✓ Action
             |  ✘ Post-conditions
             |    ✘ Blah should change. -- Caught exception: java.lang.ClassCastException
+            |Performed 1 action, 1 check.
           """.stripMargin,
-          fixExpectedException)
+          normalise = fixExpectedException)
       }
 
       'nextState {
         val test = Test(*.action("Merf").act(_ => ()).updateStateBy(_ => sys error "BERF")).observe(_.s)
-        testHistory(test.run((), newState),
+        assertRun(test.run((), newState),
           """
             |✘ Merf
             |  ✓ Action
             |  ✘ Update expected state -- Caught exception: java.lang.RuntimeException: BERF
+            |Performed 1 action, 0 checks.
           """.stripMargin)
       }
     }
@@ -259,7 +261,7 @@ object RunnerTest extends TestSuite {
         val t = Test(a >> a, i).observe(_ => v)
 
         v = true
-        testHistory(t.run(v, ()),
+        assertRun(t.run(v, ()),
           """
             |✓ Initial state.
             |  ✓ ITT
@@ -272,10 +274,11 @@ object RunnerTest extends TestSuite {
             |  ✓ Invariants
             |    ✓ ITT
             |✓ All pass.
-          """.stripMargin, showChildren = true)
+            |Performed 2 actions, 3 checks.
+          """.stripMargin)
 
         v = false
-        testHistory(t.run(v, ()),
+        assertRun(t.run(v, ()),
           """
             |✓ Initial state.
             |  ✓ IFF
@@ -288,7 +291,8 @@ object RunnerTest extends TestSuite {
             |  ✓ Invariants
             |    ✓ IFF
             |✓ All pass.
-          """.stripMargin, showChildren = true)
+            |Performed 2 actions, 3 checks.
+          """.stripMargin)
       }
     }
 

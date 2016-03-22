@@ -19,9 +19,9 @@ object StackTest extends TestSuite {
     val as = Iterator.fill(size)(a).reduce(_ >> _)
     val test = Test(as).observe(_ => ())
     val fh = test.run((), ())
-    EM.map(fh) { h =>
-      assert(h.result == Result.Pass)
-      assert(h.steps.length == size + 1)
+    EM.map(fh) { r =>
+      assert(r.result == Result.Pass)
+      assert(r.history.steps.length == size + 1)
       val end = time
       val t = (end - start).toDouble / 1000000000.0
       println(s"$desc completed in $t s.")

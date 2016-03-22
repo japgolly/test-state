@@ -84,7 +84,7 @@ class Test[F[_], Ref, Obs, State, Err](val content: TestContent[F, Ref, Obs, Sta
   def addInvariants(i: Invariants[Obs, State, Err]): Test[F, Ref, Obs, State, Err] =
     new Test(content addInvariants i, observe)
 
-  def run(initialState: State, ref: => Ref): F[History[Err]] =
+  def run(initialState: State, ref: => Ref): F[Report[Err]] =
     Runner.run(this)(initialState, ref)
 }
 

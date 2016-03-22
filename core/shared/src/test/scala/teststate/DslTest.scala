@@ -3,20 +3,12 @@ package teststate
 import utest._
 import teststate.core.Around
 import teststate.data._
-import teststate.Exports._
+import teststate.Exports.{assertionSettings => _, _}
 import teststate.TestUtil._
 
 object DslTest extends TestSuite {
 
   val * = Dsl.sync[Unit, Unit, Unit, String]
-
-  val options = History.Options.uncolored.alwaysShowChildren
-
-  def test(a: *.Action, i: *.Invariant)(expect: String): Unit = {
-    val h = Test(a, i).observe(_ => ()).run((), ())
-    val actual = h.format(options).trim
-    assertEq(actual = actual, expect.trim)
-  }
 
 //  def extract1[A, B](s: Sack[A, B]): B =
 //     s match {

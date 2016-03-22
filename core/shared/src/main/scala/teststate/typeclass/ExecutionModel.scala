@@ -12,6 +12,9 @@ trait ExecutionModel[M[_]] {
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
   def tailrec[A](a: A)(stop: A => Boolean)(rec: A => F[A]): F[A]
   def recover[E, A](f: => F[E Or A])(implicit recover: Recover[E]): F[E Or A]
+
+  def flatten[A](ffa: F[F[A]]): F[A] =
+    flatMap(ffa)(identity)
 }
 
 object ExecutionModel {
@@ -33,6 +36,7 @@ object ExecutionModel {
       override def pure   [A]   (a: A)            = a
       override def map    [A, B](a: A)(f: A => B) = f(a)
       override def flatMap[A, B](a: A)(f: A => B) = f(a)
+      override def flatten[A]   (a: A)            = a
       override def tailrec[A](start: A)(stop: A => Boolean)(rec: A => A): A = {
         @tailrec
         def go(a: A): A =
