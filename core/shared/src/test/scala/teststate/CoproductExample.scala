@@ -19,7 +19,7 @@ object CoproductExample {
       *.action("Add").act(_.ref.txt += a).updateState(_ + a)
         .addCheck(txt.assert.equal.beforeAndAfter)
 
-    val test = Plan.withoutInvariants(add("x").times(2)).test(Observer(_.txt))
+    val test = Plan.action(add("x").times(2)).test(Observer(_.txt))
   }
 
   class Num(init: Int) {
@@ -35,7 +35,7 @@ object CoproductExample {
       *.action("Add").act(_.ref.num += a).updateState(_ + a)
         .addCheck(num.assert.equal.beforeAndAfter)
 
-    val test = Plan.withoutInvariants(add(2).times(2)).test(Observer(_.num))
+    val test = Plan.action(add(2).times(2)).test(Observer(_.num))
   }
 
   sealed abstract class Type {

@@ -893,7 +893,7 @@ object OutputTest extends TestSuite {
       }
 
       'singleActionName {
-        val t = Plan.withoutInvariants(action addCheck checkPoint2.before).asAction("SubTest!")
+        val t = Plan.action(action addCheck checkPoint2.before).asAction("SubTest!")
         test(t, checkPoint)(
           """
             |✓ Initial state.
@@ -1072,7 +1072,7 @@ object OutputTest extends TestSuite {
         val * = Dsl[Unit, Obs, State]
         val checkOSFail = *.focus("Evil").obsAndState(_.o, _.s).assert.equal
         val action = *.action("Press button.").act(_ => ())
-        val r = Plan.withoutInvariants(action addCheck checkOSFail.after)
+        val r = Plan.action(action addCheck checkOSFail.after)
           .test(Observer watch Obs(777))
           .runU(State(666))
         assertRun(r,
@@ -1091,7 +1091,7 @@ object OutputTest extends TestSuite {
       val * = Dsl[Unit, List[Int], Boolean]
       val a = *.action("Remove 2").act(_ => is = List(1, 3)).updateState(_ => false)
       val c = *.focus("X").collection(_.obs).assert.existenceOf(2)(_.state)
-      val r = Plan.withoutInvariants(a addCheck c.beforeAndAfter).test(Observer watch is).runU(true)
+      val r = Plan.action(a addCheck c.beforeAndAfter).test(Observer watch is).runU(true)
       assertRun(r,
         """
           |✓ Remove 2

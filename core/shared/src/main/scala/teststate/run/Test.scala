@@ -64,8 +64,11 @@ object Plan {
   def apply[F[_], R, O, S, E](a: Actions[F, R, O, S, E], i: Invariants[O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
     new Plan(None, a, i)(em)
 
-  def withoutInvariants[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
-    Plan(actions, emptyInvariants)(em)
+  def action[F[_], R, O, S, E](a: Actions[F, R, O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
+    apply(a, emptyInvariants)(em)
+
+  def invariants[F[_], R, O, S, E](i: Invariants[O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
+    apply[F, R, O, S, E](emptyAction, i)(em)
 
   implicit def planInstanceShow[F[_], R, O, S, E](implicit sa: Show[Actions[F, R, O, S, E]],
                                                            si: Show[Invariants[O, S, E]]): Show[Plan[F, R, O, S, E]] =
@@ -79,11 +82,14 @@ object Plan {
     )
 }
 
-final case class Plan[F[_], R, O, S, E](override val name: Option[Name],
-                                        override val actions: Actions[F, R, O, S, E],
-                                        override val invariants: Invariants[O, S, E])
-                                       (implicit override val executionModel: ExecutionModel[F])
+final class Plan[F[_], R, O, S, E](override val name: Option[Name],
+                                   override val actions: Actions[F, R, O, S, E],
+                                   override val invariants: Invariants[O, S, E])
+                                  (implicit override val executionModel: ExecutionModel[F])
     extends PlanLike[F, R, O, S, E, Plan[F, R, O, S, E]] {
+
+  override def toString: String =
+    s"Plan($name, $actions, $invariants)"
 
   override type Self[FF[_], RR, OO, SS, EE] = Plan[FF, RR, OO, SS, EE]
 
