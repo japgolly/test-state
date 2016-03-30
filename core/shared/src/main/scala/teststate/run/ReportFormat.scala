@@ -70,7 +70,16 @@ object ReportFormat {
           showHistory(step.children, indent + 1)
       }
 
-      showHistory(report.history, 0)
+      report.name match {
+        case None =>
+          showHistory(report.history, 0)
+        case Some(n) =>
+          appendResultFlag(report.result)
+          sb append ' '
+          sb append n.value
+          sb append s.eol
+          showHistory(report.history, 1)
+      }
 
       if (report.history.result != Skip) {
 //      if (report.history.nonEmpty) { TODO Stop adding summaries in Runner

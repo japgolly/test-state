@@ -226,7 +226,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
       EM.map(history) { h =>
         stats.stopTimer()
-        Report(h, stats.result())
+        Report(test.name, h, stats.result())
       }
     }
 
@@ -467,14 +467,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
           else
             h
 
-        // Add test name
-        val h3: H = test.name match {
-          case None    => h2
-          case Some(n) => History(History.parent(n, h2))
-        }
-
-
-        omg.copy(history = h3)
+        omg.copy(history = h2)
       }
     }
 

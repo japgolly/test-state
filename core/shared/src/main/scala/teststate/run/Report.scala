@@ -3,11 +3,11 @@ package teststate.run
 // import acyclic.file
 import scala.annotation.elidable
 import scala.util.control.NonFatal
-import teststate.data.Failure
+import teststate.data.{Failure, Name}
 import teststate.typeclass.ShowError
 import Report._
 
-case class Report[+E](history: History[Failure[E]], stats: Stats) {
+case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: Stats) {
 
   @inline def failure = history.failure
   @inline def failed = history.failed
