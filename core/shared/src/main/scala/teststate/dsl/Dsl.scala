@@ -10,15 +10,15 @@ import Dsl.Types
 import Types.SackE
 
 object Dsl {
-  def apply[F[_]: ExecutionModel, R, O, S, E] =
+  def full[F[_]: ExecutionModel, R, O, S, E] =
     new Dsl[F, R, O, S, E]
 
-  @inline def sync[R, O, S, E] =
-    apply[Id, R, O, S, E]
+  def apply[R, O, S] =
+    full[Id, R, O, S, String]
 
   import scala.concurrent._
-  @inline def future[R, O, S, E](implicit ec: ExecutionContext) =
-    apply[Future, R, O, S, E]
+  @inline def future[R, O, S](implicit ec: ExecutionContext) =
+    full[Future, R, O, S, String]
 
   // TODO Rename DSL types like {Point,Around}{,s}, etc
   // TODO Decide pluralisation everywhere (type aliases, case class params/methods, etc)
@@ -444,7 +444,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 object Exampe {
   implicit def sa[A]: Show[A] = ???
   implicit def ea[A]: Equal[A] = ???
-  val * = Dsl.sync[Unit, Unit, Unit, String]
+  val * = Dsl[Unit, Unit, Unit, String]
 
   *.focus("stuff").value(_ => 0).assert.change
 

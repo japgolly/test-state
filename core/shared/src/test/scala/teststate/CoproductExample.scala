@@ -11,7 +11,7 @@ object CoproductExample {
   }
 
   object Txt {
-    val * = Dsl.sync[Txt, String, String, String]
+    val * = Dsl[Txt, String, String]
 
     val txt = *.focus("Txt value").obsAndState(identity, identity)
 
@@ -27,7 +27,7 @@ object CoproductExample {
   }
 
   object Num {
-    val * = Dsl.sync[Num, Int, Int, String]
+    val * = Dsl[Num, Int, Int]
 
     val num = *.focus("Number value").obsAndState(identity, identity)
 
@@ -70,7 +70,7 @@ object CoproductExample {
     case class State(t: Type, num: Int, txt: String)
     type Obs = Int Either String
 
-    val * = Dsl.sync[Top, Obs, State, String]
+    val * = Dsl[Top, Obs, State]
 
     val curType = *.focus("Current type").obsAndState[Type]({
       case Left(_) => Type.Num

@@ -14,7 +14,7 @@ object RunnerTest extends TestSuite {
   }
   case class Record(actions: Vector[String])
 
-  val * = Dsl.sync[RecordVar, Record, Unit, String]
+  val * = Dsl[RecordVar, Record, Unit]
 
   val f = *.focus("Actions").value(_.obs.actions)
 
@@ -182,7 +182,7 @@ object RunnerTest extends TestSuite {
         class Yar {
           lazy val b: Boolean = ().asInstanceOf[Boolean]
         }
-        val * = Dsl.sync[Unit, Yar, Unit, String]
+        val * = Dsl[Unit, Yar, Unit]
         val a = *.action("NOP").act(_ => ())
           .addCheck(*.focus("Blah").value(_.obs.b).assert.change)
         val test = Plan.withoutInvariants(a).test(Observer watch new Yar).stateless
@@ -221,7 +221,7 @@ object RunnerTest extends TestSuite {
 
     'refByName {
       var i = 3
-      val * = Dsl.sync[Int, Unit, Unit, String]
+      val * = Dsl[Int, Unit, Unit]
       val inc = *.action("inc").act(x => i = x.ref + 1)
       val h = Plan.withoutInvariants(inc.times(4)).testU.stateless.run(i)
       assertEq(h.failure, None)
@@ -230,7 +230,7 @@ object RunnerTest extends TestSuite {
 
     'modS {
       var i = 9
-      val * = Dsl.sync[Unit, Int, Int, String]
+      val * = Dsl[Unit, Int, Int]
       val inc = *.action("inc").act(_ => i = i + 1)
         .updateState(_ + 8)
         .updateStateBy(_.state - 3)
@@ -270,7 +270,7 @@ object RunnerTest extends TestSuite {
     'choice {
       'invariant {
         var v = true
-        val * = Dsl.sync[Unit, Boolean, Boolean, String]
+        val * = Dsl[Unit, Boolean, Boolean]
         val a = *.action("A").act(_ => v = !v).updateState(!_)
         val i00 = *.test("IFF", _ => true)
         val i11 = *.test("ITT", _ => true)

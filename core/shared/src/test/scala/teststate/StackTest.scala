@@ -13,7 +13,7 @@ object StackTest extends TestSuite {
     val desc = s"${Platform.Name} StackTest.$name (x$size)"
     def time = System.nanoTime()
     val start = time
-    val dsl = Dsl[F, Unit, Unit, Unit, String]
+    val dsl = Dsl.full[F, Unit, Unit, Unit, String]
     val nop = EM.pure(())
     val a = dsl.action("nop").act(_ => nop): dsl.Action
     val as = Iterator.fill(size)(a).reduce(_ >> _)

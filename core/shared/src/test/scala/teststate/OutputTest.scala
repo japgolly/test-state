@@ -6,7 +6,7 @@ import teststate.TestUtil._
 
 object OutputTest extends TestSuite {
 
-  val * = Dsl.sync[Unit, Unit, Unit, String]
+  val * = Dsl[Unit, Unit, Unit]
 
   def mockAction(name: String) = *.action(name).act(_ => ())
   def mockPoint (name: String) = *.point(name, _ => None)
@@ -1069,7 +1069,7 @@ object OutputTest extends TestSuite {
         // These CCs ensure correctness via .observe and .run
         case class State(s: Int)
         case class Obs(o: Int)
-        val * = Dsl.sync[Unit, Obs, State, String]
+        val * = Dsl[Unit, Obs, State]
         val checkOSFail = *.focus("Evil").obsAndState(_.o, _.s).assert.equal
         val action = *.action("Press button.").act(_ => ())
         val r = Plan.withoutInvariants(action addCheck checkOSFail.after)
@@ -1088,7 +1088,7 @@ object OutputTest extends TestSuite {
 
     'existenceOfAround {
       var is = List(1, 2, 3)
-      val * = Dsl.sync[Unit, List[Int], Boolean, String]
+      val * = Dsl[Unit, List[Int], Boolean]
       val a = *.action("Remove 2").act(_ => is = List(1, 3)).updateState(_ => false)
       val c = *.focus("X").collection(_.obs).assert.existenceOf(2)(_.state)
       val r = Plan.withoutInvariants(a addCheck c.beforeAndAfter).test(Observer watch is).runU(true)

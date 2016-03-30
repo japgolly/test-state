@@ -8,7 +8,7 @@ import teststate.TestUtil._
 
 object DslTest extends TestSuite {
 
-  val * = Dsl.sync[Unit, Unit, Unit, String]
+  val * = Dsl[Unit, Unit, Unit]
 
 //  def extract1[A, B](s: Sack[A, B]): B =
 //     s match {

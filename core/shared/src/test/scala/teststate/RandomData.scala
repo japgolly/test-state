@@ -7,7 +7,7 @@ import nyaya.gen._
 
 object RandomData {
 
-  val * = Dsl.sync[Unit, Unit, Unit, String]
+  val * = Dsl[Unit, Unit, Unit]
 
   private def applyEndos[A](basic: Gen[A])(endos: (A => A)*): Gen[A] = {
     val id: A => A = identity
