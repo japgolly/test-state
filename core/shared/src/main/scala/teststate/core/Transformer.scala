@@ -4,7 +4,7 @@ import acyclic.file
 import CoreExports._
 import CoreExports2._
 import teststate.data.Or
-import teststate.typeclass.{Recover, ~~>, ExecutionModel}
+import teststate.typeclass.{~~>, ExecutionModel}
 import Transformer._
 
 case class Transformer

@@ -33,11 +33,11 @@ object OutputTest extends TestSuite {
   val i12 = mockPoint("Invariant 1") & mockPoint("Invariant 2")
 
   val sub1 =
-    Test(
+    Plan(
       mockAction("SubAction!") addCheck mockAround("Sub around-check"),
       mockPoint("Sub-invariant 1"))
-      .addInvariants(mockPoint("Sub-invariant 2"))
-      .asAction("SubTest!")
+    .addInvariants(mockPoint("Sub-invariant 2"))
+    .asAction("SubTest!")
 
   val sub2 =
     sub1
@@ -46,7 +46,7 @@ object OutputTest extends TestSuite {
       .addCheck(mockAround("Sub-delta"))
 
   def test(a: *.Action, i: *.Invariant)(expect: String): Unit = {
-    val r = Test(a, i).observe(_ => ()).run((), ())
+    val r = Plan(a, i).stateless.testU.runU
     assertRun(r, expect)
   }
 
@@ -660,7 +660,7 @@ object OutputTest extends TestSuite {
 
       'chain - {
         def sub(n: Int, hasAction: Boolean) =
-          Test(
+          Plan(
             if (hasAction) mockAction(s"SubAction $n") else *.emptyAction,
             mockPoint(s"Sub #$n invariant")
           ).asAction(s"Sub#$n")
@@ -699,7 +699,7 @@ object OutputTest extends TestSuite {
 
       'nested - {
         def sub(n: String, a: *.Action) =
-          Test(a, mockPoint("Invariant: " + n)).asAction("Subtest: " + n)
+          Plan(a, mockPoint("Invariant: " + n)).asAction("Subtest: " + n)
 
         def nest(a0: Boolean, b: Boolean, a2: Boolean) = {
           val n = "" //List(a0,b,a2).map(x => if (x) "1" else "0") mkString ""
@@ -893,7 +893,7 @@ object OutputTest extends TestSuite {
       }
 
       'singleActionName {
-        val t = Test(action addCheck checkPoint2.before, emptyInvariants).asAction("SubTest!")
+        val t = Plan.withoutInvariants(action addCheck checkPoint2.before).asAction("SubTest!")
         test(t, checkPoint)(
           """
             |✓ Initial state.
@@ -1072,9 +1072,9 @@ object OutputTest extends TestSuite {
         val * = Dsl.sync[Unit, Obs, State, String]
         val checkOSFail = *.focus("Evil").obsAndState(_.o, _.s).assert.equal
         val action = *.action("Press button.").act(_ => ())
-        val r = Test(action addCheck checkOSFail.after, emptyInvariants)
-          .observe(_ => Obs(777))
-          .run(State(666), ())
+        val r = Plan.withoutInvariants(action addCheck checkOSFail.after)
+          .test(Observer watch Obs(777))
+          .runU(State(666))
         assertRun(r,
           """
             |✘ Press button.
@@ -1091,7 +1091,7 @@ object OutputTest extends TestSuite {
       val * = Dsl.sync[Unit, List[Int], Boolean, String]
       val a = *.action("Remove 2").act(_ => is = List(1, 3)).updateState(_ => false)
       val c = *.focus("X").collection(_.obs).assert.existenceOf(2)(_.state)
-      val r = Test(a addCheck c.beforeAndAfter).observe(_ => is).run(true, ())
+      val r = Plan.withoutInvariants(a addCheck c.beforeAndAfter).test(Observer watch is).runU(true)
       assertRun(r,
         """
           |✓ Remove 2

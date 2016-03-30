@@ -173,9 +173,8 @@ object Runner {
     UnpackChecks(result(bs), result(ds), result(aa), result(ai), result(es), coproductFoundI || coproductFoundA)
   }
 
-  def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])
-                           (initialState: S, ref: => R): F[Report[E]] = {
-    val runner = new Runner[F, R, O, S, E]()(test.content.executionModel, test.content.recover)
+  def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])(initialState: S, ref: => R): F[Report[E]] = {
+    val runner = new Runner[F, R, O, S, E]()(test.executionModel, test.recover)
     runner.run(test)(initialState, () => ref)
   }
 
@@ -202,7 +201,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
   private type P    = Progress[F, R, O, S, E]
 
   private def observe(test: Test, ref: R): FE Or O =
-    recover.recover(test.observe.apply(ref).leftMap(Failure NoCause _), Left(_))
+    recover.recover(test.observer(ref).leftMap(Failure NoCause _), Left(_))
 
   private var stats: Stats.Mutable = _
 
@@ -357,7 +356,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
               else {
 
-                val invariants = nonInitialInvariants & test.content.invariants
+                val invariants = nonInitialInvariants & test.invariants
                 innerAction match {
 
                   // ==============================================================================
@@ -402,7 +401,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                   // ==============================================================================
                   case Action.SubTest(action, subInvariants) =>
                     val omg2F = checkAround0(name, Sack.empty, check, false, p.copy(history = History.empty), {
-                      val t = new Test(new TestContent(action, subInvariants), test.observe)
+                      val t = Plan(action, subInvariants).test(test.observer)
                       val subP = subtest(t, invariants, refFn, ros, false)
                       EM.map(subP)(s => (s.history, s.ros))
                     })
@@ -423,7 +422,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
       val invariantsPoints = {
         val ps = new UniqueListBuilder[Point[OS[O, S], E]]
         val es = new UniqueListBuilder[NamedError[FE]]
-        foreachSackE(test.content.invariants)(ros.os) {
+        foreachSackE(test.invariants)(ros.os) {
           case Right(Invariant.Point(p)) => ps += p
           case Right(Invariant.Delta(_)) => ()
           case Left(e)                   => es += e
@@ -450,7 +449,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
         if (firstSteps.failed)
           EM.pure(Progress[F, R, O, S, E](None, ros, firstSteps))
         else
-          start(test.content.action, ros, firstSteps)
+          start(test.actions, ros, firstSteps)
 
       EM.map(fh) { omg =>
         import omg.{history => h}

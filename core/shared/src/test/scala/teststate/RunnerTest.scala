@@ -35,11 +35,11 @@ object RunnerTest extends TestSuite {
   implicit val recoverToString: Recover[String] =
     Recover("Caught exception: " + _.toString)
 
-  val test = Test(
+  val test = Plan.withoutInvariants(
     a(1)
     >> a(2)
     >> (a(3) >> a(4)).group("A34").addCheck(f.assert.equal(expectAt(4)).after)
-  ).observe(_.s)
+  ).test(Observer(_.s)).stateless
 
   def newState = new RecordVar(Record(Vector.empty))
 
@@ -57,7 +57,7 @@ object RunnerTest extends TestSuite {
   override def tests = TestSuite {
     'pass {
       val v = newState
-      assertRun(test.run((), v),
+      assertRun(test.run(v),
         """
           |✓ A1
           |✓ A2
@@ -71,8 +71,8 @@ object RunnerTest extends TestSuite {
     'failureReason {
       'action {
         val e = new RuntimeException("hurr")
-        val test = Test(*.action("A").act(_ => throw e)).observe(_.s)
-        val r = test.run((), newState)
+        val test = Plan.withoutInvariants(*.action("A").act(_ => throw e)).test(Observer(_.s)).stateless
+        val r = test.run(newState)
         r.failureReason match {
           case Some(Failure.WithCause(_, f)) => assert(e eq f)
           case x => fail("Got: " + x)
@@ -80,8 +80,8 @@ object RunnerTest extends TestSuite {
       }
       'after {
         val e = new RuntimeException("hurr")
-        val test = Test(*.action("A").act(_ => ()) +> *.test("x", _ => throw e)).observe(_.s)
-        val r = test.run((), newState)
+        val test = Plan.withoutInvariants(*.action("A").act(_ => ()) +> *.test("x", _ => throw e)).test(Observer(_.s)).stateless
+        val r = test.run(newState)
         r.failureReason match {
           case Some(Failure.WithCause(_, f)) => assert(e eq f)
           case x => fail("Got: " + x)
@@ -95,8 +95,8 @@ object RunnerTest extends TestSuite {
       def badPoint = *.point("OMG", _ => sys error "Crash!")
 
       'action {
-        val test = Test(*.action("A").act(_ => sys error "Crash!")).observe(_.s)
-        assertRun(test.run((), newState),
+        val test = Plan.withoutInvariants(*.action("A").act(_ => sys error "Crash!")).test(Observer(_.s)).stateless
+        assertRun(test.run(newState),
           """
             |✘ A -- Caught exception: java.lang.RuntimeException: Crash!
             |Performed 1 action, 0 checks.
@@ -104,8 +104,8 @@ object RunnerTest extends TestSuite {
       }
 
       'before {
-        val test = Test(nop, badPoint.before).observe(_.s)
-        assertRun(test.run((), newState),
+        val test = Plan(nop, badPoint.before).test(Observer(_.s)).stateless
+        assertRun(test.run(newState),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
@@ -116,8 +116,8 @@ object RunnerTest extends TestSuite {
       // Point-invariants don't distinguish between before/after.
       // All point-invariants are run both before and after actions.
       'after {
-        val test = Test(nop, badPoint.after).observe(_.s)
-        assertRun(test.run((), newState),
+        val test = Plan(nop, badPoint.after).test(Observer(_.s)).stateless
+        assertRun(test.run(newState),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
@@ -126,8 +126,8 @@ object RunnerTest extends TestSuite {
       }
 
       'around {
-        val test = Test(nop, *.focus("").value(_ => 0).testAround(_ => "what?", (_: Any, _: Any) => sys error "Crashhh!")).observe(_.s)
-        assertRun(test.run((), newState),
+        val test = Plan(nop, *.focus("").value(_ => 0).testAround(_ => "what?", (_: Any, _: Any) => sys error "Crashhh!")).test(Observer(_.s)).stateless
+        assertRun(test.run(newState),
           """
             |✘ NOP
             |  ✓ Action
@@ -138,8 +138,8 @@ object RunnerTest extends TestSuite {
       }
 
       'invariants {
-        val test = Test(nop, badPoint).observe(_.s)
-        assertRun(test.run((), newState),
+        val test = Plan(nop, badPoint).test(Observer(_.s)).stateless
+        assertRun(test.run(newState),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
@@ -148,8 +148,8 @@ object RunnerTest extends TestSuite {
       }
 
       'coproduct - {
-        val test = Test(nop, *.chooseInvariant("Who knows?!", _ => sys error "NO!")).observe(_.s)
-        assertRun(test.run((), newState),
+        val test = Plan(nop, *.chooseInvariant("Who knows?!", _ => sys error "NO!")).test(Observer(_.s)).stateless
+        assertRun(test.run(newState),
         """
           |✘ Initial state.
           |  ✘ Who knows?! -- Caught exception: java.lang.RuntimeException: NO!
@@ -158,8 +158,8 @@ object RunnerTest extends TestSuite {
       }
 
       'obs1 {
-        val test = Test(nop).observe(_ => sys error "NO!")
-        assertRun(test.run((), newState),
+        val test = Plan.withoutInvariants(nop).test(Observer watch (sys error "NO!")).stateless
+        assertRun(test.run(newState),
           """
             |✘ Initial state.
             |  ✘ Observation -- Caught exception: java.lang.RuntimeException: NO!
@@ -168,8 +168,8 @@ object RunnerTest extends TestSuite {
       }
 
       'obs2 {
-        val test = Test(nop).observe(delayCrash(1)(_.s))
-        assertRun(test.run((), newState),
+        val test = Plan.withoutInvariants(nop).test(Observer(delayCrash(1)(_.s))).stateless
+        assertRun(test.run(newState),
           """
             |✘ NOP
             |  ✓ Action
@@ -185,7 +185,7 @@ object RunnerTest extends TestSuite {
         val * = Dsl.sync[Unit, Yar, Unit, String]
         val a = *.action("NOP").act(_ => ())
           .addCheck(*.focus("Blah").value(_.obs.b).assert.change)
-        val test = Test(a).observe(_ => new Yar)
+        val test = Plan.withoutInvariants(a).test(Observer watch new Yar).stateless
         val error = "<EXPECTED>"
         def fixExpectedException(s: String): String =
           List(
@@ -195,7 +195,7 @@ object RunnerTest extends TestSuite {
             "scala.scalajs.runtime.UndefinedBehaviorError: An undefined behavior was detected: undefined is not an instance of java.lang.Boolean"
           ).foldLeft(s)(_.replace(_, error))
 
-        assertRun(test.run((), ()),
+        assertRun(test.runU,
           """
             |✘ NOP
             |  ✓ Action
@@ -207,8 +207,9 @@ object RunnerTest extends TestSuite {
       }
 
       'nextState {
-        val test = Test(*.action("Merf").act(_ => ()).updateStateBy(_ => sys error "BERF")).observe(_.s)
-        assertRun(test.run((), newState),
+        val a = *.action("Merf").act(_ => ()).updateStateBy(_ => sys error "BERF")
+        val test = Plan.withoutInvariants(a).test(Observer(_.s)).stateless
+        assertRun(test.run(newState),
           """
             |✘ Merf
             |  ✓ Action
@@ -222,7 +223,7 @@ object RunnerTest extends TestSuite {
       var i = 3
       val * = Dsl.sync[Int, Unit, Unit, String]
       val inc = *.action("inc").act(x => i = x.ref + 1)
-      val h = Test(inc.times(4)).observe(_ => ()).run((), i)
+      val h = Plan.withoutInvariants(inc.times(4)).testU.stateless.run(i)
       assertEq(h.failure, None)
       assertEq(i, 7)
     }
@@ -234,7 +235,7 @@ object RunnerTest extends TestSuite {
         .updateState(_ + 8)
         .updateStateBy(_.state - 3)
         .updateState(_ - 4)
-      val h = Test(inc.times(3)).observe(_ => i).run(i, ())
+      val h = Plan.withoutInvariants(inc.times(3)).test(Observer watch i).run(i, ())
       assertEq(h.failure, None)
       assertEq(i, 12)
     }
@@ -243,16 +244,16 @@ object RunnerTest extends TestSuite {
       'action {
         var i = 0
         val a = *.action("A").act(_ => i += 1).skip
-        val test = Test(a: *.Action /* TODO What? */).observe(_.s)
-        test.run((), newState)
+        val test = Plan.withoutInvariants(a: *.Action /* TODO What? */).test(Observer(_.s)).stateless
+        test.run(newState)
         assertEq(i, 0)
       }
 
       'invariant {
         var i = 0
         val c = *.point("X", _ => {i += 1; None}).skip
-        val test = Test(a(1), c).observe(_.s)
-        test.run((), newState)
+        val test = Plan(a(1), c).test(Observer(_.s)).stateless
+        test.run(newState)
         assertEq(i, 0)
       }
 
@@ -260,8 +261,8 @@ object RunnerTest extends TestSuite {
         var i = 0
         val c = *.point("X", _ => {i += 1; None}).skip
         val d = *.around("Y", _ => {i += 1; i})((_, _) => {i += 1; None}).skip
-        val test = Test(a(1) addCheck c.beforeAndAfter addCheck d).observe(_.s)
-        test.run((), newState)
+        val test = Plan.withoutInvariants(a(1) addCheck c.beforeAndAfter addCheck d).test(Observer(_.s)).stateless
+        test.run(newState)
         assertEq(i, 0)
       }
     }
@@ -281,10 +282,10 @@ object RunnerTest extends TestSuite {
           case (true , false) => i10
           case (false, true ) => i01
         })
-        val t = Test(a >> a, i).observe(_ => v)
+        val t = Plan(a >> a, i).test(Observer watch v)
 
         v = true
-        assertRun(t.run(v, ()),
+        assertRun(t.runU(v),
           """
             |✓ Initial state.
             |  ✓ ITT
@@ -301,7 +302,7 @@ object RunnerTest extends TestSuite {
           """.stripMargin)
 
         v = false
-        assertRun(t.run(v, ()),
+        assertRun(t.runU(v),
           """
             |✓ Initial state.
             |  ✓ IFF

@@ -21,7 +21,7 @@ object CompositionTest extends TestSuite {
     implicit def anyCanSeq[X]: Can[SeqOp, X] = Can
 
     def results(a: *.Action): String =
-      "\n" + Test(a).observe(_ => ()).run((), ()).format(inspectionFormat)
+      "\n" + Plan.withoutInvariants(a).stateless.testU.runU.format(inspectionFormat)
 
     Prop.equal[(A, B, C)]("associativity")(
       { case (a, b, c) => results((a >> b) >> c) },

@@ -3,7 +3,7 @@ package teststate.dsl
 import acyclic.file
 import teststate.core._
 import teststate.data._
-import teststate.run.Test
+import teststate.run.{Observer, Plan}
 import teststate.typeclass._
 import CoreExports._
 import Dsl.Types
@@ -21,18 +21,21 @@ object Dsl {
     apply[Future, R, O, S, E]
 
   // TODO Rename DSL types like {Point,Around}{,s}, etc
+  // TODO Decide pluralisation everywhere (type aliases, case class params/methods, etc)
   trait Types[F[_], R, O, S, E] {
-    final type OS          = teststate.data.OS[O, S]
-    final type ROS         = teststate.data.ROS[R, O, S]
-    final type ANameFn     = teststate.data.NameFn[ROS]
-    final type CNameFn     = teststate.data.NameFn[OS]
-    final type ArNameFn    = teststate.data.NameFn[BeforeAfter[OS]]
-    final type Point       = Points[O, S, E]
-    final type Around      = Arounds[O, S, E]
-    final type Invariant   = Invariants[O, S, E]
-    final type Action      = Actions[F, R, O, S, E]
-    final type TestContent = teststate.run.TestContent[F, R, O, S, E]
-    final type Test        = teststate.run.Test[F, R, O, S, E]
+    final type OS                   = teststate.data.OS[O, S]
+    final type ROS                  = teststate.data.ROS[R, O, S]
+    final type ANameFn              = teststate.data.NameFn[ROS]
+    final type CNameFn              = teststate.data.NameFn[OS]
+    final type ArNameFn             = teststate.data.NameFn[BeforeAfter[OS]]
+    final type Point                = Points[O, S, E]
+    final type Around               = Arounds[O, S, E]
+    final type Invariant            = Invariants[O, S, E]
+    final type Action               = Actions[F, R, O, S, E]
+    final type PlanWithInitialState = teststate.run.PlanWithInitialState[F, R, O, S, E]
+    final type TestWithInitialState = teststate.run.TestWithInitialState[F, R, O, S, E]
+    final type Plan                 = teststate.run.Plan[F, R, O, S, E]
+    final type Test                 = teststate.run.Test[F, R, O, S, E]
   }
 }
 
@@ -118,8 +121,11 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   def emptyInvariant: Invariant =
     Sack.empty
 
-  def emptyTest(implicit r: Recover[E]): TestContent =
-    Test(emptyAction)(EM, r)
+  def emptyPlan: Plan =
+    Plan(emptyAction, emptyInvariant)(EM)
+
+  def emptyTest(observer: Observer[R, O, E])(implicit r: Recover[E]): Test =
+    emptyPlan.test(observer)(r)
 
   // ===================================================================================================================
 

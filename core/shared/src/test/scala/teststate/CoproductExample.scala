@@ -19,7 +19,7 @@ object CoproductExample {
       *.action("Add").act(_.ref.txt += a).updateState(_ + a)
         .addCheck(txt.assert.equal.beforeAndAfter)
 
-    val test = Test(add("x").times(2)).observe(_.txt)
+    val test = Plan.withoutInvariants(add("x").times(2)).test(Observer(_.txt))
   }
 
   class Num(init: Int) {
@@ -35,7 +35,7 @@ object CoproductExample {
       *.action("Add").act(_.ref.num += a).updateState(_ + a)
         .addCheck(num.assert.equal.beforeAndAfter)
 
-    val test = Test(add(2).times(2)).observe(_.num)
+    val test = Plan.withoutInvariants(add(2).times(2)).test(Observer(_.num))
   }
 
   sealed abstract class Type {
@@ -78,8 +78,8 @@ object CoproductExample {
     }, _.t)
 
     val testNum: Actions[Id, Top, Obs, State, String] =
-      Num.test.content
-        .mapS[State](_.num, (s, n) => s.copy(num = n))
+      Num.test.plan
+        .mapS[State](_.num)((s, n) => s.copy(num = n))
         .pmapO[Obs] {
             case Left(i) => Right(i)
             case Right(_) => Left("Expected Int, got Txt.")
@@ -92,8 +92,8 @@ object CoproductExample {
         .asAction("Test Num")
 
     val testTxt: Actions[Id, Top, Obs, State, String] =
-      Txt.test.content
-        .mapS[State](_.txt, (s, n) => s.copy(txt = n))
+      Txt.test.plan
+        .mapS[State](_.txt)((s, n) => s.copy(txt = n))
         .pmapO[Obs] {
             case Right(t) => Right(t)
             case Left(_) => Left("Expected Int, got Txt.")
@@ -114,10 +114,10 @@ object CoproductExample {
     val actions: *.Action =
       testNum >> swapTypes >> testTxt
 
-    val test = Test(actions, invariants)
-      .observe(_.get() match {
+    val test = Plan(actions, invariants).test(
+      Observer(_.get() match {
         case x: Num => Left(x.num)
         case x: Txt => Right(x.txt)
-      })
+      }))
   }
 }

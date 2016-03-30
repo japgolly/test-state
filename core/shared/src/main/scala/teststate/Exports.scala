@@ -45,10 +45,20 @@ trait Exports
   val Right = teststate.data.Right
   */
 
-  type TestContent[F[_], R, O, S, E] = teststate.run.TestContent[F, R, O, S, E]
+  type Plan[F[_], R, O, S, E] = teststate.run.Plan[F, R, O, S, E]
+  val Plan = teststate.run.Plan
+
+  type PlanWithInitialState[F[_], R, O, S, E] = teststate.run.PlanWithInitialState[F, R, O, S, E]
+  val PlanWithInitialState = teststate.run.PlanWithInitialState
 
   type Test[F[_], R, O, S, E] = teststate.run.Test[F, R, O, S, E]
   val Test = teststate.run.Test
+
+  type TestWithInitialState[F[_], R, O, S, E] = teststate.run.TestWithInitialState[F, R, O, S, E]
+  val TestWithInitialState = teststate.run.TestWithInitialState
+
+  type Observer[-R, +O, +E] = teststate.run.Observer[R, O, E]
+  val Observer = teststate.run.Observer
 
   type Result[+E] = teststate.data.Result[E]
   val Result = teststate.data.Result
