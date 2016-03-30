@@ -33,16 +33,16 @@ sealed abstract class PlanLike[F[_], R, O, S, E, This] { self: This =>
     setPlan(f(plan))
 
   final def setActions(actions: Actions[F, R, O, S, E]): This =
-    modPlan(_.copy(actions = actions))
+    modPlan(p => new Plan(p.name, actions, p.invariants))
 
   final def setInvariants(invariants: Invariants[O, S, E]): This =
-    modPlan(_.copy(invariants = invariants))
+    modPlan(p => new Plan(p.name, p.actions, invariants))
 
   final def clearName: This =
-    modPlan(_.copy(name = None))
+    modPlan(p => new Plan(None, p.actions, p.invariants))
 
   final def named(name: Name): This =
-    modPlan(_.copy(name = Some(name)))
+    modPlan(p => new Plan(Some(name), p.actions, p.invariants))
 
   final def modActions(f: Actions[F, R, O, S, E] => Actions[F, R, O, S, E]): This =
     setActions(f(actions))
@@ -91,25 +91,25 @@ final case class Plan[F[_], R, O, S, E](override val name: Option[Name],
   override protected def setPlan(p: Plan[F, R, O, S, E]) = p
 
   def trans[G[_]: ExecutionModel](t: F ~~> G): Self[G, R, O, S, E] =
-    copy(actions = actions trans t)
+    new Plan(name, actions trans t, invariants)
 
   def mapR[R2](f: R2 => R): Self[F, R2, O, S, E] =
-    copy(actions = actions mapR f)
+    new Plan(name, actions mapR f, invariants)
 
   def pmapR[R2](f: R2 => E Or R): Self[F, R2, O, S, E] =
-    copy(actions = actions pmapR f)
+    new Plan(name, actions pmapR f, invariants)
 
   def pmapO[OO](g: OO => E Or O): Self[F, R, OO, S, E] =
-    Plan(actions pmapO g, invariants pmapO g)
+    new Plan(name, actions pmapO g, invariants pmapO g)
 
   def mapS[SS](g: SS => S)(s: (SS, S) => SS): Self[F, R, O, SS, E] =
-    Plan(actions.mapS(g)(s), invariants.mapS(g))
+    new Plan(name, actions.mapS(g)(s), invariants.mapS(g))
 
   def mapE[EE](f: E => EE): Self[F, R, O, S, EE] =
-    Plan(actions mapE f, invariants mapE f)
+    new Plan(name, actions mapE f, invariants mapE f)
 
   def lift[F2[_], R2, O2, S2, E2](implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Self[F2, R2, O2, S2, E2] =
-    Plan(t action actions, t invariant invariants)(t.f2)
+    new Plan(name, t action actions, t invariant invariants)(t.f2)
 
   def withInitialState(s: S) =
     PlanWithInitialState(this, s)
