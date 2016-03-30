@@ -16,8 +16,9 @@ sealed abstract class PlanLike[F[_], R, O, S, E, This] { self: This =>
   protected def plan: Plan[F, R, O, S, E]
   protected def setPlan(plan: Plan[F, R, O, S, E]): This
 
-  def actions: Actions[F, R, O, S, E] = plan.actions
-  def invariants: Invariants[O, S, E] = plan.invariants
+  def name      : Option[Name]           = plan.name
+  def actions   : Actions[F, R, O, S, E] = plan.actions
+  def invariants: Invariants[O, S, E]    = plan.invariants
   implicit val executionModel: ExecutionModel[F] = plan.executionModel
 
 //  def trans[G[_]: ExecutionModel](t: F ~~> G): Self[G, R, O, S, E]
@@ -37,6 +38,12 @@ sealed abstract class PlanLike[F[_], R, O, S, E, This] { self: This =>
   final def setInvariants(invariants: Invariants[O, S, E]): This =
     modPlan(_.copy(invariants = invariants))
 
+  final def clearName: This =
+    modPlan(_.copy(name = None))
+
+  final def named(name: Name): This =
+    modPlan(_.copy(name = Some(name)))
+
   final def modActions(f: Actions[F, R, O, S, E] => Actions[F, R, O, S, E]): This =
     setActions(f(actions))
 
@@ -46,13 +53,34 @@ sealed abstract class PlanLike[F[_], R, O, S, E, This] { self: This =>
   def addInvariants(i: Invariants[O, S, E]): This =
     modInvariants(_ & i)
 
+  // TODO asAction that uses this.name
   final def asAction(name: NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] =
     Action.liftInner(Action.SubTest(actions, invariants))(name)
 }
 
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
 
-final case class Plan[F[_], R, O, S, E](override val actions: Actions[F, R, O, S, E],
+object Plan {
+  def apply[F[_], R, O, S, E](a: Actions[F, R, O, S, E], i: Invariants[O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
+    new Plan(None, a, i)(em)
+
+  def withoutInvariants[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
+    Plan(actions, emptyInvariants)(em)
+
+  implicit def planInstanceShow[F[_], R, O, S, E](implicit sa: Show[Actions[F, R, O, S, E]],
+                                                           si: Show[Invariants[O, S, E]]): Show[Plan[F, R, O, S, E]] =
+    Show(p =>
+      s"""
+         |Invariants:
+         |${si.indent(p.invariants)}
+         |Actions:
+         |${sa.indent(p.actions)}
+       """.stripMargin.trim
+    )
+}
+
+final case class Plan[F[_], R, O, S, E](override val name: Option[Name],
+                                        override val actions: Actions[F, R, O, S, E],
                                         override val invariants: Invariants[O, S, E])
                                        (implicit override val executionModel: ExecutionModel[F])
     extends PlanLike[F, R, O, S, E, Plan[F, R, O, S, E]] {
@@ -94,22 +122,6 @@ final case class Plan[F[_], R, O, S, E](override val actions: Actions[F, R, O, S
 
   def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], r: Recover[E]) =
     test(ev(Observer.unit))(r)
-}
-
-object Plan {
-  def withoutInvariants[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
-    Plan(actions, emptyInvariants)(em)
-
-  implicit def planInstanceShow[F[_], R, O, S, E](implicit sa: Show[Actions[F, R, O, S, E]],
-                                                           si: Show[Invariants[O, S, E]]): Show[Plan[F, R, O, S, E]] =
-    Show(p =>
-      s"""
-         |Invariants:
-         |${si.indent(p.invariants)}
-         |Actions:
-         |${sa.indent(p.actions)}
-       """.stripMargin.trim
-    )
 }
 
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████

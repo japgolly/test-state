@@ -453,6 +453,8 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
       EM.map(fh) { omg =>
         import omg.{history => h}
+
+        // Summarise
         val h2: H =
           if (h.isEmpty)
             History(History.Step("Nothing to do.", Skip))
@@ -464,7 +466,15 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
             }
           else
             h
-        omg.copy(history = h2)
+
+        // Add test name
+        val h3: H = test.name match {
+          case None    => h2
+          case Some(n) => History(History.parent(n, h2))
+        }
+
+
+        omg.copy(history = h3)
       }
     }
 

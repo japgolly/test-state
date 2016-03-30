@@ -1105,6 +1105,30 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
+    'named {
+      'pass - {
+        val r = Plan(*.emptyAction, checkPoint).named("Beauty").stateless.testU.runU
+        assertRun(r,
+          """
+            |✓ Beauty
+            |  ✓ Initial state.
+            |    ✓ Check stuff.
+            |  ✓ All pass.
+            |Performed 0 actions, 1 check.
+          """.stripMargin)
+      }
+      'fail - {
+        val r = Plan(*.emptyAction, checkPointF).named("Sorrow").stateless.testU.runU
+        assertRun(r,
+          """
+            |✘ Sorrow
+            |  ✘ Initial state.
+            |    ✘ Check failure. -- Shit broke!
+            |Performed 0 actions, 1 check.
+          """.stripMargin)
+      }
+    }
+
     // action combinators
 
   }
