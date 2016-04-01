@@ -126,7 +126,7 @@ object RunnerTest extends TestSuite {
       }
 
       'around {
-        val test = Plan(nop, *.focus("").value(_ => 0).testAround(_ => "what?", (_: Any, _: Any) => sys error "Crashhh!")).test(Observer(_.s)).stateless
+        val test = Plan(nop, *.focus("").value(_ => 0).testAround(_ => "what?")((_: Any, _: Any) => sys error "Crashhh!")).test(Observer(_.s)).stateless
         assertRun(test.run(newState),
           """
             |✘ NOP

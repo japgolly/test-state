@@ -172,28 +172,28 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     private def suffix(desc: String): String => String =
       _ + " " + desc
 
-    def test(descSuffix: String, testFn: A => Boolean)(implicit ev: String =:= E): Point =
-      test(suffix(descSuffix), testFn)
+    def test(descSuffix: String)(testFn: A => Boolean)(implicit ev: String =:= E): Point =
+      test(suffix(descSuffix))(testFn)
 
-    def test(descSuffix: String, testFn: A => Boolean, error: A => E): Point =
-      test(suffix(descSuffix), testFn, error)
+    def test(descSuffix: String, error: A => E)(testFn: A => Boolean): Point =
+      test(suffix(descSuffix), error)(testFn)
 
-    def test(desc: String => String, testFn: A => Boolean)(implicit ev: String =:= E): Point =
-      test(desc, testFn, strErrorFn)
+    def test(desc: String => String)(testFn: A => Boolean)(implicit ev: String =:= E): Point =
+      test(desc, strErrorFn)(testFn)
 
-    def test(desc: String => String, testFn: A => Boolean, error: A => E): Point =
+    def test(desc: String => String, error: A => E)(testFn: A => Boolean): Point =
       Dsl.this.test(desc(focusName), error compose focusFn)(testFn compose focusFn)
 
-    def testAround(descSuffix: String, testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around =
-      testAround(suffix(descSuffix), testFn)
+    def testAround(descSuffix: String)(testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around =
+      testAround(suffix(descSuffix))(testFn)
 
-    def testAround(descSuffix: String, testFn: (A, A) => Boolean, error: (A, A) => E): Around =
-      testAround(suffix(descSuffix), testFn, error)
+    def testAround(descSuffix: String, error: (A, A) => E)(testFn: (A, A) => Boolean): Around =
+      testAround(suffix(descSuffix), error)(testFn)
 
-    def testAround(desc: String => String, testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around =
-      testAround(desc, testFn, strErrorFn2)
+    def testAround(desc: String => String)(testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around =
+      testAround(desc, strErrorFn2)(testFn)
 
-    def testAround(desc: String => String, testFn: (A, A) => Boolean, error: (A, A) => E): Around =
+    def testAround(desc: String => String, error: (A, A) => E)(testFn: (A, A) => Boolean): Around =
       around(desc(focusName))(focusFn)((os, a1) => {
         val a2 = focusFn(os)
         if (testFn(a1, a2)) None else Some(error(a1, a2))
