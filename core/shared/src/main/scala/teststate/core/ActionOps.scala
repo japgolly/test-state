@@ -92,6 +92,36 @@ object ActionOps {
       val o = Outer(name, i, Sack.empty)
       o.lift
     }
+
+    import Sack._
+
+    private def groupIfMultipleBy(name: Vector[Actions[F, R, O, S, E]] => NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] =
+      self match {
+        case Product(ss) if ss.length != 1 => _group(name(ss), ss).lift
+        case _                             => self
+        // Allow 0-actions be grouped for clearer UX.
+      }
+
+    def groupIfMultiple(name: NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] =
+      groupIfMultipleBy(_ => name)
+
+    def groupIfMultipleByLen(f: Int => NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] =
+      groupIfMultipleBy(ss => f(ss.length))
+
+    def grouped: Actions[F, R, O, S, E] =
+      groupIfMultipleBy(_anonGroupName)
+  }
+
+  private def _anonGroupName[F[_], R, O, S, E](ss: Vector[Actions[F, R, O, S, E]]): NameFn[ROS[R, O, S]] = {
+    val l = ss.length
+    s"$l actions."
+  }
+
+  private def _group[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]], ss: Vector[Actions[F, R, O, S, E]]) = {
+    val a = Some(Sack.Product(ss))
+    val i = Group[F, R, O, S, E](_ => a)
+    val o = Outer(name, i, Sack.empty)
+    o
   }
 
   private def _timesName[F[_], R, O, S, E](n: Int, name: NameFn[ROS[R, O, S]]) =
@@ -306,14 +336,6 @@ object ActionOps {
         override def modS[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
           x.rmap(_.map(_ modS m))
 
-        def groupComposite[F[_], R, O, S, E](ss: Vector[Actions[F, R, O, S, E]]) = {
-          val l = ss.length
-          val a = Some(Sack.Product(ss))
-          val i = Group[F, R, O, S, E](_ => a)
-          val o = Outer(s"$l actions.", i, Sack.empty)
-          o
-        }
-
         override def times[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(n: Int) =
           actions match {
             case Value(v)         => Value(v map (_ times n))
@@ -321,16 +343,14 @@ object ActionOps {
             case Product(ss)      =>
               if (ss.length == 1)
                 ss.head times n
-              else {
-                groupComposite(ss).times(n).lift
-                //_times(n, s"$slen actions.", f => Product(ss map (_ nameMod f))).lift
-              }
+              else
+                _group(_anonGroupName(ss), ss).times(n).lift
           }
 
         override def addCheck[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(c: Arounds[O, S, E]) =
           x match {
             case Product(ss) if ss.length != 1 =>
-              groupComposite(ss).addCheck(c).lift
+              _group(_anonGroupName(ss), ss).addCheck(c).lift
             case _ =>
               x.rmap(_ map (_ addCheck c))
           }
