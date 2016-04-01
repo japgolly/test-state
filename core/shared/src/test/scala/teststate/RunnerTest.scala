@@ -80,7 +80,7 @@ object RunnerTest extends TestSuite {
       }
       'after {
         val e = new RuntimeException("hurr")
-        val test = Plan.action(*.action("A").act(_ => ()) +> *.test("x", _ => throw e)).test(Observer(_.s)).stateless
+        val test = Plan.action(*.action("A").act(_ => ()) +> *.test("x")(_ => throw e)).test(Observer(_.s)).stateless
         val r = test.run(newState)
         r.failureReason match {
           case Some(Failure.WithCause(_, f)) => assert(e eq f)
@@ -92,7 +92,7 @@ object RunnerTest extends TestSuite {
 
     'catch {
 
-      def badPoint = *.point("OMG", _ => sys error "Crash!")
+      def badPoint = *.point("OMG")(_ => sys error "Crash!")
 
       'action {
         val test = Plan.action(*.action("A").act(_ => sys error "Crash!")).test(Observer(_.s)).stateless
@@ -251,7 +251,7 @@ object RunnerTest extends TestSuite {
 
       'invariant {
         var i = 0
-        val c = *.point("X", _ => {i += 1; None}).skip
+        val c = *.point("X")(_ => {i += 1; None}).skip
         val test = Plan(a(1), c).test(Observer(_.s)).stateless
         test.run(newState)
         assertEq(i, 0)
@@ -259,7 +259,7 @@ object RunnerTest extends TestSuite {
 
       'action {
         var i = 0
-        val c = *.point("X", _ => {i += 1; None}).skip
+        val c = *.point("X")(_ => {i += 1; None}).skip
         val d = *.around("Y", _ => {i += 1; i})((_, _) => {i += 1; None}).skip
         val test = Plan.action(a(1) addCheck c.beforeAndAfter addCheck d).test(Observer(_.s)).stateless
         test.run(newState)
@@ -272,10 +272,10 @@ object RunnerTest extends TestSuite {
         var v = true
         val * = Dsl[Unit, Boolean, Boolean]
         val a = *.action("A").act(_ => v = !v).updateState(!_)
-        val i00 = *.test("IFF", _ => true)
-        val i11 = *.test("ITT", _ => true)
-        val i01 = *.test("IFT", _ => false)
-        val i10 = *.test("ITF", _ => false)
+        val i00 = *.test("IFF")(_ => true)
+        val i11 = *.test("ITT")(_ => true)
+        val i01 = *.test("IFT")(_ => false)
+        val i10 = *.test("ITF")(_ => false)
         val i = *.chooseInvariant("I", x => (x.obs, x.state) match {
           case (true,  true ) => i11
           case (false, false) => i00

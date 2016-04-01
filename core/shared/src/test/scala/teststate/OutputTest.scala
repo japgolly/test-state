@@ -10,7 +10,7 @@ object OutputTest extends TestSuite {
   import *.{emptyAction, emptyInvariant}
 
   def mockAction(name: String) = *.action(name).act(_ => ())
-  def mockPoint (name: String) = *.point(name, _ => None)
+  def mockPoint (name: String) = *.point(name)(_ => None)
   def mockAround(name: String) = *.around(name, _ => ())((_, _) => None)
 
   val action    = mockAction("Press button.")
@@ -25,7 +25,7 @@ object OutputTest extends TestSuite {
 
   val checkPoint   = mockPoint("Check stuff.")
   val checkPoint2  = mockPoint("Check more stuff.")
-  val checkPointF  = *.point("Check failure.", _ => Some("Shit broke!"))
+  val checkPointF  = *.point("Check failure.")(_ => Some("Shit broke!"))
   val checkAround  = mockAround("Button count increased.")
   val checkAroundF = *.around("Button count increased.", _ => ())((_, _) => Some("2 != 3"))
 

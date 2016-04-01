@@ -39,8 +39,8 @@ object RandomData {
   lazy val point: Gen[*.Point] =
     applyEndos(
       Gen.choose(
-        *.test("P1", _ => true),
-        *.test("P0", _ => false))
+        *.test("P1")(_ => true),
+        *.test("P0")(_ => false))
     )(
       a => Sack.append(a, a),
       a => Sack.CoProduct("CoP", _ => a),

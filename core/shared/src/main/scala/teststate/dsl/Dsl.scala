@@ -47,7 +47,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   private def sackE(ne: NamedError[Failure[E]]) =
     Sack.Value(Left(ne))
 
-  def point(name: CNameFn, test: OS => Option[E]): Point =
+  def point(name: CNameFn)(test: OS => Option[E]): Point =
     sack1(Point(name, Tri failedOption test(_)))
 
   def around[A](name: ArNameFn, before: OS => A)(test: (OS, A) => Option[E]): Around =
@@ -57,11 +57,11 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E = (_,_) => ""
 
 
-  def test(name: CNameFn, testFn: OS => Boolean)(implicit ev: String =:= E): Point =
-    test(name, testFn, strErrorFn)
+  def test(name: CNameFn)(testFn: OS => Boolean)(implicit ev: String =:= E): Point =
+    test(name, strErrorFn)(testFn)
 
-  def test(name: CNameFn, testFn: OS => Boolean, error: OS => E): Point =
-    point(name, os => if (testFn(os)) None else Some(error(os)))
+  def test(name: CNameFn, error: OS => E)(testFn: OS => Boolean): Point =
+    point(name)(os => if (testFn(os)) None else Some(error(os)))
 
   def testAround(name: ArNameFn, testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around =
     testAround(name, testFn, strErrorFn2)
@@ -182,10 +182,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       test(desc, testFn, strErrorFn)
 
     def test(desc: String => String, testFn: A => Boolean, error: A => E): Point =
-      Dsl.this.test(
-        desc(focusName),
-        testFn compose focusFn,
-        error compose focusFn)
+      Dsl.this.test(desc(focusName), error compose focusFn)(testFn compose focusFn)
 
     def testAround(descSuffix: String, testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around =
       testAround(suffix(descSuffix), testFn)
@@ -216,13 +213,11 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def not = new AssertOps(!positive)
 
       def equal(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
-        point(
-          NameUtils.equal(focusName, positive, expect),
+        point(NameUtils.equal(focusName, positive, expect))(
           i => f.expectMaybeEqual(positive, ex = expect, actual = focusFn(i)))
 
       def equalBy(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
-        point(
-          NameFn(NameUtils.equalFn(focusName, positive, expect)),
+        point(NameFn(NameUtils.equalFn(focusName, positive, expect)))(
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
 
       def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
@@ -301,22 +296,19 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def distinct(implicit sa: Show[A], ev: Distinct.Failure[A] => E) = {
         val d = Distinct(positive)
-        point(
-          d.name(focusName),
+        point(d.name(focusName))(
           os => d(focusFn(os)).map(ev))
       }
 
       def containsAll[B <: A](queryNames: => String, query: OS => Set[B])(implicit sb: Show[B], ev: ContainsAll.Failure[B] => E) = {
         val d = ContainsAll(positive)
-        point(
-          d.name(focusName, queryNames),
+        point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
       }
 
       def containsAny[B >: A](queryNames: => String, query: OS => Set[B])(implicit sb: Show[B], ev: ContainsAny.Failure[B] => E) = {
         val d = ContainsAny(positive)
-        point(
-          d.name(focusName, queryNames),
+        point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
       }
 
@@ -325,23 +317,20 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def containsOnly[B >: A](queryNames: => String, query: OS => Set[B])(implicit sa: Show[A], ev: ContainsOnly.Failure[A] => E) = {
         val d = ContainsOnly(positive)
-        point(
-          d.name(focusName, queryNames),
+        point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
       }
 
       // TODO inconsistency with blah{,By} and types
 
       def contains[B >: A](query: B)(implicit sa: Show[B], ea: Equal[B], ev: Exists.Failure[B] => E) =
-        point(
-          Exists(positive).name(focusName, sa(query)),
+        point(Exists(positive).name(focusName, sa(query)))(
           os => Exists(positive)(focusFn(os), query).map(ev))
 
       def existenceOf(query: A)(expect: OS => Boolean)
                      (implicit sa: Show[A], ea: Equal[A], ev: Exists.Failure[A] => E) = {
         val e = wrapExp1(expect)
-        point(
-          Exists.nameFn(e, focusName, sa(query)),
+        point(Exists.nameFn(e, focusName, sa(query)))(
           os => Exists(e(os))(focusFn(os), query).map(ev))
       }
 
@@ -353,8 +342,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def existenceOfAllBy(allName: => String, all: OS => Set[A])(expect: OS => Boolean)
                           (implicit sa: Show[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) = {
         val e = wrapExp1(expect)
-        point(
-          ExistenceOfAll.nameFn(e, focusName, allName),
+        point(ExistenceOfAll.nameFn(e, focusName, allName))(
           os => ExistenceOfAll(e(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
       }
 
@@ -364,8 +352,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def equalBy(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Show[A], ev: EqualIncludingOrder.Failure[A] => E) = {
         val d = EqualIncludingOrder(positive)
-        point(
-          NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])),
+        point(NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])))(
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
 
@@ -377,7 +364,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
         val d = EqualIgnoringOrder(positive)
         point(
           NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])
-            .andThen(_.map(_ + " (ignoring order)"))),
+            .andThen(_.map(_ + " (ignoring order)"))))(
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
 
@@ -421,8 +408,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def not = new AssertOps(!positive)
 
       def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
-        point(
-          NameFn(NameUtils.equalFn(focusName, positive, i => fe(i))),
+        point(NameFn(NameUtils.equalFn(focusName, positive, i => fe(i))))(
           os => f.expectMaybeEqual(positive, ex = fe(os), actual = fa(os)))
     }
   }
