@@ -11,7 +11,7 @@ object TestState extends Build {
   object Ver {
     final val Scala211      = "2.11.8"
     final val Acyclic       = "0.1.4"
-    final val MTest         = "0.3.1"
+    final val MTest         = "0.4.3"
     final val MacroParadise = "2.1.0"
     final val KindProjector = "0.7.1"
     final val Nyaya         = "0.7.0"
