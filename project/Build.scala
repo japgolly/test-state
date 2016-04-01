@@ -19,6 +19,7 @@ object TestState extends Build {
     final val KindProjector = "0.7.1"
     final val Nyaya         = "0.7.0"
     final val Scalaz        = "7.2.1"
+    final val Cats          = "0.4.1"
   }
 
   def scalacFlags = Seq(
@@ -97,12 +98,12 @@ object TestState extends Build {
   lazy val rootJVM =
     Project("JVM", file(".rootJVM"))
       .configure(commonSettings, preventPublication)
-      .aggregate(coreJVM, coreMacrosJVM, scalazJVM)
+      .aggregate(coreJVM, coreMacrosJVM, scalazJVM, catsJVM)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
       .configure(commonSettings, preventPublication)
-      .aggregate(coreJS, coreMacrosJS, scalazJS)
+      .aggregate(coreJS, coreMacrosJS, scalazJS, catsJS)
 
   lazy val coreMacrosJVM = coreMacros.jvm
   lazy val coreMacrosJS  = coreMacros.js
@@ -130,4 +131,13 @@ object TestState extends Build {
     .configure(utestSettings)
     .settings(
       libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
+
+  lazy val catsJVM = cats.jvm
+  lazy val catsJS  = cats.js
+  lazy val cats = crossProject
+    .bothConfigure(commonSettings, publicationSettings)
+    .dependsOn(core)
+    .configure(utestSettings)
+    .settings(
+      libraryDependencies += "org.typelevel" %%% "cats" % Ver.Cats)
 }
