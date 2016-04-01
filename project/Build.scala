@@ -83,10 +83,10 @@ object TestState extends Build {
 
   def utestSettings: CPE = _
     .settings(
-      libraryDependencies  += "com.lihaoyi" %%% "utest" % Ver.MTest,
-      testFrameworks       += new TestFramework("utest.runner.Framework"))
+      libraryDependencies += "com.lihaoyi" %%% "utest" % Ver.MTest % "test",
+      testFrameworks      += new TestFramework("utest.runner.Framework"))
     .jsSettings(
-      jsEnv in Test        := NodeJSEnv().value)
+      jsEnv in Test := NodeJSEnv().value)
 
   override def rootProject = Some(root)
 
