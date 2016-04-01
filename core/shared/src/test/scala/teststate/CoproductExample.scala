@@ -16,7 +16,7 @@ object CoproductExample {
     val txt = *.focus("Txt value").obsAndState(identity, identity)
 
     def add(a: String) =
-      *.action("Add").act(_.ref.txt += a).updateState(_ + a)
+      *.action("Add")(_.ref.txt += a).updateState(_ + a)
         .addCheck(txt.assert.equal.beforeAndAfter)
 
     val test = Plan.action(add("x").times(2)).test(Observer(_.txt))
@@ -32,7 +32,7 @@ object CoproductExample {
     val num = *.focus("Number value").obsAndState(identity, identity)
 
     def add(a: Int) =
-      *.action("Add").act(_.ref.num += a).updateState(_ + a)
+      *.action("Add")(_.ref.num += a).updateState(_ + a)
         .addCheck(num.assert.equal.beforeAndAfter)
 
     val test = Plan.action(add(2).times(2)).test(Observer(_.num))
@@ -109,7 +109,7 @@ object CoproductExample {
       curType.assert.equal
 
     val swapTypes =
-      *.action("Swap types").act(_.ref.swap()).updateStateBy(i => i.state.copy(t = i.state.t.swap))
+      *.action("Swap types")(_.ref.swap()).updateStateBy(i => i.state.copy(t = i.state.t.swap))
 
     val actions: *.Action =
       testNum >> swapTypes >> testTxt

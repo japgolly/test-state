@@ -27,7 +27,7 @@ object RandomData {
     applyEndos(
       Gen.choose(
         *.emptyAction,
-        *.action("A").act(_ => ()))
+        *.action("A")(_ => ()))
     )(
       a => Sack.append(a, a),
       a => Sack.CoProduct("CoA", _ => a),

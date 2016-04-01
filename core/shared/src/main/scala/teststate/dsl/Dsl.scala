@@ -133,10 +133,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     new ActionB(actionName)
 
   final class ActionB(actionName: ANameFn) {
-    def act[U](f: ROS => F[U]): Action =
-      actTry(f.andThen(EM.map(_)(_ => None)))
+    def apply[U](f: ROS => F[U]): Action =
+      attempt(f.andThen(EM.map(_)(_ => None)))
 
-    def actTry(f: ROS => F[Option[E]]): Action =
+    def attempt(f: ROS => F[Option[E]]): Action =
       full(i => EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(i.state))))
 
     def update(f: ROS => F[S]): Action =
@@ -155,7 +155,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     print("Print <?>.", f)
 
   def print(name: => ANameFn, f: ROS => Any): Action =
-    action(name).act(i => EM.point {
+    action(name)(i => EM.point {
       println(f(i))
     })
 

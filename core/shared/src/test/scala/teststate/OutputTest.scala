@@ -9,13 +9,13 @@ object OutputTest extends TestSuite {
   val * = Dsl[Unit, Unit, Unit]
   import *.{emptyAction, emptyInvariant}
 
-  def mockAction(name: String) = *.action(name).act(_ => ())
+  def mockAction(name: String) = *.action(name)(_ => ())
   def mockPoint (name: String) = *.point(name)(_ => None)
   def mockAround(name: String) = *.around(name)(_ => ())((_, _) => None)
 
   val action    = mockAction("Press button.")
   val action2   = mockAction("Pull lever.")
-  val actionF   = *.action("Press button!").actTry(_ => Some("BUTTON'S BROKEN"))
+  val actionF   = *.action("Press button!").attempt(_ => Some("BUTTON'S BROKEN"))
   val actionG   = (action >> action2).group("Groupiness.")
   val actionGF1 = (actionF >> action2).group("Groupiness.")
   val actionGF2 = (action >> actionF).group("Groupiness.")
@@ -1072,7 +1072,7 @@ object OutputTest extends TestSuite {
         case class Obs(o: Int)
         val * = Dsl[Unit, Obs, State]
         val checkOSFail = *.focus("Evil").obsAndState(_.o, _.s).assert.equal
-        val action = *.action("Press button.").act(_ => ())
+        val action = *.action("Press button.")(_ => ())
         val r = Plan.action(action addCheck checkOSFail.after)
           .test(Observer watch Obs(777))
           .runU(State(666))
@@ -1090,7 +1090,7 @@ object OutputTest extends TestSuite {
     'existenceOfAround {
       var is = List(1, 2, 3)
       val * = Dsl[Unit, List[Int], Boolean]
-      val a = *.action("Remove 2").act(_ => is = List(1, 3)).updateState(_ => false)
+      val a = *.action("Remove 2")(_ => is = List(1, 3)).updateState(_ => false)
       val c = *.focus("X").collection(_.obs).assert.existenceOf(2)(_.state)
       val r = Plan.action(a addCheck c.beforeAndAfter).test(Observer watch is).runU(true)
       assertRun(r,

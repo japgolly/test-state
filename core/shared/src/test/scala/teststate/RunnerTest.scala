@@ -21,7 +21,7 @@ object RunnerTest extends TestSuite {
   def expectAt(n: Int) =
     (1 to n).map("A" + _).toVector
 
-  def a(n: Int) = *.action("A" + n).act(_.ref += "A" + n)
+  def a(n: Int) = *.action("A" + n)(_.ref += "A" + n)
     .addCheck(f.assert.equal(expectAt(n - 1)).before)
     .addCheck(f.assert.equal(expectAt(n)).after)
 
@@ -30,7 +30,7 @@ object RunnerTest extends TestSuite {
 //      a.addCheck(c assertAfter n.toVector)
 //  }
 
-  val nop = *.action("NOP").act(_ => ())
+  val nop = *.action("NOP")(_ => ())
 
   implicit val recoverToString: Recover[String] =
     Recover("Caught exception: " + _.toString)
@@ -71,7 +71,7 @@ object RunnerTest extends TestSuite {
     'failureReason {
       'action {
         val e = new RuntimeException("hurr")
-        val test = Plan.action(*.action("A").act(_ => throw e)).test(Observer(_.s)).stateless
+        val test = Plan.action(*.action("A")(_ => throw e)).test(Observer(_.s)).stateless
         val r = test.run(newState)
         r.failureReason match {
           case Some(Failure.WithCause(_, f)) => assert(e eq f)
@@ -80,7 +80,7 @@ object RunnerTest extends TestSuite {
       }
       'after {
         val e = new RuntimeException("hurr")
-        val test = Plan.action(*.action("A").act(_ => ()) +> *.test("x")(_ => throw e)).test(Observer(_.s)).stateless
+        val test = Plan.action(*.action("A")(_ => ()) +> *.test("x")(_ => throw e)).test(Observer(_.s)).stateless
         val r = test.run(newState)
         r.failureReason match {
           case Some(Failure.WithCause(_, f)) => assert(e eq f)
@@ -95,7 +95,7 @@ object RunnerTest extends TestSuite {
       def badPoint = *.point("OMG")(_ => sys error "Crash!")
 
       'action {
-        val test = Plan.action(*.action("A").act(_ => sys error "Crash!")).test(Observer(_.s)).stateless
+        val test = Plan.action(*.action("A")(_ => sys error "Crash!")).test(Observer(_.s)).stateless
         assertRun(test.run(newState),
           """
             |✘ A -- Caught exception: java.lang.RuntimeException: Crash!
@@ -183,7 +183,7 @@ object RunnerTest extends TestSuite {
           lazy val b: Boolean = ().asInstanceOf[Boolean]
         }
         val * = Dsl[Unit, Yar, Unit]
-        val a = *.action("NOP").act(_ => ())
+        val a = *.action("NOP")(_ => ())
           .addCheck(*.focus("Blah").value(_.obs.b).assert.change)
         val test = Plan.action(a).test(Observer watch new Yar).stateless
         val error = "<EXPECTED>"
@@ -207,7 +207,7 @@ object RunnerTest extends TestSuite {
       }
 
       'nextState {
-        val a = *.action("Merf").act(_ => ()).updateStateBy(_ => sys error "BERF")
+        val a = *.action("Merf")(_ => ()).updateStateBy(_ => sys error "BERF")
         val test = Plan.action(a).test(Observer(_.s)).stateless
         assertRun(test.run(newState),
           """
@@ -222,7 +222,7 @@ object RunnerTest extends TestSuite {
     'refByName {
       var i = 3
       val * = Dsl[Int, Unit, Unit]
-      val inc = *.action("inc").act(x => i = x.ref + 1)
+      val inc = *.action("inc")(x => i = x.ref + 1)
       val h = Plan.action(inc.times(4)).testU.stateless.run(i)
       assertEq(h.failure, None)
       assertEq(i, 7)
@@ -231,7 +231,7 @@ object RunnerTest extends TestSuite {
     'modS {
       var i = 9
       val * = Dsl[Unit, Int, Int]
-      val inc = *.action("inc").act(_ => i = i + 1)
+      val inc = *.action("inc")(_ => i = i + 1)
         .updateState(_ + 8)
         .updateStateBy(_.state - 3)
         .updateState(_ - 4)
@@ -243,7 +243,7 @@ object RunnerTest extends TestSuite {
     'skip {
       'action {
         var i = 0
-        val a = *.action("A").act(_ => i += 1).skip
+        val a = *.action("A")(_ => i += 1).skip
         val test = Plan.action(a: *.Action /* TODO What? */).test(Observer(_.s)).stateless
         test.run(newState)
         assertEq(i, 0)
@@ -271,7 +271,7 @@ object RunnerTest extends TestSuite {
       'invariant {
         var v = true
         val * = Dsl[Unit, Boolean, Boolean]
-        val a = *.action("A").act(_ => v = !v).updateState(!_)
+        val a = *.action("A")(_ => v = !v).updateState(!_)
         val i00 = *.test("IFF")(_ => true)
         val i11 = *.test("ITT")(_ => true)
         val i01 = *.test("IFT")(_ => false)

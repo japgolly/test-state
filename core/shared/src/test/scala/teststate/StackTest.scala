@@ -15,7 +15,7 @@ object StackTest extends TestSuite {
     val start = time
     val dsl = Dsl.full[F, Unit, Unit, Unit, String]
     val nop = EM.pure(())
-    val a = dsl.action("nop").act(_ => nop): dsl.Action
+    val a = dsl.action("nop")(_ => nop): dsl.Action
     val as = Iterator.fill(size)(a).reduce(_ >> _)
     val test = Plan.action(as).test(Observer.unit)
     val fh = test.run((), ())
