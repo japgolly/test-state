@@ -6,9 +6,17 @@ import Stats._
 
 case class Stats(performedActions: Int,
                  performedChecks: Int,
-                 totalTime: FiniteDuration)
+                 totalTime: FiniteDuration) {
+  def +(that: Stats): Stats =
+    Stats(
+      this.performedActions + that.performedActions,
+      this.performedChecks  + that.performedChecks,
+      this.totalTime        + that.totalTime)
+}
 
 object Stats {
+
+  def empty = Stats(0, 0, FiniteDuration(0, NANOSECONDS))
 
   class Mutable {
     var startTime, endTime = 0L

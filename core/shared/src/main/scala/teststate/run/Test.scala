@@ -64,6 +64,9 @@ object Plan {
   def apply[F[_], R, O, S, E](a: Actions[F, R, O, S, E], i: Invariants[O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
     new Plan(None, a, i)(em)
 
+  def empty[F[_], R, O, S, E](implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
+    apply[F, R, O, S, E](emptyAction, emptyInvariants)
+
   def action[F[_], R, O, S, E](a: Actions[F, R, O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
     apply(a, emptyInvariants)(em)
 

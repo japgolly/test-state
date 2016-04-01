@@ -8,6 +8,9 @@ object TestState extends Build {
 
   private val ghProject = "test-state"
 
+  private val publicationSettings =
+    Lib.publicationSettings(ghProject)
+
   object Ver {
     final val Scala211      = "2.11.8"
     final val Acyclic       = "0.1.4"
@@ -15,6 +18,7 @@ object TestState extends Build {
     final val MacroParadise = "2.1.0"
     final val KindProjector = "0.7.1"
     final val Nyaya         = "0.7.0"
+    final val Scalaz        = "7.2.1"
   }
 
   def scalacFlags = Seq(
@@ -81,7 +85,6 @@ object TestState extends Build {
       libraryDependencies  += "com.lihaoyi" %%% "utest" % Ver.MTest,
       testFrameworks       += new TestFramework("utest.runner.Framework"))
     .jsSettings(
-      scalaJSStage in Test := FastOptStage,
       jsEnv in Test        := NodeJSEnv().value)
 
   override def rootProject = Some(root)
@@ -89,23 +92,42 @@ object TestState extends Build {
   lazy val root =
     Project("root", file("."))
       .configure(commonSettings, preventPublication)
-      .aggregate(coreJVM, coreJS, coreMacrosJVM, coreMacrosJS)
+      .aggregate(rootJVM, rootJS)
+
+  lazy val rootJVM =
+    Project("JVM", file(".rootJVM"))
+      .configure(commonSettings, preventPublication)
+      .aggregate(coreJVM, coreMacrosJVM, scalazJVM)
+
+  lazy val rootJS =
+    Project("JS", file(".rootJS"))
+      .configure(commonSettings, preventPublication)
+      .aggregate(coreJS, coreMacrosJS, scalazJS)
 
   lazy val coreMacrosJVM = coreMacros.jvm
   lazy val coreMacrosJS  = coreMacros.js
   lazy val coreMacros = crossProject.in(file("core-macros"))
-    .bothConfigure(commonSettings, publicationSettings(ghProject), definesMacros)
+    .bothConfigure(commonSettings, publicationSettings, definesMacros)
     .configure(utestSettings)
 
   lazy val coreJVM = core.jvm
   lazy val coreJS  = core.js
   lazy val core = crossProject
-    .bothConfigure(commonSettings, publicationSettings(ghProject))
-    .configure(utestSettings)
+    .bothConfigure(commonSettings, publicationSettings)
     .dependsOn(coreMacros)
+    .configure(utestSettings)
     .settings(
       libraryDependencies ++= Seq(
         "com.github.japgolly.nyaya" %%% "nyaya-gen"  % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya" %%% "nyaya-prop" % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya % "test"))
+
+  lazy val scalazJVM = scalaz.jvm
+  lazy val scalazJS  = scalaz.js
+  lazy val scalaz = crossProject
+    .bothConfigure(commonSettings, publicationSettings)
+    .dependsOn(core)
+    .configure(utestSettings)
+    .settings(
+      libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
 }
