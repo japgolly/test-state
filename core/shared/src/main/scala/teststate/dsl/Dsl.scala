@@ -300,22 +300,22 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           os => d(focusFn(os)).map(ev))
       }
 
-      def containsAll[B <: A](queryNames: => String, query: OS => Set[B])(implicit sb: Show[B], ev: ContainsAll.Failure[B] => E) = {
+      def containsAll(queryNames: => String)(query: OS => Set[A])(implicit sb: Show[A], ev: ContainsAll.Failure[A] => E) = {
         val d = ContainsAll(positive)
         point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
       }
 
-      def containsAny[B >: A](queryNames: => String, query: OS => Set[B])(implicit sb: Show[B], ev: ContainsAny.Failure[B] => E) = {
+      def containsAny(queryNames: => String)(query: OS => Set[A])(implicit sb: Show[A], ev: ContainsAny.Failure[A] => E) = {
         val d = ContainsAny(positive)
         point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
       }
 
-      def containsNone[B >: A](queryNames: => String, query: OS => Set[B])(implicit sb: Show[B], ev: ContainsAny.Failure[B] => E) =
-        not.containsAny(queryNames, query)
+      def containsNone(queryNames: => String)(query: OS => Set[A])(implicit sb: Show[A], ev: ContainsAny.Failure[A] => E) =
+        not.containsAny(queryNames)(query)
 
-      def containsOnly[B >: A](queryNames: => String, query: OS => Set[B])(implicit sa: Show[A], ev: ContainsOnly.Failure[A] => E) = {
+      def containsOnly(queryNames: => String)(query: OS => Set[A])(implicit sa: Show[A], ev: ContainsOnly.Failure[A] => E) = {
         val d = ContainsOnly(positive)
         point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
@@ -337,9 +337,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
       def existenceOfAll(allName: => String)(all: A*)(expect: OS => Boolean)
                         (implicit sa: Show[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) =
-        existenceOfAllBy(allName, Function const all.toSet)(expect)
+        existenceOfAllBy(allName)(Function const all.toSet)(expect)
 
-      def existenceOfAllBy(allName: => String, all: OS => Set[A])(expect: OS => Boolean)
+      def existenceOfAllBy(allName: => String)(all: OS => Set[A])(expect: OS => Boolean)
                           (implicit sa: Show[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) = {
         val e = wrapExp1(expect)
         point(ExistenceOfAll.nameFn(e, focusName, allName))(
