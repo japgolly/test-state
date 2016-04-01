@@ -13,4 +13,3 @@
 
 * SJS module and/or DomZipper
 * React module
-* Nyaya module

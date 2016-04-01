@@ -98,12 +98,12 @@ object TestState extends Build {
   lazy val rootJVM =
     Project("JVM", file(".rootJVM"))
       .configure(commonSettings, preventPublication)
-      .aggregate(coreJVM, coreMacrosJVM, scalazJVM, catsJVM)
+      .aggregate(coreJVM, coreMacrosJVM, scalazJVM, catsJVM, nyayaJVM)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
       .configure(commonSettings, preventPublication)
-      .aggregate(coreJS, coreMacrosJS, scalazJS, catsJS)
+      .aggregate(coreJS, coreMacrosJS, scalazJS, catsJS, nyayaJS)
 
   lazy val coreMacrosJVM = coreMacros.jvm
   lazy val coreMacrosJS  = coreMacros.js
@@ -140,4 +140,15 @@ object TestState extends Build {
     .configure(utestSettings)
     .settings(
       libraryDependencies += "org.typelevel" %%% "cats" % Ver.Cats)
+
+  lazy val nyayaJVM = nyaya.jvm
+  lazy val nyayaJS  = nyaya.js
+  lazy val nyaya = crossProject
+    .bothConfigure(commonSettings, publicationSettings)
+    .dependsOn(core, scalaz)
+    .configure(utestSettings)
+    .settings(
+      libraryDependencies ++= Seq(
+        "com.github.japgolly.nyaya" %%% "nyaya-gen" % Ver.Nyaya,
+        "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya))
 }
