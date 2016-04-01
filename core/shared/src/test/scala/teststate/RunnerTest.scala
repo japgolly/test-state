@@ -260,7 +260,7 @@ object RunnerTest extends TestSuite {
       'action {
         var i = 0
         val c = *.point("X")(_ => {i += 1; None}).skip
-        val d = *.around("Y", _ => {i += 1; i})((_, _) => {i += 1; None}).skip
+        val d = *.around("Y")(_ => {i += 1; i})((_, _) => {i += 1; None}).skip
         val test = Plan.action(a(1) addCheck c.beforeAndAfter addCheck d).test(Observer(_.s)).stateless
         test.run(newState)
         assertEq(i, 0)

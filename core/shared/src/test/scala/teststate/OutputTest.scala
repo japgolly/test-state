@@ -11,7 +11,7 @@ object OutputTest extends TestSuite {
 
   def mockAction(name: String) = *.action(name).act(_ => ())
   def mockPoint (name: String) = *.point(name)(_ => None)
-  def mockAround(name: String) = *.around(name, _ => ())((_, _) => None)
+  def mockAround(name: String) = *.around(name)(_ => ())((_, _) => None)
 
   val action    = mockAction("Press button.")
   val action2   = mockAction("Pull lever.")
@@ -27,7 +27,7 @@ object OutputTest extends TestSuite {
   val checkPoint2  = mockPoint("Check more stuff.")
   val checkPointF  = *.point("Check failure.")(_ => Some("Shit broke!"))
   val checkAround  = mockAround("Button count increased.")
-  val checkAroundF = *.around("Button count increased.", _ => ())((_, _) => Some("2 != 3"))
+  val checkAroundF = *.around("Button count increased.")(_ => ())((_, _) => Some("2 != 3"))
 
   val checkOS = *.focus("Hurp").obsAndState(_ => 1, _ => 1).assert.equal
 
