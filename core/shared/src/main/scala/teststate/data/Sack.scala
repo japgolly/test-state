@@ -32,7 +32,11 @@ object Sack {
     override def isEmpty = false
   }
 
-  val empty = Product(Vector.empty)
+  val empty: Sack[Any, Nothing] =
+    Product(Vector.empty)
+
+  implicit val sackInstanceEmpty: Empty[Sack[Any, Nothing]] =
+    Empty(Sack.empty)
 
   def append[A, B](a: Sack[A, B], b: Sack[A, B]): Sack[A, B] =
     if (a.isEmpty)
@@ -86,6 +90,5 @@ object Sack {
       go(sack)
       sb.result()
     }
-
 }
 

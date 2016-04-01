@@ -2,11 +2,12 @@ package teststate.run
 
 import acyclic.file
 import scala.concurrent.duration._
-import Stats._
+import teststate.typeclass.Empty
 
 case class Stats(performedActions: Int,
                  performedChecks: Int,
                  totalTime: FiniteDuration) {
+
   def +(that: Stats): Stats =
     Stats(
       this.performedActions + that.performedActions,
@@ -17,6 +18,9 @@ case class Stats(performedActions: Int,
 object Stats {
 
   def empty = Stats(0, 0, FiniteDuration(0, NANOSECONDS))
+
+  implicit def emptyInstance: Empty[Stats] =
+    Empty(empty)
 
   class Mutable {
     var startTime, endTime = 0L

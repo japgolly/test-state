@@ -9,45 +9,17 @@ import Isomorphism._
 
 trait TestStateScalaz {
 
-  implicit def scalazMonoidPlan[F[_], R, O, S, E](implicit em: ExecutionModel[F]): Monoid[Plan[F, R, O, S, E]] = {
-    type A = Plan[F, R, O, S, E]
+  implicit def scalazMonoidMonoComposableEmpty[Op, A](implicit e: Empty[A], c: T.PolyComposable.Mono[Op, A]): Monoid[A] =
     new Monoid[A] {
-      override def zero                  = Plan.empty(em)
-      override def append(x: A, y: => A) = x >> y
+      override def zero                  = e.instance
+      override def append(x: A, y: => A) = c.compose(x, y)
     }
-  }
 
-  implicit def scalazMonoidActions[F[_], R, O, S, E]: Monoid[Actions[F, R, O, S, E]] = {
-    type A = Actions[F, R, O, S, E]
-    new Monoid[A] {
-      override def zero                  = emptyAction
-      override def append(x: A, y: => A) = x >> y
+  implicit lazy val scalazMonoidReportStats: Monoid[Report.Stats] =
+    new Monoid[Report.Stats] {
+      override def zero                                        = Report.Stats.empty
+      override def append(x: Report.Stats, y: => Report.Stats) = x + y
     }
-  }
-
-  implicit def scalazMonoidInvariants[O, S, E]: Monoid[Invariants[O, S, E]] = {
-    type A = Invariants[O, S, E]
-    new Monoid[A] {
-      override def zero                  = emptyInvariants
-      override def append(x: A, y: => A) = x & y
-    }
-  }
-
-  implicit def scalazMonoidPoints[O, S, E]: Monoid[Points[O, S, E]] = {
-    type A = Points[O, S, E]
-    new Monoid[A] {
-      override def zero                  = emptyPoints
-      override def append(x: A, y: => A) = x & y
-    }
-  }
-
-  implicit def scalazMonoidArounds[O, S, E]: Monoid[Arounds[O, S, E]] = {
-    type A = Arounds[O, S, E]
-    new Monoid[A] {
-      override def zero                  = emptyArounds
-      override def append(x: A, y: => A) = x & y
-    }
-  }
 
   implicit def scalazProfunctorFromTestState[M[_, _]](implicit p: T.Profunctor[M]): Profunctor[M] =
     new Profunctor[M] {
@@ -85,12 +57,6 @@ trait TestStateScalaz {
 
   implicit def scalazEqualToTestState[A](implicit e: Equal[A]): T.Equal[A] =
     T.Equal(e.equal)
-
-  implicit lazy val scalazMonoidReportStats: Monoid[Report.Stats] =
-    new Monoid[Report.Stats] {
-      override def zero                                        = Report.Stats.empty
-      override def append(x: Report.Stats, y: => Report.Stats) = x + y
-    }
 }
 
 object TestStateScalaz extends TestStateScalaz

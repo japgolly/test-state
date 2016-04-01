@@ -113,16 +113,16 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     Transformer.id[F, R, O, S, E]
 
   def emptyAction: Action =
-    Sack.empty
+    Empty.instance
 
   def emptyAround: Around =
-    Sack.empty
+    Empty.instance
 
   def emptyInvariant: Invariant =
-    Sack.empty
+    Empty.instance
 
   def emptyPlan: Plan =
-    Plan(emptyAction, emptyInvariant)(EM)
+    Empty.instance
 
   def emptyTest(observer: Observer[R, O, E])(implicit r: Recover[E]): Test =
     emptyPlan.test(observer)(r)

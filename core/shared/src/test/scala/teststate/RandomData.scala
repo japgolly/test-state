@@ -32,7 +32,7 @@ object RandomData {
       a => Sack.append(a, a),
       a => Sack.CoProduct("CoA", _ => a),
       a => a.group("AG"),
-      a => Action.liftInner(Action.SubTest(a, emptyInvariants))("ASub"),
+      a => Action.liftInner(Action.SubTest(a, *.emptyInvariant))("ASub"),
       a => a.skip
     )
 

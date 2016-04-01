@@ -65,13 +65,16 @@ object Plan {
     new Plan(None, a, i)(em)
 
   def empty[F[_], R, O, S, E](implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
-    apply[F, R, O, S, E](emptyAction, emptyInvariants)
+    apply[F, R, O, S, E](Empty.instance, Empty.instance)
+
+  implicit def emptyInstance[F[_], R, O, S, E](implicit em: ExecutionModel[F]): Empty[Plan[F, R, O, S, E]] =
+    Empty(empty)
 
   def action[F[_], R, O, S, E](a: Actions[F, R, O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
-    apply(a, emptyInvariants)(em)
+    apply(a, Empty.instance[Invariants[O, S, E]])(em)
 
   def invariants[F[_], R, O, S, E](i: Invariants[O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
-    apply[F, R, O, S, E](emptyAction, i)(em)
+    apply[F, R, O, S, E](Empty.instance, i)(em)
 
   implicit def planInstanceShow[F[_], R, O, S, E](implicit sa: Show[Actions[F, R, O, S, E]],
                                                            si: Show[Invariants[O, S, E]]): Show[Plan[F, R, O, S, E]] =

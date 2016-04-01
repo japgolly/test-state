@@ -1,7 +1,7 @@
 package teststate.core
 
 import acyclic.file
-import teststate.data.{Name, Sack}
+import teststate.data.Name
 import teststate.typeclass.{PolyComposable, Conditional, Show}
 
 trait CoreExports
@@ -23,12 +23,6 @@ trait CoreExports
   import Types._
   implicit def autoWidenChecksToInvariants[C[-_, _], A, E](c: CheckShapeA[C, A, E])(implicit t: ToInvariant[CheckShapeA, C]): CheckShapeA[Invariant, A, E] =
     t.toInvariant(c)
-
-  def emptyPoints    [E]: Points    [Any, Any, E] = Sack.empty
-  def emptyArounds   [E]: Arounds   [Any, Any, E] = Sack.empty
-  def emptyInvariants[E]: Invariants[Any, Any, E] = Sack.empty
-
-  def emptyAction[F[_], R, O, S, E]: Actions[F, R, O, S, E] = Sack.empty
 
   import teststate.data._
   implicit def checksInstanceShow[C[- _, _], A, E](implicit sc: Show[C[A, E]]): Show[CheckShapeA[C, A, E]] = {

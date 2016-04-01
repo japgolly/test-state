@@ -1,5 +1,6 @@
 package teststate
 
+import acyclic.file
 import teststate.data.Or
 
 trait Exports
@@ -19,6 +20,9 @@ trait Exports
 
   type ExecutionModel[M[_]] = teststate.typeclass.ExecutionModel[M]
   val ExecutionModel = teststate.typeclass.ExecutionModel
+
+  type Empty[+E] = teststate.typeclass.Empty[E]
+  val Empty = teststate.typeclass.Empty
 
   type Equal[E] = teststate.typeclass.Equal[E]
   val Equal = teststate.typeclass.Equal

@@ -10,45 +10,17 @@ import Exports._
 
 trait TestStateCats {
 
-  implicit def catsMonoidPlan[F[_], R, O, S, E](implicit em: ExecutionModel[F]): Monoid[Plan[F, R, O, S, E]] = {
-    type A = Plan[F, R, O, S, E]
+  implicit def catsMonoidMonoComposableEmpty[Op, A](implicit e: Empty[A], c: T.PolyComposable.Mono[Op, A]): Monoid[A] =
     new Monoid[A] {
-      override def empty               = Plan.empty(em)
-      override def combine(x: A, y: A) = x >> y
+      override def empty               = e.instance
+      override def combine(x: A, y: A) = c.compose(x, y)
     }
-  }
 
-  implicit def catsMonoidActions[F[_], R, O, S, E]: Monoid[Actions[F, R, O, S, E]] = {
-    type A = Actions[F, R, O, S, E]
-    new Monoid[A] {
-      override def empty               = emptyAction
-      override def combine(x: A, y: A) = x >> y
+  implicit lazy val catsMonoidReportStats: Monoid[Report.Stats] =
+    new Monoid[Report.Stats] {
+      override def empty                                     = Report.Stats.empty
+      override def combine(x: Report.Stats, y: Report.Stats) = x + y
     }
-  }
-
-  implicit def catsMonoidInvariants[O, S, E]: Monoid[Invariants[O, S, E]] = {
-    type A = Invariants[O, S, E]
-    new Monoid[A] {
-      override def empty               = emptyInvariants
-      override def combine(x: A, y: A) = x & y
-    }
-  }
-
-  implicit def catsMonoidPoints[O, S, E]: Monoid[Points[O, S, E]] = {
-    type A = Points[O, S, E]
-    new Monoid[A] {
-      override def empty               = emptyPoints
-      override def combine(x: A, y: A) = x & y
-    }
-  }
-
-  implicit def catsMonoidArounds[O, S, E]: Monoid[Arounds[O, S, E]] = {
-    type A = Arounds[O, S, E]
-    new Monoid[A] {
-      override def empty               = emptyArounds
-      override def combine(x: A, y: A) = x & y
-    }
-  }
 
   implicit def catsProfunctorFromTestState[M[_, _]](implicit p: T.Profunctor[M]): Profunctor[M] =
     new Profunctor[M] {
@@ -74,12 +46,6 @@ trait TestStateCats {
 
   implicit def catsEqualToTestState[A](implicit e: Eq[A]): Equal[A] =
     Equal(e.eqv)
-
-  implicit lazy val catsMonoidReportStats: Monoid[Report.Stats] =
-    new Monoid[Report.Stats] {
-      override def empty                                     = Report.Stats.empty
-      override def combine(x: Report.Stats, y: Report.Stats) = x + y
-    }
 }
 
 object TestStateCats extends TestStateCats
