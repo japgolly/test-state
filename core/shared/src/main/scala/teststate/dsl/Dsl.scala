@@ -22,7 +22,7 @@ object Dsl {
 
   // TODO Rename DSL types like {Point,Around}{,s}, etc
   // TODO Decide pluralisation everywhere (type aliases, case class params/methods, etc)
-  trait Types[F[_], R, O, S, E] {
+  trait Types[F[_], R, O, S, E] extends Any {
     final type OS                   = teststate.data.OS[O, S]
     final type ROS                  = teststate.data.ROS[R, O, S]
     final type ANameFn              = teststate.data.NameFn[ROS]
@@ -70,23 +70,23 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     around(name)(identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
 
-  def chooseInvariant   (n: Name)(f: OS => Invariant)     : Invariant = choose(n, f)
-  def tryChooseInvariant(n: Name)(f: OS => E Or Invariant): Invariant = tryChoose(n, f)
+  def chooseInvariant   (n: CNameFn)(f: OS => Invariant)     : Invariant = choose(n, f)
+  def tryChooseInvariant(n: CNameFn)(f: OS => E Or Invariant): Invariant = tryChoose(n, f)
 
-  def choosePoint   (n: Name)(f: OS => Point)     : Point = choose(n, f)
-  def tryChoosePoint(n: Name)(f: OS => E Or Point): Point = tryChoose(n, f)
+  def choosePoint   (n: CNameFn)(f: OS => Point)     : Point = choose(n, f)
+  def tryChoosePoint(n: CNameFn)(f: OS => E Or Point): Point = tryChoose(n, f)
 
-  def chooseAround   (n: Name)(f: OS => Around)     : Around = choose(n, f)
-  def tryChooseAround(n: Name)(f: OS => E Or Around): Around = tryChoose(n, f)
+  def chooseAround   (n: CNameFn)(f: OS => Around)     : Around = choose(n, f)
+  def tryChooseAround(n: CNameFn)(f: OS => E Or Around): Around = tryChoose(n, f)
 
-  def chooseAction   (n: Name)(f: ROS => Action)     : Action = choose(n, f)
-  def tryChooseAction(n: Name)(f: ROS => E Or Action): Action = tryChoose(n, f)
+  def chooseAction   (n: ANameFn)(f: ROS => Action)     : Action = choose(n, f)
+  def tryChooseAction(n: ANameFn)(f: ROS => E Or Action): Action = tryChoose(n, f)
 
-  private def choose[A, B](name: Name, f: A => Sack[A, B]): Sack[A, B] =
+  private def choose[A, B](name: NameFn[A], f: A => Sack[A, B]): Sack[A, B] =
     Sack.CoProduct(name, f)
 
-  private def tryChoose[A, B](name: Name, f: A => E Or SackE[A, B, E]): SackE[A, B, E] =
-    Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name, Failure NoCause e))))
+  private def tryChoose[A, B](name: NameFn[A], f: A => E Or SackE[A, B, E]): SackE[A, B, E] =
+    Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name(None), Failure NoCause e))))
 
 
   def focus(focusName: => String) =

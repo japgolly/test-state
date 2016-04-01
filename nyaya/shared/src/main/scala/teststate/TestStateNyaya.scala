@@ -14,9 +14,12 @@ trait TestStateNyaya {
 
 object TestStateNyaya extends TestStateNyaya {
 
-  final class DslNyayaOps[F[_], R, O, S, E](private val dsl: Dsl[F, R, O, S, E]) extends AnyVal {
-    def genActions(name: NameFn[ROS[R, O, S]])(g: Gen[Actions[F, R, O, S, E]])(implicit s: Settings): Actions[F, R, O, S, E] =
+  final class DslNyayaOps[F[_], R, O, S, E](private val dsl: Dsl[F, R, O, S, E]) extends AnyVal with Dsl.Types[F, R, O, S, E] {
+    def genActions(name: ANameFn)(g: Gen[Action])(implicit s: Settings): Action =
       TestStateNyaya.genActions(g)(name)(s)
+
+    def genActionsBy(name: ANameFn)(g: ROS => Gen[Action])(implicit s: Settings): Action =
+      dsl.chooseAction(name)(i => genActions(name)(g(i))(s))
   }
 
   def genActions[F[_], R, O, S, E](g: Gen[Actions[F, R, O, S, E]])(name: NameFn[ROS[R, O, S]])(implicit s: Settings): Actions[F, R, O, S, E] =
