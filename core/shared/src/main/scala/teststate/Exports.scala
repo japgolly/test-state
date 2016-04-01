@@ -7,6 +7,7 @@ trait Exports
   extends core.CoreExports
      with core.CoreExports2
      with core.CoreExports3
+     with typeclass.Empty.Ops
      with typeclass.Equal.Implicits
      with run.RunImplicits {
 

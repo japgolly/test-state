@@ -7,7 +7,6 @@
 * Action to log O and/or S.
 * Around-Invariant through coproduct that isn't consistent before/after action.
 * Rename `S` for `State`. Might be confusing that it isn't the state being tested.
-* Add `Action >> Option Action` etc?
 * Fix char/string Show instances.
 * Rename to testate
 

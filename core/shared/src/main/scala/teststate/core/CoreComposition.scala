@@ -32,7 +32,7 @@ object CoreComposition {
 
   trait Implicits extends P0 {
 
-    implicit def checksMonoComposable[A, B]: PolyComposable.Mono[AndOp, Sack[A, B]] =
+    implicit def checksMonoComposable[C[-_, _], A, E]: PolyComposable.Mono[AndOp, CheckShapeA[C, A, E]] =
       PolyComposable(Sack.append)
 
     implicit def checksCanAnd[C[-_, _], A, B]: Can[AndOp, CheckShapeA[C, A, B]] = Can

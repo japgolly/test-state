@@ -53,6 +53,13 @@ object PolyComposable {
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  final class MonoComposableTraversableOnceOps[C[x] <: TraversableOnce[x], Op, A](as: C[A], c: Mono[Op, A]) {
+    def combine(implicit empty: Empty[A]): A =
+      as.foldLeft(empty.instance)(c.compose)
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   sealed trait Can[Op, A]
   @inline def Can[Op, A] = null.asInstanceOf[Can[Op, A]]
 
@@ -60,6 +67,9 @@ object PolyComposable {
     implicit def toPolyComposableAndOps  [A](a: A)(implicit w: Can[AndOp  , A]): AndOps  [A] = new AndOps  (a)
     implicit def toPolyComposableSeqOps  [A](a: A)(implicit w: Can[SeqOp  , A]): SeqOps  [A] = new SeqOps  (a)
     implicit def toPolyComposableHPSeqOps[A](a: A)(implicit w: Can[HPSeqOp, A]): HPSeqOps[A] = new HPSeqOps(a)
+
+    implicit def toMonoComposableTraversableOnceOps[C[x] <: TraversableOnce[x], Op, A](as: C[A])(implicit c: Mono[Op, A]): MonoComposableTraversableOnceOps[C, Op, A] =
+      new MonoComposableTraversableOnceOps(as, c)
   }
 
   trait Implicits extends ToOps

@@ -92,6 +92,11 @@ abstract class ImplicitsTest extends AbstractTest {
   test2[Points    [O, S, E], Invariants[O, S, E]](_ & _).expect[Invariants[O, S, E]]
   test2[Arounds   [O, S, E], Invariants[O, S, E]](_ & _).expect[Invariants[O, S, E]]
 
+  // combine
+  test[List[Points    [O, S, E]]](_.combine).expect[Points    [O, S, E]]
+  test[List[Arounds   [O, S, E]]](_.combine).expect[Arounds   [O, S, E]]
+  test[List[Invariants[O, S, E]]](_.combine).expect[Invariants[O, S, E]]
+
   // fake subtyping
   test[Points [O, S, E]](c => c: Invariants[O, S, E])
   test[Arounds[O, S, E]](c => c: Invariants[O, S, E])
@@ -105,6 +110,11 @@ abstract class ImplicitsTest extends AbstractTest {
   test[Points    [O, S, E]](_ rename "").expectSelf
   test[Arounds   [O, S, E]](_ rename "").expectSelf
   test[Invariants[O, S, E]](_ rename "").expectSelf
+
+  // orEmpty
+  test[Option[Points    [O, S, E]]](_.orEmpty).expect[Points    [O, S, E]]
+  test[Option[Arounds   [O, S, E]]](_.orEmpty).expect[Arounds   [O, S, E]]
+  test[Option[Invariants[O, S, E]]](_.orEmpty).expect[Invariants[O, S, E]]
 
   // ===================================================================================================================
   // Actions
@@ -129,6 +139,9 @@ abstract class ImplicitsTest extends AbstractTest {
   testAA[Actions[F, R, O, S, E]](_ >> _).expect[Actions[F, R, O, S, E]]
   compileError("testAA[Actions[F, R, O, S, E]](_ +> _)")
 
+  // combine
+  test[List[Actions[F, R, O, S, E]]](_.combine).expect[Actions[F, R, O, S, E]]
+
   // >>
   compileError("test2[Actions[F, R, O, S, E], Points       [O, S, E]](_ >> _)")
   compileError("test2[Actions[F, R, O, S, E], Arounds      [O, S, E]](_ >> _)")
@@ -144,6 +157,9 @@ abstract class ImplicitsTest extends AbstractTest {
   compileError("test2[Actions[F, R, O, S, E], Invariants   [O, S, E]](_ +> _)")
   compileError("test2[Arounds      [O, S, E], Actions[F, R, O, S, E]](_ +> _)")
   compileError("test2[Invariants   [O, S, E], Actions[F, R, O, S, E]](_ +> _)")
+
+  // orEmpty
+  test[Option[Actions[F, R, O, S, E]]](_.orEmpty).expect[Actions[F, R, O, S, E]]
 
   // ===================================================================================================================
   // Transformers

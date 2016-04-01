@@ -25,7 +25,7 @@ object TestStateNyaya extends TestStateNyaya {
       .map(_.group("?")) // TODO .groupIfNotGrouped
       .zipWithIndex
       .map(x => x._1.nameMod(n => s"[${x._2 + 1}/${s.sampleSize.value}] ${n.value}"))
-      .foldLeft(Empty.instance[Actions[F, R, O, S, E]])(_ >> _) // TODO Add flatten action, checks, etc
+      .combine
       .group(name)
 
 }
