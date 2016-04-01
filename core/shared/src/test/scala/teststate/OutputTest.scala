@@ -115,7 +115,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 2 checks.
           """.stripMargin)
 
-        'coproduct - t(*.chooseInvariant("Who knows?!", _ => checkPoint))(
+        'coproduct - t(*.chooseInvariant("Who knows?!")(_ => checkPoint))(
           """
             |✓ Initial state.
             |  ✓ Check stuff.
@@ -147,7 +147,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 2 checks.
           """.stripMargin)
 
-        'coproduct - t(*.tryChooseInvariant("Who knows?!", _ => Left("Computer says no.")))(
+        'coproduct - t(*.tryChooseInvariant("Who knows?!")(_ => Left("Computer says no.")))(
           """
             |✘ Initial state.
             |  ✘ Who knows?! -- Computer says no.

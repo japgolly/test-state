@@ -190,7 +190,7 @@ abstract class ImplicitsTest extends AbstractTest {
     val i2: Invariants[O2, S2, E2]
     val i3: Invariants[O3, S3, E3]
 
-    val i = dsl.chooseInvariant("blah", _.obs.int match {
+    val i = dsl.chooseInvariant("blah")(_.obs.int match {
       case 2 => i2.lift
       case 3 => i3.lift
       case _ => dsl.emptyInvariant

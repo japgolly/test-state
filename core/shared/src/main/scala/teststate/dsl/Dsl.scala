@@ -70,17 +70,17 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     around(name)(identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
 
-  def chooseInvariant   (n: Name, f: OS => Invariant)     : Invariant = choose(n, f)
-  def tryChooseInvariant(n: Name, f: OS => E Or Invariant): Invariant = tryChoose(n, f)
+  def chooseInvariant   (n: Name)(f: OS => Invariant)     : Invariant = choose(n, f)
+  def tryChooseInvariant(n: Name)(f: OS => E Or Invariant): Invariant = tryChoose(n, f)
 
-  def choosePoint   (n: Name, f: OS => Point)     : Point = choose(n, f)
-  def tryChoosePoint(n: Name, f: OS => E Or Point): Point = tryChoose(n, f)
+  def choosePoint   (n: Name)(f: OS => Point)     : Point = choose(n, f)
+  def tryChoosePoint(n: Name)(f: OS => E Or Point): Point = tryChoose(n, f)
 
-  def chooseAround   (n: Name, f: OS => Around)     : Around = choose(n, f)
-  def tryChooseAround(n: Name, f: OS => E Or Around): Around = tryChoose(n, f)
+  def chooseAround   (n: Name)(f: OS => Around)     : Around = choose(n, f)
+  def tryChooseAround(n: Name)(f: OS => E Or Around): Around = tryChoose(n, f)
 
-  def chooseAction   (n: Name, f: ROS => Action)     : Action = choose(n, f)
-  def tryChooseAction(n: Name, f: ROS => E Or Action): Action = tryChoose(n, f)
+  def chooseAction   (n: Name)(f: ROS => Action)     : Action = choose(n, f)
+  def tryChooseAction(n: Name)(f: ROS => E Or Action): Action = tryChoose(n, f)
 
   private def choose[A, B](name: Name, f: A => Sack[A, B]): Sack[A, B] =
     Sack.CoProduct(name, f)

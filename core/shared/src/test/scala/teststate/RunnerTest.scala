@@ -148,7 +148,7 @@ object RunnerTest extends TestSuite {
       }
 
       'coproduct - {
-        val test = Plan(nop, *.chooseInvariant("Who knows?!", _ => sys error "NO!")).test(Observer(_.s)).stateless
+        val test = Plan(nop, *.chooseInvariant("Who knows?!")(_ => sys error "NO!")).test(Observer(_.s)).stateless
         assertRun(test.run(newState),
         """
           |✘ Initial state.
@@ -276,7 +276,7 @@ object RunnerTest extends TestSuite {
         val i11 = *.test("ITT")(_ => true)
         val i01 = *.test("IFT")(_ => false)
         val i10 = *.test("ITF")(_ => false)
-        val i = *.chooseInvariant("I", x => (x.obs, x.state) match {
+        val i = *.chooseInvariant("I")(x => (x.obs, x.state) match {
           case (true,  true ) => i11
           case (false, false) => i00
           case (true , false) => i10
