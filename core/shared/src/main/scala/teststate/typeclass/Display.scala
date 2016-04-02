@@ -1,6 +1,7 @@
 package teststate.typeclass
 
 import acyclic.file
+import teststate.data.{Name, NameFn}
 
 final class Display[A](private val display: A => String) extends AnyVal {
   def apply(a: A): String =
@@ -33,6 +34,9 @@ object Display {
 
   def apply[A](f: A => String): Display[A] =
     new Display(f)
+
+  def by[A, B](f: A => B)(implicit d: Display[B]): Display[A] =
+    new Display(d.display compose f)
 
   def byToString[A]: Display[A] =
     Display(_.toString)
@@ -93,6 +97,12 @@ object Display {
         sb append '\''
         ()
       }
+
+    implicit def displayName: Display[Name] =
+      Display(_.value)
+
+    implicit def displayNameFn[A]: Display[NameFn[A]] =
+      Display.by(_(None))
 
     implicit def displayOption[A](implicit display: Display[A]): Display[Option[A]] =
       Display {
