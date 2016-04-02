@@ -88,14 +88,20 @@ final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](p
     domAs[D2].map(d =>
       new DomZipper(prevLayers, curLayer.copy(dom = d), htmlScrub))
 
-  def asHtml: Out[DomZipper[html.Element, Next, Out]] =
-    as[html.Element]
+  def asHtml: Out[DomZipper[html.Element, html.Element, Out]] =
+    as[html.Element].map(_.withHtmlChildren)
 
   def forceAs[D2 <: Base]: Out[DomZipper[D2, Next, Out]] =
     this.asInstanceOf[Out[DomZipper[D2, Next, Out]]]
 
-  def widenChildren[A >: Next <: NextBase]: DomZipper[D, A, Out] =
+  def forceChildren[A <: NextBase]: DomZipper[D, A, Out] =
     new DomZipper(prevLayers, curLayer, htmlScrub)
+
+  def widenChildren[A >: Next <: NextBase]: DomZipper[D, A, Out] =
+    forceChildren
+
+  def withHtmlChildren: DomZipper[D, html.Element, Out] =
+    forceChildren
 
   // =======
   // Descent
