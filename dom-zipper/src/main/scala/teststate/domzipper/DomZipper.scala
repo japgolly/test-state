@@ -88,6 +88,9 @@ final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](p
   def forceAs[D2 <: Base]: Out[DomZipper[D2, Next, Out]] =
     this.asInstanceOf[Out[DomZipper[D2, Next, Out]]]
 
+  def narrowChildren[A <: Next]: DomZipper[D, A, Out] =
+    new DomZipper(prevLayers, curLayer, htmlScrub)
+
   // =======
   // Descent
   // =======
@@ -180,11 +183,11 @@ final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](p
     selectedOption.map(_.map(_.text))
 
   private def collect[C[_]](sel: String, c: Container[C, Out]) =
-    new Collector[C, Next, Out](this, sel, c)
+    new Collector[C, Next, Next, Out](this, sel, c)
 
-  def collect01(sel: String): Collector[Option, Next, Out] = collect(sel, new Container01)
-  def collect0n(sel: String): Collector[Vector, Next, Out] = collect(sel, new Container0N)
-  def collect1n(sel: String): Collector[Vector, Next, Out] = collect(sel, new Container1N)
+  def collect01(sel: String): Collector[Option, Next, Next, Out] = collect(sel, new Container01)
+  def collect0n(sel: String): Collector[Vector, Next, Next, Out] = collect(sel, new Container0N)
+  def collect1n(sel: String): Collector[Vector, Next, Next, Out] = collect(sel, new Container1N)
 
   def exists(sel: String): Boolean =
     collect0n(sel).nonEmpty

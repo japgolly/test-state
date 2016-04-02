@@ -5,10 +5,10 @@ import Collector._
 import DomZipper._
 import ErrorHandler.ErrorHandlerResultOps
 
-final class Collector[C[_], D <: NextBase, Out[_]](from: DomZipper[_, D, Out],
-                                                   sel: String,
-                                                   cont: Container[C, Out])
-                                                  (implicit h: ErrorHandler[Out]){
+final class Collector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
+                                                                 sel: String,
+                                                                 cont: Container[C, Out])
+                                                                (implicit h: ErrorHandler[Out]){
 
   def isEmpty: Boolean =
     from.directSelect(sel).isEmpty
@@ -16,11 +16,11 @@ final class Collector[C[_], D <: NextBase, Out[_]](from: DomZipper[_, D, Out],
   def nonEmpty: Boolean =
     !isEmpty
 
-  def as[DD <: D]: Collector[C, DD, Out] =
-    this.asInstanceOf[Collector[C, DD, Out]]
+  def as[DD <: D]: Collector[C, DD, Next, Out] =
+    this.asInstanceOf[Collector[C, DD, Next, Out]]
 
-  def asHtml(implicit ev: html.Element <:< D): Collector[C, html.Element, Out] =
-    this.asInstanceOf[Collector[C, html.Element, Out]]
+  def asHtml(implicit ev: html.Element <:< D): Collector[C, html.Element, html.Element, Out] =
+    this.asInstanceOf[Collector[C, html.Element, html.Element, Out]]
 
   def doms: Out[C[D]] = {
     val e1: Out[C[Element]] = cont(sel, from.directSelect(sel))
@@ -28,14 +28,17 @@ final class Collector[C[_], D <: NextBase, Out[_]](from: DomZipper[_, D, Out],
     e2
   }
 
-  def zippers: Out[C[DomZipper[D, D, Out]]] =
-    doms.map(cont.map(_)(d => from.addLayer(Layer("collect", sel, d))))
+  private def addLayer(d: D): DomZipper[D, Next, Out] =
+    from.addLayer(Layer("collect", sel, d))
+
+  def zippers: Out[C[DomZipper[D, Next, Out]]] =
+    doms.map(cont.map(_)(addLayer))
 
   def mapDoms[A](f: D => A): Out[C[A]] =
     doms.map(cont.map(_)(f))
 
-  def mapZippers[A](f: DomZipper[D, D, Out] => A): Out[C[A]] =
-    mapDoms(d => f(from.addLayer(Layer("collect", sel, d))))
+  def mapZippers[A](f: DomZipper[D, Next, Out] => A): Out[C[A]] =
+    mapDoms(d => f(addLayer(d)))
 
   def outerHTMLs[A]: Out[C[String]] = mapZippers(_.outerHTML)
   def innerHTMLs[A]: Out[C[String]] = mapZippers(_.innerHTML)
