@@ -1,6 +1,7 @@
 package teststate.domzipper
 
-import org.scalajs.dom.{Element, Node, html, window}
+import org.scalajs.dom
+import org.scalajs.dom.{html, window}
 import scala.reflect.ClassTag
 import scala.scalajs.js
 import DomZipper._
@@ -9,10 +10,11 @@ import ErrorHandler._
 
 object DomZipper {
 
-  type Base = Node
-  type NextBase = Element
+  type Base     = dom.Node
+  type NextBase = dom.Element
+  type Root     = html.Document
 
-  case class CssSelEngine(run: (String, Node) => CssSelResult) extends AnyVal
+  case class CssSelEngine(run: (String, dom.Node) => CssSelResult) extends AnyVal
 
   type CssSelResult = js.Array[NextBase]
 
@@ -39,7 +41,7 @@ object DomZipper {
   private val rootLayer = Layer("window.document", "", window.document)
 
   class Constructors[Next <: NextBase, Out[_]](implicit h: ErrorHandler[Out]) {
-    def root(implicit $: CssSelEngine): DomZipper[html.Document, Next, Out] =
+    def root(implicit $: CssSelEngine): DomZipper[Root, Next, Out] =
       new DomZipper(Vector.empty, rootLayer, idS)($, h)
   }
 }
