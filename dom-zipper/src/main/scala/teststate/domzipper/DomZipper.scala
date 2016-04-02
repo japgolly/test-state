@@ -43,6 +43,12 @@ object DomZipper {
   class Constructors[Next <: NextBase, Out[_]](implicit h: ErrorHandler[Out]) {
     def root(implicit $: CssSelEngine): DomZipper[Root, Next, Out] =
       new DomZipper(Vector.empty, rootLayer, idS)($, h)
+
+    def apply[D <: Base](dom: D)(implicit $: CssSelEngine): DomZipper[D, Next, Out] =
+      apply("<provided>", dom)
+
+    def apply[D <: Base](name: String, dom: D)(implicit $: CssSelEngine): DomZipper[D, Next, Out] =
+      new DomZipper(Vector.empty, Layer(name, "", dom), idS)($, h)
   }
 }
 
