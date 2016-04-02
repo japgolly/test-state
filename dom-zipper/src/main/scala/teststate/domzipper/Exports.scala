@@ -19,6 +19,9 @@ trait Exports {
   type HtmlDomZipper               = HtmlDomZipperAt[html.Element]
   type HtmlDomZipperRoot           = HtmlDomZipperAt[Root]
   val  HtmlDomZipper               = new DZ.Constructors[html.Element, Id]()(Throw)
+
+  implicit def domZipperNextCovariance[D <: Base, A <: NextBase, B >: A <: NextBase, Out[_]](z: DZ[D, A, Out]): DZ[D, B, Out] =
+    z.widenChildren
 }
 
 object Exports extends Exports

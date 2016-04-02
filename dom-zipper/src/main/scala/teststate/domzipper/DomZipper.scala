@@ -94,7 +94,7 @@ final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](p
   def forceAs[D2 <: Base]: Out[DomZipper[D2, Next, Out]] =
     this.asInstanceOf[Out[DomZipper[D2, Next, Out]]]
 
-  def narrowChildren[A <: Next]: DomZipper[D, A, Out] =
+  def widenChildren[A >: Next <: NextBase]: DomZipper[D, A, Out] =
     new DomZipper(prevLayers, curLayer, htmlScrub)
 
   // =======
