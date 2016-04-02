@@ -39,12 +39,12 @@ final class Collector[C[_], Next <: NextBase, Out[_]](from: DomZipper[_, Next, O
 object Collector {
 
   trait Container[C[_], Out[_]] {
-    def apply(sel: String, es: CssSelLookupResult): Out[C[Element]]
+    def apply(sel: String, es: CssSelResult): Out[C[Element]]
     def map[A, B](c: C[A])(f: A => B): C[B]
   }
 
   final class Container01[Out[_]](implicit h: ErrorHandler[Out]) extends Container[Option, Out] {
-    override def apply(sel: String, es: CssSelLookupResult) =
+    override def apply(sel: String, es: CssSelResult) =
       es.length match {
         case 0 => h pass None
         case 1 => h pass Some(es.head)
@@ -55,14 +55,14 @@ object Collector {
   }
 
   final class Container0N[Out[_]](implicit h: ErrorHandler[Out]) extends Container[Vector, Out] {
-    override def apply(sel: String, es: CssSelLookupResult) =
+    override def apply(sel: String, es: CssSelResult) =
       h pass es.toVector
     override def map[A, B](c: Vector[A])(f: A => B) =
       c map f
   }
 
   final class Container1N[Out[_]](implicit h: ErrorHandler[Out]) extends Container[Vector, Out] {
-    override def apply(sel: String, es: CssSelLookupResult) =
+    override def apply(sel: String, es: CssSelResult) =
       if (es.isEmpty)
         h fail s"No matches found for: $sel"
       else

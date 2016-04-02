@@ -12,8 +12,9 @@ object DomZipper {
   type Base = Node
   type NextBase = Element
 
-  case class CssSelLookup(run: (String, Node) => CssSelLookupResult) extends AnyVal
-  type CssSelLookupResult = js.Array[NextBase]
+  case class CssSelEngine(run: (String, Node) => CssSelResult) extends AnyVal
+
+  type CssSelResult = js.Array[NextBase]
 
   def displayNameAndSel(name: String, sel: String): String =
     (Option(name).filter(_.nonEmpty), Option(sel).filter(_.nonEmpty)) match {
@@ -38,14 +39,14 @@ object DomZipper {
   private val rootLayer = Layer("window.document", "", window.document)
 
   class Constructors[Next <: NextBase, Out[_]](implicit h: ErrorHandler[Out]) {
-    def root(implicit $: CssSelLookup): DomZipper[html.Document, Next, Out] =
+    def root(implicit $: CssSelEngine): DomZipper[html.Document, Next, Out] =
       new DomZipper(Vector.empty, rootLayer, idS)($, h)
   }
 }
 
 /** DOM Zipper.
   *
-  * @param $         The DOM query engine. Either jQuery or Sizzle.
+  * @param $         The CSS selector engine. Usually either jQuery or Sizzle.
   * @param h         The error handler.
   * @param htmlScrub Arbitrary preprocessor applied before returning any HTML text.
   * @tparam D        The type of the current DOM focus.
@@ -55,7 +56,7 @@ object DomZipper {
 final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](prevLayers: Vector[Layer[Base]],
                                                                                curLayer  : Layer[D],
                                                                                htmlScrub : String => String)
-                                                                              (implicit $: CssSelLookup,
+                                                                              (implicit $: CssSelEngine,
                                                                                         h: ErrorHandler[Out]) {
 
   private implicit def autoPass[A](a: A): Out[A] =
@@ -89,7 +90,7 @@ final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](p
   // Descent
   // =======
 
-  def directSelect(sel: String): CssSelLookupResult =
+  def directSelect(sel: String): CssSelResult =
     $.run(sel, dom)
 
   def apply(sel: String): Out[DomZipper[Next, Next, Out]] =
