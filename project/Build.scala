@@ -36,7 +36,7 @@ object TestState extends Build {
     "-language:higherKinds",
     "-language:existentials")
 
-  val commonSettings: PE =
+  val commonSettings = ConfigureBoth(
     _.settings(
       organization             := "com.github.japgolly.test-state",
       version                  := "0.1.0-SNAPSHOT",
@@ -64,7 +64,9 @@ object TestState extends Build {
         "to"  -> "test-only",
         "cc"  -> ";clean;compile",
         "ctc" -> ";clean;test:compile",
-        "ct"  -> ";clean;test"))
+        "ct"  -> ";clean;test")))
+    .jsConfigure(
+      _.settings(scalaJSUseRhino := false))
 
   def acyclicSettings: PE = _
     .settings(
@@ -83,35 +85,30 @@ object TestState extends Build {
   def macroParadisePlugin =
     compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.full)
 
-  def utestSettingsBoth: PE = _
-    .settings(
+  def utestSettings = ConfigureBoth(
+    _.settings(
       libraryDependencies += "com.lihaoyi" %%% "utest" % Ver.MTest % "test",
-      testFrameworks      += new TestFramework("utest.runner.Framework"))
-
-  def utestSettingsJS: PE = _
-    .configure(utestSettingsBoth)
-    .settings(jsEnv in Test := NodeJSEnv().value)
-
-  def utestSettings: CPE = _
-    .jvmConfigure(utestSettingsBoth)
-    .jsConfigure(utestSettingsJS)
+      testFrameworks      += new TestFramework("utest.runner.Framework")))
+    .jsConfigure(
+      // Not mandatory; just faster.
+      _.settings(jsEnv in Test := PhantomJSEnv().value))
 
   override def rootProject = Some(root)
 
   lazy val root =
     Project("root", file("."))
-      .configure(commonSettings, preventPublication)
+      .configure(commonSettings.jvm, preventPublication)
       .aggregate(rootJVM, rootJS)
 
   lazy val rootJVM =
     Project("JVM", file(".rootJVM"))
-      .configure(commonSettings, preventPublication)
+      .configure(commonSettings.jvm, preventPublication)
       .aggregate(
         coreJVM, coreMacrosJVM, scalazJVM, catsJVM, nyayaJVM)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
-      .configure(commonSettings, preventPublication)
+      .configure(commonSettings.jvm, preventPublication)
       .aggregate(
         coreJS, coreMacrosJS, scalazJS, catsJS, nyayaJS,
         domZipperJS, domZipperSizzleJS)
@@ -119,13 +116,15 @@ object TestState extends Build {
   lazy val coreMacrosJVM = coreMacros.jvm
   lazy val coreMacrosJS  = coreMacros.js
   lazy val coreMacros = crossProject.in(file("core-macros"))
-    .bothConfigure(commonSettings, publicationSettings, definesMacros)
+    .configure(commonSettings)
+    .bothConfigure(publicationSettings, definesMacros)
     .configure(utestSettings)
 
   lazy val coreJVM = core.jvm
   lazy val coreJS  = core.js
   lazy val core = crossProject
-    .bothConfigure(commonSettings, publicationSettings)
+    .configure(commonSettings)
+    .bothConfigure(publicationSettings)
     .dependsOn(coreMacros)
     .configure(utestSettings)
     .settings(
@@ -136,21 +135,25 @@ object TestState extends Build {
 
   lazy val domZipperJS = project.in(file("dom-zipper"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings, publicationSettings, utestSettingsJS)
-    .settings(libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom)
+    .configure(commonSettings.js, publicationSettings, utestSettings.js)
+    .settings(
+      libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
+      requiresDOM := true)
 
   lazy val domZipperSizzleJS = project.in(file("dom-zipper-sizzle"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings, publicationSettings, utestSettingsJS)
+    .configure(commonSettings.js, publicationSettings)
     .dependsOn(domZipperJS)
     .settings(
-      scalacOptions -= "-Ywarn-dead-code",
-      jsDependencies += "org.webjars" % "sizzle" % Ver.Sizzle / "sizzle.min.js" commonJSName "Sizzle")
+      scalacOptions  -= "-Ywarn-dead-code",
+      jsDependencies += "org.webjars" % "sizzle" % Ver.Sizzle / "sizzle.min.js" commonJSName "Sizzle",
+      requiresDOM    := true)
 
   lazy val scalazJVM = scalaz.jvm
   lazy val scalazJS  = scalaz.js
   lazy val scalaz = crossProject
-    .bothConfigure(commonSettings, publicationSettings)
+    .configure(commonSettings)
+    .bothConfigure(publicationSettings)
     .dependsOn(core)
     .configure(utestSettings)
     .settings(libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
@@ -158,7 +161,8 @@ object TestState extends Build {
   lazy val catsJVM = cats.jvm
   lazy val catsJS  = cats.js
   lazy val cats = crossProject
-    .bothConfigure(commonSettings, publicationSettings)
+    .configure(commonSettings)
+    .bothConfigure(publicationSettings)
     .dependsOn(core)
     .configure(utestSettings)
     .settings(libraryDependencies += "org.typelevel" %%% "cats" % Ver.Cats)
@@ -166,7 +170,8 @@ object TestState extends Build {
   lazy val nyayaJVM = nyaya.jvm
   lazy val nyayaJS  = nyaya.js
   lazy val nyaya = crossProject
-    .bothConfigure(commonSettings, publicationSettings)
+    .configure(commonSettings)
+    .bothConfigure(publicationSettings)
     .dependsOn(core, scalaz)
     .configure(utestSettings)
     .settings(

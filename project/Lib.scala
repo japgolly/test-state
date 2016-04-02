@@ -10,6 +10,16 @@ object Lib {
   type CPE = CrossProject => CrossProject
   type PE = Project => Project
 
+  class ConfigureBoth(val jvm: PE, val js: PE) {
+    def jvmConfigure(f: PE) = new ConfigureBoth(f compose jvm, js)
+    def  jsConfigure(f: PE) = new ConfigureBoth(jvm, f compose js)
+  }
+
+  def ConfigureBoth(both: PE) = new ConfigureBoth(both, both)
+
+  implicit def _configureBothToCPE(p: ConfigureBoth): CPE =
+    _.jvmConfigure(p.jvm).jsConfigure(p.js)
+
   def addCommandAliases(m: (String, String)*): PE = {
     val s = m.map(p => addCommandAlias(p._1, p._2)).reduce(_ ++ _)
     _.settings(s: _*)
