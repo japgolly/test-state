@@ -99,7 +99,7 @@ trait TestUtil {
                    expect      : String,
                    showChildren: Boolean          = true,
                    normalise   : String => String = stringIdFn)
-                  (implicit s  : ShowError[E]): Unit = {
+                  (implicit s  : DisplayError[E]): Unit = {
     val n = normalise compose trim
     val f = if (showChildren) inspectionFormat else inspectionFormatOnlyFailedChildren
     val actual = r.format(f)(s)

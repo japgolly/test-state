@@ -36,8 +36,8 @@ object Action {
   implicit def actionOuterInstanceNamedOps[F[_], R, O, S, E]: NamedOps[Outer[F, R, O, S, E], ROS[R, O, S]] =
     NamedOps((a, f) => a.copy(name = f(a.name)))
 
-  implicit def actionOuterInstanceShow[F[_], R, O, S, E]: Show[Outer[F, R, O, S, E]] =
-    Show(_.name(None).value)
+  implicit def actionOuterInstanceDisplay[F[_], R, O, S, E]: Display[Outer[F, R, O, S, E]] =
+    Display(_.name(None).value)
 
   implicit def actionInnerInstanceConditional[F[_], R, O, S, E]: Conditional[Inner[F, R, O, S, E], ROS[R, O, S]] =
     Conditional((m, f) => m match {

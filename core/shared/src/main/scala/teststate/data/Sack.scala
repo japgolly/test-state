@@ -72,8 +72,8 @@ object Sack {
   implicit def sackInstanceConditionalR[A, B, I](implicit c: Conditional[B, I]): Conditional[Sack[A, B], I] =
     Conditional((s, f) => s.rmap(c.when(_, f)))
 
-  implicit def sackInstanceShow[A, B](implicit show: Show[B]): Show[Sack[A, B]] =
-    Show { sack =>
+  implicit def sackInstanceDisplay[A, B](implicit display: Display[B]): Display[Sack[A, B]] =
+    Display { sack =>
       val sb = new StringBuilder
       def add(s: String): Unit = {
         if (sb.nonEmpty)
@@ -83,7 +83,7 @@ object Sack {
       }
       def go(s: Sack[A, B]): Unit =
         s match {
-          case Value(b)        => add(show(b))
+          case Value(b)        => add(display(b))
           case Product(ss)     => ss foreach go
           case CoProduct(n, _) => add(n(None).value)
         }

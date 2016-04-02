@@ -7,5 +7,5 @@ case class X2(i: Int)
 case class X3(i: Int)
 
 object X3 {
-  implicit def showX3: Show[X3] = Show("X3=" + _.i)
+  implicit def displayX3: Display[X3] = Display("X3=" + _.i)
 }

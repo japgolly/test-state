@@ -2,7 +2,7 @@ package teststate.core
 
 import acyclic.file
 import teststate.data.Name
-import teststate.typeclass.{PolyComposable, Conditional, Show}
+import teststate.typeclass.{PolyComposable, Conditional, Display}
 
 trait CoreExports
   extends Name.Implicits
@@ -12,7 +12,7 @@ trait CoreExports
      with PolyComposable .Implicits
      with CoreComposition.Implicits
      with PointOps       .Implicits
-     with Show           .Implicits {
+     with Display        .Implicits {
 
   type Points    [-O, -S, E] = Types.Points    [O, S, E]
   type Arounds   [-O, -S, E] = Types.Arounds   [O, S, E]
@@ -25,9 +25,9 @@ trait CoreExports
     t.toInvariant(c)
 
   import teststate.data._
-  implicit def checksInstanceShow[C[- _, _], A, E](implicit sc: Show[C[A, E]]): Show[CheckShapeA[C, A, E]] = {
-    val showValues = Show[NamedError[Failure[E]] Or C[A, E]](_.fold(_.name.value, sc.apply))
-    Sack sackInstanceShow showValues
+  implicit def checksInstanceDisplay[C[- _, _], A, E](implicit sc: Display[C[A, E]]): Display[CheckShapeA[C, A, E]] = {
+    val displayValues = Display[NamedError[Failure[E]] Or C[A, E]](_.fold(_.name.value, sc.apply))
+    Sack sackInstanceDisplay displayValues
   }
 }
 

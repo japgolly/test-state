@@ -28,11 +28,11 @@ trait Exports
   type Equal[E] = teststate.typeclass.Equal[E]
   val Equal = teststate.typeclass.Equal
 
-  type Show[E] = teststate.typeclass.Show[E]
-  val Show = teststate.typeclass.Show
+  type Display[E] = teststate.typeclass.Display[E]
+  val Display = teststate.typeclass.Display
 
-  type ShowError[E] = teststate.typeclass.ShowError[E]
-  val ShowError = teststate.typeclass.ShowError
+  type DisplayError[E] = teststate.typeclass.DisplayError[E]
+  val DisplayError = teststate.typeclass.DisplayError
 
   type Name = teststate.data.Name
   val Name = teststate.data.Name

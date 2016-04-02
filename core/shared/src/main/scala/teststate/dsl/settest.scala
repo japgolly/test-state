@@ -34,15 +34,15 @@ object NameUtils {
   def subjectShouldVerb(focusName: String, pos: Boolean, verb: String): Name =
     s"$focusName ${should(pos)} $verb."
 
-  def equal[A](focusName: String, pos: Boolean, expect: A)(implicit sa: Show[A]): Name =
+  def equal[A](focusName: String, pos: Boolean, expect: A)(implicit sa: Display[A]): Name =
     subjectShouldVerb(focusName, pos, s"be ${sa(expect)}")
 
-  def equalFn[I, A](focusName: String, pos: Boolean, expect: I => A)(implicit sa: Show[A]): Option[I] => Name = {
+  def equalFn[I, A](focusName: String, pos: Boolean, expect: I => A)(implicit sa: Display[A]): Option[I] => Name = {
     case None    => subjectShouldVerb(focusName, pos, "be <?>")
     case Some(i) => equal(focusName, pos, expect(i))
   }
 
-  def collChangeFn[I, A](focusName: String, pos: Boolean, verb: String, expectDel: I => TraversableOnce[A], expectAdd: I => TraversableOnce[A])(implicit sa: Show[A]): Option[BeforeAfter[I]] => Name = {
+  def collChangeFn[I, A](focusName: String, pos: Boolean, verb: String, expectDel: I => TraversableOnce[A], expectAdd: I => TraversableOnce[A])(implicit sa: Display[A]): Option[BeforeAfter[I]] => Name = {
     case None    => s"$focusName ${should(pos)} $verb: <?>."
     case Some(BeforeAfter(i, _)) =>
       val del = expectDel(i)
@@ -77,7 +77,7 @@ object CollectionAssertions {
   // Depends on A having universal equality and appropriate hashcodes
   sealed abstract class Distinct {
     def name(subject: => String): Name
-    def apply[A](as: TraversableOnce[A])(implicit s: Show[A]): Option[Distinct.Failure[A]]
+    def apply[A](as: TraversableOnce[A])(implicit s: Display[A]): Option[Distinct.Failure[A]]
 
     protected final def prep[A](as: TraversableOnce[A]) = {
       val m = mutable.HashMap.empty[A, Int]
@@ -100,7 +100,7 @@ object CollectionAssertions {
       override def name(subject: => String): Name =
         subject + " should be distinct."
 
-      override def apply[A](as: TraversableOnce[A])(implicit s: Show[A]) = {
+      override def apply[A](as: TraversableOnce[A])(implicit s: Display[A]) = {
         val m = prep(as)
         if (pass(m))
           None
@@ -120,7 +120,7 @@ object CollectionAssertions {
       override def name(subject: => String): Name =
         subject + " should contain duplicates."
 
-      override def apply[A](as: TraversableOnce[A])(implicit s: Show[A]) =
+      override def apply[A](as: TraversableOnce[A])(implicit s: Display[A]) =
         if (pass(prep(as)))
           Some(Was)
         else
@@ -129,7 +129,7 @@ object CollectionAssertions {
 
     sealed trait Failure[+A] extends HasErrorString with Product with Serializable
 
-    final case class Wasnt[+A](dups: List[(A, Int)])(implicit s: Show[A]) extends Failure[A] {
+    final case class Wasnt[+A](dups: List[(A, Int)])(implicit s: Display[A]) extends Failure[A] {
       def dupsToString = formatSet(dups.iterator.map { case (a, i) => s"${s(a)} → $i" })
       override def errorString = s"Dups: $dupsToString"
     }
@@ -143,7 +143,7 @@ object CollectionAssertions {
 
   sealed abstract class Exists {
     def name(subject: => String, queryName: => String): Name
-    def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Show[B]): Option[Exists.Failure[B]]
+    def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Display[B]): Option[Exists.Failure[B]]
     protected final def found[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B]) =
       source.exists(a => eb.equal(query, a))
   }
@@ -165,7 +165,7 @@ object CollectionAssertions {
       override def name(subject: => String, queryName: => String): Name =
         s"$subject should contain $queryName."
 
-      override def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Show[B]): Option[Missing[B]] =
+      override def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Display[B]): Option[Missing[B]] =
         if (found(source, query))
           None
         else
@@ -176,7 +176,7 @@ object CollectionAssertions {
       override def name(subject: => String, queryName: => String): Name =
         s"$subject shouldn't contain $queryName."
 
-      override def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Show[B]): Option[Present.type] =
+      override def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Display[B]): Option[Present.type] =
         if (found(source, query))
           Some(Present)
         else
@@ -185,7 +185,7 @@ object CollectionAssertions {
 
     sealed trait Failure[+A] extends HasErrorString with Product with Serializable
 
-    case class Missing[A](query: A)(implicit s: Show[A]) extends Failure[A] {
+    case class Missing[A](query: A)(implicit s: Display[A]) extends Failure[A] {
       override def errorString = s"Not found: ${s(query)}"
     }
 
@@ -198,7 +198,7 @@ object CollectionAssertions {
 
   sealed abstract class ContainsAll {
     def name(subject: => String, queryNames: => String): Name
-    def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A, sb: Show[B]): Option[ContainsAll.Failure[B]]
+    def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A, sb: Display[B]): Option[ContainsAll.Failure[B]]
     protected final def missing[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A) = {
       val as = source.toSet
       query.iterator.filterNot(as contains _)
@@ -214,7 +214,7 @@ object CollectionAssertions {
       override def name(subject: => String, queryNames: => String): Name =
         s"$subject should contain all $queryNames."
 
-      override def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A, sb: Show[B]): Option[Missing[B]] = {
+      override def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A, sb: Display[B]): Option[Missing[B]] = {
         val m = missing(source, query)
         if (m.isEmpty)
           None
@@ -228,7 +228,7 @@ object CollectionAssertions {
       override def name(subject: => String, queryNames: => String): Name =
         s"$subject shouldn't contain all $queryNames."
 
-      override def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A, sb: Show[B]): Option[AllPresent.type] =
+      override def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: B <:< A, sb: Display[B]): Option[AllPresent.type] =
         if (missing(source, query).isEmpty)
           Some(AllPresent)
         else
@@ -237,7 +237,7 @@ object CollectionAssertions {
 
     sealed trait Failure[+A] extends HasErrorString with Product with Serializable
 
-    case class Missing[A](missing: Set[A], query: Set[A])(implicit s: Show[A]) extends Failure[A] {
+    case class Missing[A](missing: Set[A], query: Set[A])(implicit s: Display[A]) extends Failure[A] {
       def missingToString = formatSet(missing.iterator.map(s(_)))
       override def errorString = s"Missing: $missingToString"
     }
@@ -251,7 +251,7 @@ object CollectionAssertions {
 
   sealed abstract class ContainsAny {
     def name(subject: => String, queryNames: => String): Name
-    def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: A <:< B, sb: Show[B]): Option[ContainsAny.Failure[B]]
+    def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: A <:< B, sb: Display[B]): Option[ContainsAny.Failure[B]]
   }
 
   /** ∃b. A ∋ b */
@@ -259,7 +259,7 @@ object CollectionAssertions {
     def name(subject: => String, queryNames: => String): Name =
       s"$subject should contain some $queryNames."
 
-    def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: A <:< B, sb: Show[B]): Option[ContainsAny.FoundNone.type] =
+    def apply[A, B](source: TraversableOnce[A], query: Set[B])(implicit ev: A <:< B, sb: Display[B]): Option[ContainsAny.FoundNone.type] =
       if (source.exists(query contains _))
         None
       else
@@ -271,7 +271,7 @@ object CollectionAssertions {
     def name(subject: => String, queryNames: => String): Name =
       s"$subject shouldn't contain any $queryNames."
 
-    def apply[A, B](source: TraversableOnce[A], blacklist: Set[B])(implicit ev: A <:< B, sb: Show[B]): Option[ContainsAny.FoundSome[B]] = {
+    def apply[A, B](source: TraversableOnce[A], blacklist: Set[B])(implicit ev: A <:< B, sb: Display[B]): Option[ContainsAny.FoundSome[B]] = {
       var bad = Vector.empty[B]
       for (a <- source)
         if (blacklist contains a)
@@ -293,7 +293,7 @@ object CollectionAssertions {
       override def errorString = "None found."
     }
 
-    final case class FoundSome[+A](bad: Vector[A])(implicit s: Show[A]) extends Failure[A] {
+    final case class FoundSome[+A](bad: Vector[A])(implicit s: Display[A]) extends Failure[A] {
       def badToString = formatSet(bad.iterator.map(s(_)))
       override def errorString = s"Found: $badToString"
     }
@@ -303,7 +303,7 @@ object CollectionAssertions {
 
   sealed abstract class ContainsOnly {
     def name(subject: => String, whitelistNames: => String): Name
-    def apply[A, B](source: TraversableOnce[A], whitelist: Set[B])(implicit ev: A <:< B, sa: Show[A]): Option[ContainsOnly.Failure[A]]
+    def apply[A, B](source: TraversableOnce[A], whitelist: Set[B])(implicit ev: A <:< B, sa: Display[A]): Option[ContainsOnly.Failure[A]]
     protected final def missing[A, B](source: TraversableOnce[A], whitelist: Set[B])(implicit ev: B <:< A) = {
       val as = source.toSet
       whitelist.iterator.filterNot(as contains _)
@@ -319,7 +319,7 @@ object CollectionAssertions {
       override def name(subject: => String, whitelistNames: => String): Name =
         s"$subject should only contain $whitelistNames."
 
-      override def apply[A, B](source: TraversableOnce[A], whitelist: Set[B])(implicit ev: A <:< B, sa: Show[A]) = {
+      override def apply[A, B](source: TraversableOnce[A], whitelist: Set[B])(implicit ev: A <:< B, sa: Display[A]) = {
         var bad = Vector.empty[A]
         for (a <- source)
           if (!whitelist.contains(a))
@@ -336,7 +336,7 @@ object CollectionAssertions {
       override def name(subject: => String, whitelistNames: => String): Name =
         s"$subject should contain other than $whitelistNames."
 
-      override def apply[A, B](source: TraversableOnce[A], whitelist: Set[B])(implicit ev: A <:< B, sa: Show[A]) =
+      override def apply[A, B](source: TraversableOnce[A], whitelist: Set[B])(implicit ev: A <:< B, sa: Display[A]) =
         if (source.exists(!whitelist.contains(_)))
           None
         else
@@ -345,7 +345,7 @@ object CollectionAssertions {
 
     sealed trait Failure[+A] extends HasErrorString with Product with Serializable
 
-    case class FoundIllegal[+A](illegal: Vector[A])(implicit s: Show[A]) extends Failure[A] {
+    case class FoundIllegal[+A](illegal: Vector[A])(implicit s: Display[A]) extends Failure[A] {
       def illegalToString = formatSet(illegal.iterator.map(s(_)))
       override def errorString = s"Found: $illegalToString"
     }
@@ -374,7 +374,7 @@ object CollectionAssertions {
         case Some(i) => name(expect(i), subject, allNames)
       }
 
-    def apply[A: Show](expect: Boolean, source: TraversableOnce[A], all: Set[A]): Option[Either[ContainsAny.FoundSome[A], ContainsAll.Missing[A]]] =
+    def apply[A: Display](expect: Boolean, source: TraversableOnce[A], all: Set[A]): Option[Either[ContainsAny.FoundSome[A], ContainsAll.Missing[A]]] =
       if (expect)
         ContainsAll.Pos(source, all).map(Right(_))
       else
@@ -385,7 +385,7 @@ object CollectionAssertions {
 
   sealed abstract class EqualIgnoringOrder {
 //    def name(subject: => String, expectName: => String): Name
-    def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]): Option[EqualIgnoringOrder.Failure[A]]
+    def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Display[A]): Option[EqualIgnoringOrder.Failure[A]]
 
     protected final def prep[A](source: TraversableOnce[A], expect: TraversableOnce[A]) =
       tallyElements(expect, source)
@@ -402,7 +402,7 @@ object CollectionAssertions {
 //      override def name(subject: => String, expectName: => String): Name =
 //        s"$subject should equal $expectName ignoring order."
 
-      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]) = {
+      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Display[A]) = {
         val m = prep(source, expect)
         if (pass(m))
           None
@@ -424,7 +424,7 @@ object CollectionAssertions {
 //      override def name(subject: => String, expectName: => String): Name =
 //        s"$subject shouldn't equal $expectName ignoring order."
 
-      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Show[A]) =
+      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit s: Display[A]) =
         if (pass(prep(source, expect)))
           Some(Matched)
         else
@@ -433,8 +433,8 @@ object CollectionAssertions {
 
     sealed trait Failure[+A] extends HasErrorString with Product with Serializable
 
-    case class Mismatch[+A](missing: Vector[A], excess: Vector[A])(implicit s: Show[A]) extends Failure[A] {
-      private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Show[AA]): Option[String] =
+    case class Mismatch[+A](missing: Vector[A], excess: Vector[A])(implicit s: Display[A]) extends Failure[A] {
+      private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Display[AA]): Option[String] =
         if (as.isEmpty) None else Some(name + ": " +formatSet(as.iterator.map(s(_))))
       override def errorString =
         (fmt("Missing", missing).toList ::: fmt("Excess", excess).toList).mkString(" ")
@@ -448,7 +448,7 @@ object CollectionAssertions {
   // ===================================================================================================================
 
   sealed abstract class EqualIncludingOrder {
-    def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit eq: Equal[A], s: Show[A]): Option[EqualIncludingOrder.Failure[A]]
+    def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit eq: Equal[A], s: Display[A]): Option[EqualIncludingOrder.Failure[A]]
   }
 
   // TODO Could do much better. Should diff
@@ -457,7 +457,7 @@ object CollectionAssertions {
       if (positive) Pos else Neg
 
     object Pos extends EqualIncludingOrder {
-      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit eq: Equal[A], s: Show[A]) = {
+      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit eq: Equal[A], s: Display[A]) = {
         val a = source.toVector
         val e = expect.toSeq
         if (a.corresponds(e)(eq.equal))
@@ -468,7 +468,7 @@ object CollectionAssertions {
     }
 
     object Neg extends EqualIncludingOrder {
-      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit eq: Equal[A], s: Show[A]) =
+      override def apply[A](source: TraversableOnce[A], expect: TraversableOnce[A])(implicit eq: Equal[A], s: Display[A]) =
         if (source.toSeq.corresponds(expect.toSeq)(eq.equal))
           Some(Matched)
         else
@@ -477,8 +477,8 @@ object CollectionAssertions {
 
     sealed trait Failure[+A] extends HasErrorString with Product with Serializable
 
-    case class Mismatch[+A](actual: Vector[A], expect: Vector[A])(implicit s: Show[A]) extends Failure[A] {
-      private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Show[AA]): Option[String] =
+    case class Mismatch[+A](actual: Vector[A], expect: Vector[A])(implicit s: Display[A]) extends Failure[A] {
+      private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Display[AA]): Option[String] =
         if (as.isEmpty) None else Some(name + ": " +formatSet(as.iterator.map(s(_))))
       override def errorString =
         (fmt("Actual", actual).toList ::: fmt("Expect", expect).toList).mkString(" ")
@@ -495,7 +495,7 @@ object CollectionAssertions {
   sealed abstract class ElemChanges {
     import ElemChanges._
 
-    def apply[A](args: Args[A])(implicit s: Show[A]): Option[Failure[A]]
+    def apply[A](args: Args[A])(implicit s: Display[A]): Option[Failure[A]]
 
     protected final def prep[A](args: Args[A]): Option[Map[A, EA[Int]]] = {
       val actual = tallyElements(args.before, args.after)
@@ -530,12 +530,12 @@ object CollectionAssertions {
       if (positive) Pos else Neg
 
     object Pos extends ElemChanges {
-      override def apply[A](args: Args[A])(implicit s: Show[A]) =
+      override def apply[A](args: Args[A])(implicit s: Display[A]) =
         prep(args).map(Mismatch(_))
     }
 
     object Neg extends ElemChanges {
-      override def apply[A](args: Args[A])(implicit s: Show[A]) =
+      override def apply[A](args: Args[A])(implicit s: Display[A]) =
         prep(args) match {
           case Some(errors) => None
           case None         => Some(Matched())
@@ -544,7 +544,7 @@ object CollectionAssertions {
 
     sealed trait Failure[A] extends HasErrorString with Product with Serializable
 
-    case class Mismatch[A](errors: Map[A, EA[Int]])(implicit s: Show[A]) extends Failure[A] {
+    case class Mismatch[A](errors: Map[A, EA[Int]])(implicit s: Display[A]) extends Failure[A] {
       override def errorString =
         errors.iterator
           .map { case (i, EA(e, a)) => s"${s(i)} moved by $a, expected $e." }

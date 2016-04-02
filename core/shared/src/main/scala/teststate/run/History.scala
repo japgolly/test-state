@@ -2,7 +2,7 @@ package teststate.run
 
 import acyclic.file
 import teststate.data._
-import teststate.typeclass.{Recover, ShowError}
+import teststate.typeclass.{Recover, DisplayError}
 import History.{Step, Steps}
 import Result.{Fail, Skip, Pass}
 

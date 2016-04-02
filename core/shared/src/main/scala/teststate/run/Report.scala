@@ -4,7 +4,7 @@ package teststate.run
 import scala.annotation.elidable
 import scala.util.control.NonFatal
 import teststate.data.{Failure, Name}
-import teststate.typeclass.ShowError
+import teststate.typeclass.DisplayError
 import Report._
 
 case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: Stats) {
@@ -13,9 +13,9 @@ case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: S
   @inline def failed = history.failed
   @inline def result = history.result
 
-  def failureReason[e >: E](implicit showError: ShowError[e]): Option[Failure[String]] =
+  def failureReason[e >: E](implicit displayError: DisplayError[e]): Option[Failure[String]] =
     failure.map(_ map (err =>
-      (history.rootFailurePath.lastOption, Option(showError show err).filter(_.nonEmpty)) match {
+      (history.rootFailurePath.lastOption, Option(displayError display err).filter(_.nonEmpty)) match {
         case (Some(f), Some(e)) => s"${f.name.value} -- $e"
         case (Some(f), None   ) => f.name.value
         case (None   , Some(e)) => e
@@ -24,7 +24,7 @@ case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: S
     ))
 
   @elidable(elidable.ASSERTION)
-  def assert[EE >: E]()(implicit as: AssertionSettings, se: ShowError[EE]): Unit =
+  def assert[EE >: E]()(implicit as: AssertionSettings, se: DisplayError[EE]): Unit =
     failureReason(se) match {
 
       case None =>
@@ -48,10 +48,10 @@ case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: S
         }
     }
 
-  def format[EE >: E](implicit as: AssertionSettings, s: ShowError[EE]): String =
+  def format[EE >: E](implicit as: AssertionSettings, s: DisplayError[EE]): String =
     format[EE](if (failed) as.onFail else as.onPass)(s)
 
-  def format[EE >: E](f: Format)(implicit s: ShowError[EE]): String =
+  def format[EE >: E](f: Format)(implicit s: DisplayError[EE]): String =
     f.format[EE](this)(s) getOrElse ""
 }
 

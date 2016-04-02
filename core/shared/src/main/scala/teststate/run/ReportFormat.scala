@@ -3,14 +3,14 @@ package teststate.run
 import scala.Console._
 import scala.concurrent.duration.FiniteDuration
 import teststate.data.{Failure, Result}
-import teststate.typeclass.ShowError
+import teststate.typeclass.DisplayError
 import History.{Step, Steps}
 import Result.{Fail, Skip, Pass}
 
 trait ReportFormat {
-  def format[E](report: Report[E])(implicit se: ShowError[E]): Option[String]
+  def format[E](report: Report[E])(implicit de: DisplayError[E]): Option[String]
 
-  def print[E](report: Report[E])(implicit se: ShowError[E]): Unit =
+  def print[E](report: Report[E])(implicit de: DisplayError[E]): Unit =
     format(report) foreach println
 }
 
@@ -18,12 +18,12 @@ object ReportFormat {
 
   val quiet: ReportFormat =
     new ReportFormat {
-      override def format[E](report: Report[E])(implicit se: ShowError[E]) =
+      override def format[E](report: Report[E])(implicit de: DisplayError[E]) =
         None
     }
 
   class Default(s: Default.Settings) extends ReportFormat {
-    override def format[E](report: Report[E])(implicit se: ShowError[E]) = {
+    override def format[E](report: Report[E])(implicit de: DisplayError[E]) = {
       val sb = new StringBuilder
 
       def appendIndent(indent: Int): Unit = {
@@ -58,7 +58,7 @@ object ReportFormat {
         sb append ' '
         sb append step.name.value
         for (err <- error) {
-          val e = se.show(err.failure)
+          val e = de.display(err.failure)
           if (e.nonEmpty) {
             sb append " -- "
             sb append e

@@ -76,9 +76,9 @@ object Plan {
   def invariants[F[_], R, O, S, E](i: Invariants[O, S, E])(implicit em: ExecutionModel[F]): Plan[F, R, O, S, E] =
     apply[F, R, O, S, E](Empty.instance, i)(em)
 
-  implicit def planInstanceShow[F[_], R, O, S, E](implicit sa: Show[Actions[F, R, O, S, E]],
-                                                           si: Show[Invariants[O, S, E]]): Show[Plan[F, R, O, S, E]] =
-    Show(p =>
+  implicit def planInstanceDisplay[F[_], R, O, S, E](implicit sa: Display[Actions[F, R, O, S, E]],
+                                                  si: Display[Invariants[O, S, E]]): Display[Plan[F, R, O, S, E]] =
+    Display(p =>
       s"""
          |Invariants:
          |${si.indent(p.invariants)}

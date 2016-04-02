@@ -102,10 +102,10 @@ abstract class ImplicitsTest1 extends AbstractTest {
   test[Points [O, S, E]](c => c: Invariants[O, S, E])
   test[Arounds[O, S, E]](c => c: Invariants[O, S, E])
 
-  // show
-  test[Points    [O, S, E]](_.show).expect[String]
-  test[Arounds   [O, S, E]](_.show).expect[String]
-  test[Invariants[O, S, E]](_.show).expect[String]
+  // display
+  test[Points    [O, S, E]](_.display).expect[String]
+  test[Arounds   [O, S, E]](_.display).expect[String]
+  test[Invariants[O, S, E]](_.display).expect[String]
 
   // NamedOps
   test[Points    [O, S, E]](_ rename "").expectSelf
@@ -207,8 +207,8 @@ abstract class ImplicitsTest1 extends AbstractTest {
 object ImplicitsTest2 extends TestSuite {
   import teststate.Exports._
 
-  implicit def showX2: Show[X2] =
-    Show("X2=" + _.i)
+  implicit def displayX2: Display[X2] =
+    Display("X2=" + _.i)
 
   override def tests = TestSuite {
 
@@ -216,8 +216,8 @@ object ImplicitsTest2 extends TestSuite {
     // Use toString by default and if someone wants to see something different, add their own instance.
     // There is no cost to incorrectness here.
     // This really just that I've laid things out in such a way that implicits resolve as expected.
-    'show {
-      def test[A](a: A)(expect: String)(implicit s: Show[A]): Unit = {
+    'display {
+      def test[A](a: A)(expect: String)(implicit s: Display[A]): Unit = {
         val actual = s(a)
         assert(actual == expect)
       }

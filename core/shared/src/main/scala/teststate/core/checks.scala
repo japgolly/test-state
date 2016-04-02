@@ -7,7 +7,7 @@ import teststate.{core => ^}
 import Conditional.Implicits._
 import NamedOps.ToOps._
 import Profunctor.ToOps._
-import Show.ToOps._
+import Display.ToOps._
 
 final case class Point[-I, E](name: NameFn[I], test: I => Tri[E, Unit])
 
@@ -24,8 +24,8 @@ object Point {
   implicit def pointInstanceNamedOps[I, E]: NamedOps[Point[I, E], I] =
     NamedOps((p, f) => p.copy(name = f(p.name)))
 
-  implicit def pointInstanceShow[I, E]: Show[Point[I, E]] =
-    Show(_.name(None).value)
+  implicit def pointInstanceDisplay[I, E]: Display[Point[I, E]] =
+    Display(_.name(None).value)
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -80,8 +80,8 @@ object Around {
   implicit def deltaAInstanceNamedOps[I, E]: NamedOps[DeltaA[I, E], BeforeAfter[I]] =
     NamedOps((d, f) => DeltaA(f(d.name), d.before, d.test))
 
-  implicit def deltaAInstanceShow[I, E]: Show[DeltaA[I, E]] =
-    Show(_.name(None).value)
+  implicit def deltaAInstanceDisplay[I, E]: Display[DeltaA[I, E]] =
+    Display(_.name(None).value)
 
   implicit val aroundInstance: Profunctor[Around] =
     new Profunctor[Around] {
@@ -105,10 +105,10 @@ object Around {
       case Delta(d)         => Delta(d renameBy f)
     })
 
-  implicit def aroundInstanceShow[I, E]: Show[Around[I, E]] =
-    Show {
-      case Point(p, _) => p.show
-      case Delta(d)    => d.show
+  implicit def aroundInstanceDisplay[I, E]: Display[Around[I, E]] =
+    Display {
+      case Point(p, _) => p.display
+      case Delta(d)    => d.display
     }
 }
 
@@ -142,10 +142,10 @@ object Invariant {
         Delta(x renameBy (n => f(n.cmap(BeforeAfter.same)).cmap(_.before)))
     })
 
-  implicit def invariantInstanceShow[I, E]: Show[Invariant[I, E]] =
-    Show {
-      case Point(x) => x.show
-      case Delta(x) => x.show
+  implicit def invariantInstanceDisplay[I, E]: Display[Invariant[I, E]] =
+    Display {
+      case Point(x) => x.display
+      case Delta(x) => x.display
     }
 }
 

@@ -48,7 +48,7 @@ object WholeTest extends TestSuite {
         println(h)
         println(eg.count())
         println()
-        println(formatHistory(h, Options.colored.alwaysShowChildren))
+        println(formatHistory(h, Options.colored.alwaysDisplayChildren))
         println()
       }
     }
