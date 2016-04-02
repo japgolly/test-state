@@ -6,7 +6,7 @@ import Lib._
 
 object TestState extends Build {
 
-  private val ghProject = "test-state"
+  private val ghProject = "testate"
 
   private val publicationSettings =
     Lib.publicationSettings(ghProject)
@@ -38,7 +38,7 @@ object TestState extends Build {
 
   val commonSettings = ConfigureBoth(
     _.settings(
-      organization             := "com.github.japgolly.test-state",
+      organization             := "com.github.japgolly.testate",
       version                  := "0.1.0-SNAPSHOT",
       homepage                 := Some(url("https://github.com/japgolly/" + ghProject)),
       licenses                 += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),

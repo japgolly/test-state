@@ -1,4 +1,3 @@
-* Rename to testate
 * Around-Invariant through coproduct that isn't consistent before/after action.
 
 
