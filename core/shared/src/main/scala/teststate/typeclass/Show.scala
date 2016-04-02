@@ -37,13 +37,17 @@ object Show {
   def byToString[A]: Show[A] =
     Show(_.toString)
 
+  // Putting this into a low-priority implicits trait overrides implicit instances in user-defined companion objects. :(
+  implicit def showByToString[A]: Show[A] =
+    Show(_.toString)
+
   trait Instances {
-    implicit val showUnit   : Show[Unit   ] = byToString
-    implicit val showBoolean: Show[Boolean] = byToString
-    implicit val showInt    : Show[Int    ] = byToString
-    implicit val showLong   : Show[Long   ] = byToString
-    implicit val showShort  : Show[Short  ] = byToString
-    implicit val showByte   : Show[Byte   ] = byToString
+//    implicit def showUnit   : Show[Unit   ] = byToString
+//    implicit val showBoolean: Show[Boolean] = byToString
+//    implicit val showInt    : Show[Int    ] = byToString
+//    implicit def showLong   : Show[Long   ] = byToString
+//    implicit def showShort  : Show[Short  ] = byToString
+//    implicit def showByte   : Show[Byte   ] = byToString
 
     implicit val showString: Show[String] =
       Show[String](s =>
@@ -54,12 +58,16 @@ object Show {
     implicit val showChar: Show[Char] =
       Show[Char](s =>
         // Handle \n, \t, spaces (so surrounds), long strings (?)
-        "'" + s + "'"
+        "'" + (s match {
+          case '\n' => "\\n"
+          case '\t' => "\\t"
+          case _ => s.toString
+        }) + "'"
       )
 
     implicit def showOption[A](implicit show: Show[A]): Show[Option[A]] =
       Show {
-        case None => "None"
+        case None    => "None"
         case Some(a) => s"Some(${show(a)})"
       }
 
@@ -75,9 +83,4 @@ object Show {
   object ToOps extends ToOps
 
   trait Implicits extends Instances with ToOps
-
-  object OptionalImplicits {
-    implicit def showByToString[A]: Show[A] =
-      Show(_.toString)
-  }
 }

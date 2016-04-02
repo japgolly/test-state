@@ -1,8 +1,9 @@
-package teststate.external_package
+package teststate.external
 
 import language.reflectiveCalls
 import scala.annotation.implicitNotFound
 import utest.asserts.compileError
+import utest._
 
 abstract class AbstractTest {
   trait A
@@ -62,7 +63,7 @@ abstract class AbstractTest {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-abstract class ImplicitsTest extends AbstractTest {
+abstract class ImplicitsTest1 extends AbstractTest {
   import teststate.Exports._
 
   // ===================================================================================================================
@@ -201,3 +202,30 @@ abstract class ImplicitsTest extends AbstractTest {
 
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+object ImplicitsTest2 extends TestSuite {
+  import teststate.Exports._
+
+  implicit def showX2: Show[X2] =
+    Show("X2=" + _.i)
+
+  override def tests = TestSuite {
+
+    // Doesn't affect correctness. Is just an optional nicety so don't ram it down users' throats.
+    // Use toString by default and if someone wants to see something different, add their own instance.
+    // There is no cost to incorrectness here.
+    // This really just that I've laid things out in such a way that implicits resolve as expected.
+    'show {
+      def test[A](a: A)(expect: String)(implicit s: Show[A]): Unit = {
+        val r = s(a)
+        assert(r == expect)
+      }
+      'undef     - test(X1(9))("X1(9)")
+      'defDirect - test(X2(9))("X2=9")
+      'defInCO   - test(X3(9))("X3=9")
+      'default   - test('\n')("'\\n'")
+    }
+
+  }
+}

@@ -2,7 +2,6 @@ package teststate
 
 import teststate.data.Id
 import Exports._
-import Show.OptionalImplicits.showByToString
 
 object CoproductExample {
 
