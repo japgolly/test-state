@@ -1,14 +1,14 @@
 package teststate.domzipper
 
-import org.scalajs.dom.Element
+import org.scalajs.dom.{Element, html}
 import Collector._
 import DomZipper._
 import ErrorHandler.ErrorHandlerResultOps
 
-final class Collector[C[_], Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
-                                                      sel: String,
-                                                      cont: Container[C, Out])
-                                                     (implicit h: ErrorHandler[Out]){
+final class Collector[C[_], D <: NextBase, Out[_]](from: DomZipper[_, D, Out],
+                                                   sel: String,
+                                                   cont: Container[C, Out])
+                                                  (implicit h: ErrorHandler[Out]){
 
   def isEmpty: Boolean =
     from.directSelect(sel).isEmpty
@@ -16,19 +16,25 @@ final class Collector[C[_], Next <: NextBase, Out[_]](from: DomZipper[_, Next, O
   def nonEmpty: Boolean =
     !isEmpty
 
-  def doms: Out[C[Next]] = {
+  def as[DD <: D]: Collector[C, DD, Out] =
+    this.asInstanceOf[Collector[C, DD, Out]]
+
+  def asHtml(implicit ev: html.Element <:< D): Collector[C, html.Element, Out] =
+    this.asInstanceOf[Collector[C, html.Element, Out]]
+
+  def doms: Out[C[D]] = {
     val e1: Out[C[Element]] = cont(sel, from.directSelect(sel))
-    val e2: Out[C[Next]]    = e1.asInstanceOf[Out[C[Next]]]
+    val e2: Out[C[D]]       = e1.asInstanceOf[Out[C[D]]]
     e2
   }
 
-  def zippers: Out[C[DomZipper[Next, Next, Out]]] =
+  def zippers: Out[C[DomZipper[D, D, Out]]] =
     doms.map(cont.map(_)(d => from.addLayer(Layer("collect", sel, d))))
 
-  def mapDoms[A](f: Next => A): Out[C[A]] =
+  def mapDoms[A](f: D => A): Out[C[A]] =
     doms.map(cont.map(_)(f))
 
-  def mapZippers[A](f: DomZipper[Next, Next, Out] => A): Out[C[A]] =
+  def mapZippers[A](f: DomZipper[D, D, Out] => A): Out[C[A]] =
     mapDoms(d => f(from.addLayer(Layer("collect", sel, d))))
 
   def outerHTMLs[A]: Out[C[String]] = mapZippers(_.outerHTML)
