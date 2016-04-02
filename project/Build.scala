@@ -21,6 +21,7 @@ object TestState extends Build {
     final val Scala211      = "2.11.8"
     final val ScalaJsDom    = "0.9.0"
     final val Scalaz        = "7.2.1"
+    final val Sizzle        = "2.1.1"
   }
 
   def scalacFlags = Seq(
@@ -105,12 +106,15 @@ object TestState extends Build {
   lazy val rootJVM =
     Project("JVM", file(".rootJVM"))
       .configure(commonSettings, preventPublication)
-      .aggregate(coreJVM, coreMacrosJVM, scalazJVM, catsJVM, nyayaJVM)
+      .aggregate(
+        coreJVM, coreMacrosJVM, scalazJVM, catsJVM, nyayaJVM)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
       .configure(commonSettings, preventPublication)
-      .aggregate(coreJS, coreMacrosJS, scalazJS, catsJS, nyayaJS, domZipperJS)
+      .aggregate(
+        coreJS, coreMacrosJS, scalazJS, catsJS, nyayaJS,
+        domZipperJS, domZipperSizzleJS)
 
   lazy val coreMacrosJVM = coreMacros.jvm
   lazy val coreMacrosJS  = coreMacros.js
@@ -134,6 +138,14 @@ object TestState extends Build {
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings, publicationSettings, utestSettingsJS)
     .settings(libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom)
+
+  lazy val domZipperSizzleJS = project.in(file("dom-zipper-sizzle"))
+    .enablePlugins(ScalaJSPlugin)
+    .configure(commonSettings, publicationSettings, utestSettingsJS)
+    .dependsOn(domZipperJS)
+    .settings(
+      scalacOptions -= "-Ywarn-dead-code",
+      jsDependencies += "org.webjars" % "sizzle" % Ver.Sizzle / "sizzle.min.js" commonJSName "Sizzle")
 
   lazy val scalazJVM = scalaz.jvm
   lazy val scalazJS  = scalaz.js
