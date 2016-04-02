@@ -115,7 +115,8 @@ object TestState extends Build {
 
   lazy val coreMacrosJVM = coreMacros.jvm
   lazy val coreMacrosJS  = coreMacros.js
-  lazy val coreMacros = crossProject.in(file("core-macros"))
+  lazy val coreMacros = crossProject
+    .in(file("core-macros"))
     .configure(commonSettings)
     .bothConfigure(publicationSettings, definesMacros)
     .configure(utestSettings)
@@ -133,18 +134,22 @@ object TestState extends Build {
         "com.github.japgolly.nyaya" %%% "nyaya-prop" % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya % "test"))
 
-  lazy val domZipperJS = project.in(file("dom-zipper"))
+  lazy val domZipperJS = project
+    .in(file("dom-zipper"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings, utestSettings.js)
     .settings(
+      moduleName          := "dom-zipper",
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
-      requiresDOM := true)
+      requiresDOM         := true)
 
-  lazy val domZipperSizzleJS = project.in(file("dom-zipper-sizzle"))
+  lazy val domZipperSizzleJS = project
+    .in(file("dom-zipper-sizzle"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings)
     .dependsOn(domZipperJS)
     .settings(
+      moduleName     := "dom-zipper-sizzle",
       scalacOptions  -= "-Ywarn-dead-code",
       jsDependencies += "org.webjars" % "sizzle" % Ver.Sizzle / "sizzle.min.js" commonJSName "Sizzle",
       requiresDOM    := true)
