@@ -12,14 +12,15 @@ object TestState extends Build {
     Lib.publicationSettings(ghProject)
 
   object Ver {
-    final val Scala211      = "2.11.8"
     final val Acyclic       = "0.1.4"
-    final val MTest         = "0.4.3"
-    final val MacroParadise = "2.1.0"
-    final val KindProjector = "0.7.1"
-    final val Nyaya         = "0.7.0"
-    final val Scalaz        = "7.2.1"
     final val Cats          = "0.4.1"
+    final val KindProjector = "0.7.1"
+    final val MacroParadise = "2.1.0"
+    final val MTest         = "0.4.3"
+    final val Nyaya         = "0.7.0"
+    final val Scala211      = "2.11.8"
+    final val ScalaJsDom    = "0.9.0"
+    final val Scalaz        = "7.2.1"
   }
 
   def scalacFlags = Seq(
@@ -81,12 +82,18 @@ object TestState extends Build {
   def macroParadisePlugin =
     compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.full)
 
-  def utestSettings: CPE = _
+  def utestSettingsBoth: PE = _
     .settings(
       libraryDependencies += "com.lihaoyi" %%% "utest" % Ver.MTest % "test",
       testFrameworks      += new TestFramework("utest.runner.Framework"))
-    .jsSettings(
-      jsEnv in Test := NodeJSEnv().value)
+
+  def utestSettingsJS: PE = _
+    .configure(utestSettingsBoth)
+    .settings(jsEnv in Test := NodeJSEnv().value)
+
+  def utestSettings: CPE = _
+    .jvmConfigure(utestSettingsBoth)
+    .jsConfigure(utestSettingsJS)
 
   override def rootProject = Some(root)
 
@@ -103,7 +110,7 @@ object TestState extends Build {
   lazy val rootJS =
     Project("JS", file(".rootJS"))
       .configure(commonSettings, preventPublication)
-      .aggregate(coreJS, coreMacrosJS, scalazJS, catsJS, nyayaJS)
+      .aggregate(coreJS, coreMacrosJS, scalazJS, catsJS, nyayaJS, domZipperJS)
 
   lazy val coreMacrosJVM = coreMacros.jvm
   lazy val coreMacrosJS  = coreMacros.js
@@ -123,14 +130,18 @@ object TestState extends Build {
         "com.github.japgolly.nyaya" %%% "nyaya-prop" % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya % "test"))
 
+  lazy val domZipperJS = project.in(file("dom-zipper"))
+    .enablePlugins(ScalaJSPlugin)
+    .configure(commonSettings, publicationSettings, utestSettingsJS)
+    .settings(libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom)
+
   lazy val scalazJVM = scalaz.jvm
   lazy val scalazJS  = scalaz.js
   lazy val scalaz = crossProject
     .bothConfigure(commonSettings, publicationSettings)
     .dependsOn(core)
     .configure(utestSettings)
-    .settings(
-      libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
+    .settings(libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
 
   lazy val catsJVM = cats.jvm
   lazy val catsJS  = cats.js
@@ -138,8 +149,7 @@ object TestState extends Build {
     .bothConfigure(commonSettings, publicationSettings)
     .dependsOn(core)
     .configure(utestSettings)
-    .settings(
-      libraryDependencies += "org.typelevel" %%% "cats" % Ver.Cats)
+    .settings(libraryDependencies += "org.typelevel" %%% "cats" % Ver.Cats)
 
   lazy val nyayaJVM = nyaya.jvm
   lazy val nyayaJS  = nyaya.js

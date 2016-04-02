@@ -10,5 +10,5 @@
 * Fix char/string Show instances.
 * Rename to testate
 
-* SJS module and/or DomZipper
+* SJS module?
 * React module
