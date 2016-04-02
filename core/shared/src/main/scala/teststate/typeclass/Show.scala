@@ -37,9 +37,38 @@ object Show {
   def byToString[A]: Show[A] =
     Show(_.toString)
 
+  def build[A](f: (StringBuilder, A) => Unit): Show[A] =
+    Show { a =>
+      val sb = new StringBuilder
+      f(sb, a)
+      sb.result()
+    }
+
   // Putting this into a low-priority implicits trait overrides implicit instances in user-defined companion objects. :(
   implicit def showByToString[A]: Show[A] =
     Show(_.toString)
+
+  def escapeChar(sb: StringBuilder, other: Char)(c: Char): Unit =
+    if (c < ' ')
+      c match {
+        case '\b' => sb append '\\'; sb append 'b'; ()
+        case '\f' => sb append '\\'; sb append 'f'; ()
+        case '\n' => sb append '\\'; sb append 'n'; ()
+        case '\r' => sb append '\\'; sb append 'r'; ()
+        case '\t' => sb append '\\'; sb append 't'; ()
+        case _    =>
+          val i = c.toInt
+          sb append "\\u00"
+          if (i < 16) sb append '0'
+          sb append Integer.toHexString(i)
+          ()
+      }
+    else
+      c match {
+        case '\\'    => sb append '\\'; sb append '\\'; ()
+        case `other` => sb append '\\'; sb append c   ; ()
+        case _       => sb append c                   ; ()
+      }
 
   trait Instances {
 //    implicit def showUnit   : Show[Unit   ] = byToString
@@ -50,20 +79,20 @@ object Show {
 //    implicit def showByte   : Show[Byte   ] = byToString
 
     implicit val showString: Show[String] =
-      Show[String](s =>
-        // Handle \n, \t, spaces (so surrounds), long strings (?)
-        "\"" + s + "\""
-      )
+      build { (sb, s) =>
+        sb append '"'
+        s.foreach(escapeChar(sb, '"'))
+        sb append '"'
+        ()
+      }
 
     implicit val showChar: Show[Char] =
-      Show[Char](s =>
-        // Handle \n, \t, spaces (so surrounds), long strings (?)
-        "'" + (s match {
-          case '\n' => "\\n"
-          case '\t' => "\\t"
-          case _ => s.toString
-        }) + "'"
-      )
+      build { (sb, c) =>
+        sb append '\''
+        escapeChar(sb, '\'')(c)
+        sb append '\''
+        ()
+      }
 
     implicit def showOption[A](implicit show: Show[A]): Show[Option[A]] =
       Show {

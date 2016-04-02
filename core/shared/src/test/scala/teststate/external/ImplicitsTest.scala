@@ -218,13 +218,13 @@ object ImplicitsTest2 extends TestSuite {
     // This really just that I've laid things out in such a way that implicits resolve as expected.
     'show {
       def test[A](a: A)(expect: String)(implicit s: Show[A]): Unit = {
-        val r = s(a)
-        assert(r == expect)
+        val actual = s(a)
+        assert(actual == expect)
       }
       'undef     - test(X1(9))("X1(9)")
       'defDirect - test(X2(9))("X2=9")
       'defInCO   - test(X3(9))("X3=9")
-      'default   - test('\n')("'\\n'")
+      'default   - test("a \n \u0001 \\ \" ok")("\"a \\n \\u0001 \\\\ \\\" ok\"")
     }
 
   }
