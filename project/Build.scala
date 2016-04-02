@@ -21,7 +21,7 @@ object TestState extends Build {
     final val Scala211      = "2.11.8"
     final val ScalaJsDom    = "0.9.0"
     final val Scalaz        = "7.2.1"
-    final val Sizzle        = "2.1.1"
+    final val Sizzle        = "2.3.0"
   }
 
   def scalacFlags = Seq(
@@ -151,7 +151,7 @@ object TestState extends Build {
     .settings(
       moduleName     := "dom-zipper-sizzle",
       scalacOptions  -= "-Ywarn-dead-code",
-      jsDependencies += "org.webjars" % "sizzle" % Ver.Sizzle / "sizzle.min.js" commonJSName "Sizzle",
+      jsDependencies += "org.webjars.bower" % "sizzle" % Ver.Sizzle / "sizzle.min.js" commonJSName "Sizzle",
       requiresDOM    := true)
 
   lazy val scalazJVM = scalaz.jvm
