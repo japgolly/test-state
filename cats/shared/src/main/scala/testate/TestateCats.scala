@@ -8,7 +8,7 @@ import testate.{data => D, typeclass => T}
 import D.Or
 import Exports._
 
-trait TestStateCats {
+trait TestateCats {
 
   implicit def catsMonoidMonoComposableEmpty[Op, A](implicit e: Empty[A], c: T.PolyComposable.Mono[Op, A]): Monoid[A] =
     new Monoid[A] {
@@ -22,30 +22,30 @@ trait TestStateCats {
       override def combine(x: Report.Stats, y: Report.Stats) = x + y
     }
 
-  implicit def catsProfunctorFromTestState[M[_, _]](implicit p: T.Profunctor[M]): Profunctor[M] =
+  implicit def catsProfunctorFromTestate[M[_, _]](implicit p: T.Profunctor[M]): Profunctor[M] =
     new Profunctor[M] {
       override def lmap [A, B, C]   (m: M[A, B])(f: C => A)            = p.lmap(m)(f)
       override def rmap [A, B, C]   (m: M[A, B])(f: B => C)            = p.rmap(m)(f)
       override def dimap[A, B, C, D](m: M[A, B])(f: C => A)(g: B => D) = p.dimap(m)(f, g)
     }
 
-  implicit def catsDisjunctionFromTestState[A, B](o: A Or B): A Xor B =
+  implicit def catsDisjunctionFromTestate[A, B](o: A Or B): A Xor B =
     o.fold(Xor.Left.apply, Xor.Right.apply)
 
-  implicit def catsDisjunctionToTestState[A, B](d: A Xor B): A Or B =
+  implicit def catsDisjunctionToTestate[A, B](d: A Xor B): A Or B =
     d.fold(D.Left.apply, D.Right.apply)
 
-  implicit def catsNatTransFromTestState[F[_], G[_]](implicit t: F ~> G): T.~~>[F, G] =
+  implicit def catsNatTransFromTestate[F[_], G[_]](implicit t: F ~> G): T.~~>[F, G] =
     new T.~~>[F, G] { def apply[A](fa: => F[A]) = t(fa) }
 
-  implicit def catsNatTransToTestState[F[_], G[_]](implicit t: T.~~>[F, G]): F ~> G =
+  implicit def catsNatTransToTestate[F[_], G[_]](implicit t: T.~~>[F, G]): F ~> G =
     new (F ~> G) { def apply[A](fa: F[A]) = t(fa) }
 
-  implicit def catsEqualFromTestState[A](implicit e: Equal[A]): Eq[A] =
+  implicit def catsEqualFromTestate[A](implicit e: Equal[A]): Eq[A] =
     Eq.instance(e.equal)
 
-  implicit def catsEqualToTestState[A](implicit e: Eq[A]): Equal[A] =
+  implicit def catsEqualToTestate[A](implicit e: Eq[A]): Equal[A] =
     Equal(e.eqv)
 }
 
-object TestStateCats extends TestStateCats
+object TestateCats extends TestateCats

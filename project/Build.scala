@@ -4,7 +4,7 @@ import org.scalajs.sbtplugin.ScalaJSPlugin
 import ScalaJSPlugin.autoImport._
 import Lib._
 
-object TestState extends Build {
+object Testate extends Build {
 
   private val ghProject = "testate"
 
