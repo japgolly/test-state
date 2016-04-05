@@ -2,7 +2,7 @@ package testate
 
 import utest._
 import testate.data.Failure
-import testate.Exports.{assertionSettings => _, _}
+import testate.Exports.{assertionSettings => _, equalByUnivEq => _, _}
 import testate.TestUtil._
 
 object RunnerTest extends TestSuite {

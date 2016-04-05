@@ -22,6 +22,7 @@ object TestState extends Build {
     final val ScalaJsDom    = "0.9.0"
     final val Scalaz        = "7.2.1"
     final val Sizzle        = "2.3.0"
+    final val UnivEq        = "1.0.0-SNAPSHOT"
   }
 
   def scalacFlags = Seq(
@@ -130,9 +131,10 @@ object TestState extends Build {
     .configure(utestSettings)
     .settings(
       libraryDependencies ++= Seq(
-        "com.github.japgolly.nyaya" %%% "nyaya-gen"  % Ver.Nyaya % "test",
-        "com.github.japgolly.nyaya" %%% "nyaya-prop" % Ver.Nyaya % "test",
-        "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya % "test"))
+        "com.github.japgolly.univeq" %%% "univeq"     % Ver.UnivEq,
+        "com.github.japgolly.nyaya"  %%% "nyaya-gen"  % Ver.Nyaya % "test",
+        "com.github.japgolly.nyaya"  %%% "nyaya-prop" % Ver.Nyaya % "test",
+        "com.github.japgolly.nyaya"  %%% "nyaya-test" % Ver.Nyaya % "test"))
 
   lazy val domZipperJS = project
     .in(file("dom-zipper"))

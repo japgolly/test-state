@@ -1,6 +1,7 @@
 package testate.typeclass
 
 import acyclic.file
+import japgolly.univeq.UnivEq
 
 class Equal[A](val equal: (A, A) => Boolean) extends AnyVal
 
@@ -12,15 +13,18 @@ object Equal {
   def by_==[A]: Equal[A] =
     Equal(_ == _)
 
-  trait Implicits {
-    implicit val equalUnit   : Equal[Unit   ] = by_==
+  trait ImplicitsLowPri {
+    implicit def equalByUnivEq[A: UnivEq]: Equal[A] =
+      by_==
+  }
+
+  trait Implicits extends ImplicitsLowPri {
+    // Cache oft-used instances
     implicit val equalChar   : Equal[Char   ] = by_==
     implicit val equalString : Equal[String ] = by_==
     implicit val equalBoolean: Equal[Boolean] = by_==
     implicit val equalInt    : Equal[Int    ] = by_==
     implicit val equalLong   : Equal[Long   ] = by_==
-    implicit def equalShort  : Equal[Short  ] = by_==
-    implicit def equalByte   : Equal[Byte   ] = by_==
 
     implicit def equalOption[A](implicit e: Equal[A]): Equal[Option[A]] =
       Equal((a, b) => a match {
