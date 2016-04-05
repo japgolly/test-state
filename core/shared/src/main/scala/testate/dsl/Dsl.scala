@@ -1,6 +1,7 @@
 package testate.dsl
 
 import acyclic.file
+import japgolly.univeq.UnivEq
 import testate.core._
 import testate.data._
 import testate.run.{Observer, Plan}
@@ -300,7 +301,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
           os => d(focusFn(os)).map(ev))
       }
 
-      def containsAll(queryNames: => String)(query: OS => Set[A])(implicit sb: Display[A], ev: ContainsAll.Failure[A] => E) = {
+      def containsAll(queryNames: => String)(query: OS => Set[A])(implicit sb: Display[A], ua: UnivEq[A], ev: ContainsAll.Failure[A] => E) = {
         val d = ContainsAll(positive)
         point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
@@ -315,7 +316,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       def containsNone(queryNames: => String)(query: OS => Set[A])(implicit sb: Display[A], ev: ContainsAny.Failure[A] => E) =
         not.containsAny(queryNames)(query)
 
-      def containsOnly(queryNames: => String)(query: OS => Set[A])(implicit sa: Display[A], ev: ContainsOnly.Failure[A] => E) = {
+      def containsOnly(queryNames: => String)(query: OS => Set[A])(implicit sa: Display[A], ua: UnivEq[A], ev: ContainsOnly.Failure[A] => E) = {
         val d = ContainsOnly(positive)
         point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
@@ -336,11 +337,11 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
 
 
       def existenceOfAll(allName: => String)(all: A*)(expect: OS => Boolean)
-                        (implicit sa: Display[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) =
-        existenceOfAllBy(allName)(Function const all.toSet)(expect)
+                        (implicit sa: Display[A], ua: UnivEq[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) =
+        existenceOfAllBy(allName)(Function const UnivEq.toSet(all))(expect)
 
       def existenceOfAllBy(allName: => String)(all: OS => Set[A])(expect: OS => Boolean)
-                          (implicit sa: Display[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) = {
+                          (implicit sa: Display[A], ua: UnivEq[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) = {
         val e = wrapExp1(expect)
         point(ExistenceOfAll.nameFn(e, focusName, allName))(
           os => ExistenceOfAll(e(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
