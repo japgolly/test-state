@@ -22,7 +22,7 @@ object Testate extends Build {
     final val ScalaJsDom    = "0.9.0"
     final val Scalaz        = "7.2.1"
     final val Sizzle        = "2.3.0"
-    final val UnivEq        = "1.0.0-SNAPSHOT"
+    final val UnivEq        = "1.0.0"
   }
 
   def scalacFlags = Seq(
