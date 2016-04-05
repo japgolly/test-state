@@ -8,7 +8,7 @@ import testate.{data => D, typeclass => T}
 import D.Or
 import Exports._
 
-trait TestateCats {
+trait TestateCats extends T.Equal.ImplicitsLowPri {
 
   implicit def catsMonoidMonoComposableEmpty[Op, A](implicit e: Empty[A], c: T.PolyComposable.Mono[Op, A]): Monoid[A] =
     new Monoid[A] {
