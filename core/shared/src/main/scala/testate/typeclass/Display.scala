@@ -53,26 +53,30 @@ object Display {
     Display(_.toString)
 
   def escapeChar(sb: StringBuilder, other: Char)(c: Char): Unit =
-    if (c < ' ')
-      c match {
-        case '\b' => sb append '\\'; sb append 'b'; ()
-        case '\f' => sb append '\\'; sb append 'f'; ()
-        case '\n' => sb append '\\'; sb append 'n'; ()
-        case '\r' => sb append '\\'; sb append 'r'; ()
-        case '\t' => sb append '\\'; sb append 't'; ()
-        case _    =>
-          val i = c.toInt
-          sb append "\\u00"
-          if (i < 16) sb append '0'
-          sb append Integer.toHexString(i)
-          ()
-      }
-    else
-      c match {
-        case '\\'    => sb append '\\'; sb append '\\'; ()
-        case `other` => sb append '\\'; sb append c   ; ()
-        case _       => sb append c                   ; ()
-      }
+    c match {
+      case '\b'    => sb append '\\'; sb append 'b'; ()
+      case '\f'    => sb append '\\'; sb append 'f'; ()
+      case '\n'    => sb append '\\'; sb append 'n'; ()
+      case '\r'    => sb append '\\'; sb append 'r'; ()
+      case '\t'    => sb append '\\'; sb append 't'; ()
+      case '\\'    => sb append '\\'; sb append '\\'; ()
+      case `other` => sb append '\\'; sb append c; ()
+      case _ =>
+        if (c >= ' ' && c <= '~')
+          sb append c
+        else {
+          val hex = Integer.toHexString(c.toInt)
+          sb append "\\u"
+          hex.length match {
+            case 1 => sb append "000"
+            case 2 => sb append "00"
+            case 3 => sb append '0'
+            case _ =>
+          }
+          sb append hex
+        }
+        ()
+    }
 
   trait Instances {
 //    implicit def displayUnit   : Display[Unit   ] = byToString
