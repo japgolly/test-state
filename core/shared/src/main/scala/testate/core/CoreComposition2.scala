@@ -8,41 +8,13 @@ import CoreExports._
 import CoreExports2._
 import PolyComposable._
 
-/**
-  * P = Point
-  * @ = Around
-  * I = Invariant
-  * C = Check
-  * A = Action
-  *
-  * C & A = -
-  * A & C = -
-  *
-  * A >> A = A
-  * A >> P = A with post-condition
-  * A >> @ = A with post-condition
-  * A >> I = -
-  *
-  * P >> A = A with pre-condition
-  * P >> P = -
-  * P >> @ = -
-  * P >> I = -
-  *
-  * @ >> A = -
-  * @ >> P = -
-  * @ >> @ = -
-  * @ >> I = -
-  *
-  * I >> A = -
-  * I >> P = -
-  * I >> @ = -
-  * I >> I = -
-  */
 object CoreComposition2 {
-
   trait Implicits {
 
     implicit def actionsMonoComposable[F[_], R, O, S, E]: Mono[SeqOp, Actions[F, R, O, S, E]] =
+      PolyComposable(Sack.append)
+
+    implicit def pointsMonoComposable[O, S, E]: Mono[HPSeqOp, Points[O, S, E]] =
       PolyComposable(Sack.append)
 
     implicit def actionsComposePreCond[F[_], R, O, S, E]: Right[HPSeqOp, Points[O, S, E], Actions[F, R, O, S, E]] =

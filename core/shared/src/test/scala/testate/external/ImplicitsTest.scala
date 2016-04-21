@@ -151,16 +151,39 @@ abstract class ImplicitsTest1 extends AbstractTest {
   compileError("test2[Arounds      [O, S, E], Actions[F, R, O, S, E]](_ >> _)")
   compileError("test2[Invariants   [O, S, E], Actions[F, R, O, S, E]](_ >> _)")
 
+  // orEmpty
+  test[Option[Actions[F, R, O, S, E]]](_.orEmpty).expect[Actions[F, R, O, S, E]]
+
+  // ===================================================================================================================
   // +>
-                test2[Points       [O, S, E], Actions[F, R, O, S, E]](_ +> _).expect[Actions[F, R, O, S, E]]
-                test2[Actions[F, R, O, S, E], Points       [O, S, E]](_ +> _).expect[Actions[F, R, O, S, E]]
-                test2[Actions[F, R, O, S, E], Arounds      [O, S, E]](_ +> _).expect[Actions[F, R, O, S, E]]
+  // ===================================================================================================================
+
+  // point* +> action +> (point | around)*
+
+                testAA[Points    [      O, S, E]](_ +> _).expect[Points[O, S, E]]
+  compileError("testAA[Arounds   [      O, S, E]](_ +> _)")
+  compileError("testAA[Invariants[      O, S, E]](_ +> _)")
+  compileError("testAA[Actions   [F, R, O, S, E]](_ +> _)")
+
+  compileError("test2[Points    [O, S, E], Arounds   [O, S, E]](_ +> _)")
+  compileError("test2[Points    [O, S, E], Invariants[O, S, E]](_ +> _)")
+  compileError("test2[Arounds   [O, S, E], Points    [O, S, E]](_ +> _)")
+  compileError("test2[Arounds   [O, S, E], Invariants[O, S, E]](_ +> _)")
+  compileError("test2[Invariants[O, S, E], Arounds   [O, S, E]](_ +> _)")
+  compileError("test2[Invariants[O, S, E], Points    [O, S, E]](_ +> _)")
+
+  test2[Points       [O, S, E], Actions[F, R, O, S, E]](_ +> _).expect[Actions[F, R, O, S, E]]
+  test2[Actions[F, R, O, S, E], Points       [O, S, E]](_ +> _).expect[Actions[F, R, O, S, E]]
+  test2[Actions[F, R, O, S, E], Arounds      [O, S, E]](_ +> _).expect[Actions[F, R, O, S, E]]
+
   compileError("test2[Actions[F, R, O, S, E], Invariants   [O, S, E]](_ +> _)")
   compileError("test2[Arounds      [O, S, E], Actions[F, R, O, S, E]](_ +> _)")
   compileError("test2[Invariants   [O, S, E], Actions[F, R, O, S, E]](_ +> _)")
 
-  // orEmpty
-  test[Option[Actions[F, R, O, S, E]]](_.orEmpty).expect[Actions[F, R, O, S, E]]
+  test2[Points[O, S, E], Actions[F, R, O, S, E]]((p, action) =>
+    p +> p +> action +> p +> p +> p.after +> p.after +> p
+  ).expect[Actions[F, R, O, S, E]]
+
 
   // ===================================================================================================================
   // Transformers

@@ -68,7 +68,10 @@ object PolyComposable {
     implicit def toPolyComposableSeqOps  [A](a: A)(implicit w: Can[SeqOp  , A]): SeqOps  [A] = new SeqOps  (a)
     implicit def toPolyComposableHPSeqOps[A](a: A)(implicit w: Can[HPSeqOp, A]): HPSeqOps[A] = new HPSeqOps(a)
 
-    implicit def toMonoComposableTraversableOnceOps[C[x] <: TraversableOnce[x], Op, A](as: C[A])(implicit c: Mono[Op, A]): MonoComposableTraversableOnceOps[C, Op, A] =
+    implicit def toMonoComposableTraversableOnceOpsA[C[x] <: TraversableOnce[x], A](as: C[A])(implicit c: Mono[AndOp, A]): MonoComposableTraversableOnceOps[C, AndOp, A] =
+      new MonoComposableTraversableOnceOps(as, c)
+
+    implicit def toMonoComposableTraversableOnceOpsS[C[x] <: TraversableOnce[x], A](as: C[A])(implicit c: Mono[SeqOp, A]): MonoComposableTraversableOnceOps[C, SeqOp, A] =
       new MonoComposableTraversableOnceOps(as, c)
   }
 
