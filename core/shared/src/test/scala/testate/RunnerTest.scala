@@ -38,7 +38,11 @@ object RunnerTest extends TestSuite {
   val test = Plan.action(
     a(1)
     >> a(2)
-    >> (a(3) >> a(4)).group("A34").addCheck(f.assert.equal(expectAt(4)).after)
+    >> (a(3) >> a(4)).group("A34").addCheck(f.assert.beforeAndAfter(expectAt(2), expectAt(4)))
+  ).test(Observer(_.s)).stateless
+
+  val test2 = Plan.action(
+    f.assert(expectAt(0)) +> (*.action("A1")(_.ref += "A1") >> a(2)).group("A12") +> f.assert(expectAt(2))
   ).test(Observer(_.s)).stateless
 
   def newState = new RecordVar(Record(Vector.empty))
@@ -55,7 +59,7 @@ object RunnerTest extends TestSuite {
   }
 
   override def tests = TestSuite {
-    'pass {
+    'pass1 {
       val v = newState
       assertRun(test.run(v),
         """
@@ -63,9 +67,31 @@ object RunnerTest extends TestSuite {
           |✓ A2
           |✓ A34
           |✓ All pass.
-          |Performed 4 actions, 9 checks.
+          |Performed 4 actions, 10 checks.
         """.stripMargin, showChildren = false)
       assertEq(actual = v.s, Record(Vector("A1", "A2", "A3", "A4")))
+    }
+
+    'pass2 {
+      val v = newState
+      assertRun(test2.run(v),
+        """
+          |✓ A12
+          |  ✓ Pre-conditions
+          |    ✓ Actions should be .
+          |  ✓ A1
+          |  ✓ A2
+          |    ✓ Pre-conditions
+          |      ✓ Actions should be "A1".
+          |    ✓ Action
+          |    ✓ Post-conditions
+          |      ✓ Actions should be "A1", "A2".
+          |  ✓ Post-conditions
+          |    ✓ Actions should be "A1", "A2".
+          |✓ All pass.
+          |Performed 2 actions, 4 checks.
+        """.stripMargin, showChildren = true)
+      assertEq(actual = v.s, Record(Vector("A1", "A2")))
     }
 
     'failureReason {
@@ -318,6 +344,28 @@ object RunnerTest extends TestSuite {
             |Performed 2 actions, 3 checks.
           """.stripMargin)
       }
+    }
+
+    'realOrder {
+      var i = 0
+      val * = Dsl[Unit, Unit, Unit]
+      val plan = Plan.action(
+        *.test("Before")(_ => i == 0)
+          +> *.action("Inc")(_ => i += 1)
+          +> *.test("After")(_ => i == 1))
+
+      val test = plan.stateless.testU
+      assertRun(test.runU,
+        """
+          |✓ Inc
+          |  ✓ Pre-conditions
+          |    ✓ Before
+          |  ✓ Action
+          |  ✓ Post-conditions
+          |    ✓ After
+          |✓ All pass.
+          |Performed 1 action, 2 checks.
+        """.stripMargin)
     }
 
   }

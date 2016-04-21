@@ -229,7 +229,7 @@ object OutputTest extends TestSuite {
             |✘ Press button.
             |  ✘ Pre-conditions
             |    ✘ Check failure. -- Shit broke!
-            |Performed 1 action, 1 check.
+            |Performed 0 actions, 1 check.
           """.stripMargin)
 
         'afterA - t(actionF addCheck checkPoint.after)(
@@ -261,7 +261,7 @@ object OutputTest extends TestSuite {
             |✘ Press button.
             |  ✘ Pre-conditions
             |    ✘ Check failure. -- Shit broke!
-            |Performed 1 action, 1 check.
+            |Performed 0 actions, 1 check.
           """.stripMargin)
 
         'beforeAfter2 - t(actionF addCheck checkPoint.after addCheck checkPoint2.before)(

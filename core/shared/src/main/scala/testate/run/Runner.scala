@@ -235,7 +235,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                            arounds   : Arounds[O, S, E],
                            collapse  : Boolean,
                            p         : P,
-                           run       : F[(H, ROS)]): F[P] = {
+                           run       : => F[(H, ROS)]): F[P] = {
 
     val checksPre = unpackChecks(invariants, arounds, p.ros.os)
 
