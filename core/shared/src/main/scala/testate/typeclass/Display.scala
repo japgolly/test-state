@@ -62,7 +62,8 @@ object Display {
       case '\\'    => sb append '\\'; sb append '\\'; ()
       case `other` => sb append '\\'; sb append c; ()
       case _ =>
-        if (c >= ' ' && c <= '~')
+        // if (c >= ' ' && c <= '~')
+        if (!c.isControl)
           sb append c
         else {
           val hex = Integer.toHexString(c.toInt)
