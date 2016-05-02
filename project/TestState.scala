@@ -13,7 +13,7 @@ object TestState {
 
   object Ver {
     final val Acyclic       = "0.1.4"
-    final val Cats          = "0.4.1"
+    final val Cats          = "0.5.0"
     final val KindProjector = "0.7.1"
     final val MacroParadise = "2.1.0"
     final val MTest         = "0.4.3"
