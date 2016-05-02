@@ -63,6 +63,7 @@ object TestState {
         "tc"  -> "test:compile",
         "t"   -> "test",
         "to"  -> "test-only",
+        "tq"  -> "test-quick",
         "cc"  -> ";clean;compile",
         "ctc" -> ";clean;test:compile",
         "ct"  -> ";clean;test")))
