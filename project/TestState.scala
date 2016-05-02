@@ -4,7 +4,7 @@ import org.scalajs.sbtplugin.ScalaJSPlugin
 import ScalaJSPlugin.autoImport._
 import Lib._
 
-object Testate extends Build {
+object TestState {
 
   private val ghProject = "testate"
 
@@ -93,8 +93,6 @@ object Testate extends Build {
     .jsConfigure(
       // Not mandatory; just faster.
       _.settings(jsEnv in Test := PhantomJSEnv().value))
-
-  override def rootProject = Some(root)
 
   lazy val root =
     Project("root", file("."))
