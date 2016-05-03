@@ -267,7 +267,7 @@ object RunnerTest extends TestSuite {
       'action {
         var i = 0
         val a = *.action("A")(_ => i += 1).skip
-        val test = Plan.action(a: *.Action /* TODO What? */).test(Observer(_.s)).stateless
+        val test = Plan.action(a).test(Observer(_.s)).stateless
         test.run(newState)
         assertEq(i, 0)
       }
