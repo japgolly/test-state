@@ -15,9 +15,6 @@ trait Exports {
   type DomZipperRoot           = DomZipperAt[Root]
   val  DomZipper               = new DZ.Constructors[NextBase, Id]()(Throw)
 
-  // TODO Just HtmlZipper
-  // TODO HtmlDomZipperAt[N] should be <: HtmlDomZipper
-
   type HtmlDomZipperAt[+D <: Base] = DZ[D, html.Element, Id]
   type HtmlDomZipper               = HtmlDomZipperAt[html.Element]
   type HtmlDomZipperRoot           = HtmlDomZipperAt[Root]
