@@ -15,10 +15,16 @@ trait Exports {
   type DomZipperRoot           = DomZipperAt[Root]
   val  DomZipper               = new DZ.Constructors[NextBase, Id]()(Throw)
 
+  // TODO Just HtmlZipper
+  // TODO HtmlDomZipperAt[N] should be <: HtmlDomZipper
+
   type HtmlDomZipperAt[+D <: Base] = DZ[D, html.Element, Id]
   type HtmlDomZipper               = HtmlDomZipperAt[html.Element]
   type HtmlDomZipperRoot           = HtmlDomZipperAt[Root]
   val  HtmlDomZipper               = new DZ.Constructors[html.Element, Id]()(Throw)
+
+  type HtmlScrub = teststate.domzipper.HtmlScrub
+  val  HtmlScrub = teststate.domzipper.HtmlScrub
 
   implicit def domZipperNextCovariance[D <: Base, A <: NextBase, B >: A <: NextBase, Out[_]](z: DZ[D, A, Out]): DZ[D, B, Out] =
     z.widenChildren

@@ -11,15 +11,15 @@ val coreJS            = TestState.coreJS
 
 val domZipperJS       = TestState.domZipperJS
 val domZipperSizzleJS = TestState.domZipperSizzleJS
-
-val scalazJVM         = TestState.scalazJVM
-val scalazJS          = TestState.scalazJS
+val scalajsReactJS    = TestState.scalajsReactJS
 
 val catsJVM           = TestState.catsJVM
 val catsJS            = TestState.catsJS
-
 val nyayaJVM          = TestState.nyayaJVM
 val nyayaJS           = TestState.nyayaJS
+val scalazJVM         = TestState.scalazJVM
+val scalazJS          = TestState.scalazJS
 
-
+val examples          = TestState.examples
+val exampleReactJS    = TestState.exampleReactJS
 

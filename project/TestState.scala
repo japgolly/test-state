@@ -20,9 +20,14 @@ object TestState {
     final val Nyaya         = "0.7.0"
     final val Scala211      = "2.11.8"
     final val ScalaJsDom    = "0.9.0"
+    final val ScalaJsReact  = "0.11.1"
     final val Scalaz        = "7.2.1"
     final val Sizzle        = "2.3.0"
     final val UnivEq        = "1.0.0"
+
+    // Used in examples only
+    final val Monocle       = "1.2.1"
+    final val ReactJs       = "15.0.1"
   }
 
   def scalacFlags = Seq(
@@ -95,10 +100,12 @@ object TestState {
       // Not mandatory; just faster.
       _.settings(jsEnv in Test := PhantomJSEnv().value))
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
   lazy val root =
     Project("root", file("."))
       .configure(commonSettings.jvm, preventPublication)
-      .aggregate(rootJVM, rootJS)
+      .aggregate(rootJVM, rootJS, examples)
 
   lazy val rootJVM =
     Project("JVM", file(".rootJVM"))
@@ -111,7 +118,10 @@ object TestState {
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
         coreJS, coreMacrosJS, scalazJS, catsJS, nyayaJS,
-        domZipperJS, domZipperSizzleJS)
+        domZipperJS, domZipperSizzleJS,
+        scalajsReactJS)
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   lazy val coreMacrosJVM = coreMacros.jvm
   lazy val coreMacrosJS  = coreMacros.js
@@ -184,4 +194,52 @@ object TestState {
       libraryDependencies ++= Seq(
         "com.github.japgolly.nyaya" %%% "nyaya-gen" % Ver.Nyaya,
         "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya))
+
+  lazy val scalajsReactJS = project
+    .in(file("scalajs-react"))
+    .enablePlugins(ScalaJSPlugin)
+    .configure(commonSettings.js, publicationSettings)
+    .dependsOn(domZipperJS)
+    .settings(
+      moduleName := "scalajs-react",
+      libraryDependencies ++= Seq(
+        "com.github.japgolly.scalajs-react" %%% "core" % Ver.ScalaJsReact,
+        "com.github.japgolly.scalajs-react" %%% "test" % Ver.ScalaJsReact),
+      requiresDOM := true)
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  lazy val examples =
+    Project("examples", file(".examples"))
+      .configure(commonSettings.jvm, preventPublication)
+      .aggregate(exampleReactJS)
+
+  lazy val exampleReactJS = project
+    .in(file("example-react"))
+    .enablePlugins(ScalaJSPlugin)
+    .configure(commonSettings.js, preventPublication, utestSettings.js)
+    .dependsOn(coreJS, scalajsReactJS, domZipperSizzleJS)
+    .settings(
+      moduleName := "example-react",
+      libraryDependencies ++= Seq(
+        "com.github.japgolly.scalajs-react" %%% "ext-monocle"   % Ver.ScalaJsReact,
+        "com.github.julien-truffaut"        %%% "monocle-core"  % Ver.Monocle,
+        "com.github.julien-truffaut"        %%% "monocle-macro" % Ver.Monocle),
+      addCompilerPlugin(macroParadisePlugin), // For Monocle macros
+      jsDependencies ++= Seq(
+        "org.webjars.bower" % "react" % Ver.ReactJs
+          /        "react-with-addons.js"
+          minified "react-with-addons.min.js"
+          commonJSName "React",
+        "org.webjars.bower" % "react" % Ver.ReactJs
+          /         "react-dom.js"
+          minified  "react-dom.min.js"
+          dependsOn "react-with-addons.js"
+          commonJSName "ReactDOM",
+        "org.webjars.bower" % "react" % Ver.ReactJs
+          /         "react-dom-server.js"
+          minified  "react-dom-server.min.js"
+          dependsOn "react-dom.js"
+          commonJSName "ReactDOMServer"),
+      requiresDOM := true)
 }
