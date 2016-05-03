@@ -37,18 +37,17 @@ object DomZipper {
       .map(_ + ":not(:disabled)") // :not(:read-only) | Firefox errors out when :read-only is used
       .mkString(",")
 
-  private val idS = (s: String) => s
   private val rootLayer = Layer("window.document", "", window.document)
 
   class Constructors[Next <: NextBase, Out[_]](implicit h: ErrorHandler[Out]) {
-    def root(implicit $: CssSelEngine): DomZipper[Root, Next, Out] =
-      new DomZipper(Vector.empty, rootLayer, idS)($, h)
+    def root(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipper[Root, Next, Out] =
+      new DomZipper(Vector.empty, rootLayer, scrub)($, h)
 
-    def apply[D <: Base](dom: D)(implicit $: CssSelEngine): DomZipper[D, Next, Out] =
-      apply("<provided>", dom)
+    def apply[D <: Base](dom: D)(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipper[D, Next, Out] =
+      apply("<provided>", dom)($, scrub)
 
-    def apply[D <: Base](name: String, dom: D)(implicit $: CssSelEngine): DomZipper[D, Next, Out] =
-      new DomZipper(Vector.empty, Layer(name, "", dom), idS)($, h)
+    def apply[D <: Base](name: String, dom: D)(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipper[D, Next, Out] =
+      new DomZipper(Vector.empty, Layer(name, "", dom), scrub)($, h)
   }
 }
 
@@ -56,14 +55,13 @@ object DomZipper {
   *
   * @param $         The CSS selector engine. Usually either jQuery or Sizzle.
   * @param h         The error handler.
-  * @param htmlScrub Arbitrary preprocessor applied before returning any HTML text.
   * @tparam D        The type of the current DOM focus.
   * @tparam Next     The type of all DOM children.
   * @tparam Out      The shape of all output that can potentially fail.
   */
 final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](prevLayers: Vector[Layer[Base]],
                                                                                curLayer  : Layer[D],
-                                                                               htmlScrub : String => String)
+                                                                               htmlScrub : HtmlScrub)
                                                                               (implicit $: CssSelEngine,
                                                                                         h: ErrorHandler[Out]) {
 
@@ -74,8 +72,11 @@ final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](p
   // Self configuration
   // ==================
 
+  def scrubHtml(f: HtmlScrub): DomZipper[D, Next, Out] =
+    new DomZipper(prevLayers, curLayer, htmlScrub >> f)
+
   def scrubHtml(f: String => String): DomZipper[D, Next, Out] =
-    new DomZipper(prevLayers, curLayer, f compose htmlScrub)
+    scrubHtml(HtmlScrub(f))
 
   def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[D, Next, Result] =
     new DomZipper(prevLayers, curLayer, htmlScrub)($, errorHandler)
@@ -171,8 +172,8 @@ final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](p
   def dynamicString(f: js.Dynamic => Any): String =
     dynamicMethod[Any](f).fold("undefined")(_.toString)
 
-  def outerHTML: String = htmlScrub(dynamicString(_.outerHTML))
-  def innerHTML: String = htmlScrub(dynamicString(_.innerHTML))
+  def outerHTML: String = htmlScrub run dynamicString(_.outerHTML)
+  def innerHTML: String = htmlScrub run dynamicString(_.innerHTML)
   def innerText: String = dom.textContent
 
   def value: Out[String] =
