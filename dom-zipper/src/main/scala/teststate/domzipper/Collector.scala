@@ -8,10 +8,16 @@ import ErrorHandler.ErrorHandlerResultOps
 final class Collector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
                                                                  sel: String,
                                                                  cont: Container[C, Out])
-                                                                (implicit h: ErrorHandler[Out]){
+                                                                (implicit h: ErrorHandler[Out]) {
+
+  // Eager! DOM could change!
+  private val result = from.directSelect(sel)
 
   def isEmpty: Boolean =
-    from.directSelect(sel).isEmpty
+    result.isEmpty
+
+  def size: Int =
+    result.length
 
   def nonEmpty: Boolean =
     !isEmpty
@@ -23,7 +29,7 @@ final class Collector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper
     this.asInstanceOf[Collector[C, html.Element, html.Element, Out]]
 
   def doms: Out[C[D]] = {
-    val e1: Out[C[Element]] = cont(sel, from.directSelect(sel))
+    val e1: Out[C[Element]] = cont(sel, result)
     val e2: Out[C[D]]       = e1.asInstanceOf[Out[C[D]]]
     e2
   }
