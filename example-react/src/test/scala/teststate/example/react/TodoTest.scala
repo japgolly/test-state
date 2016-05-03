@@ -2,7 +2,8 @@ package teststate.example.react
 
 import japgolly.scalajs.react.test._
 import utest._
-import TestState._
+
+import MyTestState._
 import TodoTestDsl._
 
 object TodoTest extends TestSuite {
