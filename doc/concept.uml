@@ -1,0 +1,27 @@
+@startuml
+
+|Pure world\nStateless\n|
+start
+
+|#PeachPuff|Impure world\nStateful\n|
+:Observe;
+
+|Pure world\nStateless\n|
+:Test invariants;
+
+while (More actions?) is (yep)
+  :Test action's\npre-conditions;
+
+  |Impure world\nStateful\n|
+  :Perform action;
+  :Observe;
+
+  |Pure world\nStateless\n|
+  :Action updates\nexpected state;
+  :Test action's\npost-conditions;
+  :Test invariants;
+endWhile (nope)
+
+stop
+@enduml
+
