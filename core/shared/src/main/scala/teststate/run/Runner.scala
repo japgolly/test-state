@@ -46,7 +46,7 @@ object Runner {
           coproductFound = true
           Recover.id.attempt(p(i)) match {
             case Right(s) => go(s)
-            case Left(e)  => err(Recover.recoverToString.name(n, Some(i)), e.failure)
+            case Left(e)  => err(Recover.byToString.name(n, Some(i)), e.failure)
           }
       }
     go(sack)

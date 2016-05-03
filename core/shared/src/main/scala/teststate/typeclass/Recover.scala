@@ -1,6 +1,7 @@
 package teststate.typeclass
 
 import acyclic.file
+import java.io.PrintStream
 import teststate.data._
 
 final case class Recover[+E](toE: Throwable => E) extends AnyVal {
@@ -34,15 +35,14 @@ object Recover {
   val id: Recover[Throwable] =
     Recover(identity)
 
-  implicit val recoverToString: Recover[String] =
+  val byToString: Recover[String] =
+    Recover("Caught exception: " + _.toString)
+
+  def printFirst[A](r: Recover[A], stream: PrintStream = System.err): Recover[A] =
     Recover { t =>
-      // TODO Yay? Nay?
-      /*
-      val o = System.err
-      o.println()
-      t.printStackTrace(o)
-      o.println()
-      */
-      "Caught exception: " + t.toString
+      stream.println()
+      t.printStackTrace(stream)
+      stream.println()
+      r.toE(t)
     }
 }

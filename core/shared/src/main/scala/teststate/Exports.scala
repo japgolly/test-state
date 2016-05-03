@@ -64,6 +64,9 @@ trait Exports
 
   implicit def testStateAssertionSettings: Report.AssertionSettings =
     Report.AssertionSettings.default
+
+  implicit def testStateRecoverString: Recover[String] =
+    Recover.byToString
 }
 
 object Exports extends Exports

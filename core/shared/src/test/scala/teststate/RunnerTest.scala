@@ -32,9 +32,6 @@ object RunnerTest extends TestSuite {
 
   val nop = *.action("NOP")(_ => ())
 
-  implicit val recoverToString: Recover[String] =
-    Recover("Caught exception: " + _.toString)
-
   val test = Plan.action(
     a(1)
     >> a(2)
