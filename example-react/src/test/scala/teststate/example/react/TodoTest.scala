@@ -3,9 +3,9 @@ package teststate.example.react
 import japgolly.scalajs.react.test._
 import utest._
 import TestState._
+import TodoTestDsl._
 
 object TodoTest extends TestSuite {
-  import TodoTestDSL._
 
   /**
    * Here be all the invariants for the TodoComponent.
@@ -16,7 +16,7 @@ object TodoTest extends TestSuite {
     var invars = dsl.emptyInvariant
 
     // Invariant #1
-    invars &= dsl.focus("Summary: total and (complete + pending)")
+    invars &= dsl.focus("Total and (complete + pending) in summary")
       .compare(_.obs.summaryTotal, i => i.obs.summaryComplete + i.obs.summaryPending)
       .assert.equal
 
@@ -34,7 +34,7 @@ object TodoTest extends TestSuite {
       .assert.equal
 
     // Invariant #4
-    invars &= dsl.test("NewItem: Blank text = disabled 'Add' button")(i =>
+    invars &= dsl.test("'Add' button disabled = new-item text is blank.")(i =>
       i.obs.newItemText.trim.isEmpty == i.obs.newItemButtonDisabled)
 
     // Ensure observation always matches expected state

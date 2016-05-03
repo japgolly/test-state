@@ -68,20 +68,20 @@ final class TodoObs($: HtmlDomZipper) {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/**
-  *
-  */
-object TodoTestDSL {
+object TodoTestDsl {
 
+  /**
+   * This is some (expected) state we will maintain ourselves as actions are performed.
+   *
+   * It is used to make ensure that observations about the real state (via [[TodoObs]]) are what we expect.
+   */
   @Lenses
   case class State(total: Int, completed: Int)
 
   val dsl = Dsl[Unit, TodoObs, State]
 
-  val showingComplete = dsl.focus("ShowComplete").value(_.obs.showingComplete)
-
-  val itemCount = dsl.focus("Number of items").value(_.obs.visibleItemCount)
-
+  val showingComplete  = dsl.focus("ShowingComplete"   ).value(_.obs.showingComplete)
+  val itemCount        = dsl.focus("Visible item count").value(_.obs.visibleItemCount)
   val visibleItemNames = dsl.focus("Visible item names").collection(_.obs.itemCompleteButtons.keys)
 
   def setNewText(text: String): dsl.Action =
