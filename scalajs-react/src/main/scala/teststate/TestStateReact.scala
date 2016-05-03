@@ -13,10 +13,8 @@ trait TestStateReact extends domzipper.Exports {
   implicit def toTestStateReactCompExt[N <: TopNode](c: CompScope.Mounted[N]): TestStateReactCompExt[N] =
     new TestStateReactCompExt(c)
 
-  // TODO Separate Defaults ↓ from Exports ↑
-
-  implicit override def defaultHtmlScrub: HtmlScrub =
-    super.defaultHtmlScrub >> HtmlScrub.removeReactDataAttr
+  implicit override val testStateHtmlScrub: HtmlScrub =
+    HtmlScrub.default >> HtmlScrub.removeReactDataAttr
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -23,4 +23,6 @@ object HtmlScrub {
 
   val removeComments: HtmlScrub =
     replaceAll("<!--[^\u0000]*?-->", "")
+
+  def default = removeComments
 }

@@ -75,10 +75,8 @@ trait Exports
   implicit def testStateOrFromScalaEither[A, B](e: A Either B): A Or B =
     Or fromScalaEither e
 
-  // TODO Separate Defaults ↓ from Exports ↑
-
-  implicit def assertionSettings: Report.AssertionSettings =
-    Report.AssertionSettings.coloured
+  implicit def testStateAssertionSettings: Report.AssertionSettings =
+    Report.AssertionSettings.default
 }
 
 object Exports extends Exports

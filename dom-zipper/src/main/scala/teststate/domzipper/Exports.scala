@@ -29,10 +29,8 @@ trait Exports {
   implicit def domZipperNextCovariance[D <: Base, A <: NextBase, B >: A <: NextBase, Out[_]](z: DZ[D, A, Out]): DZ[D, B, Out] =
     z.widenChildren
 
-  // TODO Separate Defaults ↓ from Exports ↑
-
-  implicit def defaultHtmlScrub: HtmlScrub =
-    HtmlScrub.removeComments
+  implicit def testStateHtmlScrub: HtmlScrub =
+    HtmlScrub.default
 }
 
 object Exports extends Exports

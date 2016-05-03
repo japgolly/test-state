@@ -95,5 +95,7 @@ object Report {
     def coloured = AssertionSettings(
       onPass = Format.Default.coloured.apply,
       onFail = Format.Default.coloured.alwaysShowChildren.apply)
+
+    def default = coloured
   }
 }
