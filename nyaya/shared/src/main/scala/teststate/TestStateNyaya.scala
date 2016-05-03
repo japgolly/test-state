@@ -5,18 +5,18 @@ import nyaya.gen._
 import nyaya.test.Settings
 import teststate.data.ROS
 import Exports._
-import TestateNyaya._
+import TestStateNyaya._
 
-trait TestateNyaya {
+trait TestStateNyaya {
   implicit def toDslNyayaOps[F[_], R, O, S, E](dsl: Dsl[F, R, O, S, E]): DslNyayaOps[F, R, O, S, E] =
     new DslNyayaOps(dsl)
 }
 
-object TestateNyaya extends TestateNyaya {
+object TestStateNyaya extends TestStateNyaya {
 
   final class DslNyayaOps[F[_], R, O, S, E](private val dsl: Dsl[F, R, O, S, E]) extends AnyVal with Dsl.Types[F, R, O, S, E] {
     def genActions(name: ANameFn)(g: Gen[Action])(implicit s: Settings): Action =
-      TestateNyaya.genActions(g)(name)(s)
+      TestStateNyaya.genActions(g)(name)(s)
 
     def genActionsBy(name: ANameFn)(g: ROS => Gen[Action])(implicit s: Settings): Action =
       dsl.chooseAction(name)(i => genActions(name)(g(i))(s))
