@@ -11,8 +11,6 @@ trait Exports
      with typeclass.Equal.Implicits
      with run.RunImplicits {
 
-  // TODO Decide on project name. Prefix ALL implicits values for Equal etc.
-
   type Dsl[F[_], R, O, S, E] = teststate.dsl.Dsl[F, R, O, S, E]
   val Dsl = teststate.dsl.Dsl
 
@@ -39,17 +37,6 @@ trait Exports
 
   type NameFn[-A] = teststate.data.NameFn[A]
   val NameFn = teststate.data.NameFn
-
-  /*
-  type Or[+A, +B] = teststate.data.Or[A, B]
-  val Or = teststate.data.Or
-
-  type Left[+A, +B] = teststate.data.Left[A, B]
-  val Left = teststate.data.Left
-
-  type Right[+A, +B] = teststate.data.Right[A, B]
-  val Right = teststate.data.Right
-  */
 
   type Plan[F[_], R, O, S, E] = teststate.run.Plan[F, R, O, S, E]
   val Plan = teststate.run.Plan

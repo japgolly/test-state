@@ -9,7 +9,7 @@ import PolyComposable._
 
 trait RunImplicits {
 
-  implicit def planComposable[F[_], R, O, S, E]: Mono[SeqOp, Plan[F, R, O, S, E]] =
+  implicit def testStatePlanComposable[F[_], R, O, S, E]: Mono[SeqOp, Plan[F, R, O, S, E]] =
     PolyComposable { (x, y) =>
       val n: Option[Name] =
         (x.name, y.name) match {
@@ -23,5 +23,5 @@ trait RunImplicits {
       new Plan(n, as, is)(x.executionModel)
     }
 
-  implicit def plansCanSeq[F[_], R, O, S, E]: Can[SeqOp, Plan[F, R, O, S, E]] = Can
+  implicit def testStatePlansCanSeq[F[_], R, O, S, E]: Can[SeqOp, Plan[F, R, O, S, E]] = Can
 }

@@ -49,7 +49,7 @@ object Display {
     }
 
   // Putting this into a low-priority implicits trait overrides implicit instances in user-defined companion objects. :(
-  implicit def displayByToString[A]: Display[A] =
+  implicit def testStateDisplayByToString[A]: Display[A] =
     Display(_.toString)
 
   def escapeChar(sb: StringBuilder, other: Char)(c: Char): Unit =
@@ -80,14 +80,14 @@ object Display {
     }
 
   trait Instances {
-//    implicit def displayUnit   : Display[Unit   ] = byToString
-//    implicit val displayBoolean: Display[Boolean] = byToString
-//    implicit val displayInt    : Display[Int    ] = byToString
-//    implicit def displayLong   : Display[Long   ] = byToString
-//    implicit def displayShort  : Display[Short  ] = byToString
-//    implicit def displayByte   : Display[Byte   ] = byToString
+//    implicit def testStateDisplayUnit   : Display[Unit   ] = byToString
+//    implicit val testStateDisplayBoolean: Display[Boolean] = byToString
+//    implicit val testStateDisplayInt    : Display[Int    ] = byToString
+//    implicit def testStateDisplayLong   : Display[Long   ] = byToString
+//    implicit def testStateDisplayShort  : Display[Short  ] = byToString
+//    implicit def testStateDisplayByte   : Display[Byte   ] = byToString
 
-    implicit val displayString: Display[String] =
+    implicit val testStateDisplayString: Display[String] =
       build { (sb, s) =>
         sb append '"'
         s.foreach(escapeChar(sb, '"'))
@@ -95,7 +95,7 @@ object Display {
         ()
       }
 
-    implicit val displayChar: Display[Char] =
+    implicit val testStateDisplayChar: Display[Char] =
       build { (sb, c) =>
         sb append '\''
         escapeChar(sb, '\'')(c)
@@ -103,24 +103,24 @@ object Display {
         ()
       }
 
-    implicit def displayName: Display[Name] =
+    implicit def testStateDisplayName: Display[Name] =
       Display(_.value)
 
-    implicit def displayNameFn[A]: Display[NameFn[A]] =
+    implicit def testStateDisplayNameFn[A]: Display[NameFn[A]] =
       Display.by(_(None))
 
-    implicit def displayOption[A](implicit display: Display[A]): Display[Option[A]] =
+    implicit def testStateDisplayOption[A](implicit display: Display[A]): Display[Option[A]] =
       Display {
         case None    => "None"
         case Some(a) => s"Some(${display(a)})"
       }
 
-    implicit def displayTraversable[C[X] <: Traversable[X], A](implicit display: Display[A]): Display[C[A]] =
+    implicit def testStateDisplayTraversable[C[X] <: Traversable[X], A](implicit display: Display[A]): Display[C[A]] =
       Display(_.toIterator.map(display(_)).mkString(", "))
   }
 
   trait ToOps {
-    implicit def toDisplayOps[A: Display](a: A): Ops[A] =
+    implicit def toTestStateDisplayOps[A: Display](a: A): Ops[A] =
       new Ops(a)
   }
 

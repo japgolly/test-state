@@ -29,7 +29,7 @@ object NamedOps {
   }
 
   trait ToOps {
-    implicit def toNamedOps[A, I](a: A)(implicit n: NamedOps[A, I]): Ops[A, I] =
+    implicit def toTestStateNamedOps[A, I](a: A)(implicit n: NamedOps[A, I]): Ops[A, I] =
       new Ops(a)(n)
   }
 
