@@ -4,7 +4,7 @@ import japgolly.scalajs.react.test._
 import utest._
 import TestState._
 
-object TodoComponentTest extends TestSuite {
+object TodoTest extends TestSuite {
   import TodoTestDSL._
 
   /**
