@@ -130,21 +130,6 @@ object ReportFormat {
 
       val sec1 = formatDuration(1)
 
-      /*
-      case class Settings(pass: Int => String,
-                          skip: Int => String,
-                          fail: Int => String,
-                          time: FiniteDuration => String)
-
-      val uncoloured = Settings(_.toString, _.toString, _.toString, formatDuration(1))
-
-      val coloured = Settings(
-        pass = BOLD + GREEN + _ + RESET + WHITE,
-        skip = BOLD + YELLOW + _ + BLACK,
-        fail = RED + _ + BOLD,
-        time = uncoloured.time)
-        */
-
       private def units(sb: StringBuilder, n: Int, u: String) = {
         sb append n
         sb append ' '
