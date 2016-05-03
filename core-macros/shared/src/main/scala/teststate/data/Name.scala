@@ -1,6 +1,7 @@
 package teststate.data
 
 import acyclic.file
+import scala.reflect.macros.blackbox
 
 abstract class Name {
   def value: String
@@ -36,21 +37,20 @@ object Name {
   def lazily(n: => Name): Name =
     new Later(() => n.value)
 
-  // TODO Is this needed? Just put in comp objects, no?
   trait Implicits {
-//    implicit def nameFromString(s: String): Name = Name(s)
-    implicit def materializeNameFromString(body: String): Name = macro Name.MacroImpls.name
-    implicit def materializeNameFnFromString(body: String): NameFn[Any] = macro Name.MacroImpls.nameFn
-//    implicit def materializeNameFnFromString[A](body: A)(implicit ev: A => Name): NameFn[Any] = macro Name.MacroImpls.nameFn2[A]
-    implicit def nameFnFromString[A](a: A)(implicit ev: A => Name): NameFn[Any] = NameFn const ev(a)
-//    implicit def nameFnFromFn[A](f: Option[A] => Name): NameFn[A] = Fn(f)
+    implicit def materializeNameFromString(body: String): Name =
+      macro Name.MacroImpls.name
+
+    implicit def materializeNameFnFromString(body: String): NameFn[Any] =
+      macro Name.MacroImpls.nameFn
+
+    implicit def nameFnFromString[A](a: A)(implicit ev: A => Name): NameFn[Any] =
+      NameFn const ev(a)
   }
 
   object Implicits extends Implicits
 
-  import scala.reflect.macros.blackbox.Context
-
-  final class MacroImpls(val c: Context) {
+  final class MacroImpls(val c: blackbox.Context) {
     import c.universe.{Name => _, _}
 
     def name(body: c.Expr[String]): c.Expr[Name] =
@@ -63,9 +63,6 @@ object Name {
 
     def nameFn(body: c.Expr[String]): c.Expr[NameFn[Any]] =
       c.Expr[NameFn[Any]](q"_root_.teststate.data.NameFn.const($body)")
-
-//    def nameFn2[A](body: c.Expr[A])(ev: c.Expr[A => Name]): c.Expr[NameFn[Any]] =
-//      c.Expr[NameFn[Any]](q"Function const $ev($body)")
   }
 }
 
