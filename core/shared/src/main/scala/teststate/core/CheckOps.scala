@@ -26,7 +26,7 @@ object CheckOps {
       tc.map_OS(c)(f)
 
     def mapOS[X, Y](o: X => O, s: Y => S): C[X, Y, E] =
-      map_OS(_.map(o, s))
+      map_OS(_.mapOS(o, s))
 
     def mapO[X](f: X => O): C[X, S, E] =
       map_OS(_ mapO f)
