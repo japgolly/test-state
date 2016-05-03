@@ -24,6 +24,10 @@ case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: S
     ))
 
   @elidable(elidable.ASSERTION)
+  def assertF[EE >: E]()(implicit as: AssertionSettings, se: DisplayError[EE]): Unit =
+    assert[EE]()(as.failSettingsOnPass, se)
+
+  @elidable(elidable.ASSERTION)
   def assert[EE >: E]()(implicit as: AssertionSettings, se: DisplayError[EE]): Unit =
     failureReason(se) match {
 
@@ -53,6 +57,9 @@ case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: S
 
   def format[EE >: E](f: Format)(implicit s: DisplayError[EE]): String =
     f.format[EE](this)(s) getOrElse ""
+
+  def formatF[EE >: E](implicit as: AssertionSettings, s: DisplayError[EE]): String =
+    format(as.failSettingsOnPass, s)
 }
 
 object Report {
@@ -72,6 +79,9 @@ object Report {
   case class AssertionSettings(onPass: Format, onFail: Format) {
     def silenceOnPass: AssertionSettings =
       copy(onPass = Format.quiet)
+
+    def failSettingsOnPass: AssertionSettings =
+      copy(onPass = onFail)
   }
 
   object AssertionSettings {
