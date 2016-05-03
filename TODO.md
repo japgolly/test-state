@@ -13,6 +13,4 @@ Maybe
 * Show O and/or S on failure.
 * Action to log O and/or S.
 * Rename `S` for `State`. Might be confusing that it isn't the state being tested.
-* JS module
-* Replace c & c with {<+,+>}? Down to two symbolic ops.
 
