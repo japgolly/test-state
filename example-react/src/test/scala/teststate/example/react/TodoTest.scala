@@ -12,29 +12,29 @@ object TodoTest extends TestSuite {
    *
    * They be validated before and after each action executes, arr.
    */
-  val invariants: *.Invariant = {
-    var invars = *.emptyInvariant
+  val invariants: dsl.Invariant = {
+    var invars = dsl.emptyInvariant
 
     // Invariant #1
-    invars &= *.focus("Summary: total and (complete + pending)")
+    invars &= dsl.focus("Summary: total and (complete + pending)")
       .compare(_.obs.summaryTotal, i => i.obs.summaryComplete + i.obs.summaryPending)
       .assert.equal
 
     // Invariant #2
     val itemCountEqualsTotal   = itemCount.assert.equalBy(_.obs.summaryTotal)
     val itemCountEqualsPending = itemCount.assert.equalBy(_.obs.summaryPending)
-    invars &= *.chooseInvariant("Expected visible items")(_.obs.showingComplete match {
+    invars &= dsl.chooseInvariant("Expected visible items")(_.obs.showingComplete match {
       case true  => itemCountEqualsTotal
       case false => itemCountEqualsPending
     })
 
     // Invariant #3
-    invars &= *.focus("Number of 'Complete' buttons")
+    invars &= dsl.focus("Number of 'Complete' buttons")
       .compare(_.obs.completeItemButtonCount, _.obs.summaryPending)
       .assert.equal
 
     // Invariant #4
-    invars &= *.test("NewItem: Blank text = disabled 'Add' button")(i =>
+    invars &= dsl.test("NewItem: Blank text = disabled 'Add' button")(i =>
       i.obs.newItemText.trim.isEmpty == i.obs.newItemButtonDisabled)
 
     // Ensure observation always matches expected state
@@ -43,15 +43,15 @@ object TodoTest extends TestSuite {
     // invariants are just normal immutable Scala values. You can compose with & whenever and however you like).
     //
     val expectedStateIsCorrect =
-      *.focus("Total items"    ).obsAndState(_.summaryTotal   , _.total    ).assert.equal &
-      *.focus("Completed items").obsAndState(_.summaryComplete, _.completed).assert.equal
+      dsl.focus("Total items"    ).obsAndState(_.summaryTotal   , _.total    ).assert.equal &
+      dsl.focus("Completed items").obsAndState(_.summaryComplete, _.completed).assert.equal
 
     invars & expectedStateIsCorrect
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  def runTest(plan: *.Plan): Report[String] =
+  def runTest(plan: dsl.Plan): Report[String] =
     ReactTestUtils.withRenderedIntoDocument(TodoComponent.Component()) { c =>
 
       def observe() = new TodoObs(c.htmlDomZipper)

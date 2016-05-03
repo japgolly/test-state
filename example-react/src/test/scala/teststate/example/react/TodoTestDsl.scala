@@ -76,37 +76,37 @@ object TodoTestDSL {
   @Lenses
   case class State(total: Int, completed: Int)
 
-  val * = Dsl[Unit, TodoObs, State]
+  val dsl = Dsl[Unit, TodoObs, State]
 
-  val showingComplete = *.focus("ShowComplete").value(_.obs.showingComplete)
+  val showingComplete = dsl.focus("ShowComplete").value(_.obs.showingComplete)
 
-  val itemCount = *.focus("Number of items").value(_.obs.visibleItemCount)
+  val itemCount = dsl.focus("Number of items").value(_.obs.visibleItemCount)
 
-  val visibleItemNames = *.focus("Visible item names").collection(_.obs.itemCompleteButtons.keys)
+  val visibleItemNames = dsl.focus("Visible item names").collection(_.obs.itemCompleteButtons.keys)
 
-  def setNewText(text: String): *.Action =
-    *.action(s"Set new text to '$text'")(ChangeEventData(text) simulate _.obs.newItemInput)
+  def setNewText(text: String): dsl.Action =
+    dsl.action(s"Set new text to '$text'")(ChangeEventData(text) simulate _.obs.newItemInput)
 
-  val clickAdd: *.Action =
-    *.action("Click the 'Add' button")(Simulate click _.obs.newItemButton)
+  val clickAdd: dsl.Action =
+    dsl.action("Click the 'Add' button")(Simulate click _.obs.newItemButton)
 
-  def addItem(text: String): *.Action =
+  def addItem(text: String): dsl.Action =
     ( setNewText(text)
-      +> *.test("Add button must be enabled.")(!_.obs.newItemButtonDisabled)
+      +> dsl.test("Add button must be enabled.")(!_.obs.newItemButtonDisabled)
       >> clickAdd.updateState(State.total.modify(_ + 1))
-      +> *.focus("New item text").value(_.obs.newItemText).assert("")
+      +> dsl.focus("New item text").value(_.obs.newItemText).assert("")
     ).group(s"Add item: '$text'")
 
-  def completeItem(name: String): *.Action =
-    *.action("Complete item: " + name).attempt(_.obs.itemCompleteButtons.get(name) match {
+  def completeItem(name: String): dsl.Action =
+    dsl.action("Complete item: " + name).attempt(_.obs.itemCompleteButtons.get(name) match {
       case None          => Some("Item not found.")
       case Some(None)    => Some("Item missing 'Complete' button.")
       case Some(Some(b)) => Simulate click b; None
     })
     .updateState(State.completed.modify(_ + 1))
 
-  val toggleShowCompleted: *.Action =
-    *.action("Toggle ShowCompleted")(Simulate change _.obs.showCompleteInput) +>
+  val toggleShowCompleted: dsl.Action =
+    dsl.action("Toggle ShowCompleted")(Simulate change _.obs.showCompleteInput) +>
       showingComplete.assert.change
 }
 
