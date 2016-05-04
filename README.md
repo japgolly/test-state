@@ -86,12 +86,12 @@ Here is what the above looks like in action:
 | Module              | Description | Platforms |
 |---------------------|-------------|-----------|
 | `core`              | The core module. | Scala + Scala.JS. |
-| `dom-zipper`        | Utility for observing web DOM.<br>*(Requires [jQuery](https://jquery.com/) or [Sizzle](https://sizzlejs.com/).)* | Scala.JS only. |
+| `dom-zipper`        | Standalone utility for observing web DOM.<br>*(Requires [jQuery](https://jquery.com/) or [Sizzle](https://sizzlejs.com/).)* | Scala.JS only. |
 | `dom-zipper-sizzle` | As above bundled with [Sizzle](https://sizzlejs.com/). | Scala.JS only. |
-| `cats`         | Support for [Cats](https://github.com/typelevel/cats). | Scala + Scala.JS. |
-| `nyaya`        | Support for [Nyaya](https://github.com/japgolly/nyaya). | Scala + Scala.JS. |
-| `scalajs-react` | Support for [scalajs-react](https://github.com/japgolly/scalajs-react). | Scala.JS only. |
-| `scalaz`       | Support for [Scalaz](https://github.com/scalaz/scalaz). | Scala + Scala.JS. |
+| `ext-cats`          | Extensions for [Cats](https://github.com/typelevel/cats). | Scala + Scala.JS. |
+| `ext-nyaya`         | Extensions for [Nyaya](https://github.com/japgolly/nyaya). | Scala + Scala.JS. |
+| `ext-scalajs-react` | Extensions for [scalajs-react](https://github.com/japgolly/scalajs-react). | Scala.JS only. |
+| `ext-scalaz`        | Extensions for [Scalaz](https://github.com/scalaz/scalaz). | Scala + Scala.JS. |
 
 
 # Examples

@@ -168,6 +168,7 @@ object TestState {
   lazy val scalazJVM = scalaz.jvm
   lazy val scalazJS  = scalaz.js
   lazy val scalaz = crossProject
+    .in(file("ext-scalaz"))
     .configure(commonSettings)
     .bothConfigure(publicationSettings)
     .dependsOn(core)
@@ -177,6 +178,7 @@ object TestState {
   lazy val catsJVM = cats.jvm
   lazy val catsJS  = cats.js
   lazy val cats = crossProject
+    .in(file("ext-cats"))
     .configure(commonSettings)
     .bothConfigure(publicationSettings)
     .dependsOn(core)
@@ -186,6 +188,7 @@ object TestState {
   lazy val nyayaJVM = nyaya.jvm
   lazy val nyayaJS  = nyaya.js
   lazy val nyaya = crossProject
+    .in(file("ext-nyaya"))
     .configure(commonSettings)
     .bothConfigure(publicationSettings)
     .dependsOn(core, scalaz)
@@ -196,7 +199,7 @@ object TestState {
         "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya))
 
   lazy val scalajsReactJS = project
-    .in(file("scalajs-react"))
+    .in(file("ext-scalajs-react"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings)
     .dependsOn(domZipperJS)
