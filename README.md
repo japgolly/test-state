@@ -1,11 +1,88 @@
-# Testate
+# Scala Test-State
 
-test   
-||||
-||state
-|||||||
-testate
-"test state"
+Test stateful stuff statelessly, and reasonably.
+
+
+# What is this?
+
+Firstly, a quick mention of what this *is not*:
+
+1. This is not a test *framework*.
+   <br>Use it conjunction with ScalaTest, Specs2, μTest, etc.
+
+1. This is not a property testing library.
+   <br>Use it conjunction with ScalaCheck, Nyaya, ScalaProps, etc.
+
+Ok, so what *is* this?
+This is a library that:
+
+1. Lets you write pure, immutable, referentially-transparent tests
+   that verify stateful, effectful code or data.
+
+1. Encourages composability of test concepts such as invariants/properties, pre/post conditions,
+   dynamic actions/assertions, and more.
+
+1. Makes test failure and inspection easy to comprehend.
+
+### Uses
+
+* Unit-test a webapp with Scala.JS.
+* Test DB triggers, or a DB migration.
+* Integration-test.
+* Random-test (fuzz-test) like Android's `monkeyrunner` or ScalaCheck's `Command` API.
+* UAT automation.
+
+
+### Features
+
+* Compiled for Scala & Scala.JS.
+* Can run synchronously, asynchronously (`Future`) or in your own context-type (eg `Task`). Is stack-safe.
+* Everything is immutable and composable.
+* Combines property and imperative testing.
+* Actions and assertions can be non-deterministic and/or dependent on runtime state.
+* Tries to be as transparent and informative as possible about test execution.
+* Optionally configurable error type. Use a custom ADT to precisely maintain all forms of failure and error in your domain.
+* Includes a utility called `DomZipper` which greatly simplifies the task of HTML/SVG observation.
+* Extension modules for various 3rd-party libraries. (Scalaz, Cats, more.)
+
+
+# How does it work?
+
+The key is to take **observations** of anything relevant in the stateful test subject.
+Observations are like immutable snapshots.
+They capture what the state was at a particular point in time.
+Once an observation is captured, assertions are performed on it.
+
+Optionally, you can specify some kind of test-only state that you modify as you test
+and use to ensure the real-world observations are what you expect.
+<br>For example, if you're testing a bank account app, you could maintain your own expected balance such that
+when you instruct the app to make a deposit, you add the same amount to your state.
+You could then add an invariant that whenever the balance is shown in the app, it matches the expected state balance.
+
+This is a (simplified) model of how tests are executed:
+
+![concept](doc/concept.uml.png)
+
+Here is what the above looks like in action:
+
+![example output](example-react/output-failure.png)
+
+# How do I use this?
+
+modules
+deps
+Create an object
+types (Action etc)
+types (FROSE)
+create obs & dsl
+create plan
+run test
+
+DSL
+
+---
+
+
 
 ### Foreword
 
@@ -20,49 +97,13 @@ When you want to test it in a pragmatic stateless, composable, and intelligible 
 well that's what this library exists to facilitate.
 
 
-### What this IS
-
-This is a library to bring all those nice things we care about when testing stateless code
-to testing stateful code.
-
-* unit testing a webapp with Scala.JS.
-* integration testing a webapp.
-* testing DB state or a DB migration.
-* random-testing (fuzz-testing) like Android's monkeyrunner
-
-
-* Scala & Scala.JS.
-* Sync & Async (stack-safe).
-* Test stateful, effectful code & stateless pure core.
-* Property test (∀) & imperatively test (∃).
-* Products & coproducts.
 
 
 
-### What this IS *NOT*
-
-This is not a test framework.
-<br>It is not a replacement for ScalaTest, Specs2, μTest, etc.
-<br>It is to be used in conjunction with your favourite test framework.
-
-This is not a property testing library.
-<br>It is not a replacement for ScalaCheck, Nyaya, ScalaProps.
-<br>It is to be used in conjunction with your favourite property testing library.
 
 
 Doc
 ===
-* What it is and is for.
-  * Mention: sync/async.
-  * Mention: state/temporal-stateless.
-  * Mention: embedable?
-  * Mention: unit/functional/integration/property/fuzz
-* Concepts + diagram (like Diode).
-* Example applications.
-* Comparison/conjunction with other libraries.
-* What's available (modules).
-* Sample output.
-
 
 * How to use.
   * Setup. SBT & Exports.
@@ -73,6 +114,7 @@ Doc
   * React TODO app. - domzipper, web, invariants, actions.
   * DB triggers.    - real external state, ref.
   * Mutable sample. - fuzz, invariants.
+ What's available (modules).
 
 
 Each time an action is performed, R→O then (S,O)→S.
