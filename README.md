@@ -2,6 +2,18 @@
 
 Test stateful stuff statelessly, and reasonably.
 
+# Contents
+
+- [What is this?](#what-is-this)
+- [How does this work?](#how-does-this-work)
+- How do I use this?
+  - [Usage](doc/USAGE.md).
+  - [Types](doc/TYPES.md).
+  - [DSL](doc/DSL.md).
+- Modules
+- Examples
+- Changelog
+
 
 # What is this?
 
@@ -46,7 +58,7 @@ This is a library that:
 * Extension modules for various 3rd-party libraries. (Scalaz, Cats, more.)
 
 
-# How does it work?
+# How does this work?
 
 The key is to take **observations** of anything relevant in the stateful test subject.
 Observations are like immutable snapshots.
@@ -67,143 +79,22 @@ Here is what the above looks like in action:
 
 ![example output](example-react/output-failure.png)
 
-# How do I use this?
-
-modules
-deps
-Create an object
-types (Action etc)
-types (FROSE)
-create obs & dsl
-create plan
-run test
-
-DSL
-
----
-
-
-
-Doc
-===
-
-* How to use.
-  * Setup. SBT & Exports.
-  * Writing a test: Actions, checks, invariants.
-  * Running a test.
-* Operator/API reference.
-* Example projects:
-  * React TODO app. - domzipper, web, invariants, actions.
-  * DB triggers.    - real external state, ref.
-  * Mutable sample. - fuzz, invariants.
- What's available (modules).
-
-
-Each time an action is performed, R→O then (S,O)→S.
-
-Show example code & report BEFORE Usage.
-Results before how.
-
-
-# Usage
-
-#### Project Setup
-
-1. Choose your modules. Add to SBT.
-
-1. Create an `object` for your config and select the functionality you want.
-
-  ```scala
-  package your.package
-
-  object Testate
-    extends testate.Exports
-    // with testate.TestStateCats
-    // with testate.TestStateNyaya
-    // with testate.TestStateScalaz
-    // with testate.domzipper.sizzle.Exports
-  {
-    // Additional config here if desired.
-  }
-  ```
-
-#### Writing Tests
-
-Maybe point to tutorial on blog and just have a reference here.
-```
-import
-dsl
-actions
-checks before|after|around
-invariants
-plan -> test -> report -> assert
-```
-
-1. Import your config.
-  ```scala
-  import your.package.Testate._
-  ```
-1. Create a DSL.
-  ```scala
-  val dsl = Dsl[Reference, Observation, StateExpectations]
-  ```
-1. Create checks (and focuses).
-  ```scala
-  // Focuses
-  val moneyRemaining = dsl.focus("Money remaining").value(_.obs.money)
-  val columns        = dsl.focus("Columns").collection(_.obs.selCols)
-
-  // Checks
-  val noMoneyRemaining = moneyRemaining.assert.equal(0)
-  val itemCountMatches = dsl.focus("Item count").obsAndState(_.count, _.items.size).assert.equal
-  ```
-1. Create invariants.
-  ```scala
-  val invariants =
-    columns.assert.distinct &
-    columns.assert.contains("Name") &
-    moneyRemaining.test("isn't negative")(_ >= 0)
-  ```
-1. Create actions.
-  ```scala
-  def addMoney(amount: Int) =
-    dsl.action("Add $" + amount)(_.ref.addTransaction(amount))            // Action
-      .updateState(s => s.copy(expectedMoney = s.expectedMoney + amount)) // Adjust expected state
-
-  // Add before-, after-, and around-conditions using +>
-  val logout = (
-    loggedInUser.assert.not.equal(None)     // Pre-condition
-    +> dsl.action("Logout")(_.ref.logout()) // Action
-    +> loggedInUser.assert.equal(None)      // Post-condition #1
-    +> pageId.assert.change                 // Post-condition #2
-  )
-
-  // Compose actions using >>
-  val example =
-    login >> addMoney(100).times(3) >> logout
-  ```
-1. Create test.
-  ```scala
-  val plan = Plan(actions, invariants)
-  val test = plan test Observer(...)
-  ```
-1. Run test.
-  ```scala
-  val report = test.run(initialExpectedState, reference)
-
-  // Asserts that test passed. Throws an exception if failed.
-  // Prints a report on pass and/or failure, when & how configurable via implicit settings.
-  report.assert()
-  ```
-
-
 
 # Modules
+
 | Module              | Description | Platforms |
 |---------------------|-------------|-----------|
 | `core`              | The core module. | Scala + Scala.JS. |
-| `supp-scalaz`       | Support for [Scalaz](https://github.com/scalaz/scalaz). | Scala + Scala.JS. |
-| `supp-cats`         | Support for [Cats](https://github.com/typelevel/cats). | Scala + Scala.JS. |
-| `supp-nyaya`        | Support for [Nyaya](https://github.com/japgolly/nyaya). | Scala + Scala.JS. |
 | `dom-zipper`        | Utility for observing web DOM.<br>*(Requires [jQuery](https://jquery.com/) or [Sizzle](https://sizzlejs.com/).)* | Scala.JS only. |
 | `dom-zipper-sizzle` | As above bundled with [Sizzle](https://sizzlejs.com/). | Scala.JS only. |
+| `cats`         | Support for [Cats](https://github.com/typelevel/cats). | Scala + Scala.JS. |
+| `nyaya`        | Support for [Nyaya](https://github.com/japgolly/nyaya). | Scala + Scala.JS. |
+| `scalajs-react` | Support for [scalajs-react](https://github.com/japgolly/scalajs-react). | Scala.JS only. |
+| `scalaz`       | Support for [Scalaz](https://github.com/scalaz/scalaz). | Scala + Scala.JS. |
+
+
+# Examples
+
+* React TODO app. - domzipper, web, invariants, actions.
+* DB triggers.    - real external state, ref.
+* Mutable sample. - fuzz, invariants.
