@@ -84,24 +84,6 @@ DSL
 
 
 
-### Foreword
-
-Are you sick of internet elitists in their ivory towers going on and on about how inferior FP is and how much more productive it is to code imperatively?
-If you're like me, you live in, and code for the Real World.
-We don't live a vaccuum where we can just write effects everywhere and spend all day admiring how readable it is "in theory".
-That might be fine for PMs but we have jobs to do. We just want to get work done.
-We're pragmatic and responsible. That's why we use strongly-typed FP and embrace statelessness.
-
-Sure there are times where ivory-tower stateful style and effects are useful.
-When you want to test it in a pragmatic stateless, composable, and intelligible way,
-well that's what this library exists to facilitate.
-
-
-
-
-
-
-
 Doc
 ===
 
