@@ -50,6 +50,7 @@ This is a library that:
 * Compiled for Scala & Scala.JS.
 * Can run synchronously, asynchronously (`Future`) or in your own context-type (eg `Task`). Is stack-safe.
 * Everything is immutable and composable.
+* Everything can be transformed into (reused in) different contexts.
 * Combines property and imperative testing.
 * Actions and assertions can be non-deterministic and/or dependent on runtime state.
 * Tries to be as transparent and informative as possible about test execution.
