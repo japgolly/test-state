@@ -63,15 +63,15 @@ object ActionOps {
       tc.modS(a)(f)
 
     def updateState(f: S => S)(implicit em: ExecutionModel[F]) =
-      tryUpdateState(s => Right(f(s)))
+      updateStateAttempt(s => Right(f(s)))
 
-    def tryUpdateState(f: S => E Or S)(implicit em: ExecutionModel[F]) =
+    def updateStateAttempt(f: S => E Or S)(implicit em: ExecutionModel[F]) =
       modS(_ => f)
 
     def updateStateBy(f: OS[O, S] => S)(implicit em: ExecutionModel[F]) =
-      tryUpdateStateBy(i => Right(f(i)))
+      updateStateAttemptBy(i => Right(f(i)))
 
-    def tryUpdateStateBy(f: OS[O, S] => E Or S)(implicit em: ExecutionModel[F]) =
+    def updateStateAttemptBy(f: OS[O, S] => E Or S)(implicit em: ExecutionModel[F]) =
       modS(o => s => f(OS(o, s)))
   }
 

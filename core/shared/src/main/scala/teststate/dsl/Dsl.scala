@@ -71,22 +71,22 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     around(name)(identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
 
-  def chooseInvariant   (n: CNameFn)(f: OS => Invariant)     : Invariant = choose(n, f)
-  def tryChooseInvariant(n: CNameFn)(f: OS => E Or Invariant): Invariant = tryChoose(n, f)
+  def chooseInvariant       (n: CNameFn)(f: OS => Invariant)     : Invariant = choose(n, f)
+  def chooseInvariantAttempt(n: CNameFn)(f: OS => E Or Invariant): Invariant = chooseAttempt(n, f)
 
-  def choosePoint   (n: CNameFn)(f: OS => Point)     : Point = choose(n, f)
-  def tryChoosePoint(n: CNameFn)(f: OS => E Or Point): Point = tryChoose(n, f)
+  def choosePoint       (n: CNameFn)(f: OS => Point)     : Point = choose(n, f)
+  def choosePointAttempt(n: CNameFn)(f: OS => E Or Point): Point = chooseAttempt(n, f)
 
-  def chooseAround   (n: CNameFn)(f: OS => Around)     : Around = choose(n, f)
-  def tryChooseAround(n: CNameFn)(f: OS => E Or Around): Around = tryChoose(n, f)
+  def chooseAround       (n: CNameFn)(f: OS => Around)     : Around = choose(n, f)
+  def chooseAroundAttempt(n: CNameFn)(f: OS => E Or Around): Around = chooseAttempt(n, f)
 
-  def chooseAction   (n: ANameFn)(f: ROS => Action)     : Action = choose(n, f)
-  def tryChooseAction(n: ANameFn)(f: ROS => E Or Action): Action = tryChoose(n, f)
+  def chooseAction       (n: ANameFn)(f: ROS => Action)     : Action = choose(n, f)
+  def chooseActionAttempt(n: ANameFn)(f: ROS => E Or Action): Action = chooseAttempt(n, f)
 
   private def choose[A, B](name: NameFn[A], f: A => Sack[A, B]): Sack[A, B] =
     Sack.CoProduct(name, f)
 
-  private def tryChoose[A, B](name: NameFn[A], f: A => E Or SackE[A, B, E]): SackE[A, B, E] =
+  private def chooseAttempt[A, B](name: NameFn[A], f: A => E Or SackE[A, B, E]): SackE[A, B, E] =
     Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name(None), Failure NoCause e))))
 
 
@@ -321,8 +321,6 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
         point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
       }
-
-      // TODO inconsistency with blah{,By} and types
 
       def contains[B >: A](query: B)(implicit sa: Display[B], ea: Equal[B], ev: Exists.Failure[B] => E) =
         point(Exists(positive).name(focusName, sa(query)))(

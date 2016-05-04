@@ -1,0 +1,42 @@
+digraph G {
+
+node[style=filled]
+
+root [fillcolor="#444444" fontcolor=white label="Dsl"]
+
+{
+node[fillcolor="#e4e4e4"]
+action [label="Action\nDsl"]
+node[fillcolor=lightgreen]
+Action
+Invariant
+node[fillcolor=lightblue]
+Point
+Around
+}
+
+// root -> focus,transformer
+// root -> emptyPlan,emptyTest
+
+root -> Action [label=".chooseAction(Attempt)\l.emptyAction\l.print\l"]
+root -> Around [label=".around\l.chooseAround(Attempt)\l.emptyAround\l.testAround\l"]
+root -> Point  [label=".choosePoint(Attempt)\l.point\l.test\l"]
+root -> Invariant [label=".chooseInvariant(Attempt)\l.emptyInvariant\l"]
+
+root -> action [label=".action"]
+action -> Action [label=".apply\l.attempt\l.update(By)\l.full\l"]
+
+{edge[style=dashed color="#888888" fontcolor="#555555" label="(implicit)"]
+Point -> Invariant
+Around -> Invariant
+}
+
+Point -> Around [label=".after\l.before\l.beforeAndAfter\l"]
+
+Around -> Action // label how???
+
+Action -> Action [label=".group(…)\l.rename(…)\l.times\l.updateState(Attempt)(By)\l.when/unless/skip\l"]
+Around -> Around [label=".rename(…)\l.when/unless/skip\l"]
+Point -> Point [label=".rename(…)\l.when/unless/skip\l"]
+Invariant -> Invariant [label=".rename(…)\l.when/unless/skip\l"]
+}

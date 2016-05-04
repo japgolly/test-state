@@ -1,0 +1,72 @@
+digraph G {
+node[style=filled]
+//edge[minlen=2]
+
+root [fillcolor="#444444" fontcolor=white label="Dsl"]
+
+{
+node[fillcolor="#9BD858"] edge[color="#9BD858" fontcolor="#377700"]
+Point  [label="Point"]
+Around [label="Around"]
+Point -> Around [color="#555555"]
+}
+
+// root -> focus,transformer
+// root -> emptyPlan,emptyTest
+
+/*
+root -> Action [label=".chooseAction(Attempt)\l.emptyAction\l.print\l"]
+root -> Around [label=".around\l.chooseAround(Attempt)\l.emptyAround\l.testAround\l"]
+root -> Point  [label=".choosePoint(Attempt)\l.point\l.test\l"]
+root -> Invariant [label=".chooseInvariant(Attempt)\l.emptyInvariant\l"]
+
+root -> action [label=".action"]
+action -> Action [label=".apply\l.attempt\l.update(By)\l.full\l"]
+*/
+
+
+// node[style=filled fillcolor="#ffcccc"]
+// edge[color="#bb8888" fontcolor="#772222"]
+
+root -> Focus [label=".focus\l"]
+
+node[fillcolor="#DFAB62"] edge[color="#DFAB62" fontcolor="#785005"]
+FocusValue [label="Value\nFocus"]
+FocusValueAO [label="Value\nAssertions"]
+Focus        -> FocusValue   [label=".value\l"]
+FocusValue   -> FocusValue   [label=".map\l.rename\l"]
+FocusValue   -> FocusValueAO [label=".assert\l"]
+FocusValueAO -> FocusValueAO [label=".not\l"]
+FocusValue   -> Point        [label=".assert(…)\l.test\l"]
+FocusValueAO -> Point        [label=".equal(By)\l"]
+FocusValue   -> Around       [label=".testAround\l"]
+FocusValueAO -> Around       [label=".beforeAndAfter(By)\l.change(To)\l.noChange\l.{de,inc}rease(By)\l.{de,inc}rement\l"]
+
+node[fillcolor="#CF9ED3"] edge[color="#CF9ED3" fontcolor="#6e4373"]
+FocusColl [label="Collection\nFocus"]
+FocusCollAO [label="Collection\nAssertions"]
+Focus       -> FocusColl   [label=".collection\l"]
+FocusColl   -> FocusColl   [label=".map\l"]
+FocusColl   -> FocusCollAO [label=".assert\l"]
+FocusColl   -> FocusValue  [label=".size\l.value(By)\l"]
+FocusCollAO -> FocusCollAO [label=".not\l"]
+FocusColl   -> Point       [label=".assert(…)\l"]
+FocusCollAO -> Point       [label=".distinct\l.contains(All,Any,None,Only)\l.existenceOf(All(By))\l.equal(IgnoringOrder)(By)\l"]
+FocusCollAO -> Around      [label=".elemChanges(By)\l"]
+
+node[fillcolor="#90D1BA"] edge[color="#90D1BA" fontcolor="#32715d"]
+BiFocus [label="Value Pair\nFocus"]
+BiFocusAO [label="Value Pair\nAssertions"]
+Focus       -> BiFocus     [label=".compare\l.obsAndState\l"]
+BiFocus     -> BiFocus     [label=".map\l"]
+BiFocus     -> BiFocusAO   [label=".assert\l"]
+BiFocusAO   -> BiFocusAO   [label=".not\l"]
+BiFocusAO   -> Point       [label=".equal\l"]
+/*
+ObsAndState [label="Value Pair\nFocus"]
+Focus       -> ObsAndState [label=".obsAndState\l"]
+ObsAndState -> ObsAndState [label=".map\l"]
+ObsAndState -> BiFocus     [style=dashed label="<extends>"]
+ObsAndState -> FocusValue  [label=".obs\l.state\l"]
+*/
+}

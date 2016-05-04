@@ -147,7 +147,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 2 checks.
           """.stripMargin)
 
-        'coproduct - t(*.tryChooseInvariant("Who knows?!")(_ => Left("Computer says no.")))(
+        'coproduct - t(*.chooseInvariantAttempt("Who knows?!")(_ => Left("Computer says no.")))(
           """
             |✘ Initial state.
             |  ✘ Who knows?! -- Computer says no.
