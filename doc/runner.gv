@@ -1,0 +1,36 @@
+digraph G {
+edge[dir=back,arrowtail=dot]
+
+// Provided by user
+{ node[style=filled fillcolor="#eebbcc"]
+  a [label="Actions"]
+  i [label="Invariants"]
+  is [label="Initial\nState"]
+  o [label="Observer"]
+  ref [label="⇒ Ref"]
+}
+
+// Nearly always provided automatically
+{ node[style=filled fillcolor="#d8d8d8"]
+  r [label="Recover"]
+  em [label="ExecutionModel"]
+}
+
+
+// Aggregation types
+{ node[style=filled fillcolor=lightblue]
+  plan [label="Plan"]
+  planS [label="PlanWithInitialState"]
+  test [label="Test"]
+  testS [label="TestWithInitialState"]
+}
+
+run [label="Runner" style=filled fillcolor=lightgreen]
+
+plan -> a,i,em
+planS -> plan,is
+test -> plan,r,o
+testS -> planS,test
+
+run -> ref,testS
+}
