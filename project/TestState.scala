@@ -111,15 +111,15 @@ object TestState {
     Project("JVM", file(".rootJVM"))
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
-        coreJVM, coreMacrosJVM, scalazJVM, catsJVM, nyayaJVM)
+        coreJVM, coreMacrosJVM, extScalazJVM, extCatsJVM, extNyayaJVM)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
-        coreJS, coreMacrosJS, scalazJS, catsJS, nyayaJS,
-        domZipperJS, domZipperSizzleJS,
-        scalajsReactJS)
+        coreJS, coreMacrosJS, extScalazJS, extCatsJS, extNyayaJS,
+        domZipper, domZipperSizzle,
+        extScalaJsReact)
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -127,9 +127,9 @@ object TestState {
   lazy val coreMacrosJS  = coreMacros.js
   lazy val coreMacros = crossProject
     .in(file("core-macros"))
-    .configure(commonSettings)
+    .configure(commonSettings, utestSettings)
     .bothConfigure(publicationSettings, definesMacros)
-    .configure(utestSettings)
+    .settings(moduleName := "core-macros")
 
   lazy val coreJVM = core.jvm
   lazy val coreJS  = core.js
@@ -145,7 +145,7 @@ object TestState {
         "com.github.japgolly.nyaya"  %%% "nyaya-prop" % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya"  %%% "nyaya-test" % Ver.Nyaya % "test"))
 
-  lazy val domZipperJS = project
+  lazy val domZipper = project
     .in(file("dom-zipper"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings, utestSettings.js)
@@ -154,57 +154,62 @@ object TestState {
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
       requiresDOM         := true)
 
-  lazy val domZipperSizzleJS = project
+  lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings)
-    .dependsOn(domZipperJS)
+    .dependsOn(domZipper)
     .settings(
       moduleName     := "dom-zipper-sizzle",
       scalacOptions  -= "-Ywarn-dead-code",
       jsDependencies += "org.webjars.bower" % "sizzle" % Ver.Sizzle / "sizzle.min.js" commonJSName "Sizzle",
       requiresDOM    := true)
 
-  lazy val scalazJVM = scalaz.jvm
-  lazy val scalazJS  = scalaz.js
-  lazy val scalaz = crossProject
+  lazy val extScalazJVM = extScalaz.jvm
+  lazy val extScalazJS  = extScalaz.js
+  lazy val extScalaz = crossProject
     .in(file("ext-scalaz"))
     .configure(commonSettings)
     .bothConfigure(publicationSettings)
     .dependsOn(core)
     .configure(utestSettings)
-    .settings(libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
+    .settings(
+      moduleName          := "ext-scalaz",
+      libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
 
-  lazy val catsJVM = cats.jvm
-  lazy val catsJS  = cats.js
-  lazy val cats = crossProject
+  lazy val extCatsJVM = extCats.jvm
+  lazy val extCatsJS  = extCats.js
+  lazy val extCats = crossProject
     .in(file("ext-cats"))
     .configure(commonSettings)
     .bothConfigure(publicationSettings)
     .dependsOn(core)
     .configure(utestSettings)
-    .settings(libraryDependencies += "org.typelevel" %%% "cats" % Ver.Cats)
+    .settings(
+      moduleName          := "ext-cats",
+      libraryDependencies += "org.typelevel" %%% "cats" % Ver.Cats)
 
-  lazy val nyayaJVM = nyaya.jvm
-  lazy val nyayaJS  = nyaya.js
-  lazy val nyaya = crossProject
+  lazy val extNyayaJVM = extNyaya.jvm
+  lazy val extNyayaJS  = extNyaya.js
+  lazy val extNyaya = crossProject
     .in(file("ext-nyaya"))
     .configure(commonSettings)
     .bothConfigure(publicationSettings)
-    .dependsOn(core, scalaz)
+    .dependsOn(core, extScalaz)
     .configure(utestSettings)
     .settings(
+      moduleName := "ext-nyaya",
       libraryDependencies ++= Seq(
         "com.github.japgolly.nyaya" %%% "nyaya-gen" % Ver.Nyaya,
         "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya))
 
-  lazy val scalajsReactJS = project
+  lazy val extScalaJsReact = project
     .in(file("ext-scalajs-react"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings)
-    .dependsOn(domZipperJS)
+    .dependsOn(domZipper)
     .settings(
-      moduleName := "scalajs-react",
+      moduleName := "ext-scalajs-react",
       libraryDependencies ++= Seq(
         "com.github.japgolly.scalajs-react" %%% "core" % Ver.ScalaJsReact,
         "com.github.japgolly.scalajs-react" %%% "test" % Ver.ScalaJsReact),
@@ -221,7 +226,7 @@ object TestState {
     .in(file("example-react"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, preventPublication, utestSettings.js)
-    .dependsOn(coreJS, scalajsReactJS, domZipperSizzleJS)
+    .dependsOn(coreJS, domZipperSizzle, extScalaJsReact)
     .settings(
       moduleName := "example-react",
       libraryDependencies ++= Seq(

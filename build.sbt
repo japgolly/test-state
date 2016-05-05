@@ -9,16 +9,16 @@ val coreMacrosJS      = TestState.coreMacrosJS
 val coreJVM           = TestState.coreJVM
 val coreJS            = TestState.coreJS
 
-val domZipperJS       = TestState.domZipperJS
-val domZipperSizzleJS = TestState.domZipperSizzleJS
-val scalajsReactJS    = TestState.scalajsReactJS
+val domZipper         = TestState.domZipper
+val domZipperSizzle   = TestState.domZipperSizzle
+val extScalaJsReact   = TestState.extScalaJsReact
 
-val catsJVM           = TestState.catsJVM
-val catsJS            = TestState.catsJS
-val nyayaJVM          = TestState.nyayaJVM
-val nyayaJS           = TestState.nyayaJS
-val scalazJVM         = TestState.scalazJVM
-val scalazJS          = TestState.scalazJS
+val extCatsJVM        = TestState.extCatsJVM
+val extCatsJS         = TestState.extCatsJS
+val extNyayaJVM       = TestState.extNyayaJVM
+val extNyayaJS        = TestState.extNyayaJS
+val extScalazJVM      = TestState.extScalazJVM
+val extScalazJS       = TestState.extScalazJS
 
 val examples          = TestState.examples
 val exampleReactJS    = TestState.exampleReactJS
