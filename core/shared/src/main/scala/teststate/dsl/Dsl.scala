@@ -214,53 +214,53 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
     def assert: AssertOps =
       new AssertOps(true)
 
-    @inline def assert(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Points =
+    @inline def assert(expect: A)(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
       assert.equal(expect)(e, f)
 
     final class AssertOps(positive: Boolean) {
       def not = new AssertOps(!positive)
 
-      def equal(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Points =
+      def equal(expect: A)(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
         point(NameUtils.equal(focusName, positive, expect))(
           i => f.expectMaybeEqual(positive, ex = expect, actual = focusFn(i)))
 
-      def equalBy(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Points =
+      def equalBy(expect: OS => A)(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
         point(NameFn(NameUtils.equalFn(focusName, positive, expect)))(
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
 
-      def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Arounds =
+      def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         equal(before).before & equal(after).after
 
-      def beforeAndAfterBy(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Arounds =
+      def beforeAndAfterBy(before: OS => A, after: OS => A)(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         equalBy(before).before & equalBy(after).after
 
       private def mkAround(name: AroundName, f: (A, A) => Option[E]) =
         around(name)(focusFn)((os, a) => f(a, focusFn(os)))
 
-      def changeTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Arounds =
+      def changeTo(expect: A => A)(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         mkAround(
           NameFn(NameUtils.equalFn(focusName, positive, i => expect(focusFn(i.before)))),
           (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
 
-      def change(implicit e: Equal[A], f: SomethingFailures[A, E]) =
+      def change(implicit e: Equal[A], f: DisplayFailure[A, E]) =
         not.changeTo(identity)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "change"))
 
-      def noChange(implicit e: Equal[A], f: SomethingFailures[A, E]) =
+      def noChange(implicit e: Equal[A], f: DisplayFailure[A, E]) =
         not.change
 
-      def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Display[A]) =
+      def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]) =
         changeTo(n.plus(_, a))(q, f)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)))
 
-      def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Display[A]) =
+      def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]) =
         changeTo(n.minus(_, a))(q, f)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
 
-      def increment(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Display[A]) =
+      def increment(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]) =
         increaseBy(n.one)(n, q, f, s)
 
-      def decrement(implicit n: Numeric[A], q: Equal[A], f: SomethingFailures[A, E], s: Display[A]) =
+      def decrement(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]) =
         decreaseBy(n.one)(n, q, f, s)
     }
   } // FocusValue
@@ -411,7 +411,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
     final class AssertOps(positive: Boolean) {
       def not = new AssertOps(!positive)
 
-      def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Points =
+      def equal(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
         point(NameFn(NameUtils.equalFn(focusName, positive, i => fe(i))))(
           os => f.expectMaybeEqual(positive, ex = fe(os), actual = fa(os)))
     }

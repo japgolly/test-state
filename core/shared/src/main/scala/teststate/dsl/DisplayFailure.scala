@@ -3,7 +3,7 @@ package teststate.dsl
 import acyclic.file
 import teststate.typeclass.{Equal, Display}
 
-trait SomethingFailures[-AA, +E] {
+trait DisplayFailure[-AA, +E] {
   def expectedEqual      [A <: AA](expected: A, actual: A)         (implicit s: Display[A]): E
   def expectedToChange   [A <: AA](a: A)                           (implicit s: Display[A]): E
   def expectedChange     [A <: AA](from: A, expected: A, actual: A)(implicit s: Display[A]): E
@@ -35,8 +35,8 @@ trait SomethingFailures[-AA, +E] {
       Some(expectedChange(from = from, expected = expected, actual = actual))
 }
 
-object SomethingFailures {
-  implicit object ToString extends SomethingFailures[Any, String] {
+object DisplayFailure {
+  implicit object ToString extends DisplayFailure[Any, String] {
     def expectedEqual      [A](expected: A, actual: A)         (implicit s: Display[A]) = s"Expected ${s(expected)}, not ${s(actual)}."
     def expectedToChange   [A](a: A)                           (implicit s: Display[A]) = s"Expected ${s(a)} to change, but it didn't."
     def expectedChange     [A](from: A, expected: A, actual: A)(implicit s: Display[A]) = s"Expected ${s(from)} to change into ${s(expected)}, not ${s(actual)}."
