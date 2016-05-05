@@ -2,6 +2,8 @@
 
 Test stateful stuff statelessly, and reasonably.
 
+[![Build Status](https://travis-ci.org/japgolly/test-state.svg?branch=master)](https://travis-ci.org/japgolly/test-state)
+
 # Contents
 
 - [What is this?](#what-is-this)
