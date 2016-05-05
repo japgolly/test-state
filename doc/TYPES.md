@@ -2,14 +2,14 @@
 
 Most built-in structures have abstract types for you to plug in your own types.
 
-Their names are consistent are match the following:
+Their names are consistent and match the following:
 
 | Type   | Desc |
 |--------|------|
 | `F[_]` | The context in which test execution is performed.<br>By default, this is the built-in type alias `Id`; for asynchronous tests, `scala.concurrent.Future`.
 | `R`    | Reference. *(optional)*<br>Some kind of arbitrary (non-strict) data that is available to all parts of the test. It can be used to perform actions or make observations. |
 | `O`    | Observation. *(optional)*<br>An immutable snapshot of the stateful world that captures anything relevant to the test. |
-| `S`    | State for testing. *(optional)*<br>Data created and updated by the test. Used to keep track of expectations about the test subject. **This is not** the mutable/stateful test subject; this is **immutable**, and updated by test `Action`s. |
+| `S`    | State for testing. *(optional)*<br>Data created and updated by the test. Used to keep track of expectations about the test subject.<br>**This is not** the mutable/stateful test subject; this is **immutable**, and updated by test `Actions`. |
 | `E`    | Error.<br>Representation of assertion failure or exceptions. By default, this is `String`. |
 
 
@@ -28,23 +28,22 @@ As an example, if you were testing a database you might have the following:
 
 | Type | Desc |
 |------|------|
-| `Actions[F[_], R, O, S, E]` | Zero or more actions that affect<br>the impure world and possibly update test state expectations. Executed<br>one at a time. |
+| `Actions[F[_], R, O, S, E]` | Zero or more actions that affect the impure world and possibly update test state expectations. Executed one at a time. |
 | `Invariants[-O, -S, E]` | Zero or more properties that should always be true. |
 | `Points[-O, -S, E]` | Zero or more assertions at a single *Point* in time.<br>Eg. *x is 7*. |
 | `Arounds[-O, -S, E]` | Zero or more assertions *Around* a period of time.<br>Eg. *x was 7*, *x increased by 2*. |
 | `Dsl[F[_], R, O, S, E]` | Provides you with a library of functions. See [DSL.md](DSL.md). |
-| `ROS[+R, +O, +S]` | Same as a `(R,O,S)` tuple except instead of `_1`, `_2`, `_3` it has<br>`ref`, `obs`, `state`. |
-| `OS[+O, +S]` | Same as a `(O,S)` tuple except instead of `_1`, `_2` it has<br>`obs`, `state`. |
+| `ROS[+R, +O, +S]` | Same as a `(R,O,S)` tuple except instead of `_1`, `_2`, `_3` it has `ref`, `obs`, `state`. |
+| `OS[+O, +S]` | Same as a `(O,S)` tuple except instead of `_1`, `_2` it has `obs`, `state`. |
 | `Name` | A lazy `String` that specifies the name of an action or assertion. |
 | `NameFn[-A]` | A function from `Option[A]` to a `Name`.<br>Think of it as a `Name` that becomes more detailed when an `A` becomes available.<br>Example: It could return `"Check counter"` on `None`, and `"Check counter is 7"` on `Some(7)`. |
 | `Report[+E]` | Result of test execution. You'll often just call `.assert()` on this to assert that the test passed. |
 
 
-
 Using the above, you create the content of your tests.
 In order to run tests, you combine data as follows:
 
-![Runner hierarchy](runner.gv.svg)
+![Runner hierarchy](https://cdn.rawgit.com/japgolly/test-state/master/doc/runner.gv.svg)
 
 Example:
 ```scala

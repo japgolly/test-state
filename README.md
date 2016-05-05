@@ -1,6 +1,6 @@
 # Scala Test-State
 
-Test stateful stuff statelessly, and reasonably.
+Test **stateful** stuff **statelessly**, and reasonably.
 
 [![Build Status](https://travis-ci.org/japgolly/test-state.svg?branch=master)](https://travis-ci.org/japgolly/test-state)
 
@@ -69,7 +69,7 @@ Observations are like immutable snapshots.
 They capture what the state was at a particular point in time.
 Once an observation is captured, assertions are performed on it.
 
-Optionally, you can specify some kind of test-only state that you modify as you test
+Optionally, you can specify some kind of test-only state that you modify as you test,
 and use to ensure the real-world observations are what you expect.
 <br>For example, if you're testing a bank account app, you could maintain your own expected balance such that
 when you instruct the app to make a deposit, you add the same amount to your state.
@@ -79,6 +79,11 @@ This is a (simplified) model of how tests are executed:
 
 ![concept](doc/concept.uml.png)
 
+# How do I use this?
+  - [Usage](doc/USAGE.md).
+  - [Types](doc/TYPES.md).
+  - [DSL](doc/DSL.md).
+  - [Composability](doc/COMPSE.md).
 
 # Modules
 

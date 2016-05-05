@@ -8,7 +8,7 @@
 # Project Setup
 
 1. Choose dependencies and add to SBT.
-    <br>Module descriptions are [here](../README.md). Take what you need and delete the rest.
+    <br>Module descriptions are [here](../README.md#modules). Take what you need and delete the rest.
     ```scala
     val TestStateVer = "2.0.0"
 
@@ -24,7 +24,7 @@
 
 1. Create a configuration for your needs.
     <br>Each module has a `trait` containing all of its public API.
-    Mix them into your own `object`. Lately you can add additional configuration such as settings,
+    Mix them into your own `object`. Later you can add additional configuration such as settings,
     or typeclasses for your data types.
     ```scala
     package my.app.test
@@ -64,6 +64,8 @@
 
 1. Most likely you will just want to call `.assert()`, which print results to the screen and throws an exception on failure.
 
+   Like this: ![output example](../example-react/output-fail.png)
+
 
 This project also comes with example projects.
-<br>If the above is unclear, reading/running one of the example projects may help.
+<br>If the above is unclear, reading/running one of the example projects will help.
