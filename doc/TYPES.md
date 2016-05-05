@@ -43,7 +43,7 @@ As an example, if you were testing a database you might have the following:
 Using the above, you create the content of your tests.
 In order to run tests, you combine data as follows:
 
-![Runner hierarchy](https://cdn.rawgit.com/japgolly/test-state/master/doc/runner.gv.svg)
+![Runner hierarchy](https://rawgit.com/japgolly/test-state/master/doc/runner.gv.svg)
 
 Example:
 ```scala
