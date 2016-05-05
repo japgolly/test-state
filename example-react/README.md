@@ -39,7 +39,7 @@ The idea is that:
 
 ## Test Setup
 
-Here we want to use TestStare itself (`core`), the scalajs-react extensions, and the DomZipper.
+Here we want to use TestState itself (`core`), the scalajs-react extensions, and the DomZipper.
 We don't want to have to think about *how* DomZipper will query DOM so we will use the default `dom-zipper-sizzle` bundle which takes care of it.
 
 Firstly we create a `TestState` object for the project that combines our dependencies.
