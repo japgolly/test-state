@@ -1,5 +1,5 @@
 digraph G {
-edge[dir=back,arrowtail=dot]
+edge[color="#333333"]
 
 // Provided by user
 { node[style=filled fillcolor="#eebbcc"]
@@ -11,7 +11,7 @@ edge[dir=back,arrowtail=dot]
 }
 
 // Nearly always provided automatically
-{ node[style=filled fillcolor="#d8d8d8"]
+{ node[style=filled fillcolor="#dddddd"]
   r [label="Recover"]
   em [label="ExecutionModel"]
 }
@@ -25,12 +25,21 @@ edge[dir=back,arrowtail=dot]
   testS [label="TestWithInitialState"]
 }
 
-run [label="Runner" style=filled fillcolor=lightgreen]
+run [label="Report" style=filled fillcolor=lightgreen]
 
-plan -> a,i,em
-planS -> plan,is
-test -> plan,r,o
-testS -> planS,test
+{edge[style=dashed color="#888888" fontcolor="#666666" label=" implicit"]
+r -> test
+em -> plan
+}
 
-run -> ref,testS
+a,i -> plan
+is -> planS
+o -> test
+plan -> planS [label=".withInitialState"]
+plan -> test [label=".test"]
+planS -> testS [label=".test"]
+test -> testS [label=".withInitialState"]
+
+ref -> run
+testS -> run [label=".run"]
 }

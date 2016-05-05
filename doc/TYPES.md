@@ -42,7 +42,7 @@ As an example, if you were testing a database you might have the following:
 
 
 Using the above, you create the content of your tests.
-In order to run tests, you combine data to get to the top of the following hierarchy:
+In order to run tests, you combine data as follows:
 
 ![Runner hierarchy](runner.gv.svg)
 
