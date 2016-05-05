@@ -7,7 +7,7 @@ import D.Or
 import Exports.{Equal => _, _}
 import Isomorphism._
 
-trait TestStateScalaz extends T.Equal.ImplicitsLowPri {
+trait ExtScalaz extends T.Equal.ImplicitsLowPri {
 
   implicit def scalazMonoidMonoComposableEmpty[Op, A](implicit e: Empty[A], c: T.PolyComposable.Mono[Op, A]): Monoid[A] =
     new Monoid[A] {
@@ -59,4 +59,4 @@ trait TestStateScalaz extends T.Equal.ImplicitsLowPri {
     T.Equal(e.equal)
 }
 
-object TestStateScalaz extends TestStateScalaz
+object ExtScalaz extends ExtScalaz

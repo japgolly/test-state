@@ -4,20 +4,10 @@ import monocle.macros.Lenses
 import japgolly.scalajs.react.test._
 import org.scalajs.dom.html
 import ReactTestUtils.Simulate
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-object MyTestState
-  extends teststate.Exports
-     with teststate.TestStateReact
-     with teststate.domzipper.sizzle.Exports
-
 import MyTestState._
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 /**
- * Observes everything we want to know about the Todo component.
+ * Observation capturing everything we want to know about the Todo component.
  *
  * This becomes the stateless snapshot of the component's DOM / what a user would see.
  */

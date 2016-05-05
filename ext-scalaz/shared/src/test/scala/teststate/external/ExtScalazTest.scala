@@ -4,14 +4,14 @@ import japgolly.univeq.UnivEq
 import scalaz.{Equal => Equal2}
 
 object Blah1
-  extends teststate.TestStateScalaz
+  extends teststate.ExtScalaz
      with teststate.Exports
 
 object Blah2
   extends teststate.Exports
-     with teststate.TestStateScalaz
+     with teststate.ExtScalaz
 
-object TestStateScalazTest {
+object ExtScalazTest {
 
   case class U(i: Int)
   implicit def univEqU: UnivEq[U] = UnivEq.force

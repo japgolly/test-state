@@ -8,7 +8,7 @@ import teststate.{data => D, typeclass => T}
 import D.Or
 import Exports._
 
-trait TestStateCats extends T.Equal.ImplicitsLowPri {
+trait ExtCats extends T.Equal.ImplicitsLowPri {
 
   implicit def catsMonoidMonoComposableEmpty[Op, A](implicit e: Empty[A], c: T.PolyComposable.Mono[Op, A]): Monoid[A] =
     new Monoid[A] {
@@ -48,4 +48,4 @@ trait TestStateCats extends T.Equal.ImplicitsLowPri {
     Equal(e.eqv)
 }
 
-object TestStateCats extends TestStateCats
+object ExtCats extends ExtCats
