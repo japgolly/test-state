@@ -13,7 +13,7 @@ trait ExtScalaJsReact extends domzipper.Exports {
   implicit def toExtScalaJsReactCompExt[N <: TopNode](c: CompScope.Mounted[N]): ExtScalaJsReactCompExt[N] =
     new ExtScalaJsReactCompExt(c)
 
-  implicit override val testStateHtmlScrub: HtmlScrub =
+  implicit override val htmlScrub: HtmlScrub =
     HtmlScrub.default >> HtmlScrub.removeReactDataAttr
 }
 

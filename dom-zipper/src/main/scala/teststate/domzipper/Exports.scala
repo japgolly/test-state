@@ -26,7 +26,7 @@ trait Exports {
   implicit def domZipperNextCovariance[D <: Base, A <: NextBase, B >: A <: NextBase, Out[_]](z: DZ[D, A, Out]): DZ[D, B, Out] =
     z.widenChildren
 
-  implicit def testStateHtmlScrub: HtmlScrub =
+  implicit def htmlScrub: HtmlScrub =
     HtmlScrub.default
 }
 
