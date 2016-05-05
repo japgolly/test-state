@@ -11,9 +11,9 @@ Test stateful stuff statelessly, and reasonably.
   - [Types](doc/TYPES.md).
   - [DSL](doc/DSL.md).
   - [Composability](doc/COMPSE.md).
-- Modules
-- Examples
-- Changelog
+- [Modules](#modules)
+- [Examples](#examples)
+- [Changelogs](doc/changelog) — [Latest](doc/changelog/2.0.0.md).
 
 
 # What is this?
@@ -77,10 +77,6 @@ This is a (simplified) model of how tests are executed:
 
 ![concept](doc/concept.uml.png)
 
-Here is what the above looks like in action:
-
-![example output](example-react/output-failure.png)
-
 
 # Modules
 
@@ -97,6 +93,6 @@ Here is what the above looks like in action:
 
 # Examples
 
-* React TODO app. - domzipper, web, invariants, actions.
-* DB triggers.    - real external state, ref.
-* Mutable sample. - fuzz, invariants.
+* [Scala.Js + React](example-react) - Demonstrates DomZipper, invariants, actions, basics.
+* [TODO] DB triggers.    - real external state, ref.
+* [TODO] Mutable sample. - fuzz, invariants.
