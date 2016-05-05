@@ -25,6 +25,7 @@ Once you have an instance, you can create your test content as follows:
 ![dsl-core](https://cdn.rawgit.com/japgolly/test-state/master/doc/dsl-core.gv.svg)
 
 You can create assertions here but it's more convenient to use the *focus* DSL below.
+
 Instead, the most common path here is the `Action` path.
 The majority of your test actions will be created like this:
 

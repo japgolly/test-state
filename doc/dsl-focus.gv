@@ -8,7 +8,7 @@ root [fillcolor="#444444" fontcolor=white label="Dsl"]
 node[fillcolor="#9BD858"] edge[color="#9BD858" fontcolor="#377700"]
 Point  [label="Point"]
 Around [label="Around"]
-Point -> Around [color="#555555"]
+Point -> Around [color="#555555" fontcolor="#111111" label=".before\l.after\l.beforeAndAfter\l"]
 }
 
 // root -> focus,transformer

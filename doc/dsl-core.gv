@@ -2,7 +2,7 @@ digraph G {
 
 node[style=filled]
 
-root [fillcolor="#444444" fontcolor=white label="Dsl"]
+root [fillcolor="#333333" fontcolor=white label="Dsl"]
 
 {
 node[fillcolor="#e4e4e4"]
@@ -33,7 +33,7 @@ Around -> Invariant
 
 Point -> Around [label=".after\l.before\l.beforeAndAfter\l"]
 
-Around -> Action // label how???
+Around -> Action [style=dotted arrowhead=dot]
 
 Action -> Action [label=".group(…)\l.rename(…)\l.times\l.updateState(Attempt)(By)\l.when/unless/skip\l"]
 Around -> Around [label=".rename(…)\l.when/unless/skip\l"]

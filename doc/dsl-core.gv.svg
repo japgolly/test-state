@@ -11,7 +11,7 @@
 <polygon fill="white" stroke="none" points="-4,4 -4,-456.74 738.304,-456.74 738.304,4 -4,4"/>
 <!-- root -->
 <g id="node1" class="node"><title>root</title>
-<ellipse fill="#444444" stroke="black" cx="239.304" cy="-434.74" rx="27" ry="18"/>
+<ellipse fill="#333333" stroke="black" cx="239.304" cy="-434.74" rx="27" ry="18"/>
 <text text-anchor="middle" x="239.304" y="-431.04" font-family="Times,serif" font-size="14.00" fill="white">Dsl</text>
 </g>
 <!-- action -->
@@ -127,8 +127,8 @@
 </g>
 <!-- Around&#45;&gt;Action -->
 <g id="edge10" class="edge"><title>Around&#45;&gt;Action</title>
-<path fill="none" stroke="black" d="M256.985,-139.288C235.914,-119.001 199.121,-83.5761 175.243,-60.5864"/>
-<polygon fill="black" stroke="black" points="177.612,-58.0087 167.981,-53.5941 172.757,-63.0513 177.612,-58.0087"/>
+<path fill="none" stroke="black" stroke-dasharray="1,5" d="M256.985,-139.288C235.549,-118.649 197.842,-82.3447 174.015,-59.4035"/>
+<ellipse fill="black" stroke="black" cx="170.862" cy="-56.3685" rx="4.00002" ry="4.00002"/>
 </g>
 <!-- Around&#45;&gt;Invariant -->
 <g id="edge8" class="edge"><title>Around&#45;&gt;Invariant</title>
