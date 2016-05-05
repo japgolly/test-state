@@ -33,28 +33,30 @@ object Lib {
   implicit def CrossProjectExtB(b: CrossProject.Builder) =
     new CrossProjectExt(b)
 
-  def publicationSettings(ghProject: String): PE =
-    sourceMapsToGithub(ghProject).andThen(
-    _.settings(
-      publishTo := {
-        val nexus = "https://oss.sonatype.org/"
-        if (isSnapshot.value)
-          Some("snapshots" at nexus + "content/repositories/snapshots")
-        else
-          Some("releases"  at nexus + "service/local/staging/deploy/maven2")
-      },
-      pomExtra :=
-        <scm>
-          <connection>scm:git:github.com/japgolly/{ghProject}</connection>
-          <developerConnection>scm:git:git@github.com:japgolly/{ghProject}.git</developerConnection>
-          <url>github.com:japgolly/{ghProject}.git</url>
-        </scm>
-        <developers>
-          <developer>
-            <id>japgolly</id>
-            <name>David Barri</name>
-          </developer>
-        </developers>))
+  def publicationSettings(ghProject: String) =
+    ConfigureBoth(
+      _.settings(
+        publishTo := {
+          val nexus = "https://oss.sonatype.org/"
+          if (isSnapshot.value)
+            Some("snapshots" at nexus + "content/repositories/snapshots")
+          else
+            Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+        },
+        pomExtra :=
+          <scm>
+            <connection>scm:git:github.com/japgolly/{ghProject}</connection>
+            <developerConnection>scm:git:git@github.com:japgolly/{ghProject}.git</developerConnection>
+            <url>github.com:japgolly/{ghProject}.git</url>
+          </scm>
+          <developers>
+            <developer>
+              <id>japgolly</id>
+              <name>David Barri</name>
+            </developer>
+          </developers>))
+    .jsConfigure(
+      sourceMapsToGithub(ghProject))
 
   def sourceMapsToGithub(ghProject: String): PE =
     p => p.settings(

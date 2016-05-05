@@ -127,15 +127,14 @@ object TestState {
   lazy val coreMacrosJS  = coreMacros.js
   lazy val coreMacros = crossProject
     .in(file("core-macros"))
-    .configure(commonSettings, utestSettings)
-    .bothConfigure(publicationSettings, definesMacros)
+    .configure(commonSettings, publicationSettings, utestSettings)
+    .bothConfigure(definesMacros)
     .settings(moduleName := "core-macros")
 
   lazy val coreJVM = core.jvm
   lazy val coreJS  = core.js
   lazy val core = crossProject
-    .configure(commonSettings)
-    .bothConfigure(publicationSettings)
+    .configure(commonSettings, publicationSettings)
     .dependsOn(coreMacros)
     .configure(utestSettings)
     .settings(
@@ -148,7 +147,7 @@ object TestState {
   lazy val domZipper = project
     .in(file("dom-zipper"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, publicationSettings, utestSettings.js)
+    .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
     .settings(
       moduleName          := "dom-zipper",
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
@@ -157,7 +156,7 @@ object TestState {
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, publicationSettings)
+    .configure(commonSettings.js, publicationSettings.js)
     .dependsOn(domZipper)
     .settings(
       moduleName     := "dom-zipper-sizzle",
@@ -169,8 +168,7 @@ object TestState {
   lazy val extScalazJS  = extScalaz.js
   lazy val extScalaz = crossProject
     .in(file("ext-scalaz"))
-    .configure(commonSettings)
-    .bothConfigure(publicationSettings)
+    .configure(commonSettings, publicationSettings)
     .dependsOn(core)
     .configure(utestSettings)
     .settings(
@@ -181,8 +179,7 @@ object TestState {
   lazy val extCatsJS  = extCats.js
   lazy val extCats = crossProject
     .in(file("ext-cats"))
-    .configure(commonSettings)
-    .bothConfigure(publicationSettings)
+    .configure(commonSettings, publicationSettings)
     .dependsOn(core)
     .configure(utestSettings)
     .settings(
@@ -193,8 +190,7 @@ object TestState {
   lazy val extNyayaJS  = extNyaya.js
   lazy val extNyaya = crossProject
     .in(file("ext-nyaya"))
-    .configure(commonSettings)
-    .bothConfigure(publicationSettings)
+    .configure(commonSettings, publicationSettings)
     .dependsOn(core, extScalaz)
     .configure(utestSettings)
     .settings(
@@ -206,7 +202,7 @@ object TestState {
   lazy val extScalaJsReact = project
     .in(file("ext-scalajs-react"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, publicationSettings)
+    .configure(commonSettings.js, publicationSettings.js)
     .dependsOn(domZipper)
     .settings(
       moduleName := "ext-scalajs-react",
