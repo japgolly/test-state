@@ -110,7 +110,7 @@ object CoproductExample {
     val swapTypes =
       *.action("Swap types")(_.ref.swap()).updateStateBy(i => i.state.copy(t = i.state.t.swap))
 
-    val actions: *.Action =
+    val actions: *.Actions =
       testNum >> swapTypes >> testTxt
 
     val test = Plan(actions, invariants).test(

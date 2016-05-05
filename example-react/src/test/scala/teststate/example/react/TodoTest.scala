@@ -13,7 +13,7 @@ object TodoTest extends TestSuite {
    *
    * They be validated before and after each action executes, arr.
    */
-  val invariants: dsl.Invariant = {
+  val invariants: dsl.Invariants = {
     var invars = dsl.emptyInvariant
 
     // Invariant #1

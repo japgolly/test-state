@@ -3,12 +3,11 @@ package teststate.dsl
 import acyclic.file
 import japgolly.univeq.UnivEq
 import teststate.core._
+import teststate.core.Types.SackE
 import teststate.data._
-import teststate.run.{Observer, Plan}
+import teststate.run.Observer
 import teststate.typeclass._
 import CoreExports._
-import Dsl.Types
-import Types.SackE
 
 object Dsl {
   def full[F[_]: ExecutionModel, R, O, S, E] =
@@ -18,29 +17,54 @@ object Dsl {
     full[Id, R, O, S, String]
 
   import scala.concurrent._
-  @inline def future[R, O, S](implicit ec: ExecutionContext) =
+  def future[R, O, S](implicit ec: ExecutionContext) =
     full[Future, R, O, S, String]
 
-  // TODO Rename DSL types like {Point,Around}{,s}, etc
-  // TODO Decide pluralisation everywhere (type aliases, case class params/methods, etc)
   trait Types[F[_], R, O, S, E] extends Any {
     final type OS                   = teststate.data.OS[O, S]
     final type ROS                  = teststate.data.ROS[R, O, S]
-    final type ANameFn              = teststate.data.NameFn[ROS]
-    final type CNameFn              = teststate.data.NameFn[OS]
-    final type ArNameFn             = teststate.data.NameFn[BeforeAfter[OS]]
-    final type Point                = Points[O, S, E]
-    final type Around               = Arounds[O, S, E]
-    final type Invariant            = Invariants[O, S, E]
-    final type Action               = Actions[F, R, O, S, E]
+    final type ActionName           = teststate.data.NameFn[ROS]
+    final type AssertionName        = teststate.data.NameFn[OS]
+    final type AroundName           = teststate.data.NameFn[BeforeAfter[OS]]
+    final type Points               = CoreExports.Points[O, S, E]
+    final type Arounds              = CoreExports.Arounds[O, S, E]
+    final type Invariants           = CoreExports.Invariants[O, S, E]
+    final type Actions              = CoreExports.Actions[F, R, O, S, E]
     final type PlanWithInitialState = teststate.run.PlanWithInitialState[F, R, O, S, E]
     final type TestWithInitialState = teststate.run.TestWithInitialState[F, R, O, S, E]
     final type Plan                 = teststate.run.Plan[F, R, O, S, E]
     final type Test                 = teststate.run.Test[F, R, O, S, E]
   }
+
+  def Types[F[_], R, O, S, E]: Types[F, R, O, S, E] =
+    new Types[F, R, O, S, E]{}
 }
 
-final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[F, R, O, S, E] {
+
+final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Types[F, R, O, S, E] {
+
+  // Allows: import dsl.Types._
+  val Types = Dsl.Types[F, R, O, S, E]
+
+  def emptyAction: Actions =
+    Empty.instance
+
+  def emptyAround: Arounds =
+    Empty.instance
+
+  def emptyInvariant: Invariants =
+    Empty.instance
+
+  def emptyPlan: Plan =
+    Empty.instance
+
+  def emptyTest(observer: Observer[R, O, E])(implicit r: Recover[E]): Test =
+    emptyPlan.test(observer)(r)
+
+  val transformer: Transformer[F, R, O, S, E, F, R, O, S, E] =
+    Transformer.id[F, R, O, S, E]
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   private def sack1[A](a: A) =
     Sack.Value(Right(a))
@@ -48,40 +72,43 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   private def sackE(ne: NamedError[Failure[E]]) =
     Sack.Value(Left(ne))
 
-  def point(name: CNameFn)(test: OS => Option[E]): Point =
+  private def strErrorFn(implicit ev: String =:= E): Any => E =
+    _ => ""
+
+  private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E =
+    (_,_) => ""
+
+  def point(name: AssertionName)(test: OS => Option[E]): Points =
     sack1(Point(name, Tri failedOption test(_)))
 
-  def around[A](name: ArNameFn)(before: OS => A)(test: (OS, A) => Option[E]): Around =
+  def around[A](name: AroundName)(before: OS => A)(test: (OS, A) => Option[E]): Arounds =
     sack1(Around.Delta(Around.DeltaA(name, os => Passed(before(os)), test)))
 
-  private def strErrorFn(implicit ev: String =:= E): Any => E = _ => ""
-  private def strErrorFn2(implicit ev: String =:= E): (Any, Any) => E = (_,_) => ""
-
-
-  def test(name: CNameFn)(testFn: OS => Boolean)(implicit ev: String =:= E): Point =
+  def test(name: AssertionName)(testFn: OS => Boolean)(implicit ev: String =:= E): Points =
     test(name, strErrorFn)(testFn)
 
-  def test(name: CNameFn, error: OS => E)(testFn: OS => Boolean): Point =
+  def test(name: AssertionName, error: OS => E)(testFn: OS => Boolean): Points =
     point(name)(os => if (testFn(os)) None else Some(error(os)))
 
-  def testAround(name: ArNameFn)(testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Around =
+  def testAround(name: AroundName)(testFn: (OS, OS) => Boolean)(implicit ev: String =:= E): Arounds =
     testAround(name, strErrorFn2)(testFn)
 
-  def testAround(name: ArNameFn, error: (OS, OS) => E)(testFn: (OS, OS) => Boolean): Around =
+  def testAround(name: AroundName, error: (OS, OS) => E)(testFn: (OS, OS) => Boolean): Arounds =
     around(name)(identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  def chooseInvariant       (n: CNameFn)(f: OS => Invariant)     : Invariant = choose(n, f)
-  def chooseInvariantAttempt(n: CNameFn)(f: OS => E Or Invariant): Invariant = chooseAttempt(n, f)
+  def chooseInvariant       (n: AssertionName)(f: OS => Invariants)     : Invariants = choose(n, f)
+  def chooseInvariantAttempt(n: AssertionName)(f: OS => E Or Invariants): Invariants = chooseAttempt(n, f)
 
-  def choosePoint       (n: CNameFn)(f: OS => Point)     : Point = choose(n, f)
-  def choosePointAttempt(n: CNameFn)(f: OS => E Or Point): Point = chooseAttempt(n, f)
+  def choosePoint       (n: AssertionName)(f: OS => Points)     : Points = choose(n, f)
+  def choosePointAttempt(n: AssertionName)(f: OS => E Or Points): Points = chooseAttempt(n, f)
 
-  def chooseAround       (n: CNameFn)(f: OS => Around)     : Around = choose(n, f)
-  def chooseAroundAttempt(n: CNameFn)(f: OS => E Or Around): Around = chooseAttempt(n, f)
+  def chooseAround       (n: AssertionName)(f: OS => Arounds)     : Arounds = choose(n, f)
+  def chooseAroundAttempt(n: AssertionName)(f: OS => E Or Arounds): Arounds = chooseAttempt(n, f)
 
-  def chooseAction       (n: ANameFn)(f: ROS => Action)     : Action = choose(n, f)
-  def chooseActionAttempt(n: ANameFn)(f: ROS => E Or Action): Action = chooseAttempt(n, f)
+  def chooseAction       (n: ActionName)(f: ROS => Actions)     : Actions = choose(n, f)
+  def chooseActionAttempt(n: ActionName)(f: ROS => E Or Actions): Actions = chooseAttempt(n, f)
 
   private def choose[A, B](name: NameFn[A], f: A => Sack[A, B]): Sack[A, B] =
     Sack.CoProduct(name, f)
@@ -89,6 +116,39 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
   private def chooseAttempt[A, B](name: NameFn[A], f: A => E Or SackE[A, B, E]): SackE[A, B, E] =
     Sack.CoProduct(name, f(_).recover(e => sackE(NamedError(name(None), Failure NoCause e))))
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  def action(actionName: ActionName) =
+    new ActionB(actionName)
+
+  final class ActionB(actionName: ActionName) {
+    def apply[U](f: ROS => F[U]): Actions =
+      attempt(f.andThen(EM.map(_)(_ => None)))
+
+    def attempt(f: ROS => F[Option[E]]): Actions =
+      full(i => EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(i.state))))
+
+    def update(f: ROS => F[S]): Actions =
+      updateBy(i => EM.map(f(i))(Function.const))
+
+    def updateBy(f: ROS => F[O => S]): Actions =
+      full(i => EM.map(f(i))(os => Right(os.andThen(Right(_)))))
+
+    def full[U](f: ROS => F[E Or (O => E Or S)]): Actions = {
+      val a = Action.Single[F, R, O, S, E](i => Some(() => f(i)))
+      Action.liftInner(a)(actionName)
+    }
+  }
+
+  def print(f: ROS => Any): Actions =
+    print("Print <?>.", f)
+
+  def print(name: => ActionName, f: ROS => Any): Actions =
+    action(name)(i => EM.point {
+      println(f(i))
+    })
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   def focus(focusName: => String) =
     new Focus(focusName)
@@ -108,59 +168,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       new BiFocus[A](focusName, fa = actual, fe = expect)
   }
 
-  // ===================================================================================================================
-
-  val transformer: Transformer[F, R, O, S, E, F, R, O, S, E] =
-    Transformer.id[F, R, O, S, E]
-
-  def emptyAction: Action =
-    Empty.instance
-
-  def emptyAround: Around =
-    Empty.instance
-
-  def emptyInvariant: Invariant =
-    Empty.instance
-
-  def emptyPlan: Plan =
-    Empty.instance
-
-  def emptyTest(observer: Observer[R, O, E])(implicit r: Recover[E]): Test =
-    emptyPlan.test(observer)(r)
-
-  // ===================================================================================================================
-
-  def action(actionName: ANameFn) =
-    new ActionB(actionName)
-
-  final class ActionB(actionName: ANameFn) {
-    def apply[U](f: ROS => F[U]): Action =
-      attempt(f.andThen(EM.map(_)(_ => None)))
-
-    def attempt(f: ROS => F[Option[E]]): Action =
-      full(i => EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(i.state))))
-
-    def update(f: ROS => F[S]): Action =
-      updateBy(i => EM.map(f(i))(Function.const))
-
-    def updateBy(f: ROS => F[O => S]): Action =
-      full(i => EM.map(f(i))(os => Right(os.andThen(Right(_)))))
-
-    def full[U](f: ROS => F[E Or (O => E Or S)]): Action = {
-      val a = Action.Single[F, R, O, S, E](i => Some(() => f(i)))
-      Action.liftInner(a)(actionName)
-    }
-  }
-
-  def print(f: ROS => Any): Action =
-    print("Print <?>.", f)
-
-  def print(name: => ANameFn, f: ROS => Any): Action =
-    action(name)(i => EM.point {
-      println(f(i))
-    })
-
-  // ===================================================================================================================
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   final class FocusValue[A](focusName: => String, focusFn: OS => A)(implicit displayA: Display[A]) {
 
@@ -173,28 +181,28 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     private def suffix(desc: String): String => String =
       _ + " " + desc
 
-    def test(descSuffix: String)(testFn: A => Boolean)(implicit ev: String =:= E): Point =
+    def test(descSuffix: String)(testFn: A => Boolean)(implicit ev: String =:= E): Points =
       test(suffix(descSuffix))(testFn)
 
-    def test(descSuffix: String, error: A => E)(testFn: A => Boolean): Point =
+    def test(descSuffix: String, error: A => E)(testFn: A => Boolean): Points =
       test(suffix(descSuffix), error)(testFn)
 
-    def test(desc: String => String)(testFn: A => Boolean)(implicit ev: String =:= E): Point =
+    def test(desc: String => String)(testFn: A => Boolean)(implicit ev: String =:= E): Points =
       test(desc, strErrorFn)(testFn)
 
-    def test(desc: String => String, error: A => E)(testFn: A => Boolean): Point =
+    def test(desc: String => String, error: A => E)(testFn: A => Boolean): Points =
       Dsl.this.test(desc(focusName), error compose focusFn)(testFn compose focusFn)
 
-    def testAround(descSuffix: String)(testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around =
+    def testAround(descSuffix: String)(testFn: (A, A) => Boolean)(implicit ev: String =:= E): Arounds =
       testAround(suffix(descSuffix))(testFn)
 
-    def testAround(descSuffix: String, error: (A, A) => E)(testFn: (A, A) => Boolean): Around =
+    def testAround(descSuffix: String, error: (A, A) => E)(testFn: (A, A) => Boolean): Arounds =
       testAround(suffix(descSuffix), error)(testFn)
 
-    def testAround(desc: String => String)(testFn: (A, A) => Boolean)(implicit ev: String =:= E): Around =
+    def testAround(desc: String => String)(testFn: (A, A) => Boolean)(implicit ev: String =:= E): Arounds =
       testAround(desc, strErrorFn2)(testFn)
 
-    def testAround(desc: String => String, error: (A, A) => E)(testFn: (A, A) => Boolean): Around =
+    def testAround(desc: String => String, error: (A, A) => E)(testFn: (A, A) => Boolean): Arounds =
       around(desc(focusName))(focusFn)((os, a1) => {
         val a2 = focusFn(os)
         if (testFn(a1, a2)) None else Some(error(a1, a2))
@@ -206,31 +214,30 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def assert: AssertOps =
       new AssertOps(true)
 
-    @inline def assert(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
+    @inline def assert(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Points =
       assert.equal(expect)(e, f)
 
     final class AssertOps(positive: Boolean) {
-
       def not = new AssertOps(!positive)
 
-      def equal(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
+      def equal(expect: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Points =
         point(NameUtils.equal(focusName, positive, expect))(
           i => f.expectMaybeEqual(positive, ex = expect, actual = focusFn(i)))
 
-      def equalBy(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
+      def equalBy(expect: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Points =
         point(NameFn(NameUtils.equalFn(focusName, positive, expect)))(
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
 
-      def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
+      def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Arounds =
         equal(before).before & equal(after).after
 
-      def beforeAndAfterBy(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
+      def beforeAndAfterBy(before: OS => A, after: OS => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Arounds =
         equalBy(before).before & equalBy(after).after
 
-      private def mkAround(name: ArNameFn, f: (A, A) => Option[E]) =
+      private def mkAround(name: AroundName, f: (A, A) => Option[E]) =
         around(name)(focusFn)((os, a) => f(a, focusFn(os)))
 
-      def changeTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Around =
+      def changeTo(expect: A => A)(implicit e: Equal[A], f: SomethingFailures[A, E]): Arounds =
         mkAround(
           NameFn(NameUtils.equalFn(focusName, positive, i => expect(focusFn(i.before)))),
           (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
@@ -258,7 +265,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     }
   } // FocusValue
 
-  // ===================================================================================================================
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   final class FocusColl[C[X] <: TraversableOnce[X], A](focusName: => String, focusFn: OS => C[A]) {
 
@@ -282,7 +289,7 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
     def assert: AssertOps =
       new AssertOps(true)
 
-    @inline def assert(expect: A*)(implicit eq: Equal[A], sa: Display[A], ev: CollectionAssertions.EqualIncludingOrder.Failure[A] => E): Point =
+    @inline def assert(expect: A*)(implicit eq: Equal[A], sa: Display[A], ev: CollectionAssertions.EqualIncludingOrder.Failure[A] => E): Points =
       assert.equal(expect: _*)(eq, sa, ev)
 
     final class AssertOps(positive: Boolean) {
@@ -386,10 +393,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       }
 
     }
-  }
+  } // FocusColl
 
-
-  // ===================================================================================================================
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   sealed class BiFocus[A](focusName: => String, fa: OS => A, fe: OS => A)(implicit displayA: Display[A]) {
 
@@ -403,10 +409,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Types[
       new AssertOps(true)
 
     final class AssertOps(positive: Boolean) {
-
       def not = new AssertOps(!positive)
 
-      def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Point =
+      def equal(implicit e: Equal[A], f: SomethingFailures[A, E]): Points =
         point(NameFn(NameUtils.equalFn(focusName, positive, i => fe(i))))(
           os => f.expectMaybeEqual(positive, ex = fe(os), actual = fa(os)))
     }

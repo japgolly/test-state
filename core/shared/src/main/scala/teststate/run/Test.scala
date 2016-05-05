@@ -121,7 +121,7 @@ final class Plan[F[_], R, O, S, E](override val name: Option[Name],
     new Plan(name, actions mapE f, invariants mapE f)
 
   def lift[F2[_], R2, O2, S2, E2](implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Self[F2, R2, O2, S2, E2] =
-    new Plan(name, t action actions, t invariant invariants)(t.f2)
+    new Plan(name, t actions actions, t invariants invariants)(t.f2)
 
   def withInitialState(s: S) =
     PlanWithInitialState(this, s)

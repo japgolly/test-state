@@ -15,12 +15,12 @@ object CompositionTest extends TestSuite {
   def associativity[A, B, C, AB, BC](implicit
                                      x1: PolyComposable[SeqOp, A, B, AB],
                                      x2: PolyComposable[SeqOp, B, C, BC],
-                                     x3: PolyComposable[SeqOp, AB, C, *.Action],
-                                     x4: PolyComposable[SeqOp, A, BC, *.Action]) = {
+                                     x3: PolyComposable[SeqOp, AB, C, *.Actions],
+                                     x4: PolyComposable[SeqOp, A, BC, *.Actions]) = {
 
     implicit def anyCanSeq[X]: Can[SeqOp, X] = Can
 
-    def results(a: *.Action): String =
+    def results(a: *.Actions): String =
       "\n" + Plan.action(a).stateless.testU.runU.format(inspectionFormat)
 
     Prop.equal[(A, B, C)]("associativity")(

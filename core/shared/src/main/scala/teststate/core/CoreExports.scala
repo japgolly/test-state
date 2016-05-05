@@ -21,8 +21,8 @@ trait CoreExports
   type Actions[F[_], R, O, S, E] = Action.Actions[F, R, O, S, E]
 
   import Types._
-  implicit def autoWidenChecksToInvariants[C[-_, _], A, E](c: CheckShapeA[C, A, E])(implicit t: ToInvariant[CheckShapeA, C]): CheckShapeA[Invariant, A, E] =
-    t.toInvariant(c)
+  implicit def autoWidenChecksToInvariants[C[-_, _], A, E](c: CheckShapeA[C, A, E])(implicit t: ToInvariants[CheckShapeA, C]): CheckShapeA[Invariant, A, E] =
+    t.toInvariants(c)
 
   import teststate.data._
   implicit def checksInstanceDisplay[C[- _, _], A, E](implicit sc: Display[C[A, E]]): Display[CheckShapeA[C, A, E]] = {

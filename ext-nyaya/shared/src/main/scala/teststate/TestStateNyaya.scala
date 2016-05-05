@@ -15,10 +15,10 @@ trait TestStateNyaya {
 object TestStateNyaya extends TestStateNyaya {
 
   final class DslNyayaOps[F[_], R, O, S, E](private val dsl: Dsl[F, R, O, S, E]) extends AnyVal with Dsl.Types[F, R, O, S, E] {
-    def genActions(name: ANameFn)(g: Gen[Action])(implicit s: Settings): Action =
+    def genActions(name: ActionName)(g: Gen[Actions])(implicit s: Settings): Actions =
       TestStateNyaya.genActions(g)(name)(s)
 
-    def genActionsBy(name: ANameFn)(g: ROS => Gen[Action])(implicit s: Settings): Action =
+    def genActionsBy(name: ActionName)(g: ROS => Gen[Actions])(implicit s: Settings): Actions =
       dsl.chooseAction(name)(i => genActions(name)(g(i))(s))
   }
 

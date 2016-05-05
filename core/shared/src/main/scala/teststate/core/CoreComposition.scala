@@ -23,11 +23,11 @@ object CoreComposition {
   trait P0 {
 
     implicit def checksPolyComposable[C[-_, _], D[-_, _], A, E](implicit
-                                                                  c: ToInvariant[CheckShapeA, C],
-                                                                  d: ToInvariant[CheckShapeA, D],
-                                                                  i: PolyComposable.Mono[AndOp, CheckShapeA[Invariant, A, E]])
+                                                                c: ToInvariants[CheckShapeA, C],
+                                                                d: ToInvariants[CheckShapeA, D],
+                                                                i: PolyComposable.Mono[AndOp, CheckShapeA[Invariant, A, E]])
         : PolyComposable[AndOp, CheckShapeA[C, A, E], CheckShapeA[D, A, E], CheckShapeA[Invariant, A, E]] =
-      PolyComposable((fc, fd) => i.compose(c toInvariant fc, d toInvariant fd))
+      PolyComposable((fc, fd) => i.compose(c toInvariants fc, d toInvariants fd))
   }
 
   trait Implicits extends P0 {

@@ -46,7 +46,7 @@ object OutputTest extends TestSuite {
       .addCheck(mockPoint("Sub-post").after)
       .addCheck(mockAround("Sub-delta"))
 
-  def test(a: *.Action, i: *.Invariant)(expect: String): Unit = {
+  def test(a: *.Actions, i: *.Invariants)(expect: String): Unit = {
     val r = Plan(a, i).stateless.testU.runU
     assertRun(r, expect)
   }
@@ -96,7 +96,7 @@ object OutputTest extends TestSuite {
     }
 
     'invariants {
-      def t(i: *.Invariant)(expect: String) = test(emptyAction, i)(expect)
+      def t(i: *.Invariants)(expect: String) = test(emptyAction, i)(expect)
       'pass {
         'simplest - t(checkPoint)(
           """
@@ -157,7 +157,7 @@ object OutputTest extends TestSuite {
     }
 
     'action {
-      def t(a: *.Action)(expect: String) = test(a, emptyInvariant)(expect)
+      def t(a: *.Actions)(expect: String) = test(a, emptyInvariant)(expect)
       'pass {
         'simplest - t(action)(
           """
@@ -336,7 +336,7 @@ object OutputTest extends TestSuite {
     }
 
     'actionG {
-      def t(a: *.Action)(expect: String) = test(a, emptyInvariant)(expect)
+      def t(a: *.Actions)(expect: String) = test(a, emptyInvariant)(expect)
       'pass {
         'simple - t(actionG)(
           """
@@ -699,7 +699,7 @@ object OutputTest extends TestSuite {
       }
 
       'nested - {
-        def sub(n: String, a: *.Action) =
+        def sub(n: String, a: *.Actions) =
           Plan(a, mockPoint("Invariant: " + n)).asAction("Subtest: " + n)
 
         def nest(a0: Boolean, b: Boolean, a2: Boolean) = {

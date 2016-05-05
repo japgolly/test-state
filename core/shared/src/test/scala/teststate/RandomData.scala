@@ -23,7 +23,7 @@ object RandomData {
     } yield f(a)
   }
 
-  lazy val action: Gen[*.Action] =
+  lazy val action: Gen[*.Actions] =
     applyEndos(
       Gen.choose(
         *.emptyAction,
@@ -36,7 +36,7 @@ object RandomData {
       a => a.skip
     )
 
-  lazy val point: Gen[*.Point] =
+  lazy val point: Gen[*.Points] =
     applyEndos(
       Gen.choose(
         *.test("P1")(_ => true),
