@@ -242,25 +242,25 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
           NameFn(NameUtils.equalFn(focusName, positive, i => expect(focusFn(i.before)))),
           (a1, a2) => f.expectMaybeEqual(positive, ex = expect(a1), actual = a2))
 
-      def change(implicit e: Equal[A], f: DisplayFailure[A, E]) =
+      def change(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         not.changeTo(identity)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "change"))
 
-      def noChange(implicit e: Equal[A], f: DisplayFailure[A, E]) =
+      def noChange(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         not.change
 
-      def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]) =
+      def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
         changeTo(n.plus(_, a))(q, f)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)))
 
-      def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]) =
+      def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
         changeTo(n.minus(_, a))(q, f)
           .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
 
-      def increment(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]) =
+      def increment(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
         increaseBy(n.one)(n, q, f, s)
 
-      def decrement(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]) =
+      def decrement(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
         decreaseBy(n.one)(n, q, f, s)
     }
   } // FocusValue
@@ -302,39 +302,39 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
 
       import CollectionAssertions._
 
-      def distinct(implicit sa: Display[A], ev: Distinct.Failure[A] => E) = {
+      def distinct(implicit sa: Display[A], ev: Distinct.Failure[A] => E): Points = {
         val d = Distinct(positive)
         point(d.name(focusName))(
           os => d(focusFn(os)).map(ev))
       }
 
-      def containsAll(queryNames: => String)(query: OS => Set[A])(implicit sb: Display[A], ua: UnivEq[A], ev: ContainsAll.Failure[A] => E) = {
+      def containsAll(queryNames: => String)(query: OS => Set[A])(implicit sb: Display[A], ua: UnivEq[A], ev: ContainsAll.Failure[A] => E): Points = {
         val d = ContainsAll(positive)
         point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
       }
 
-      def containsAny(queryNames: => String)(query: OS => Set[A])(implicit sb: Display[A], ev: ContainsAny.Failure[A] => E) = {
+      def containsAny(queryNames: => String)(query: OS => Set[A])(implicit sb: Display[A], ev: ContainsAny.Failure[A] => E): Points = {
         val d = ContainsAny(positive)
         point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
       }
 
-      def containsNone(queryNames: => String)(query: OS => Set[A])(implicit sb: Display[A], ev: ContainsAny.Failure[A] => E) =
+      def containsNone(queryNames: => String)(query: OS => Set[A])(implicit sb: Display[A], ev: ContainsAny.Failure[A] => E): Points =
         not.containsAny(queryNames)(query)
 
-      def containsOnly(queryNames: => String)(query: OS => Set[A])(implicit sa: Display[A], ua: UnivEq[A], ev: ContainsOnly.Failure[A] => E) = {
+      def containsOnly(queryNames: => String)(query: OS => Set[A])(implicit sa: Display[A], ua: UnivEq[A], ev: ContainsOnly.Failure[A] => E): Points = {
         val d = ContainsOnly(positive)
         point(d.name(focusName, queryNames))(
           os => d(focusFn(os), query(os)).map(ev))
       }
 
-      def contains[B >: A](query: B)(implicit sa: Display[B], ea: Equal[B], ev: Exists.Failure[B] => E) =
+      def contains[B >: A](query: B)(implicit sa: Display[B], ea: Equal[B], ev: Exists.Failure[B] => E): Points =
         point(Exists(positive).name(focusName, sa(query)))(
           os => Exists(positive)(focusFn(os), query).map(ev))
 
       def existenceOf(query: A)(expect: OS => Boolean)
-                     (implicit sa: Display[A], ea: Equal[A], ev: Exists.Failure[A] => E) = {
+                     (implicit sa: Display[A], ea: Equal[A], ev: Exists.Failure[A] => E): Points = {
         val e = wrapExp1(expect)
         point(Exists.nameFn(e, focusName, sa(query)))(
           os => Exists(e(os))(focusFn(os), query).map(ev))
@@ -342,31 +342,35 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
 
 
       def existenceOfAll(allName: => String)(all: A*)(expect: OS => Boolean)
-                        (implicit sa: Display[A], ua: UnivEq[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) =
+                        (implicit sa: Display[A], ua: UnivEq[A],
+                         ev1: ContainsAny.FoundSome[A] => E,
+                         ev2: ContainsAll.Missing[A] => E): Points =
         existenceOfAllBy(allName)(Function const UnivEq.toSet(all))(expect)
 
       def existenceOfAllBy(allName: => String)(all: OS => Set[A])(expect: OS => Boolean)
-                          (implicit sa: Display[A], ua: UnivEq[A], ev1: ContainsAny.FoundSome[A] => E, ev2: ContainsAll.Missing[A] => E) = {
+                          (implicit sa: Display[A], ua: UnivEq[A],
+                           ev1: ContainsAny.FoundSome[A] => E,
+                           ev2: ContainsAll.Missing[A] => E): Points = {
         val e = wrapExp1(expect)
         point(ExistenceOfAll.nameFn(e, focusName, allName))(
           os => ExistenceOfAll(e(os), focusFn(os), all(os)).map(_.fold(ev1, ev2)))
       }
 
 
-      def equal(expect: A*)(implicit eq: Equal[A], sa: Display[A], ev: EqualIncludingOrder.Failure[A] => E) =
+      def equal(expect: A*)(implicit eq: Equal[A], sa: Display[A], ev: EqualIncludingOrder.Failure[A] => E): Points =
         equalBy(Function const expect)(eq, sa, ev)
 
-      def equalBy(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Display[A], ev: EqualIncludingOrder.Failure[A] => E) = {
+      def equalBy(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Display[A], ev: EqualIncludingOrder.Failure[A] => E): Points = {
         val d = EqualIncludingOrder(positive)
         point(NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])))(
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
 
 
-      def equalIgnoringOrder(expect: A*)(implicit sa: Display[A], ev: EqualIgnoringOrder.Failure[A] => E) =
+      def equalIgnoringOrder(expect: A*)(implicit sa: Display[A], ev: EqualIgnoringOrder.Failure[A] => E): Points =
         equalIgnoringOrderBy(Function const expect)(sa, ev)
 
-      def equalIgnoringOrderBy(expect: OS => TraversableOnce[A])(implicit sa: Display[A], ev: EqualIgnoringOrder.Failure[A] => E) = {
+      def equalIgnoringOrderBy(expect: OS => TraversableOnce[A])(implicit sa: Display[A], ev: EqualIgnoringOrder.Failure[A] => E): Points = {
         val d = EqualIgnoringOrder(positive)
         point(
           NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])
@@ -375,10 +379,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
       }
 
 
-      def elemChanges(del: A*)(add: A*)(implicit sa: Display[A], ev: ElemChanges.Failure[A] => E) =
+      def elemChanges(del: A*)(add: A*)(implicit sa: Display[A], ev: ElemChanges.Failure[A] => E): Arounds =
         elemChangesBy(Function const del, Function const add)(sa, ev)
 
-      def elemChangesBy(del: OS => TraversableOnce[A], add: OS => TraversableOnce[A])(implicit sa: Display[A], ev: ElemChanges.Failure[A] => E) = {
+      def elemChangesBy(del: OS => TraversableOnce[A], add: OS => TraversableOnce[A])(implicit sa: Display[A], ev: ElemChanges.Failure[A] => E): Arounds = {
         val d = ElemChanges(positive)
         around(
           NameFn(NameUtils.collChangeFn(focusName, positive, "change", del, add)))(
