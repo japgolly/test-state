@@ -154,7 +154,6 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
     new Focus(focusName)
 
   final class Focus(focusName: => String) {
-    // TODO Make implicit
     def value[A: Display](f: OS => A) =
       new FocusValue(focusName, f)
 
