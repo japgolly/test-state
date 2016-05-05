@@ -1,113 +1,69 @@
-
-
-# How do I use this?
-
-modules
-deps
-Create an object
-types (Action etc)
-types (FROSE)
-create obs & dsl
-create plan
-run test
-
-
-* How to use.
-  * Setup. SBT & Exports.
-  * Writing a test: Actions, checks, invariants.
-  * Running a test.
-* Operator/API reference.
-
-
-
-
 # Usage
 
-#### Project Setup
+- [Project Setup](#project-setup)
+- [Writing Tests](#writing-tests)
+- [Running Tests](#running-tests)
 
-1. Choose your modules. Add to SBT.
 
-1. Create an `object` for your config and select the functionality you want.
+# Project Setup
 
-  ```scala
-  package your.package
+1. Choose dependencies and add to SBT.
+    <br>Module descriptions are [here](../README.md). Take what you need and delete the rest.
+    ```scala
+    val TestStateVer = "2.0.0"
 
-  object Testate
-    extends testate.Exports
-    // with testate.TestStateCats
-    // with testate.TestStateNyaya
-    // with testate.TestStateScalaz
-    // with testate.domzipper.sizzle.Exports
-  {
-    // Additional config here if desired.
-  }
-  ```
+    libraryDependencies ++= Seq(
+      "com.github.japgolly.test-state" %%% "core"              % TestStateVer % "test",
+      "com.github.japgolly.test-state" %%% "dom-zipper"        % TestStateVer % "test",
+      "com.github.japgolly.test-state" %%% "dom-zipper-sizzle" % TestStateVer % "test",
+      "com.github.japgolly.test-state" %%% "ext-cats"          % TestStateVer % "test",
+      "com.github.japgolly.test-state" %%% "ext-nyaya"         % TestStateVer % "test",
+      "com.github.japgolly.test-state" %%% "ext-scalajs-react" % TestStateVer % "test",
+      "com.github.japgolly.test-state" %%% "ext-scalaz"        % TestStateVer % "test")
+    ```
 
-#### Writing Tests
+1. Create a configuration for your needs.
+    <br>Each module has a `trait` containing all of its public API.
+    Mix them into your own `object`. Lately you can add additional configuration such as settings,
+    or typeclasses for your data types.
+    ```scala
+    package my.app.test
 
-Maybe point to tutorial on blog and just have a reference here.
-```
-import
-dsl
-actions
-checks before|after|around
-invariants
-plan -> test -> report -> assert
-```
+    object MyTestState
+      extends teststate.Exports                  // Core. Most important piece.
+         with teststate.domzipper.Exports
+         with teststate.domzipper.sizzle.Exports // This already extends above.
+         with teststate.ExtCats
+         with teststate.ExtNyaya
+         with teststate.ExtScalaJsReact
+         with teststate.ExtScalaz
+    {
+      // Additional config here if desired.
 
-1. Import your config.
-  ```scala
-  import your.package.Testate._
-  ```
-1. Create a DSL.
-  ```scala
-  val dsl = Dsl[Reference, Observation, StateExpectations]
-  ```
-1. Create checks (and focuses).
-  ```scala
-  // Focuses
-  val moneyRemaining = dsl.focus("Money remaining").value(_.obs.money)
-  val columns        = dsl.focus("Columns").collection(_.obs.selCols)
+      // Example: customise how BankAccounts are displayed in test output.
+      implicit val displayBankAccount: Display[BankAccount] =
+        Display(_.accountNo)
+    }
+    ```
 
-  // Checks
-  val noMoneyRemaining = moneyRemaining.assert.equal(0)
-  val itemCountMatches = dsl.focus("Item count").obsAndState(_.count, _.items.size).assert.equal
-  ```
-1. Create invariants.
-  ```scala
-  val invariants =
-    columns.assert.distinct &
-    columns.assert.contains("Name") &
-    moneyRemaining.test("isn't negative")(_ >= 0)
-  ```
-1. Create actions.
-  ```scala
-  def addMoney(amount: Int) =
-    dsl.action("Add $" + amount)(_.ref.addTransaction(amount))            // Action
-      .updateState(s => s.copy(expectedMoney = s.expectedMoney + amount)) // Adjust expected state
+# Writing Tests
 
-  // Add before-, after-, and around-conditions using +>
-  val logout = (
-    loggedInUser.assert.not.equal(None)     // Pre-condition
-    +> dsl.action("Logout")(_.ref.logout()) // Action
-    +> loggedInUser.assert.equal(None)      // Post-condition #1
-    +> pageId.assert.change                 // Post-condition #2
-  )
+1. [Choose your types](TYPES.md).
+   This nearly always involves creating a small class for your *Observations*.
+1. [Create a `Dsl` instance](DSL.md). Use your DSL to create actions, assertions and invariants.
+1. [Compose everything](COMPOSE.md) to create a `Test`.
 
-  // Compose actions using >>
-  val example =
-    login >> addMoney(100).times(3) >> logout
-  ```
-1. Create test.
-  ```scala
-  val plan = Plan(actions, invariants)
-  val test = plan test Observer(...)
-  ```
-1. Run test.
-  ```scala
-  val report = test.run(initialExpectedState, reference)
+# Running Tests
 
-  // Asserts that test passed. Throws an exception if failed.
-  // Prints a report on pass and/or failure, when & how configurable via implicit settings.
-  report.assert()
-  ```
+1. On your `Test`, call `.run` to execute it.
+    <br>*(Technically execution depends on the context as described in [TYPES.md](TYPES.md).
+    E.g. if the context is a `scalaz.effect.IO` then nothing will have been executed yet and you're free to call `.unsafePerformIO` yourself.)*
+
+1. The result will be a `Report[E]` where `E` (the error type) is by default a `String`.
+   You're free to inspect the results if desired but...
+
+1. Most likely you will just want to call `.assert()`, which print results to the screen and throws an exception on failure.
+
+
+This project also comes with example projects.
+<br>If the above is unclear, reading/running one of the example projects may help.

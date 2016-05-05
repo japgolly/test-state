@@ -10,6 +10,7 @@ Test stateful stuff statelessly, and reasonably.
   - [Usage](doc/USAGE.md).
   - [Types](doc/TYPES.md).
   - [DSL](doc/DSL.md).
+  - [Composability](doc/COMPSE.md).
 - Modules
 - Examples
 - Changelog
