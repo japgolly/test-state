@@ -150,6 +150,19 @@ val toggleShowCompleted =
 
 ## Sample Output
 
+The [test in this example](src/test/scala/teststate/example/react/TodoTest.scala) is this:
+
+```scala
+  addItem("hello")
+  >> addItem("hello2")
+  >> addItem(" blah 3 ")    +> visibleItemNames.assert.contains("blah 3")
+  >> completeItem("hello2") +> visibleItemNames.size.assert.decrement
+  >> toggleShowCompleted    +> visibleItemNames.size.assert.increment
+  >> toggleShowCompleted    +> visibleItemNames.assert("hello", "blah 3")
+```
+
+Which processes the following output:
+
 ![pass](output-pass.png)
 This is what you see (by default) when the test passes.
 
