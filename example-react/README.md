@@ -5,6 +5,7 @@
   - [Test Setup](#test-setup)
   - [Invariants](#invariants)
   - [Actions](#actions)
+  - [Running](#running)
 - [Sample Output](#sample-output)
 
 
@@ -148,9 +149,21 @@ val toggleShowCompleted =
   showingComplete.assert.change
 ```
 
-## Sample Output
+## Running
 
-The [test in this example](src/test/scala/teststate/example/react/TodoTest.scala) is this:
+As for how to glue everything together and run tests,
+it's best to just have a look [at the source](src/test/scala/teststate/example/react/) yourself.
+It's short.
+
+You can also clone this repo and run the tests via:
+```sh
+sbt exampleReactJS/test
+```
+
+
+# Sample Output
+
+Here is the code for the [test in this example](src/test/scala/teststate/example/react/TodoTest.scala).
 
 ```scala
   addItem("hello")
@@ -163,11 +176,11 @@ The [test in this example](src/test/scala/teststate/example/react/TodoTest.scala
 
 Which processes the following output:
 
-![pass](output-pass.png)
 This is what you see (by default) when the test passes.
+![pass](output-pass.png)
 
-![fail](output-fail.png)
 This is an example of test failure.
+![fail](output-fail.png)
 
 <br>You can also tell TestState to show you everything it does in glorious and excruciating detail, if you so wish.
 ![verbose](output-verbose.png)
