@@ -174,13 +174,14 @@ Here is the code for the [test in this example](src/test/scala/teststate/example
   >> toggleShowCompleted    +> visibleItemNames.assert("hello", "blah 3")
 ```
 
-Which processes the following output:
-
 This is what you see (by default) when the test passes.
+
 ![pass](output-pass.png)
 
 This is an example of test failure.
+
 ![fail](output-fail.png)
 
-<br>You can also tell TestState to show you everything it does in glorious and excruciating detail, if you so wish.
+You can also tell TestState to show you everything it does in glorious and excruciating detail, if you so wish.
+
 ![verbose](output-verbose.png)
