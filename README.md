@@ -12,7 +12,7 @@ Test **stateful** stuff **statelessly**, and reasonably.
   - [Usage](doc/USAGE.md).
   - [Types](doc/TYPES.md).
   - [DSL](doc/DSL.md).
-  - [Composability](doc/COMPSE.md).
+  - [Composability](doc/COMPOSE.md).
 - [Modules](#modules)
 - [Examples](#examples)
 - [Changelogs](doc/changelog) — [Latest](doc/changelog/2.0.0.md).
@@ -83,7 +83,7 @@ This is a (simplified) model of how tests are executed:
   - [Usage](doc/USAGE.md).
   - [Types](doc/TYPES.md).
   - [DSL](doc/DSL.md).
-  - [Composability](doc/COMPSE.md).
+  - [Composability](doc/COMPOSE.md).
 
 # Modules
 
