@@ -6,26 +6,9 @@ import teststate.data.{BeforeAfter, Name, NameFn}
 import teststate.typeclass._
 import scala.collection.mutable
 import Name.Implicits._
+import scala.annotation.tailrec
 
-// exists
-
-  /*
-
-  def forall[F[_]: Foldable, B](input: Any, fb: F[B])(each: B => EvalL): EvalL = {
-    val es = fb.foldLeft(List.empty[Eval])((q, b) => run(each(b)) :: q)
-    val ho = es.headOption
-    val n  = Need(ho.fold("∅")(e => s"∀{${e.name.value}}"))
-    val i  = Input(input)
-    val r  = es.filter(_.failure) match {
-      case Nil =>
-        Eval.success(n, i)
-      case fs@(_ :: _) =>
-        val causes = fs.foldLeft(Eval.root)((q, e) => q.add(e.name.value, List(e)))
-        Eval(n, i, causes)
-    }
-    r.liftL
-  }
-   */
+// TODO s/implicit d: Display/implicit val display: Display/ in all failure classes
 
 object NameUtils {
 
@@ -557,4 +540,110 @@ object CollectionAssertions {
     }
   }
 
+  // ===================================================================================================================
+
+  sealed abstract class Forall {
+    def name(collection: => String, criteria: => String): Name
+    def apply[C[x] <: TraversableOnce[x], A](as: C[A])(f: A => Boolean)(implicit d: Display[A]): Option[Forall.Failure[A]]
+  }
+
+  object Forall {
+    def apply(positive: Boolean): Forall =
+      if (positive) Pos else Neg
+
+    object Pos extends Forall {
+      override def name(coll: => String, criteria: => String): Name =
+        s"All $coll should $criteria."
+
+      override def apply[C[x] <: TraversableOnce[x], A](as: C[A])(f: A => Boolean)(implicit d: Display[A]): Option[Failed[A]] = {
+        var ok = 0
+        var ko = Vector.empty[A]
+        for (a <- as)
+          if (f(a))
+            ok += 1
+          else
+            ko :+= a
+
+        ko.lastOption.map(last => Failed(ko.init, last, ok))
+      }
+    }
+
+    object Neg extends Forall {
+      override def name(coll: => String, criteria: => String): Name =
+        s"Not all $coll should $criteria."
+
+      override def apply[C[x] <: TraversableOnce[x], A](as: C[A])(f: A => Boolean)(implicit d: Display[A]) =
+        Exists.Pos(as)(!f(_)).map(e => AllPass(e.values))
+    }
+
+    sealed trait Failure[+A] extends HasErrorString with Product with Serializable
+
+    final case class Failed[+A](valuesI: Vector[A], valuesL: A, ok: Int)(implicit d: Display[A]) extends Failure[A] {
+      val values = valuesI :+ valuesL
+      val ko = values.length
+      val total = ok + ko
+      def failedElementsStr = formatSet(values.iterator.map(d.apply))
+      override def errorString = s"$ko of $total elements failed: $failedElementsStr"
+    }
+
+    final case class AllPass[+A](values: Vector[A])(implicit d: Display[A]) extends Failure[A] {
+      override def errorString = s"All ${values.length} elements satisfied criteria."
+    }
+  }
+
+  sealed abstract class Exists {
+    def name(collection: => String, criteria: => String): Name
+    def apply[C[x] <: TraversableOnce[x], A](as: C[A])(f: A => Boolean)(implicit d: Display[A]): Option[Exists.Failure[A]]
+  }
+
+  object Exists {
+    def apply(positive: Boolean): Exists =
+      if (positive) Pos else Neg
+
+    object Pos extends Exists {
+      override def name(coll: => String, criteria: => String): Name =
+        s"Of all $coll, at least one should $criteria."
+
+      override def apply[C[x] <: TraversableOnce[x], A](as: C[A])(f: A => Boolean)(implicit d: Display[A]): Option[DoesntExist[A]] = {
+        val i = as.toIterator
+        val b = Vector.newBuilder[A]
+
+        @tailrec def loop(): Option[DoesntExist[A]] =
+          if (i.hasNext) {
+            val a = i.next()
+            if (f(a))
+              None
+            else {
+              b += a
+              loop()
+            }
+          } else
+            Some(DoesntExist(b.result()))
+
+        loop()
+      }
+    }
+
+    object Neg extends Exists {
+      override def name(coll: => String, criteria: => String): Name =
+        s"Of all $coll, none should $criteria."
+
+      override def apply[C[x] <: TraversableOnce[x], A](as: C[A])(f: A => Boolean)(implicit d: Display[A]): Option[Passed[A]] =
+        Forall.Pos(as)(!f(_)).map(e => Passed(e.valuesI, e.valuesL, e.ok))
+    }
+
+    sealed trait Failure[+A] extends HasErrorString with Product with Serializable
+
+    final case class DoesntExist[+A](values: Vector[A])(implicit d: Display[A]) extends Failure[A] {
+      override def errorString = s"None of the ${values.length} elements satisfied criteria."
+    }
+
+    final case class Passed[+A](valuesI: Vector[A], valuesL: A, ok: Int)(implicit d: Display[A]) extends Failure[A] {
+      val values = valuesI :+ valuesL
+      val ko = values.length
+      val total = ok + ko
+      def passedElementsStr = formatSet(values.iterator.map(d.apply))
+      override def errorString = s"$ko of $total elements satisfied criteria: $passedElementsStr"
+    }
+  }
 }

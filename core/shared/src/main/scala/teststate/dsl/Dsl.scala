@@ -398,6 +398,18 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
             )).map(ev))
       }
 
+      def forall(criteriaDesc: => String, criteria: A => Boolean)(implicit d: Display[A], ev: Forall.Failure[A] => E): Points = {
+        val q = Forall(positive)
+        point(q.name(focusName, criteriaDesc))(os =>
+          q(focusFn(os))(criteria).map(ev))
+      }
+
+      def exists(criteriaDesc: => String, criteria: A => Boolean)(implicit d: Display[A], ev: Exists.Failure[A] => E): Points = {
+        val q = Exists(positive)
+        point(q.name(focusName, criteriaDesc))(os =>
+          q(focusFn(os))(criteria).map(ev))
+      }
+
     }
   } // FocusColl
 

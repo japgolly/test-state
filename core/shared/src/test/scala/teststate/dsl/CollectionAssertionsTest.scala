@@ -72,6 +72,8 @@ object CollectionAssertionsTest extends TestSuite {
   type D = String
   type DS = Set[Char]
 
+  val charPred = (_: Char) <= 'b'
+
   override def tests = TestSuite {
     'logic {
 
@@ -124,6 +126,10 @@ object CollectionAssertionsTest extends TestSuite {
           (ea -- c) == (a -- b) &&
           (ed -- c) == (b -- a)
         })
+
+      'forall - test1("forall", (b, d) => Forall(b)(d.toList)(charPred), _ forall charPred)
+
+      'exists - test1("exists", (b, d) => Exists(b)(d.toList)(charPred), _ exists charPred)
     }
 
 
@@ -210,6 +216,41 @@ object CollectionAssertionsTest extends TestSuite {
         'nameT - assertEq(nameFn(Some(true)) .value, "Bag should contain all books.")
         'nameF - assertEq(nameFn(Some(false)).value, "Bag shouldn't contain any books.")
       }
+
+      /*
+      'forallP - test(Forall(true))(
+        _.name("Ints", "large"), "∀ Ints. large")(
+        _ (List(1,9,2))(_ > 5), "2 of 3 elements failed: 1, 2.")
+
+      'forallF - test(Forall(false))(
+        _.name("Ints", "small"), "¬ ∀ Ints. small")(
+        _ (List(1,2,3))(_ < 5), "3 elements found; all passed.")
+
+      'existsP - test(Exists(true))(
+        _.name("Ints", "large"), "∃ Ints. large")(
+        _ (List(1,2,3))(_ > 5), "3 elements found; none passed.")
+
+      'existsF - test(Exists(false))(
+        _.name("Ints", "large"), "¬ ∃ Ints. large")(
+        _ (List(1,9,3))(_ > 5), "1 of 3 elements exist: 9.")
+       */
+
+      'forallP - test(Forall(true))(
+        _.name("ints", "be large"), "All ints should be large.")(
+        _ (List(1,9,2))(_ > 5), "2 of 3 elements failed: 1, 2.")
+
+      'forallF - test(Forall(false))(
+        _.name("ints", "be large"), "Not all ints should be large.")(
+        _ (List(7,8,9))(_ > 5), "All 3 elements satisfied criteria.")
+
+      'existsP - test(Exists(true))(
+        _.name("ints", "be large"), "Of all ints, at least one should be large.")(
+        _ (List(1,2,3))(_ > 5), "None of the 3 elements satisfied criteria.")
+
+      'existsF - test(Exists(false))(
+        _.name("ints", "be large"), "Of all ints, none should be large.")(
+        _ (List(1,9,3))(_ > 5), "1 of 3 elements satisfied criteria: 9.")
+
     }
   }
 }

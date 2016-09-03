@@ -51,7 +51,7 @@ FocusColl   -> FocusCollAO [label=".assert\l"]
 FocusColl   -> FocusValue  [label=".size\l.value(By)\l"]
 FocusCollAO -> FocusCollAO [label=".not\l"]
 FocusColl   -> Point       [label=".assert(…)\l"]
-FocusCollAO -> Point       [label=".distinct\l.contains(All,Any,None,Only)\l.existenceOf(All(By))\l.equal(IgnoringOrder)(By)\l"]
+FocusCollAO -> Point       [label=".distinct\l.contains(All,Any,None,Only)\l.existenceOf(All(By))\l.exists\l.equal(IgnoringOrder)(By)\l.forall\l"]
 FocusCollAO -> Around      [label=".elemChanges(By)\l"]
 
 node[fillcolor="#90D1BA"] edge[color="#90D1BA" fontcolor="#32715d"]
