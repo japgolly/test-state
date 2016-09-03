@@ -10,7 +10,7 @@
 1. Choose dependencies and add to SBT.
     <br>Module descriptions are [here](../README.md#modules). Take what you need and delete the rest.
     ```scala
-    val TestStateVer = "2.0.0"
+    val TestStateVer = "2.1.0"
 
     libraryDependencies ++= Seq(
       "com.github.japgolly.test-state" %%% "core"              % TestStateVer % "test",
