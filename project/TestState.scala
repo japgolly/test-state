@@ -17,7 +17,7 @@ object TestState {
     final val KindProjector = "0.8.1"
     final val MacroParadise = "2.1.0"
     final val MTest         = "0.4.3"
-    final val Nyaya         = "0.7.0"
+    final val Nyaya         = "0.7.2"
     final val Scala211      = "2.11.8"
     final val ScalaJsDom    = "0.9.1"
     final val ScalaJsReact  = "0.11.1"
