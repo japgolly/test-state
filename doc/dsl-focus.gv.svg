@@ -151,8 +151,9 @@
 <g id="edge12" class="edge"><title>FocusColl&#45;&gt;FocusColl</title>
 <path fill="none" stroke="#cf9ed3" d="M253.889,-642.466C267.205,-641.549 276.986,-638.004 276.986,-631.831 276.986,-627.345 271.823,-624.247 263.892,-622.537"/>
 <polygon fill="#cf9ed3" stroke="#cf9ed3" points="264.266,-619.055 253.889,-621.195 263.335,-625.993 264.266,-619.055"/>
-<text text-anchor="start" x="276.986" y="-635.631" font-family="Times,serif" font-size="14.00" fill="#6e4373">.map</text>
-<text text-anchor="start" x="276.986" y="-620.631" font-family="Times,serif" font-size="14.00" fill="#6e4373">.mapColl</text>
+<text text-anchor="start" x="276.986" y="-643.131" font-family="Times,serif" font-size="14.00" fill="#6e4373">.filter</text>
+<text text-anchor="start" x="276.986" y="-628.131" font-family="Times,serif" font-size="14.00" fill="#6e4373">.map</text>
+<text text-anchor="start" x="276.986" y="-613.131" font-family="Times,serif" font-size="14.00" fill="#6e4373">.mapColl</text>
 </g>
 <!-- FocusCollAO -->
 <g id="node8" class="node"><title>FocusCollAO</title>

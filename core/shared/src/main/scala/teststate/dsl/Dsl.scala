@@ -274,6 +274,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
     def map[B](f: A => B): FocusColl[Iterator, B] =
       mapColl(_.toIterator map f)
 
+    def filter(f: A => Boolean): FocusColl[Iterator, A] =
+      mapColl(_.toIterator filter f)
+
     def mapColl[D[X] <: TraversableOnce[X], B](f: C[A] => D[B]): FocusColl[D, B] =
       new FocusColl(focusName, f compose focusFn)
 
