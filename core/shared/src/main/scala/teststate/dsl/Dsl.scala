@@ -271,7 +271,10 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
     def rename(n: => String) = new FocusColl[C, A](n, focusFn)
     def run = focusFn
 
-    def map[D[X] <: TraversableOnce[X], B: Display](f: C[A] => D[B]): FocusColl[D, B] =
+    def map[B](f: A => B): FocusColl[Iterator, B] =
+      mapColl(_.toIterator map f)
+
+    def mapColl[D[X] <: TraversableOnce[X], B](f: C[A] => D[B]): FocusColl[D, B] =
       new FocusColl(focusName, f compose focusFn)
 
     def value(implicit s: Display[C[A]]) =
