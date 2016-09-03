@@ -331,15 +331,15 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
           os => d(focusFn(os), query(os)).map(ev))
       }
 
-      def contains[B >: A](query: B)(implicit sa: Display[B], ea: Equal[B], ev: Exists.Failure[B] => E): Points =
-        point(Exists(positive).name(focusName, sa(query)))(
-          os => Exists(positive)(focusFn(os), query).map(ev))
+      def contains[B >: A](query: B)(implicit sa: Display[B], ea: Equal[B], ev: Contains.Failure[B] => E): Points =
+        point(Contains(positive).name(focusName, sa(query)))(
+          os => Contains(positive)(focusFn(os), query).map(ev))
 
       def existenceOf(query: A)(expect: OS => Boolean)
-                     (implicit sa: Display[A], ea: Equal[A], ev: Exists.Failure[A] => E): Points = {
+                     (implicit sa: Display[A], ea: Equal[A], ev: Contains.Failure[A] => E): Points = {
         val e = wrapExp1(expect)
-        point(Exists.nameFn(e, focusName, sa(query)))(
-          os => Exists(e(os))(focusFn(os), query).map(ev))
+        point(Contains.nameFn(e, focusName, sa(query)))(
+          os => Contains(e(os))(focusFn(os), query).map(ev))
       }
 
 

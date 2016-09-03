@@ -197,8 +197,8 @@ object CollectionAssertionsTest extends TestSuite {
           _ (ElemChanges.Args('d' :: Nil, Nil, Nil, Nil)), "'d' moved by -1, expected 0.")
       }
 
-      'exists {
-        val nameFn = Exists.nameFn(identity[Boolean], "Bag", "Malazan")
+      'contains {
+        val nameFn = Contains.nameFn(identity[Boolean], "Bag", "Malazan")
         'nameA - assertEq(nameFn(None)       .value, "Bag: possible existence of Malazan.")
         'nameT - assertEq(nameFn(Some(true)) .value, "Bag should contain Malazan.")
         'nameF - assertEq(nameFn(Some(false)).value, "Bag shouldn't contain Malazan.")

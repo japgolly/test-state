@@ -142,14 +142,14 @@ object CollectionAssertions {
 
   // ===================================================================================================================
 
-  sealed abstract class Exists {
+  sealed abstract class Contains {
     def name(subject: => String, queryName: => String): Name
-    def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Display[B]): Option[Exists.Failure[B]]
+    def apply[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Display[B]): Option[Contains.Failure[B]]
     protected final def found[A, B](source: TraversableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B]) =
       source.exists(a => eb.equal(query, a))
   }
 
-  object Exists {
+  object Contains {
     def name(expect: Boolean, subject: => String, queryName: => String): Name =
       Name.lazily(apply(expect).name(subject, queryName))
 
@@ -159,10 +159,10 @@ object CollectionAssertions {
         case Some(i) => name(expect(i), subject, queryName)
       }
 
-    def apply(positive: Boolean): Exists =
+    def apply(positive: Boolean): Contains =
       if (positive) Pos else Neg
 
-    object Pos extends Exists {
+    object Pos extends Contains {
       override def name(subject: => String, queryName: => String): Name =
         s"$subject should contain $queryName."
 
@@ -173,7 +173,7 @@ object CollectionAssertions {
           Some(Missing(query))
     }
 
-    object Neg extends Exists {
+    object Neg extends Contains {
       override def name(subject: => String, queryName: => String): Name =
         s"$subject shouldn't contain $queryName."
 
