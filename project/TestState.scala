@@ -13,21 +13,21 @@ object TestState {
 
   object Ver {
     final val Acyclic       = "0.1.4"
-    final val Cats          = "0.5.0"
-    final val KindProjector = "0.7.1"
+    final val Cats          = "0.7.2"
+    final val KindProjector = "0.8.1"
     final val MacroParadise = "2.1.0"
     final val MTest         = "0.4.3"
     final val Nyaya         = "0.7.0"
     final val Scala211      = "2.11.8"
-    final val ScalaJsDom    = "0.9.0"
+    final val ScalaJsDom    = "0.9.1"
     final val ScalaJsReact  = "0.11.1"
-    final val Scalaz        = "7.2.1"
+    final val Scalaz        = "7.2.5"
     final val Sizzle        = "2.3.0"
-    final val UnivEq        = "1.0.0"
+    final val UnivEq        = "1.0.1"
 
     // Used in examples only
-    final val Monocle       = "1.2.1"
-    final val ReactJs       = "15.0.1"
+    final val Monocle       = "1.2.2"
+    final val ReactJs       = "15.3.1"
   }
 
   def scalacFlags = Seq(
@@ -45,7 +45,7 @@ object TestState {
   val commonSettings = ConfigureBoth(
     _.settings(
       organization             := "com.github.japgolly.test-state",
-      version                  := "2.0.1-SNAPSHOT",
+      version                  := "2.1.0-SNAPSHOT",
       homepage                 := Some(url("https://github.com/japgolly/" + ghProject)),
       licenses                 += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
       scalaVersion             := Ver.Scala211,
