@@ -29,12 +29,6 @@ trait ExtCats extends T.Equal.ImplicitsLowPri {
       override def dimap[A, B, C, D](m: M[A, B])(f: C => A)(g: B => D) = p.dimap(m)(f, g)
     }
 
-  implicit def catsDisjunctionFromTestState[A, B](o: A Or B): A Xor B =
-    o.fold(Xor.Left.apply, Xor.Right.apply)
-
-  implicit def catsDisjunctionToTestState[A, B](d: A Xor B): A Or B =
-    d.fold(D.Left.apply, D.Right.apply)
-
   implicit def catsNatTransFromTestState[F[_], G[_]](implicit t: F ~> G): T.~~>[F, G] =
     new T.~~>[F, G] { def apply[A](fa: => F[A]) = t(fa) }
 

@@ -12,22 +12,22 @@ object TestState {
     Lib.publicationSettings(ghProject)
 
   object Ver {
-    final val Acyclic       = "0.1.4"
-    final val Cats          = "0.7.2"
-    final val KindProjector = "0.8.1"
+    final val Acyclic       = "0.1.5"
+    final val Cats          = "0.8.0"
+    final val KindProjector = "0.9.3"
     final val MacroParadise = "2.1.0"
-    final val MTest         = "0.4.3"
-    final val Nyaya         = "0.7.2"
+    final val MTest         = "0.4.4"
+    final val Nyaya         = "0.8.0"
     final val Scala211      = "2.11.8"
     final val ScalaJsDom    = "0.9.1"
     final val ScalaJsReact  = "0.11.1"
-    final val Scalaz        = "7.2.5"
+    final val Scalaz        = "7.2.7"
     final val Sizzle        = "2.3.0"
     final val UnivEq        = "1.0.1"
 
     // Used in examples only
-    final val Monocle       = "1.2.2"
-    final val ReactJs       = "15.3.1"
+    final val Monocle       = "1.3.1"
+    final val ReactJs       = "15.3.2"
   }
 
   def scalacFlags = Seq(
@@ -72,8 +72,6 @@ object TestState {
         "cc"  -> ";clean;compile",
         "ctc" -> ";clean;test:compile",
         "ct"  -> ";clean;test")))
-    .jsConfigure(
-      _.settings(scalaJSUseRhino := false))
 
   def acyclicSettings: PE = _
     .settings(
@@ -127,16 +125,16 @@ object TestState {
   lazy val coreMacrosJS  = coreMacros.js
   lazy val coreMacros = crossProject
     .in(file("core-macros"))
-    .configure(commonSettings, publicationSettings, utestSettings)
+    .configureCross(commonSettings, publicationSettings, utestSettings)
     .bothConfigure(definesMacros)
     .settings(moduleName := "core-macros")
 
   lazy val coreJVM = core.jvm
   lazy val coreJS  = core.js
   lazy val core = crossProject
-    .configure(commonSettings, publicationSettings)
+    .configureCross(commonSettings, publicationSettings)
     .dependsOn(coreMacros)
-    .configure(utestSettings)
+    .configureCross(utestSettings)
     .settings(
       libraryDependencies ++= Seq(
         "com.github.japgolly.univeq" %%% "univeq"     % Ver.UnivEq,
@@ -156,7 +154,7 @@ object TestState {
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, publicationSettings.js)
+    .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
     .dependsOn(domZipper)
     .settings(
       moduleName     := "dom-zipper-sizzle",
@@ -168,9 +166,9 @@ object TestState {
   lazy val extScalazJS  = extScalaz.js
   lazy val extScalaz = crossProject
     .in(file("ext-scalaz"))
-    .configure(commonSettings, publicationSettings)
+    .configureCross(commonSettings, publicationSettings)
     .dependsOn(core)
-    .configure(utestSettings)
+    .configureCross(utestSettings)
     .settings(
       moduleName          := "ext-scalaz",
       libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
@@ -179,20 +177,20 @@ object TestState {
   lazy val extCatsJS  = extCats.js
   lazy val extCats = crossProject
     .in(file("ext-cats"))
-    .configure(commonSettings, publicationSettings)
+    .configureCross(commonSettings, publicationSettings)
     .dependsOn(core)
-    .configure(utestSettings)
+    .configureCross(utestSettings)
     .settings(
       moduleName          := "ext-cats",
-      libraryDependencies += "org.typelevel" %%% "cats" % Ver.Cats)
+      libraryDependencies += "org.typelevel" %%% "cats-core" % Ver.Cats)
 
   lazy val extNyayaJVM = extNyaya.jvm
   lazy val extNyayaJS  = extNyaya.js
   lazy val extNyaya = crossProject
     .in(file("ext-nyaya"))
-    .configure(commonSettings, publicationSettings)
+    .configureCross(commonSettings, publicationSettings)
     .dependsOn(core, extScalaz)
-    .configure(utestSettings)
+    .configureCross(utestSettings)
     .settings(
       moduleName := "ext-nyaya",
       libraryDependencies ++= Seq(
@@ -202,7 +200,7 @@ object TestState {
   lazy val extScalaJsReact = project
     .in(file("ext-scalajs-react"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, publicationSettings.js)
+    .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
     .dependsOn(domZipper)
     .settings(
       moduleName := "ext-scalajs-react",
