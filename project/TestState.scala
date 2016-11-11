@@ -46,7 +46,6 @@ object TestState {
   val commonSettings = ConfigureBoth(
     _.settings(
       organization             := "com.github.japgolly.test-state",
-      version                  := "2.1.1-SNAPSHOT",
       homepage                 := Some(url("https://github.com/japgolly/" + ghProject)),
       licenses                 += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
       scalaVersion             := Ver.Scala211,
