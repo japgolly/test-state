@@ -13,20 +13,21 @@ object TestState {
 
   object Ver {
     final val Acyclic       = "0.1.5"
-    final val Cats          = "0.8.0"
+    final val Cats          = "0.8.1"
     final val KindProjector = "0.9.3"
     final val MacroParadise = "2.1.0"
     final val MTest         = "0.4.4"
-    final val Nyaya         = "0.8.0"
+    final val Nyaya         = "0.8.1"
     final val Scala211      = "2.11.8"
+    final val Scala212      = "2.12.0"
     final val ScalaJsDom    = "0.9.1"
-    final val ScalaJsReact  = "0.11.1"
+    final val ScalaJsReact  = "0.11.3"
     final val Scalaz        = "7.2.7"
     final val Sizzle        = "2.3.0"
-    final val UnivEq        = "1.0.1"
+    final val UnivEq        = "1.0.2"
 
     // Used in examples only
-    final val Monocle       = "1.3.1"
+    final val Monocle       = "1.3.2"
     final val ReactJs       = "15.3.2"
   }
 
@@ -49,6 +50,7 @@ object TestState {
       homepage                 := Some(url("https://github.com/japgolly/" + ghProject)),
       licenses                 += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
       scalaVersion             := Ver.Scala211,
+      crossScalaVersions       := Seq(Ver.Scala211, Ver.Scala212),
       scalacOptions           ++= scalacFlags,
       scalacOptions in Test   --= Seq("-Ywarn-dead-code"),
       shellPrompt in ThisBuild := ((s: State) => Project.extract(s).currentRef.project + "> "),
@@ -83,9 +85,9 @@ object TestState {
     _.settings(
       scalacOptions += "-language:experimental.macros",
       libraryDependencies ++= Seq(
-        // "org.scala-lang" % "scala-reflect" % Ver.Scala211,
-        // "org.scala-lang" % "scala-library" % Ver.Scala211,
-        "org.scala-lang" % "scala-compiler" % Ver.Scala211 % "provided"))
+        // "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+        // "org.scala-lang" % "scala-library" % scalaVersion.value,
+        "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided"))
 
   def macroParadisePlugin =
     compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.full)
