@@ -2,7 +2,7 @@ package teststate.example.react
 
 import monocle.macros.Lenses
 import monocle.Lens
-import japgolly.scalajs.react._, vdom.prefix_<^._
+import japgolly.scalajs.react._, vdom.html_<^._
 
 object TodoComponent {
 
@@ -26,11 +26,11 @@ object TodoComponent {
     Lens[Vector[A], A](_ apply idx)(a => _.updated(idx, a))
 
   private val newFormMarker =
-    ReactAttr.devOnly("data-new-form") := 1
+    VdomAttr.devOnly("data-new-form") := 1
 
   final class Backend($: BackendScope[Unit, State]) {
 
-    def render(s: State): ReactElement = {
+    def render(s: State): VdomElement = {
 
       val items =
         if (s.showCompleted)
@@ -67,7 +67,7 @@ object TodoComponent {
 
     private def renderList(items: TraversableOnce[TodoItem]): TagMod =
       if (items.isEmpty)
-        EmptyTag
+        EmptyVdom
       else
         <.div(
           "Todo List",
@@ -76,12 +76,12 @@ object TodoComponent {
               <.li(
                 ^.key := idx,
                 renderItem(item, idx))
-            }))
+            }.toVdomArray))
 
     private def renderItem(item: TodoItem, idx: Int) = {
       val complete =
         if (item.completed)
-          EmptyTag
+          EmptyVdom
         else
           <.button(
             ^.onClick --> completeItem(idx),
@@ -116,7 +116,7 @@ object TodoComponent {
           row("Total"   , total)))
     }
 
-    private def updateNewText(ev: ReactEventI): Callback =
+    private def updateNewText(ev: ReactEventFromInput): Callback =
       ev.extract(_.target.value)(text =>
         $.modState(State.newItemText set text))
 
@@ -130,7 +130,7 @@ object TodoComponent {
         (State.item(idx) ^|-> TodoItem.completed) set true)
   }
 
-  val Component = ReactComponentB[Unit]("Todo Example")
+  val Component = ScalaComponent.build[Unit]("Todo Example")
     .initialState(State("", Vector.empty, false))
     .renderBackend[Backend]
     .build

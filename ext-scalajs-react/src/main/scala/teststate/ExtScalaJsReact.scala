@@ -10,11 +10,11 @@ trait ExtScalaJsReact extends domzipper.Exports {
   implicit def toReactExtHtmlScrubObject(a: HtmlScrub.type): ReactExtHtmlScrubObject =
     new ReactExtHtmlScrubObject(a)
 
-  implicit def toExtScalaJsReactCompExt[N <: TopNode](c: CompScope.Mounted[N]): ExtScalaJsReactCompExt[N] =
-    new ExtScalaJsReactCompExt(c)
+  implicit def toExtScalaJsReactCompExt(m: GenericComponent.MountedRaw): ExtScalaJsReactCompExt =
+    new ExtScalaJsReactCompExt(m)
 
   implicit override val htmlScrub: HtmlScrub =
-    HtmlScrub.default >> HtmlScrub.removeReactDataAttr
+    HtmlScrub.default >> HtmlScrub.removeReactInternals
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -22,13 +22,15 @@ trait ExtScalaJsReact extends domzipper.Exports {
 object ExtScalaJsReact extends ExtScalaJsReact {
 
   final class ReactExtHtmlScrubObject(private val self: HtmlScrub.type) extends AnyVal {
-    def removeReactDataAttr: HtmlScrub =
-      HtmlScrub(ReactTestUtils.removeReactDataAttr)
+    @deprecated("Use .removeReactInternals", "2.1.2") def removeReactDataAttr: HtmlScrub = removeReactInternals
+
+    def removeReactInternals: HtmlScrub =
+      HtmlScrub(ReactTestUtils.removeReactInternals)
   }
 
-  final class ExtScalaJsReactCompExt[N <: TopNode](private val c: CompScope.Mounted[N]) extends AnyVal {
-    def domZipper(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperAt[N] =
-      DomZipper(c.displayName, c.getDOMNode())($, scrub)
+  final class ExtScalaJsReactCompExt(private val m: GenericComponent.MountedRaw) extends AnyVal {
+    def domZipper(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperAt[vdom.TopNode] =
+      DomZipper(m.displayName, ReactDOM.raw findDOMNode m.raw)($, scrub)
 
     def htmlDomZipper(implicit $: CssSelEngine, scrub: HtmlScrub): HtmlDomZipper =
       domZipper($, scrub).asHtml

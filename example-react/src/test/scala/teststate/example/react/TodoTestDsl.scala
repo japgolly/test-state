@@ -3,7 +3,6 @@ package teststate.example.react
 import monocle.macros.Lenses
 import japgolly.scalajs.react.test._
 import org.scalajs.dom.html
-import ReactTestUtils.Simulate
 import MyTestState._
 
 /**
@@ -75,7 +74,7 @@ object TodoTestDsl {
   val visibleItemNames = dsl.focus("Visible item names").collection(_.obs.itemCompleteButtons.keys)
 
   def setNewText(text: String): dsl.Actions =
-    dsl.action(s"Set new text to '$text'")(ChangeEventData(text) simulate _.obs.newItemInput)
+    dsl.action(s"Set new text to '$text'")(SimEvent.Change(text) simulate _.obs.newItemInput)
 
   val clickAdd: dsl.Actions =
     dsl.action("Click the 'Add' button")(Simulate click _.obs.newItemButton)
