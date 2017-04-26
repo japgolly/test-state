@@ -45,17 +45,18 @@ object TestState {
 
   val commonSettings = ConfigureBoth(
     _.settings(
-      organization             := "com.github.japgolly.test-state",
-      homepage                 := Some(url("https://github.com/japgolly/" + ghProject)),
-      licenses                 += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
-      scalaVersion             := Ver.Scala212,
-      crossScalaVersions       := Seq(Ver.Scala211, Ver.Scala212),
-      scalacOptions           ++= scalacFlags,
-      scalacOptions in Test   --= Seq("-Ywarn-dead-code"),
-      shellPrompt in ThisBuild := ((s: State) => Project.extract(s).currentRef.project + "> "),
-      triggeredMessage         := Watched.clearWhenTriggered,
-      incOptions               := incOptions.value.withNameHashing(true),
-      updateOptions            := updateOptions.value.withCachedResolution(true),
+      organization              := "com.github.japgolly.test-state",
+      homepage                  := Some(url("https://github.com/japgolly/" + ghProject)),
+      licenses                  += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
+      scalaVersion              := Ver.Scala212,
+      crossScalaVersions        := Seq(Ver.Scala211, Ver.Scala212),
+      scalacOptions            ++= scalacFlags,
+      scalacOptions in Compile ++= byScalaVersion { case (2, 12) => Seq("-opt:l:method") }.value,
+      scalacOptions in Test    --= Seq("-Ywarn-dead-code"),
+      shellPrompt in ThisBuild  := ((s: State) => Project.extract(s).currentRef.project + "> "),
+      triggeredMessage          := Watched.clearWhenTriggered,
+      incOptions                := incOptions.value.withNameHashing(true),
+      updateOptions             := updateOptions.value.withCachedResolution(true),
       addCompilerPlugin("org.spire-math" %% "kind-projector" % Ver.KindProjector))
     .configure(
       acyclicSettings,
@@ -73,6 +74,9 @@ object TestState {
         "cc"  -> ";clean;compile",
         "ctc" -> ";clean;test:compile",
         "ct"  -> ";clean;test")))
+
+  def byScalaVersion[A](f: PartialFunction[(Int, Int), Seq[A]]): Def.Initialize[Seq[A]] =
+    Def.setting(CrossVersion.partialVersion(scalaVersion.value).flatMap(f.lift).getOrElse(Nil))
 
   def acyclicSettings: PE = _
     .settings(
