@@ -2,7 +2,9 @@ package teststate.domzipper.sizzle
 
 import org.scalajs.dom._
 import scala.scalajs.js
+import scala.scalajs.js.annotation.JSGlobal
 
+@JSGlobal
 @js.native
 object Sizzle extends js.Object {
 

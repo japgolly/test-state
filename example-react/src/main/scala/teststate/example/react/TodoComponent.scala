@@ -130,7 +130,7 @@ object TodoComponent {
         (State.item(idx) ^|-> TodoItem.completed) set true)
   }
 
-  val Component = ScalaComponent.build[Unit]("Todo Example")
+  val Component = ScalaComponent.builder[Unit]("Todo Example")
     .initialState(State("", Vector.empty, false))
     .renderBackend[Backend]
     .build

@@ -12,30 +12,30 @@ object TestState {
     Lib.publicationSettings(ghProject)
 
   object Ver {
-    final val Acyclic       = "0.1.5"
-    final val Cats          = "0.8.1"
+    final val Acyclic       = "0.1.7"
+    final val Cats          = "0.9.0"
     final val KindProjector = "0.9.3"
     final val MacroParadise = "2.1.0"
     final val MTest         = "0.4.5"
     final val Nyaya         = "0.8.1"
-    final val Scala211      = "2.11.8"
-    final val Scala212      = "2.12.1"
+    final val Scala211      = "2.11.11"
+    final val Scala212      = "2.12.2"
     final val ScalaJsDom    = "0.9.1"
-    final val ScalaJsReact  = "1.0.0-RC1"
-    final val Scalaz        = "7.2.9"
+    final val ScalaJsReact  = "1.0.0"
+    final val Scalaz        = "7.2.11"
     final val Sizzle        = "2.3.0"
     final val UnivEq        = "1.0.2"
 
     // Used in examples only
     final val Monocle       = "1.4.0"
-    final val ReactJs       = "15.4.2"
+    final val ReactJs       = "15.5.4"
   }
 
   def scalacFlags = Seq(
     "-deprecation",
     "-unchecked",
     "-Ywarn-dead-code",
-    "-Ywarn-unused",
+    // "-Ywarn-unused",
     "-Ywarn-value-discard",
     "-feature",
     "-language:postfixOps",
