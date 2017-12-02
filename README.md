@@ -16,6 +16,7 @@ Test **stateful** stuff **statelessly**, and reasonably.
 - [Modules](#modules)
 - [Examples](#examples)
 - [Changelogs](doc/changelog) — [Latest](doc/changelog/2.1.1.md).
+- [Support](#supportexamples)
 
 
 # What is this?
@@ -103,3 +104,10 @@ This is a (simplified) model of how tests are executed:
 * [Scala.Js + React](example-react) - Demonstrates DomZipper, invariants, actions, basics.
 * [TODO] DB triggers.    - real external state, ref.
 * [TODO] Mutable sample. - fuzz, invariants.
+
+
+# Support
+If you like what I do
+—my OSS libraries, my contributions to other OSS libs, [my programming blog](https://japgolly.blogspot.com)—
+and you'd like to support me, more content, more lib maintenance, [please become a patron](https://www.patreon.com/japgolly)!
+I do all my OSS work unpaid so showing your support will make a big difference.
