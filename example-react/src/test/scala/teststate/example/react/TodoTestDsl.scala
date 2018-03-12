@@ -27,7 +27,7 @@ final class TodoObs($: HtmlDomZipper) {
     newItemInput.value
 
   val newItemButtonDisabled: Boolean =
-    newItemButton.disabled.get
+    newItemButton.disabled
 
   private val items =
     $.collect0n("li")

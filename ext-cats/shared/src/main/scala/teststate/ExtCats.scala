@@ -2,8 +2,8 @@ package teststate
 
 import acyclic.file
 import cats._
+import cats.arrow.Profunctor
 import cats.data._
-import cats.functor._
 import teststate.{data => D, typeclass => T}
 import D.Or
 import Exports._

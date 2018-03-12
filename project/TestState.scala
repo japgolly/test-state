@@ -1,7 +1,8 @@
 import sbt._
 import Keys._
 import org.scalajs.sbtplugin.ScalaJSPlugin
-import ScalaJSPlugin.autoImport._
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
+import org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv
 import Lib._
 
 object TestState {
@@ -13,22 +14,22 @@ object TestState {
 
   object Ver {
     final val Acyclic       = "0.1.7"
-    final val Cats          = "0.9.0"
-    final val KindProjector = "0.9.3"
-    final val MacroParadise = "2.1.0"
-    final val MTest         = "0.4.5"
+    final val Cats          = "1.0.1"
+    final val KindProjector = "0.9.6"
+    final val MacroParadise = "2.1.1"
+    final val MTest         = "0.4.8"
     final val Nyaya         = "0.8.1"
-    final val Scala211      = "2.11.11"
-    final val Scala212      = "2.12.2"
-    final val ScalaJsDom    = "0.9.1"
-    final val ScalaJsReact  = "1.0.0"
-    final val Scalaz        = "7.2.11"
+    final val Scala211      = "2.11.12"
+    final val Scala212      = "2.12.4"
+    final val ScalaJsDom    = "0.9.4"
+    final val ScalaJsReact  = "1.2.0"
+    final val Scalaz        = "7.2.20"
     final val Sizzle        = "2.3.0"
     final val UnivEq        = "1.0.2"
 
     // Used in examples only
-    final val Monocle       = "1.4.0"
-    final val ReactJs       = "15.5.4"
+    final val Monocle       = "1.5.0"
+    final val ReactJs       = "16.2.0"
   }
 
   def scalacFlags = Seq(
@@ -55,7 +56,7 @@ object TestState {
       scalacOptions in Test    --= Seq("-Ywarn-dead-code"),
       shellPrompt in ThisBuild  := ((s: State) => Project.extract(s).currentRef.project + "> "),
       triggeredMessage          := Watched.clearWhenTriggered,
-      incOptions                := incOptions.value.withNameHashing(true),
+      incOptions                := incOptions.value.withNameHashing(true).withLogRecompileOnMacro(false),
       updateOptions             := updateOptions.value.withCachedResolution(true),
       addCompilerPlugin("org.spire-math" %% "kind-projector" % Ver.KindProjector))
     .configure(
@@ -100,8 +101,7 @@ object TestState {
       libraryDependencies += "com.lihaoyi" %%% "utest" % Ver.MTest % "test",
       testFrameworks      += new TestFramework("utest.runner.Framework")))
     .jsConfigure(
-      // Not mandatory; just faster.
-      _.settings(jsEnv in Test := PhantomJSEnv().value))
+      _.settings(jsEnv in Test := new JSDOMNodeJSEnv))
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -154,7 +154,7 @@ object TestState {
     .settings(
       moduleName          := "dom-zipper",
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
-      requiresDOM         := true)
+      jsEnv               := new JSDOMNodeJSEnv)
 
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
@@ -165,7 +165,7 @@ object TestState {
       moduleName     := "dom-zipper-sizzle",
       scalacOptions  -= "-Ywarn-dead-code",
       jsDependencies += "org.webjars.bower" % "sizzle" % Ver.Sizzle / "sizzle.min.js" commonJSName "Sizzle",
-      requiresDOM    := true)
+      jsEnv          := new JSDOMNodeJSEnv)
 
   lazy val extScalazJVM = extScalaz.jvm
   lazy val extScalazJS  = extScalaz.js
@@ -212,7 +212,7 @@ object TestState {
       libraryDependencies ++= Seq(
         "com.github.japgolly.scalajs-react" %%% "core" % Ver.ScalaJsReact,
         "com.github.japgolly.scalajs-react" %%% "test" % Ver.ScalaJsReact),
-      requiresDOM := true)
+      jsEnv := new JSDOMNodeJSEnv)
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -234,19 +234,23 @@ object TestState {
         "com.github.julien-truffaut"        %%% "monocle-macro" % Ver.Monocle),
       addCompilerPlugin(macroParadisePlugin), // For Monocle macros
       jsDependencies ++= Seq(
-        "org.webjars.bower" % "react" % Ver.ReactJs
-          /        "react-with-addons.js"
-          minified "react-with-addons.min.js"
+        "org.webjars.npm" % "react" % Ver.ReactJs
+          /        "umd/react.development.js"
+          minified "umd/react.production.min.js"
           commonJSName "React",
-        "org.webjars.bower" % "react" % Ver.ReactJs
-          /         "react-dom.js"
-          minified  "react-dom.min.js"
-          dependsOn "react-with-addons.js"
+        "org.webjars.npm" % "react-dom" % Ver.ReactJs
+          /         "umd/react-dom.development.js"
+          minified  "umd/react-dom.production.min.js"
+          dependsOn "umd/react.development.js"
           commonJSName "ReactDOM",
-        "org.webjars.bower" % "react" % Ver.ReactJs
-          /         "react-dom-server.js"
-          minified  "react-dom-server.min.js"
-          dependsOn "react-dom.js"
-          commonJSName "ReactDOMServer"),
-      requiresDOM := true)
+        "org.webjars.npm" % "react-dom" % Ver.ReactJs
+          /         "umd/react-dom-server.browser.development.js"
+          minified  "umd/react-dom-server.browser.production.min.js"
+          dependsOn "umd/react-dom.development.js"
+          commonJSName "ReactDOMServer",
+        "org.webjars.npm" % "react-dom" % Ver.ReactJs % Test
+          /         "umd/react-dom-test-utils.development.js"
+          minified  "umd/react-dom-test-utils.production.min.js"
+          dependsOn "umd/react-dom.development.js"
+          commonJSName "ReactTestUtils"))
 }

@@ -30,7 +30,7 @@ object ExtScalaJsReact extends ExtScalaJsReact {
 
   final class ExtScalaJsReactCompExt(private val m: GenericComponent.MountedRaw) extends AnyVal {
     def domZipper(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperAt[vdom.TopNode] =
-      DomZipper(m.displayName, ReactDOM.raw findDOMNode m.raw)($, scrub)
+      DomZipper(m.displayName, ReactDOM.findDOMNode(m.raw).get.asElement)($, scrub)
 
     def htmlDomZipper(implicit $: CssSelEngine, scrub: HtmlScrub): HtmlDomZipper =
       domZipper($, scrub).asHtml
