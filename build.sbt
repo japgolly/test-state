@@ -1,5 +1,5 @@
 name := "TestState"
-version in ThisBuild := "2.1.4-SNAPSHOT"
+version in ThisBuild := "2.2.0-SNAPSHOT"
 
 val root              = TestState.root
 val rootJVM           = TestState.rootJVM
