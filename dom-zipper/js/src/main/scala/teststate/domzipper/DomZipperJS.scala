@@ -48,21 +48,21 @@ object DomZipperJS extends DomZipperModule {
     override def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[Cur, Next, Result] =
       new DomZipper(prevLayers, curLayer, htmlScrub)($, errorHandler)
 
-    override protected[domzipper] def addLayer[D2 <: Node](nextLayer: DomZipperJS.Layer[D2]): DomZipper[D2, Next, Out] =
+    override protected[domzipper] def addLayer[NewCur <: Base](nextLayer: DomZipperJS.Layer[NewCur]): DomZipper[NewCur, Next, Out] =
       new DomZipper(prevLayers :+ curLayer, nextLayer, htmlScrub)
 
     def dom: Cur =
       curLayer.dom
 
-    def as[D2 <: Base](implicit ct: ClassTag[D2]): Out[DomZipper[D2, Next, Out]] =
-      domAs[D2].map(d =>
+    def as[NewCur <: Base](implicit ct: ClassTag[NewCur]): Out[DomZipper[NewCur, Next, Out]] =
+      domAs[NewCur].map(d =>
         new DomZipper(prevLayers, curLayer.copy(dom = d), htmlScrub))
 
     def asHtml: Out[DomZipper[html.Element, html.Element, Out]] =
       as[html.Element].map(_.withHtmlChildren)
 
-    def forceAs[D2 <: Base]: Out[DomZipper[D2, Next, Out]] =
-      this.asInstanceOf[Out[DomZipper[D2, Next, Out]]]
+    def forceAs[NewCur <: Base]: Out[DomZipper[NewCur, Next, Out]] =
+      this.asInstanceOf[Out[DomZipper[NewCur, Next, Out]]]
 
     def forceChildren[A <: NextBase]: DomZipper[Cur, A, Out] =
       new DomZipper(prevLayers, curLayer, htmlScrub)
@@ -73,14 +73,14 @@ object DomZipperJS extends DomZipperModule {
     def withHtmlChildren: DomZipper[Cur, html.Element, Out] =
       forceChildren
 
-    def domAs[D2 <: Base](implicit ct: ClassTag[D2]): Out[D2] =
+    def domAs[NewCur <: Base](implicit ct: ClassTag[NewCur]): Out[NewCur] =
       ct.unapply(dom) orFail s"${dom.nodeName} is not a ${ct.runtimeClass}."
 
     def domAsHtml: Out[html.Element] =
       domAs[html.Element]
 
-    def forceDomAs[D2 <: Base]: D2 =
-      dom.asInstanceOf[D2]
+    def forceDomAs[NewCur <: Base]: NewCur =
+      dom.asInstanceOf[NewCur]
 
     override def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out] =
       new Collector(this, sel, c)

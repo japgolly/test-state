@@ -121,7 +121,7 @@ trait DomZipperModule {
       }
     }
 
-    protected[domzipper] def addLayer[D2 <: Base](nextLayer: Layer[D2]): DomZipper[D2, Next, Out]
+    protected[domzipper] def addLayer[NewCur <: Base](nextLayer: Layer[NewCur]): DomZipper[NewCur, Next, Out]
 
     private final def failMsg(msg: String): String =
       msg + "\n" + describeLoc
