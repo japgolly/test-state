@@ -5,11 +5,18 @@ trait ErrorHandler[Result[_]] {
   def pass[A](a: A): Result[A]
   def fail[A](e: => String): Result[A]
   def map[A, B](r: Result[A])(f: A => B): Result[B]
+  def flatMap[A, B](r: Result[A])(f: A => Result[B]): Result[B]
 
   def apply[A](e: Either[String, A]): Result[A] =
     e match {
       case Right(a) => pass(a)
       case Left(s) => fail(s)
+    }
+
+  def option[A](o: Option[A], err: => String): Result[A] =
+    o match {
+      case Some(a) => pass(a)
+      case None => fail(err)
     }
 }
 
@@ -18,6 +25,8 @@ object ErrorHandler {
   implicit class ErrorHandlerResultOps[Result[_], A](private val self: Result[A]) extends AnyVal {
     def map[B](f: A => B)(implicit h: ErrorHandler[Result]): Result[B] =
       h.map(self)(f)
+    def flatMap[B](f: A => Result[B])(implicit h: ErrorHandler[Result]): Result[B] =
+      h.flatMap(self)(f)
   }
 
   implicit class ErrorHandlerOptionOps[A](private val self: Option[A]) extends AnyVal {
@@ -28,24 +37,27 @@ object ErrorHandler {
   type Id[A] = A
 
   object Throw extends ErrorHandler[Id] {
-    override def pass[A](a: A)              = a
-    override def fail[A](e: => String)      = sys error e
-    override def map[A, B](r: A)(f: A => B) = f(r)
+    override def pass[A](a: A)                  = a
+    override def fail[A](e: => String)          = sys error e
+    override def map[A, B](r: A)(f: A => B)     = f(r)
+    override def flatMap[A, B](r: A)(f: A => B) = f(r)
   }
 
   type ErrMsgOr[A] = Either[String, A]
 
   object ReturnEither extends ErrorHandler[ErrMsgOr] {
-    override def pass[A](a: A)                        = Right(a)
-    override def fail[A](e: => String)                = Left(e)
-    override def map[A, B](r: ErrMsgOr[A])(f: A => B) = r.right map f
-    override def apply[A](e: ErrMsgOr[A])             = e
+    override def pass[A](a: A)                                      = Right(a)
+    override def fail[A](e: => String)                              = Left(e)
+    override def map[A, B](r: ErrMsgOr[A])(f: A => B)               = r.right map f
+    override def flatMap[A, B](r: ErrMsgOr[A])(f: A => ErrMsgOr[B]) = r.right flatMap f
+    override def apply[A](e: ErrMsgOr[A])                           = e
   }
 
   object ReturnOption extends ErrorHandler[Option] {
-    override def pass[A](a: A)                      = Some(a)
-    override def fail[A](e: => String)              = None
-    override def map[A, B](r: Option[A])(f: A => B) = r map f
+    override def pass[A](a: A)                                  = Some(a)
+    override def fail[A](e: => String)                          = None
+    override def map[A, B](r: Option[A])(f: A => B)             = r map f
+    override def flatMap[A, B](r: Option[A])(f: A => Option[B]) = r flatMap f
   }
 
 //  object ReturnDisjunction extends ErrorHandler {

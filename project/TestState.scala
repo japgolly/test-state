@@ -17,6 +17,7 @@ object TestState {
     final val Cats          = "1.1.0"
     final val KindProjector = "0.9.6"
     final val MacroParadise = "2.1.1"
+    final val Microlibs     = "1.14"
     final val MTest         = "0.4.8"
     final val Nyaya         = "0.8.1"
     final val Scala211      = "2.11.12"
@@ -24,6 +25,7 @@ object TestState {
     final val ScalaJsDom    = "0.9.5"
     final val ScalaJsReact  = "1.2.0"
     final val Scalaz        = "7.2.21"
+    final val Selenium      = "3.11.0"
     final val Sizzle        = "2.3.0"
     final val UnivEq        = "1.0.2"
 
@@ -81,7 +83,7 @@ object TestState {
 
   def acyclicSettings: PE = _
     .settings(
-      libraryDependencies += "com.lihaoyi" %% "acyclic" % Ver.Acyclic % "provided",
+      libraryDependencies += "com.lihaoyi" %% "acyclic" % Ver.Acyclic % Provided,
       addCompilerPlugin("com.lihaoyi" %% "acyclic" % Ver.Acyclic),
       autoCompilerPlugins := true)
 
@@ -91,14 +93,14 @@ object TestState {
       libraryDependencies ++= Seq(
         // "org.scala-lang" % "scala-reflect" % scalaVersion.value,
         // "org.scala-lang" % "scala-library" % scalaVersion.value,
-        "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided"))
+        "org.scala-lang" % "scala-compiler" % scalaVersion.value % Provided))
 
   def macroParadisePlugin =
     compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.full)
 
   def utestSettings = ConfigureBoth(
     _.settings(
-      libraryDependencies += "com.lihaoyi" %%% "utest" % Ver.MTest % "test",
+      libraryDependencies += "com.lihaoyi" %%% "utest" % Ver.MTest % Test,
       testFrameworks      += new TestFramework("utest.runner.Framework")))
     .jsConfigure(
       _.settings(jsEnv in Test := new JSDOMNodeJSEnv))
@@ -114,15 +116,17 @@ object TestState {
     Project("JVM", file(".rootJVM"))
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
-        coreJVM, coreMacrosJVM, extScalazJVM, extCatsJVM, extNyayaJVM)
+        coreJVM, coreMacrosJVM,
+        domZipperJVM, domZipperSelenium,
+        extScalazJVM, extCatsJVM, extNyayaJVM)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
-        coreJS, coreMacrosJS, extScalazJS, extCatsJS, extNyayaJS,
-        domZipper, domZipperSizzle,
-        extScalaJsReact)
+        coreJS, coreMacrosJS,
+        domZipperJS, domZipperSizzle,
+        extScalazJS, extCatsJS, extNyayaJS, extScalaJsReact)
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -147,20 +151,37 @@ object TestState {
         "com.github.japgolly.nyaya"  %%% "nyaya-prop" % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya"  %%% "nyaya-test" % Ver.Nyaya % "test"))
 
-  lazy val domZipper = project
+  lazy val domZipperJVM = domZipper.jvm
+  lazy val domZipperJS  = domZipper.js
+  lazy val domZipper = crossProject
     .in(file("dom-zipper"))
-    .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
-    .settings(
-      moduleName          := "dom-zipper",
+    .configureCross(commonSettings, publicationSettings, utestSettings)
+    .settings(moduleName := "dom-zipper")
+    .jsSettings(
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
       jsEnv               := new JSDOMNodeJSEnv)
+
+  lazy val domZipperSelenium = project
+    .in(file("dom-zipper-selenium"))
+    .configure(commonSettings.jvm, publicationSettings.jvm, utestSettings.jvm)
+    .dependsOn(domZipperJVM)
+    .settings(
+      moduleName := "dom-zipper-selenium",
+      libraryDependencies ++= Seq(
+        "org.seleniumhq.selenium"        % "selenium-api"            % Ver.Selenium,
+        "org.seleniumhq.selenium"        % "selenium-chrome-driver"  % Ver.Selenium % Test,
+        "org.seleniumhq.selenium"        % "selenium-firefox-driver" % Ver.Selenium % Test,
+        "com.github.japgolly.microlibs" %% "test-util"               % Ver.Microlibs % Test),
+      fork in Test := true,
+      javaOptions in Test ++= Seq(
+        "-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath,
+        "-DCI=" + System.getProperty("CI", "")))
 
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
-    .dependsOn(domZipper)
+    .dependsOn(domZipperJS)
     .settings(
       moduleName     := "dom-zipper-sizzle",
       scalacOptions  -= "-Ywarn-dead-code",
@@ -206,7 +227,7 @@ object TestState {
     .in(file("ext-scalajs-react"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
-    .dependsOn(domZipper)
+    .dependsOn(domZipperJS)
     .settings(
       moduleName := "ext-scalajs-react",
       libraryDependencies ++= Seq(
