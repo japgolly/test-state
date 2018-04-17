@@ -1,6 +1,6 @@
 package teststate.domzipper.sizzle
 
-import teststate.domzipper.DomZipper.CssSelEngine
+import teststate.domzipper.DomZipperJS.CssSelEngine
 
 trait Exports
   extends teststate.domzipper.Exports {
@@ -9,7 +9,7 @@ trait Exports
   val Sizzle = teststate.domzipper.sizzle.Sizzle
 
   implicit val cssSelEngine: CssSelEngine =
-    CssSelEngine(Sizzle(_, _))
+    CssSelEngine(Sizzle(_, _).toVector)
 }
 
 object Exports extends Exports

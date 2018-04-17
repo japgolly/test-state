@@ -81,7 +81,7 @@ object TestState {
 
   def acyclicSettings: PE = _
     .settings(
-      libraryDependencies += "com.lihaoyi" %% "acyclic" % Ver.Acyclic % "provided",
+      libraryDependencies += "com.lihaoyi" %% "acyclic" % Ver.Acyclic % Provided,
       addCompilerPlugin("com.lihaoyi" %% "acyclic" % Ver.Acyclic),
       autoCompilerPlugins := true)
 
@@ -91,14 +91,14 @@ object TestState {
       libraryDependencies ++= Seq(
         // "org.scala-lang" % "scala-reflect" % scalaVersion.value,
         // "org.scala-lang" % "scala-library" % scalaVersion.value,
-        "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided"))
+        "org.scala-lang" % "scala-compiler" % scalaVersion.value % Provided))
 
   def macroParadisePlugin =
     compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.full)
 
   def utestSettings = ConfigureBoth(
     _.settings(
-      libraryDependencies += "com.lihaoyi" %%% "utest" % Ver.MTest % "test",
+      libraryDependencies += "com.lihaoyi" %%% "utest" % Ver.MTest % Test,
       testFrameworks      += new TestFramework("utest.runner.Framework")))
     .jsConfigure(
       _.settings(jsEnv in Test := new JSDOMNodeJSEnv))
@@ -114,15 +114,17 @@ object TestState {
     Project("JVM", file(".rootJVM"))
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
-        coreJVM, coreMacrosJVM, extScalazJVM, extCatsJVM, extNyayaJVM)
+        coreJVM, coreMacrosJVM,
+        domZipperJVM,
+        extScalazJVM, extCatsJVM, extNyayaJVM)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
-        coreJS, coreMacrosJS, extScalazJS, extCatsJS, extNyayaJS,
-        domZipper, domZipperSizzle,
-        extScalaJsReact)
+        coreJS, coreMacrosJS,
+        domZipperJS, domZipperSizzle,
+        extScalazJS, extCatsJS, extNyayaJS, extScalaJsReact)
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -147,12 +149,13 @@ object TestState {
         "com.github.japgolly.nyaya"  %%% "nyaya-prop" % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya"  %%% "nyaya-test" % Ver.Nyaya % "test"))
 
-  lazy val domZipper = project
+  lazy val domZipperJVM = domZipper.jvm
+  lazy val domZipperJS  = domZipper.js
+  lazy val domZipper = crossProject
     .in(file("dom-zipper"))
-    .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
-    .settings(
-      moduleName          := "dom-zipper",
+    .configureCross(commonSettings, publicationSettings, utestSettings)
+    .settings(moduleName := "dom-zipper")
+    .jsSettings(
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
       jsEnv               := new JSDOMNodeJSEnv)
 
@@ -160,7 +163,7 @@ object TestState {
     .in(file("dom-zipper-sizzle"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
-    .dependsOn(domZipper)
+    .dependsOn(domZipperJS)
     .settings(
       moduleName     := "dom-zipper-sizzle",
       scalacOptions  -= "-Ywarn-dead-code",
@@ -206,7 +209,7 @@ object TestState {
     .in(file("ext-scalajs-react"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
-    .dependsOn(domZipper)
+    .dependsOn(domZipperJS)
     .settings(
       moduleName := "ext-scalajs-react",
       libraryDependencies ++= Seq(

@@ -2,7 +2,7 @@ package teststate
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.test._
-import teststate.domzipper.DomZipper.CssSelEngine
+import teststate.domzipper.DomZipperJS.CssSelEngine
 import ExtScalaJsReact._
 
 trait ExtScalaJsReact extends domzipper.Exports {

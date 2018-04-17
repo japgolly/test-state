@@ -91,7 +91,7 @@ This is a (simplified) model of how tests are executed:
 | Module              | Description | Platforms |
 |---------------------|-------------|-----------|
 | `core`              | The core module. | Scala + Scala.JS. |
-| `dom-zipper`        | Standalone utility for observing web DOM.<br>*(Requires [jQuery](https://jquery.com/) or [Sizzle](https://sizzlejs.com/).)* | Scala.JS only. |
+| `dom-zipper`        | Standalone utility for observing web DOM with precision with conciseness.<br>This is the base API; concrete implementations below. | Scala + Scala.JS. |
 | `dom-zipper-sizzle` | As above bundled with [Sizzle](https://sizzlejs.com/). | Scala.JS only. |
 | `ext-cats`          | Extensions for [Cats](https://github.com/typelevel/cats). | Scala + Scala.JS. |
 | `ext-nyaya`         | Extensions for [Nyaya](https://github.com/japgolly/nyaya). | Scala + Scala.JS. |
