@@ -88,15 +88,16 @@ This is a (simplified) model of how tests are executed:
 
 # Modules
 
-| Module              | Description | Platforms |
-|---------------------|-------------|-----------|
-| `core`              | The core module. | Scala + Scala.JS. |
-| `dom-zipper`        | Standalone utility for observing web DOM with precision with conciseness.<br>This is the base API; concrete implementations below. | Scala + Scala.JS. |
-| `dom-zipper-sizzle` | As above bundled with [Sizzle](https://sizzlejs.com/). | Scala.JS only. |
-| `ext-cats`          | Extensions for [Cats](https://github.com/typelevel/cats). | Scala + Scala.JS. |
-| `ext-nyaya`         | Extensions for [Nyaya](https://github.com/japgolly/nyaya). | Scala + Scala.JS. |
-| `ext-scalajs-react` | Extensions for [scalajs-react](https://github.com/japgolly/scalajs-react). | Scala.JS only. |
-| `ext-scalaz`        | Extensions for [Scalaz](https://github.com/scalaz/scalaz). | Scala + Scala.JS. |
+| Module                | Description | Platforms |
+|-----------------------|-------------|-----------|
+| `core`                | The core module. | JVM + JS |
+| `dom-zipper`          | Standalone utility for observing web DOM with precision with conciseness.<br>This is the base API; concrete implementations below. | JVM + JS |
+| `dom-zipper-selenium` | DOM zipper built on [Selenium](https://www.seleniumhq.org/). | JVM |
+| `dom-zipper-sizzle`   | DOM zipper built on [Sizzle](https://sizzlejs.com/). | JS |
+| `ext-cats`            | Extensions for [Cats](https://github.com/typelevel/cats). | JVM + JS |
+| `ext-nyaya`           | Extensions for [Nyaya](https://github.com/japgolly/nyaya). | JVM + JS |
+| `ext-scalajs-react`   | Extensions for [scalajs-react](https://github.com/japgolly/scalajs-react). | JS |
+| `ext-scalaz`          | Extensions for [Scalaz](https://github.com/scalaz/scalaz). | JVM + JS |
 
 
 # Examples

@@ -7,17 +7,17 @@ import ErrorHandler.{Id, Throw}
 
 trait Exports extends SharedExports {
 
-  type DomZipperAt[+D <: Base] = DZ[D, NextBase, Id]
-  type DomZipper               = DomZipperAt[Base]
-  type DomZipperRoot           = DomZipperAt[Root]
-  val  DomZipper               = new Constructors[NextBase, Id]()(Throw)
+  final type DomZipperAt[+D <: Base] = DZ[D, NextBase, Id]
+  final type DomZipper               = DomZipperAt[Base]
+  final type DomZipperRoot           = DomZipperAt[Root]
+  final val  DomZipper               = new Constructors[NextBase, Id]()(Throw)
 
-  type HtmlDomZipperAt[+D <: Base] = DZ[D, html.Element, Id]
-  type HtmlDomZipper               = HtmlDomZipperAt[html.Element]
-  type HtmlDomZipperRoot           = HtmlDomZipperAt[Root]
-  val  HtmlDomZipper               = new Constructors[html.Element, Id]()(Throw)
+  final type HtmlDomZipperAt[+D <: Base] = DZ[D, html.Element, Id]
+  final type HtmlDomZipper               = HtmlDomZipperAt[html.Element]
+  final type HtmlDomZipperRoot           = HtmlDomZipperAt[Root]
+  final val  HtmlDomZipper               = new Constructors[html.Element, Id]()(Throw)
 
-  implicit def domZipperNextCovariance[D <: Base, A <: NextBase, B >: A <: NextBase, Out[_]](z: DZ[D, A, Out]): DZ[D, B, Out] =
+  final implicit def domZipperNextCovariance[D <: Base, A <: NextBase, B >: A <: NextBase, Out[_]](z: DZ[D, A, Out]): DZ[D, B, Out] =
     z.widenChildren
 }
 

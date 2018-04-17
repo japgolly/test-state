@@ -1,7 +1,7 @@
 package teststate.domzipper
 
 import org.scalajs.dom
-import org.scalajs.dom.{Node, html}
+import org.scalajs.dom.html
 import scala.reflect.ClassTag
 import scala.scalajs.js
 import ErrorHandler._
@@ -16,7 +16,7 @@ object DomZipperJS extends DomZipperModule {
 
   private def rootLayer = Layer("window.document", "", dom.window.document)
 
-  class Constructors[Next <: NextBase, Out[_]](implicit h: ErrorHandler[Out]) {
+  final class Constructors[Next <: NextBase, Out[_]](implicit h: ErrorHandler[Out]) {
     def root(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipper[Root, Next, Out] =
       new DomZipper(Vector.empty, rootLayer, scrub)($, h)
 

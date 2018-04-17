@@ -12,6 +12,7 @@ val coreJS            = TestState.coreJS
 
 val domZipperJVM      = TestState.domZipperJVM
 val domZipperJS       = TestState.domZipperJS
+val domZipperSelenium = TestState.domZipperSelenium
 val domZipperSizzle   = TestState.domZipperSizzle
 val extScalaJsReact   = TestState.extScalaJsReact
 

@@ -17,6 +17,7 @@ object TestState {
     final val Cats          = "1.1.0"
     final val KindProjector = "0.9.6"
     final val MacroParadise = "2.1.1"
+    final val Microlibs     = "1.14"
     final val MTest         = "0.4.8"
     final val Nyaya         = "0.8.1"
     final val Scala211      = "2.11.12"
@@ -24,6 +25,7 @@ object TestState {
     final val ScalaJsDom    = "0.9.5"
     final val ScalaJsReact  = "1.2.0"
     final val Scalaz        = "7.2.21"
+    final val Selenium      = "3.11.0"
     final val Sizzle        = "2.3.0"
     final val UnivEq        = "1.0.2"
 
@@ -115,7 +117,7 @@ object TestState {
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
         coreJVM, coreMacrosJVM,
-        domZipperJVM,
+        domZipperJVM, domZipperSelenium,
         extScalazJVM, extCatsJVM, extNyayaJVM)
 
   lazy val rootJS =
@@ -158,6 +160,20 @@ object TestState {
     .jsSettings(
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
       jsEnv               := new JSDOMNodeJSEnv)
+
+  lazy val domZipperSelenium = project
+    .in(file("dom-zipper-selenium"))
+    .configure(commonSettings.jvm, publicationSettings.jvm, utestSettings.jvm)
+    .dependsOn(domZipperJVM)
+    .settings(
+      moduleName := "dom-zipper-selenium",
+      libraryDependencies ++= Seq(
+        "org.seleniumhq.selenium"        % "selenium-api"            % Ver.Selenium,
+        "org.seleniumhq.selenium"        % "selenium-chrome-driver"  % Ver.Selenium % Test,
+        "org.seleniumhq.selenium"        % "selenium-firefox-driver" % Ver.Selenium % Test,
+        "com.github.japgolly.microlibs" %% "test-util"               % Ver.Microlibs % Test),
+      fork in Test := true,
+      javaOptions in Test += ("-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath))
 
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
