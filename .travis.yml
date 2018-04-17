@@ -6,19 +6,18 @@ scala:
   - 2.12.4
 jdk:
   - oraclejdk8
-addons:
-  chrome: stable
+#addons:
+#  chrome: stable
   
-before_script:
-  - wget http://chromedriver.storage.googleapis.com/2.7/chromedriver_linux64.zip
-  - unzip chromedriver_linux64.zip chromedriver
-  - sudo cp chromedriver /usr/local/bin/.
-  - sudo chmod +x /usr/local/bin/chromedriver
-  - google-chrome-stable --headless --no-sandbox
+#before_script:
+#  - wget http://chromedriver.storage.googleapis.com/2.7/chromedriver_linux64.zip
+#  - unzip chromedriver_linux64.zip chromedriver
+#  - sudo cp chromedriver /usr/local/bin/.
+#  - sudo chmod +x /usr/local/bin/chromedriver
 
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION test:compile JS/test:fastOptJS JS/test:fullOptJS
-  - sbt ++$TRAVIS_SCALA_VERSION test
+  - sbt -DCI=travis ++$TRAVIS_SCALA_VERSION test:compile JS/test:fastOptJS JS/test:fullOptJS
+  - sbt -DCI=travis ++$TRAVIS_SCALA_VERSION test
   # TODO Investigate
   #  - sbt ++$TRAVIS_SCALA_VERSION 'set scalaJSStage in Global := FullOptStage' JS/test
 

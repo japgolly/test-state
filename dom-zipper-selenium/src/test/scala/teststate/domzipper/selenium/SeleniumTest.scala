@@ -26,38 +26,41 @@ object SeleniumTest extends TestSuite {
   def nameInputHtml = """<input type="text" id="name" name="user_name" value="Bob Loblaw">"""
   def checkboxes = $.collect0n("input[type=checkbox]")
 
-  override def tests = TestSuite {
+  override def tests = SeleniumTestUtil.CI match {
+    case None => TestSuite {
 
-    'outerHTML - assertEq(name.outerHTML, nameInputHtml)
+      'outerHTML - assertEq(name.outerHTML, nameInputHtml)
 
-    'innerHTML - assertEq($("div", 1 of 3).innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
+      'innerHTML - assertEq($("div", 1 of 3).innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
 
-    'innerText - assertEq($("div", 1 of 3).innerText, "Name:")
+      'innerText - assertEq($("div", 1 of 3).innerText, "Name:")
 
-    'value - assertEq(name.value, "Bob Loblaw")
+      'value - assertEq(name.value, "Bob Loblaw")
 
-    'checkedT - assertEq($("input[type=checkbox]", 1 of 2).checked, true)
-    'checkedF - assertEq($("input[type=checkbox]", 2 of 2).checked, false)
+      'checkedT - assertEq($("input[type=checkbox]", 1 of 2).checked, true)
+      'checkedF - assertEq($("input[type=checkbox]", 2 of 2).checked, false)
 
-    'collect - {
-      assertEq(checkboxes.size, 2)
-      assertEq(checkboxes.mapDoms(_.isSelected), Vector(true, false))
-      assertEq(checkboxes.mapZippers(_.checked), Vector(true, false))
+      'collect - {
+        assertEq(checkboxes.size, 2)
+        assertEq(checkboxes.mapDoms(_.isSelected), Vector(true, false))
+        assertEq(checkboxes.mapZippers(_.checked), Vector(true, false))
+      }
+
+      'selectedOption {
+        'nonSelect - assertEq($.failToOption.selectedOption.map(_ => ()), None)
+        'some - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
+        'none - assertEq($("select", 2 of 2).selectedOptionText, None)
+      }
+
+      'findSelfOrChildWithAttribute - {
+        def attr = "data-coding"
+        def html = """<label for="coding" data-coding="1">Coding</label>"""
+        def child = $.findSelfOrChildWithAttribute(attr)
+        'child - assertEq(child.map(_.outerHTML), Some(html))
+        'self - assertEq(child.flatMap(_.findSelfOrChildWithAttribute(attr).map(_.outerHTML)), Some(html))
+      }
     }
 
-    'selectedOption {
-      'nonSelect - assertEq($.failToOption.selectedOption.map(_ => ()), None)
-      'some - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
-      'none - assertEq($("select", 2 of 2).selectedOptionText, None)
-    }
-
-    'findSelfOrChildWithAttribute - {
-      def attr = "data-coding"
-      def html = """<label for="coding" data-coding="1">Coding</label>"""
-      def child = $.findSelfOrChildWithAttribute(attr)
-      'child - assertEq(child.map(_.outerHTML), Some(html))
-      'self - assertEq(child.flatMap(_.findSelfOrChildWithAttribute(attr).map(_.outerHTML)), Some(html))
-    }
-
+    case Some(_) => TestSuite {}
   }
 }

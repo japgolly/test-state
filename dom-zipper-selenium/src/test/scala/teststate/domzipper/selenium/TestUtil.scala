@@ -4,6 +4,9 @@ import java.io.File
 
 object SeleniumTestUtil {
 
+  lazy val CI: Option[String] =
+    Option(System.getProperty("CI")).map(_.toLowerCase.trim).filter(_.nonEmpty)
+
   lazy val baseDirectory: File = {
     val p = "sbt.baseDirectory"
     val d = Option(System.getProperty(p)).getOrElse(sys.error(s"Property [$p] isn't specified."))

@@ -173,7 +173,9 @@ object TestState {
         "org.seleniumhq.selenium"        % "selenium-firefox-driver" % Ver.Selenium % Test,
         "com.github.japgolly.microlibs" %% "test-util"               % Ver.Microlibs % Test),
       fork in Test := true,
-      javaOptions in Test += ("-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath))
+      javaOptions in Test ++= Seq(
+        "-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath,
+        "-DCI=" + System.getProperty("CI", "")))
 
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
