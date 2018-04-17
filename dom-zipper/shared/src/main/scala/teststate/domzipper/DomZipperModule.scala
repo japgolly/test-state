@@ -76,8 +76,7 @@ trait DomZipperModule {
 
     def checked: Out[Boolean]
 
-    private final def collect[C[_]](sel: String, c: Container[C, Out]) =
-      newCollector[C, Next, Next, Out](this, sel, c)
+    protected def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out]
 
     final def collect01(sel: String): Collector[Option, Next, Next, Out] = collect(sel, new Container01)
     final def collect0n(sel: String): Collector[Vector, Next, Next, Out] = collect(sel, new Container0N)
@@ -137,11 +136,6 @@ trait DomZipperModule {
   // ===================================================================================================================
 
   type Collector[C[_], D <: Next, Next <: NextBase, Out[_]] <: AbstractCollector[C, D, Next, Out]
-
-  protected def newCollector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
-                                                                        sel: String,
-                                                                        cont: Container[C, Out])
-                                                                       (implicit h: ErrorHandler[Out]): Collector[C, D, Next, Out]
 
   abstract class AbstractCollector[C[_], D <: Next, Next <: NextBase, Out[_]] protected (
       from: DomZipper[_, Next, Out],

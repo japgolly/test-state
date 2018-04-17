@@ -7,6 +7,7 @@ import scala.scalajs.js
 import ErrorHandler._
 
 object DomZipperJS extends DomZipperModule {
+  import AbstractCollector._
 
   override type Base = dom.Node
   override type NextBase = dom.Element
@@ -81,6 +82,9 @@ object DomZipperJS extends DomZipperModule {
     def forceDomAs[D2 <: Base]: D2 =
       dom.asInstanceOf[D2]
 
+    override def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out] =
+      new Collector(this, sel, c)
+
     /** Cast DOM to [[js.Dynamic]] and invoke a method expected to return `A` if successful. */
     def dynamicMethod[A](f: js.Dynamic => Any): Option[A] =
       f(dom.asInstanceOf[js.Dynamic]).asInstanceOf[js.UndefOr[A]].toOption
@@ -122,14 +126,6 @@ object DomZipperJS extends DomZipperModule {
   }
 
   // ===================================================================================================================
-
-  import AbstractCollector._
-
-  protected def newCollector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
-                                                                        sel: String,
-                                                                        cont: Container[C, Out])
-                                                                       (implicit h: ErrorHandler[Out]) =
-    new Collector[C, D, Next, Out](from, sel, cont)
 
   final class Collector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
                                                                    sel: String,
