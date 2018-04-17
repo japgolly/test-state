@@ -15,6 +15,7 @@ object SeleniumTest extends TestSuite {
     val testHtmlPath = SeleniumTestUtil.testResource("test.html").getAbsoluteFile
     val options = new ChromeOptions()
     options.setHeadless(true)
+    options.addArguments("--no-sandbox") // Travis workaround: https://github.com/SeleniumHQ/selenium/issues/4961
     val driver = new ChromeDriver(options)
     driver.get("file://" + testHtmlPath)
     DomZipperSelenium.html(driver)
