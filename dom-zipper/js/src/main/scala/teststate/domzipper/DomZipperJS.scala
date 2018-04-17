@@ -28,29 +28,29 @@ object DomZipperJS extends DomZipperModule {
 
   /** DOM Zipper.
     *
-    * @param $         The CSS selector engine. Usually either jQuery or Sizzle.
-    * @param h         The error handler.
-    * @tparam D        The type of the current DOM focus.
-    * @tparam Next     The type of all DOM children.
-    * @tparam Out      The shape of all output that can potentially fail.
+    * @param $     The CSS selector engine. Usually either jQuery or Sizzle.
+    * @param h     The error handler.
+    * @tparam Cur  The type of the current DOM focus.
+    * @tparam Next The type of all DOM children.
+    * @tparam Out  The shape of all output that can potentially fail.
     */
-  final class DomZipper[+D <: Base, Next <: NextBase, Out[_]] private[domzipper](prevLayers: Vector[Layer[Base]],
-                                                                                 curLayer  : Layer[D],
+  final class DomZipper[+Cur <: Base, Next <: NextBase, Out[_]] private[domzipper](prevLayers: Vector[Layer[Base]],
+                                                                                 curLayer  : Layer[Cur],
                                                                                  htmlScrub : HtmlScrub)
                                                                                 (implicit $: CssSelEngine,
                                                                                  h: ErrorHandler[Out])
-      extends AbstractDomZipper[D, Next, Out](prevLayers, curLayer, htmlScrub) {
+      extends AbstractDomZipper[Cur, Next, Out](prevLayers, curLayer, htmlScrub) {
 
-    override protected def setScrubHtml(f: HtmlScrub): DomZipper[D, Next, Out] =
+    override protected def setScrubHtml(f: HtmlScrub): DomZipper[Cur, Next, Out] =
       new DomZipper(prevLayers, curLayer, f)
 
-    override def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[D, Next, Result] =
+    override def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[Cur, Next, Result] =
       new DomZipper(prevLayers, curLayer, htmlScrub)($, errorHandler)
 
     override protected[domzipper] def addLayer[D2 <: Node](nextLayer: DomZipperJS.Layer[D2]): DomZipper[D2, Next, Out] =
       new DomZipper(prevLayers :+ curLayer, nextLayer, htmlScrub)
 
-    def dom: D =
+    def dom: Cur =
       curLayer.dom
 
     def as[D2 <: Base](implicit ct: ClassTag[D2]): Out[DomZipper[D2, Next, Out]] =
@@ -63,13 +63,13 @@ object DomZipperJS extends DomZipperModule {
     def forceAs[D2 <: Base]: Out[DomZipper[D2, Next, Out]] =
       this.asInstanceOf[Out[DomZipper[D2, Next, Out]]]
 
-    def forceChildren[A <: NextBase]: DomZipper[D, A, Out] =
+    def forceChildren[A <: NextBase]: DomZipper[Cur, A, Out] =
       new DomZipper(prevLayers, curLayer, htmlScrub)
 
-    def widenChildren[A >: Next <: NextBase]: DomZipper[D, A, Out] =
+    def widenChildren[A >: Next <: NextBase]: DomZipper[Cur, A, Out] =
       forceChildren
 
-    def withHtmlChildren: DomZipper[D, html.Element, Out] =
+    def withHtmlChildren: DomZipper[Cur, html.Element, Out] =
       forceChildren
 
     def domAs[D2 <: Base](implicit ct: ClassTag[D2]): Out[D2] =
@@ -114,7 +114,7 @@ object DomZipperJS extends DomZipperModule {
     def selectedOptionText: Out[Option[String]] =
       selectedOption.map(_.map(_.text))
 
-    def findSelfOrChildWithAttribute[DD >: D <: Base](attr: String)(implicit ev: DomZipper[Next, Next, Out] <:< DomZipper[DD, Next, Out]): Out[Option[DomZipper[DD, Next, Out]]] =
+    def findSelfOrChildWithAttribute[DD >: Cur <: Base](attr: String)(implicit ev: DomZipper[Next, Next, Out] <:< DomZipper[DD, Next, Out]): Out[Option[DomZipper[DD, Next, Out]]] =
       dom.attributes.getNamedItem(attr) match {
         case null => collect01(s"*[$attr]").zippers.map(_.map(ev))
         case _ => Some(this)

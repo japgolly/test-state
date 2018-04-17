@@ -25,20 +25,20 @@ trait DomZipperModule {
 
   // ===================================================================================================================
 
-  type DomZipper[+D <: Base, Next <: NextBase, Out[_]] <: AbstractDomZipper[D, Next, Out]
+  type DomZipper[+Cur <: Base, Next <: NextBase, Out[_]] <: AbstractDomZipper[Cur, Next, Out]
 
   /** DOM Zipper.
     *
-    * @tparam D        The type of the current DOM focus.
-    * @tparam Next     The type of all DOM children.
-    * @tparam Out      The shape of all output that can potentially fail.
+    * @tparam Cur  The type of the current DOM focus.
+    * @tparam Next The type of all DOM children.
+    * @tparam Out  The shape of all output that can potentially fail.
     */
-  abstract class AbstractDomZipper[+D <: Base, Next <: NextBase, Out[_]] protected (
+  abstract class AbstractDomZipper[+Cur <: Base, Next <: NextBase, Out[_]] protected (
       prevLayers: Vector[Layer[Base]],
-      curLayer: Layer[D],
+      curLayer: Layer[Cur],
       htmlScrub: HtmlScrub)
      (implicit $: CssSelEngine,
-      h: ErrorHandler[Out]) { self: DomZipper[D, Next, Out] =>
+      h: ErrorHandler[Out]) { self: DomZipper[Cur, Next, Out] =>
 
     protected final implicit def autoPass[A](a: A): Out[A] =
       h pass a
@@ -47,19 +47,48 @@ trait DomZipperModule {
     // Self configuration
     // ==================
 
-    protected def setScrubHtml(f: HtmlScrub): DomZipper[D, Next, Out]
+    protected def setScrubHtml(f: HtmlScrub): DomZipper[Cur, Next, Out]
 
-    final def scrubHtml(f: HtmlScrub): DomZipper[D, Next, Out] =
+    final def scrubHtml(f: HtmlScrub): DomZipper[Cur, Next, Out] =
       setScrubHtml(htmlScrub >> f)
 
-    final def scrubHtml(f: String => String): DomZipper[D, Next, Out] =
+    final def scrubHtml(f: String => String): DomZipper[Cur, Next, Out] =
       scrubHtml(HtmlScrub(f))
 
-    def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[D, Next, Result]
+    def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[Cur, Next, Result]
 
-    final def failToOption: DomZipper[D, Next, Option]   = failBy(ReturnOption)
-    final def failToEither: DomZipper[D, Next, ErrMsgOr] = failBy(ReturnEither)
-    final def throwErrors : DomZipper[D, Next, Id]       = failBy(Throw)
+    final def failToOption: DomZipper[Cur, Next, Option]   = failBy(ReturnOption)
+    final def failToEither: DomZipper[Cur, Next, ErrMsgOr] = failBy(ReturnEither)
+    final def throwErrors : DomZipper[Cur, Next, Id]       = failBy(Throw)
+
+    // ====================
+    // DOM & DOM inspection
+    // ====================
+
+    protected def _outerHTML: String
+    protected def _innerHTML: String
+    final def outerHTML: String = htmlScrub run _outerHTML
+    final def innerHTML: String = htmlScrub run _innerHTML
+
+    def innerText: String
+
+    def value: Out[String]
+
+    def checked: Out[Boolean]
+
+    private final def collect[C[_]](sel: String, c: Container[C, Out]) =
+      newCollector[C, Next, Next, Out](this, sel, c)
+
+    final def collect01(sel: String): Collector[Option, Next, Next, Out] = collect(sel, new Container01)
+    final def collect0n(sel: String): Collector[Vector, Next, Next, Out] = collect(sel, new Container0N)
+    final def collect1n(sel: String): Collector[Vector, Next, Next, Out] = collect(sel, new Container1N)
+
+    final def exists(sel: String): Boolean =
+      collect0n(sel).nonEmpty
+
+    final def editables01 = collect01(DomZipperModule.EditableSel)
+    final def editables0n = collect0n(DomZipperModule.EditableSel)
+    final def editables1n = collect1n(DomZipperModule.EditableSel)
 
     // =======
     // Descent
@@ -103,35 +132,6 @@ trait DomZipperModule {
 
     final def describeLoc: String =
       s"DESC: ${allLayers.iterator.map(_.display) mkString " → "}\nHTML: $outerHTML"
-
-    // ====================
-    // DOM & DOM inspection
-    // ====================
-
-    protected def _outerHTML: String
-    protected def _innerHTML: String
-    final def outerHTML: String = htmlScrub run _outerHTML
-    final def innerHTML: String = htmlScrub run _innerHTML
-
-    def innerText: String
-
-    def value: Out[String]
-
-    def checked: Out[Boolean]
-
-    private final def collect[C[_]](sel: String, c: Container[C, Out]) =
-      newCollector[C, Next, Next, Out](this, sel, c)
-
-    final def collect01(sel: String): Collector[Option, Next, Next, Out] = collect(sel, new Container01)
-    final def collect0n(sel: String): Collector[Vector, Next, Next, Out] = collect(sel, new Container0N)
-    final def collect1n(sel: String): Collector[Vector, Next, Next, Out] = collect(sel, new Container1N)
-
-    final def exists(sel: String): Boolean =
-      collect0n(sel).nonEmpty
-
-    final def editables01 = collect01(DomZipperModule.EditableSel)
-    final def editables0n = collect0n(DomZipperModule.EditableSel)
-    final def editables1n = collect1n(DomZipperModule.EditableSel)
   }
 
   // ===================================================================================================================
