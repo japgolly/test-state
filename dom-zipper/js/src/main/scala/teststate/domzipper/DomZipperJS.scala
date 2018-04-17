@@ -1,7 +1,7 @@
 package teststate.domzipper
 
 import org.scalajs.dom
-import org.scalajs.dom.html
+import org.scalajs.dom.{Node, html}
 import scala.reflect.ClassTag
 import scala.scalajs.js
 import ErrorHandler._
@@ -26,13 +26,6 @@ object DomZipperJS extends DomZipperModule {
       new DomZipper(Vector.empty, Layer(name, "", dom), scrub)($, h)
   }
 
-  protected def newDomZipper[D <: Base, Next <: NextBase, Out[_]](prevLayers: Vector[Layer[Base]],
-                                                                  curLayer: Layer[D],
-                                                                  htmlScrub: HtmlScrub)
-                                                                 (implicit $: CssSelEngine,
-                                                                  h: ErrorHandler[Out]) =
-    new DomZipper[D, Next, Out](prevLayers, curLayer, htmlScrub)
-
   /** DOM Zipper.
     *
     * @param $         The CSS selector engine. Usually either jQuery or Sizzle.
@@ -48,9 +41,21 @@ object DomZipperJS extends DomZipperModule {
                                                                                  h: ErrorHandler[Out])
       extends AbstractDomZipper[D, Next, Out](prevLayers, curLayer, htmlScrub) {
 
+    override protected def setScrubHtml(f: HtmlScrub): DomZipper[D, Next, Out] =
+      new DomZipper(prevLayers, curLayer, f)
+
+    override def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[D, Next, Result] =
+      new DomZipper(prevLayers, curLayer, htmlScrub)($, errorHandler)
+
+    override protected[domzipper] def addLayer[D2 <: Node](nextLayer: DomZipperJS.Layer[D2]): DomZipper[D2, Next, Out] =
+      new DomZipper(prevLayers :+ curLayer, nextLayer, htmlScrub)
+
+    def dom: D =
+      curLayer.dom
+
     def as[D2 <: Base](implicit ct: ClassTag[D2]): Out[DomZipper[D2, Next, Out]] =
       domAs[D2].map(d =>
-        newDomZipper(prevLayers, curLayer.copy(dom = d), htmlScrub))
+        new DomZipper(prevLayers, curLayer.copy(dom = d), htmlScrub))
 
     def asHtml: Out[DomZipper[html.Element, html.Element, Out]] =
       as[html.Element].map(_.withHtmlChildren)
@@ -59,7 +64,7 @@ object DomZipperJS extends DomZipperModule {
       this.asInstanceOf[Out[DomZipper[D2, Next, Out]]]
 
     def forceChildren[A <: NextBase]: DomZipper[D, A, Out] =
-      newDomZipper(prevLayers, curLayer, htmlScrub)
+      new DomZipper(prevLayers, curLayer, htmlScrub)
 
     def widenChildren[A >: Next <: NextBase]: DomZipper[D, A, Out] =
       forceChildren

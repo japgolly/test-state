@@ -27,12 +27,6 @@ trait DomZipperModule {
 
   type DomZipper[+D <: Base, Next <: NextBase, Out[_]] <: AbstractDomZipper[D, Next, Out]
 
-  protected def newDomZipper[D <: Base, Next <: NextBase, Out[_]](prevLayers: Vector[Layer[Base]],
-                                                                  curLayer: Layer[D],
-                                                                  htmlScrub: HtmlScrub)
-                                                                 (implicit $: CssSelEngine,
-                                                                  h: ErrorHandler[Out]): DomZipper[D, Next, Out]
-
   /** DOM Zipper.
     *
     * @tparam D        The type of the current DOM focus.
@@ -53,14 +47,15 @@ trait DomZipperModule {
     // Self configuration
     // ==================
 
+    protected def setScrubHtml(f: HtmlScrub): DomZipper[D, Next, Out]
+
     final def scrubHtml(f: HtmlScrub): DomZipper[D, Next, Out] =
-      newDomZipper(prevLayers, curLayer, htmlScrub >> f)
+      setScrubHtml(htmlScrub >> f)
 
     final def scrubHtml(f: String => String): DomZipper[D, Next, Out] =
       scrubHtml(HtmlScrub(f))
 
-    final def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[D, Next, Result] =
-      newDomZipper(prevLayers, curLayer, htmlScrub)($, errorHandler)
+    def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[D, Next, Result]
 
     final def failToOption: DomZipper[D, Next, Option]   = failBy(ReturnOption)
     final def failToEither: DomZipper[D, Next, ErrMsgOr] = failBy(ReturnEither)
@@ -71,7 +66,7 @@ trait DomZipperModule {
     // =======
 
     final def directSelect(sel: String): CssSelResult =
-      $.run(sel, dom)
+      $.run(sel, curLayer.dom)
 
     final def apply(sel: String): Out[DomZipper[Next, Next, Out]] =
       apply("", sel)
@@ -98,8 +93,7 @@ trait DomZipperModule {
       }
     }
 
-    private[domzipper] final def addLayer[D2 <: Base](nextLayer: Layer[D2]): DomZipper[D2, Next, Out] =
-      newDomZipper(prevLayers :+ curLayer, nextLayer, htmlScrub)
+    protected[domzipper] def addLayer[D2 <: Base](nextLayer: Layer[D2]): DomZipper[D2, Next, Out]
 
     private final def failMsg(msg: String): String =
       msg + "\n" + describeLoc
@@ -113,9 +107,6 @@ trait DomZipperModule {
     // ====================
     // DOM & DOM inspection
     // ====================
-
-    final def dom: D =
-      curLayer.dom
 
     protected def _outerHTML: String
     protected def _innerHTML: String
