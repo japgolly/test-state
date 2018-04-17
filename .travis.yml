@@ -7,17 +7,14 @@ scala:
 jdk:
   - oraclejdk8
 addons:
-  apt:
-    sources:
-      - google-chrome
-    packages:
-      - google-chrome-stable
+  chrome: stable
   
 before_script:
   - wget http://chromedriver.storage.googleapis.com/2.7/chromedriver_linux64.zip
   - unzip chromedriver_linux64.zip chromedriver
   - sudo cp chromedriver /usr/local/bin/.
   - sudo chmod +x /usr/local/bin/chromedriver
+  - google-chrome-stable --headless --no-sandbox
 
 script:
   - sbt ++$TRAVIS_SCALA_VERSION test:compile JS/test:fastOptJS JS/test:fullOptJS
