@@ -243,18 +243,18 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
 
       def change(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         not.changeTo(identity)
-          .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "change"))
+          .rename(NameUtils.subjectShouldVerb(focusName, positive, "change"))
 
       def noChange(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         not.change
 
       def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
         changeTo(n.plus(_, a))(q, f)
-          .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)))
+        .rename(NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)))
 
       def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
         changeTo(n.minus(_, a))(q, f)
-          .renameContextFree(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
+          .rename(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
 
       def increment(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
         increaseBy(n.one)(n, q, f, s)

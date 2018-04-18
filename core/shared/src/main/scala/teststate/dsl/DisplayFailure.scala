@@ -37,8 +37,8 @@ trait DisplayFailure[-AA, +E] {
 
 object DisplayFailure {
   implicit object ToString extends DisplayFailure[Any, String] {
-    def expectedEqual      [A](expected: A, actual: A)         (implicit s: Display[A]) = s"Expected ${s(expected)}, not ${s(actual)}."
+    def expectedEqual      [A](expected: A, actual: A)         (implicit s: Display[A]) = s"Got ${s(actual)}, expected ${s(expected)}."
     def expectedToChange   [A](a: A)                           (implicit s: Display[A]) = s"Expected ${s(a)} to change, but it didn't."
-    def expectedChange     [A](from: A, expected: A, actual: A)(implicit s: Display[A]) = s"Expected ${s(from)} to change into ${s(expected)}, not ${s(actual)}."
+    def expectedChange     [A](from: A, expected: A, actual: A)(implicit s: Display[A]) = s"Got ${s(actual)}, expected ${s(from)} to change into ${s(expected)}."
   }
 }
