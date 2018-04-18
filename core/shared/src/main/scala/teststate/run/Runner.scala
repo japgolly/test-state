@@ -44,16 +44,16 @@ object Runner {
         case Sack.Product(ss)     => ss foreach go
         case Sack.CoProduct(n, p) =>
           coproductFound = true
-          Recover.id.attempt(p(i)) match {
+          Attempt.id.attempt(p(i)) match {
             case Right(s) => go(s)
-            case Left(e)  => err(Recover.byToString.name(n, Some(i)), e.failure)
+            case Left(e)  => err(Attempt.byToString.name(n, Some(i)), e.failure)
           }
       }
     go(sack)
     coproductFound
   }
 
-  def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[Failure[E]] Or B => Unit)(implicit r: Recover[E]) =
+  def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[Failure[E]] Or B => Unit)(implicit r: Attempt[E]) =
     foreachSack(s)(a)((n, t) => f(Left(NamedError(n, r(t)))))(f)
 
   private case class ActionQueue[F[_], R, O, S, E](head: NamedError[Failure[E]] Or Action.Outer[F, R, O, S, E],
@@ -73,7 +73,7 @@ object Runner {
   private object Progress {
     def prepareNext[F[_], R, O, S, E](actions: Actions[F, R, O, S, E],
                                       ros    : ROS[R, O, S],
-                                      history: History[Failure[E]])(implicit r: Recover[E]): Progress[F, R, O, S, E] = {
+                                      history: History[Failure[E]])(implicit r: Attempt[E]): Progress[F, R, O, S, E] = {
 
       @tailrec
       def queue(subject: Actions[F, R, O, S, E], tail: Actions[F, R, O, S, E]): Option[ActionQueue[F, R, O, S, E]] =
@@ -134,7 +134,7 @@ object Runner {
   def unpackChecks[O, S, E](invariants: Invariants[O, S, E],
                             arounds   : Arounds[O, S, E],
                             input     : OS[O, S])
-                           (implicit r: Recover[E]): UnpackChecks[List, O, S, E] = {
+                           (implicit r: Attempt[E]): UnpackChecks[List, O, S, E] = {
 
     import Around.{Before, After}
 
@@ -174,7 +174,7 @@ object Runner {
   }
 
   def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])(initialState: S, refFn: () => R): F[Report[E]] = {
-    val runner = new Runner[F, R, O, S, E]()(test.executionModel, test.recover)
+    val runner = new Runner[F, R, O, S, E]()(test.executionModel, test.attempt)
     runner.run(test)(initialState, refFn)
   }
 
@@ -191,7 +191,7 @@ object Runner {
 /**
   * Internal use only. Not thread-safe (due to mutable stats). Don't expose.
   */
-private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], recover: Recover[E]) {
+private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], attempt: Attempt[E]) {
   import Runner._
 
   private type FE   = Failure[E]
@@ -201,7 +201,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
   private type P    = Progress[F, R, O, S, E]
 
   private def observe(test: Test, ref: R): FE Or O =
-    recover.recover(test.observer(ref).leftMap(Failure NoCause _), Left(_))
+    attempt.recover(test.observer(ref).leftMap(Failure NoCause _), Left(_))
 
   private var stats: Stats.Mutable = _
 
@@ -257,7 +257,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
         val b = Vector.newBuilder[HalfCheck[O, S, E]]
         for (d0 <- checksPre.deltas) {
           val d = d0.aux
-          val r = recover.attempt(d.before(p.ros.os)).fold[Tri[FE, d.A]](Failed(_), _.noCause)
+          val r = attempt.attempt(d.before(p.ros.os)).fold[Tri[FE, d.A]](Failed(_), _.noCause)
           b += HalfCheck(d)(r)
         }
         b.result()
@@ -350,7 +350,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
           queue.head match {
             case Right(Action.Outer(nameFn, innerAction, check)) =>
 
-              val name = recover.name(nameFn, ros.some)
+              val name = attempt.name(nameFn, ros.some)
 
               if (p.failed)
                 EM.pure(p :+ History.Step(name, Skip))
@@ -378,7 +378,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                           val ref2 = refFn()
                           observe(test, ref2) match {
                             case Right(obs2) =>
-                              recover.attempt(nextStateFn(obs2)) match {
+                              attempt.attempt(nextStateFn(obs2)) match {
                                 case Right(Right(state2)) => ret(new ROS(ref2, obs2, state2), Pass)
                                 case Right(Left(e))       => rets(ros, Pass, History.Step(Observation, Fail(Failure NoCause e)))
                                 case Left(e)              => rets(ros, Pass, History.Step(UpdateState, Fail(e)))

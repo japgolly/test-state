@@ -58,8 +58,8 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
   def emptyPlan: Plan =
     Empty.instance
 
-  def emptyTest(observer: Observer[R, O, E])(implicit r: Recover[E]): Test =
-    emptyPlan.test(observer)(r)
+  def emptyTest(observer: Observer[R, O, E])(implicit a: Attempt[E]): Test =
+    emptyPlan.test(observer)(a)
 
   val transformer: Transformer[F, R, O, S, E, F, R, O, S, E] =
     Transformer.id[F, R, O, S, E]

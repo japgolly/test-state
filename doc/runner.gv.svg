@@ -97,8 +97,8 @@
 <!-- r -->
 <g id="node6" class="node">
 <title>r</title>
-<ellipse fill="#dddddd" stroke="#000000" cx="174.9452" cy="-389.8701" rx="48.9926" ry="18"/>
-<text text-anchor="middle" x="174.9452" y="-386.1701" font-family="Times,serif" font-size="14.00" fill="#000000">Recover</text>
+<ellipse fill="#dddddd" stroke="#000000" cx="174.9452" cy="-389.8701" rx="49.2915" ry="18"/>
+<text text-anchor="middle" x="174.9452" y="-386.1701" font-family="Times,serif" font-size="14.00" fill="#000000">Attempt</text>
 </g>
 <!-- r&#45;&gt;test -->
 <g id="edge1" class="edge">

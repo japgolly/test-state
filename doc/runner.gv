@@ -12,7 +12,7 @@ edge[color="#333333"]
 
 // Nearly always provided automatically
 { node[style=filled fillcolor="#dddddd"]
-  r [label="Recover"]
+  r [label="Attempt"]
   em [label="ExecutionModel"]
 }
 

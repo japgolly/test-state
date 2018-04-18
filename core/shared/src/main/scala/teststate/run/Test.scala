@@ -129,11 +129,11 @@ final class Plan[F[_], R, O, S, E](override val name: Option[Name],
   def stateless(implicit ev: Unit =:= S) =
     withInitialState(())
 
-  def test(observer: Observer[R, O, E])(implicit r: Recover[E]) =
-    Test(this, observer)(r)
+  def test(observer: Observer[R, O, E])(implicit a: Attempt[E]) =
+    Test(this, observer)(a)
 
-  def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], r: Recover[E]) =
-    test(ev(Observer.unit))(r)
+  def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], a: Attempt[E]) =
+    test(ev(Observer.unit))(a)
 }
 
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
@@ -167,17 +167,17 @@ final case class PlanWithInitialState[F[_], R, O, S, E](override val plan: Plan[
 //  def lift[F2[_], R2, O2, S2, E2](implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Self[F2, R2, O2, S2, E2] =
 //    plan.lift(t).withInitialState(initialState)
 
-  def test(observer: Observer[R, O, E])(implicit r: Recover[E]) =
-    TestWithInitialState(plan.test(observer)(r), initialState)
+  def test(observer: Observer[R, O, E])(implicit a: Attempt[E]) =
+    TestWithInitialState(plan.test(observer)(a), initialState)
 
-  def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], r: Recover[E]) =
-    test(ev(Observer.unit))(r)
+  def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], a: Attempt[E]) =
+    test(ev(Observer.unit))(a)
 }
 
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
 
 final case class Test[F[_], R, O, S, E](override val plan: Plan[F, R, O, S, E], observer: Observer[R, O, E])
-                                       (implicit val recover: Recover[E])
+                                       (implicit val attempt: Attempt[E])
     extends PlanLike[F, R, O, S, E, Test[F, R, O, S, E]] {
 
   override type Self[FF[_], RR, OO, SS, EE] = Test[FF, RR, OO, SS, EE]
@@ -200,7 +200,7 @@ final case class Test[F[_], R, O, S, E](override val plan: Plan[F, R, O, S, E], 
     copy(plan = plan.mapS(g)(s))
 
   def mapE[EE](f: E => EE): Self[F, R, O, S, EE] =
-    Test(plan mapE f, observer mapE f)(recover map f)
+    Test(plan mapE f, observer mapE f)(attempt map f)
 
 //  def lift[F2[_], R2, O2, S2, E2](implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Self[F2, R2, O2, S2, E2] =
 //    Test(plan.lift(t), observer)(recover)
@@ -229,7 +229,7 @@ final case class TestWithInitialState[F[_], R, O, S, E](test: Test[F, R, O, S, E
   override def plan                            = test.plan
   override def setPlan(p: Plan[F, R, O, S, E]) = test.setPlan(p).withInitialState(initialState)
 
-  def recover  = test.recover
+  def recover  = test.attempt
   def observer = test.observer
 
   def trans[G[_]: ExecutionModel](t: F ~~> G): Self[G, R, O, S, E] =
