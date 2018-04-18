@@ -173,9 +173,9 @@ object Runner {
     UnpackChecks(result(bs), result(ds), result(aa), result(ai), result(es), coproductFoundI || coproductFoundA)
   }
 
-  def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])(initialState: S, ref: => R): F[Report[E]] = {
+  def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])(initialState: S, refFn: () => R): F[Report[E]] = {
     val runner = new Runner[F, R, O, S, E]()(test.executionModel, test.recover)
-    runner.run(test)(initialState, () => ref)
+    runner.run(test)(initialState, refFn)
   }
 
   @inline implicit class RunnerTriExt[E, A](private val self: Tri[E, A]) extends AnyVal {
@@ -235,7 +235,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                            arounds   : Arounds[O, S, E],
                            collapse  : Boolean,
                            p         : P,
-                           run       : => F[(H, ROS)]): F[P] = {
+                           run       : () => F[(H, ROS)]): F[P] = {
 
     val checksPre = unpackChecks(invariants, arounds, p.ros.os)
 
@@ -264,7 +264,7 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
       }
 
       // Perform action
-      EM.map(run) { case (step, ros2) =>
+      EM.map(run()) { case (step, ros2) =>
 
         def addStep(s: History.Step[FE]) =
           p.copy(ros = ros2, history = p.history :+ s)
@@ -326,7 +326,8 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
                             (run       : A => F[(Name => H, ROS)]): F[P] =
     prepare(p.ros) match {
       case Some(a) =>
-        checkAround0(name, invariants, arounds, collapse, p, EM.map(run(a))(x => (x._1(ActionName), x._2)))
+        val runFn = () => EM.map(run(a))(x => (x._1(ActionName), x._2))
+        checkAround0(name, invariants, arounds, collapse, p, runFn)
       case None =>
         EM.pure(p :+ History.Step(name, Skip))
     }
@@ -400,11 +401,12 @@ private final class Runner[F[_], R, O, S, E](implicit EM: ExecutionModel[F], rec
 
                   // ==============================================================================
                   case Action.SubTest(action, subInvariants) =>
-                    val omg2F = checkAround0(name, Sack.empty, check, false, p.copy(history = History.empty), {
+                    val runFn = () => {
                       val t = Plan(action, subInvariants).test(test.observer)
                       val subP = subtest(t, invariants, refFn, ros, false)
                       EM.map(subP)(s => (s.history, s.ros))
-                    })
+                    }
+                    val omg2F = checkAround0(name, Sack.empty, check, false, p.copy(history = History.empty), runFn)
                     EM.map(omg2F)(s => s.copy(history = p.history ++ s.history))
                 }
             }

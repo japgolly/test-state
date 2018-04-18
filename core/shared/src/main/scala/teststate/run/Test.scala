@@ -211,11 +211,12 @@ final case class Test[F[_], R, O, S, E](override val plan: Plan[F, R, O, S, E], 
   def stateless(implicit ev: Unit =:= S) =
     withInitialState(())
 
+  @deprecated("Use withInitialState(s).withRef(() => ref).run() to have ref evaluated once per test, or withInitialState(s).withRefByName(ref).run() if you want ref evaluated on each use", "2.2.0")
   def run(initialState: S, ref: => R): F[Report[E]] =
-    Runner.run(this)(initialState, ref)
+    withInitialState(initialState).withRefByName(ref).run()
 
   def runU(initialState: S)(implicit ev: Unit =:= R): F[Report[E]] =
-    run(initialState, ())
+    withInitialState(initialState).withoutRef.run()
 }
 
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
@@ -255,9 +256,33 @@ final case class TestWithInitialState[F[_], R, O, S, E](test: Test[F, R, O, S, E
   def planWithInitialState =
     plan.withInitialState(initialState)
 
+  @deprecated("Use withRef(() => ref).run() to have ref evaluated once per test, or withRefByName(ref).run() if you want ref evaluated on each use", "2.2.0")
   def run(ref: => R): F[Report[E]] =
-    Runner.run(test)(initialState, ref)
+    withRefByName(ref).run()
 
-  def runU(implicit ev: Unit =:= R): F[Report[E]] =
-    run(())
+  def runU()(implicit ev: Unit =:= R): F[Report[E]] =
+    withoutRef.run()
+
+  def withRef(ref: () => R): RunnableTest[F, R, O, S, E] =
+    RunnableTest(test, initialState, () => {
+      lazy val r: R = ref()
+      val f: () => R = () => r
+      f
+    })
+
+  def withRefByName(ref: => R): RunnableTest[F, R, O, S, E] =
+    RunnableTest(test, initialState, () => () => ref)
+
+  def withRefConst(ref: R): RunnableTest[F, R, O, S, E] =
+    RunnableTest(test, initialState, () => () => ref)
+
+  def withoutRef(implicit ev: Unit =:= R): RunnableTest[F, R, O, S, E] =
+    RunnableTest(test, initialState, () => () => ())
+}
+
+// █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
+
+final case class RunnableTest[F[_], R, O, S, E](test: Test[F, R, O, S, E], initialState: S, refFn: () => () => R) {
+  def run(): F[Report[E]] =
+    Runner.run(test)(initialState, refFn())
 }

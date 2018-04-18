@@ -23,9 +23,10 @@ edge[color="#333333"]
   planS [label="PlanWithInitialState"]
   test [label="Test"]
   testS [label="TestWithInitialState"]
+  testR [label="RunnableTest"]
 }
 
-run [label="Report" style=filled fillcolor=lightgreen]
+run [label="Report" style=filled fillcolor="#aaffaa"]
 
 {edge[style=dashed color="#888888" fontcolor="#666666" label=" implicit"]
 r -> test
@@ -41,5 +42,6 @@ planS -> testS [label=".test"]
 test -> testS [label=".withInitialState"]
 
 ref -> run
-testS -> run [label=".run"]
+testS -> testR [label="  .withRef{,ByName,Const}\l  .withoutRef\l"]
+testR -> run [label=".run()"]
 }
