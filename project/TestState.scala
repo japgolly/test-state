@@ -13,21 +13,22 @@ object TestState {
     Lib.publicationSettings(ghProject)
 
   object Ver {
-    final val Acyclic       = "0.1.7"
-    final val Cats          = "1.1.0"
-    final val KindProjector = "0.9.6"
-    final val MacroParadise = "2.1.1"
-    final val Microlibs     = "1.14"
-    final val MTest         = "0.4.8"
-    final val Nyaya         = "0.8.1"
-    final val Scala211      = "2.11.12"
-    final val Scala212      = "2.12.4"
-    final val ScalaJsDom    = "0.9.5"
-    final val ScalaJsReact  = "1.2.0"
-    final val Scalaz        = "7.2.21"
-    final val Selenium      = "3.11.0"
-    final val Sizzle        = "2.3.0"
-    final val UnivEq        = "1.0.2"
+    final val Acyclic         = "0.1.7"
+    final val Cats            = "1.1.0"
+    final val KindProjector   = "0.9.6"
+    final val MacroParadise   = "2.1.1"
+    final val Microlibs       = "1.14"
+    final val MTest           = "0.4.8"
+    final val Nyaya           = "0.8.1"
+    final val Scala211        = "2.11.12"
+    final val Scala212        = "2.12.4"
+    final val ScalaJsDom      = "0.9.5"
+    final val ScalaJsReact    = "1.2.0"
+    final val ScalaJsJavaTime = "0.2.4"
+    final val Scalaz          = "7.2.21"
+    final val Selenium        = "3.11.0"
+    final val Sizzle          = "2.3.0"
+    final val UnivEq          = "1.0.2"
 
     // Used in examples only
     final val Monocle       = "1.5.0"
@@ -150,6 +151,8 @@ object TestState {
         "com.github.japgolly.nyaya"  %%% "nyaya-gen"  % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya"  %%% "nyaya-prop" % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya"  %%% "nyaya-test" % Ver.Nyaya % "test"))
+    .jsSettings(
+      libraryDependencies += "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime)
 
   lazy val domZipperJVM = domZipper.jvm
   lazy val domZipperJS  = domZipper.js
@@ -240,7 +243,19 @@ object TestState {
   lazy val examples =
     Project("examples", file(".examples"))
       .configure(commonSettings.jvm, preventPublication)
-      .aggregate(exampleReactJS)
+      .aggregate(exampleSelenium, exampleReactJS)
+
+  lazy val exampleSelenium = project
+    .in(file("example-selenium"))
+    .configure(commonSettings.jvm, preventPublication, utestSettings.jvm)
+    .dependsOn(coreJVM, domZipperSelenium)
+    .settings(
+      moduleName := "example-selenium",
+      libraryDependencies ++= Seq(
+        "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium % Test,
+        "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium % Test),
+      fork in Test := true,
+      javaOptions in Test += ("-DCI=" + System.getProperty("CI", "")))
 
   lazy val exampleReactJS = project
     .in(file("example-react"))

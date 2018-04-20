@@ -53,6 +53,8 @@ trait Exports
   type Result[+E] = teststate.data.Result[E]
   val Result = teststate.data.Result
 
+  val Retry = teststate.run.Retry
+
   type Test[F[_], R, O, S, E] = teststate.run.Test[F, R, O, S, E]
   val Test = teststate.run.Test
 

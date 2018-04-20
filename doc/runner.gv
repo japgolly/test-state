@@ -44,4 +44,8 @@ test -> testS [label=".withInitialState"]
 ref -> run
 testS -> testR [label="  .withRef{,ByName,Const}\l  .withoutRef\l"]
 testR -> run [label=".run()"]
+
+test -> test [label=".withRetryPolicy"]
+testS -> testS [label=".withRetryPolicy"]
+testR -> testR [label=".withRetryPolicy"]
 }

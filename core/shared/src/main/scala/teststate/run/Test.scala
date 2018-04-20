@@ -130,7 +130,7 @@ final class Plan[F[_], R, O, S, E](override val name: Option[Name],
     withInitialState(())
 
   def test(observer: Observer[R, O, E])(implicit a: Attempt[E]) =
-    Test(this, observer)(a)
+    Test(this, observer, Retry.Policy.never)(a)
 
   def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], a: Attempt[E]) =
     test(ev(Observer.unit))(a)
@@ -176,22 +176,28 @@ final case class PlanWithInitialState[F[_], R, O, S, E](override val plan: Plan[
 
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
 
-final case class Test[F[_], R, O, S, E](override val plan: Plan[F, R, O, S, E], observer: Observer[R, O, E])
+final case class Test[F[_], R, O, S, E](override val plan: Plan[F, R, O, S, E],
+                                        observer: Observer[R, O, E],
+                                        retryPolicy: Retry.Policy)
                                        (implicit val attempt: Attempt[E])
     extends PlanLike[F, R, O, S, E, Test[F, R, O, S, E]] {
 
   override type Self[FF[_], RR, OO, SS, EE] = Test[FF, RR, OO, SS, EE]
 
-  override def setPlan(p: Plan[F, R, O, S, E]) = copy(plan = p)
+  override def setPlan(p: Plan[F, R, O, S, E]): Self[F, R, O, S, E] =
+    copy(plan = p)
+
+  def withRetryPolicy(p: Retry.Policy): Test[F, R, O, S, E] =
+    copy(retryPolicy = p)
 
   def trans[G[_]: ExecutionModel](t: F ~~> G): Self[G, R, O, S, E] =
     copy(plan = plan trans t)
 
   def mapR[R2](f: R2 => R): Self[F, R2, O, S, E] =
-    Test(plan mapR f, observer cmapR f)
+    Test(plan mapR f, observer cmapR f, retryPolicy)
 
   def pmapR[R2](f: R2 => E Or R): Self[F, R2, O, S, E] =
-    Test(plan pmapR f, observer pmapR f)
+    Test(plan pmapR f, observer pmapR f, retryPolicy)
 
 //  def pmapO[OO](g: OO => E Or O): Self[F, R, OO, S, E] =
 //    Test(plan pmapO g, observer pmapO g)
@@ -200,7 +206,7 @@ final case class Test[F[_], R, O, S, E](override val plan: Plan[F, R, O, S, E], 
     copy(plan = plan.mapS(g)(s))
 
   def mapE[EE](f: E => EE): Self[F, R, O, S, EE] =
-    Test(plan mapE f, observer mapE f)(attempt map f)
+    Test(plan mapE f, observer mapE f, retryPolicy)(attempt map f)
 
 //  def lift[F2[_], R2, O2, S2, E2](implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Self[F2, R2, O2, S2, E2] =
 //    Test(plan.lift(t), observer)(recover)
@@ -229,8 +235,12 @@ final case class TestWithInitialState[F[_], R, O, S, E](test: Test[F, R, O, S, E
   override def plan                            = test.plan
   override def setPlan(p: Plan[F, R, O, S, E]) = test.setPlan(p).withInitialState(initialState)
 
-  def recover  = test.attempt
-  def observer = test.observer
+  def recover     = test.attempt
+  def observer    = test.observer
+  def retryPolicy = test.retryPolicy
+
+  def withRetryPolicy(p: Retry.Policy): TestWithInitialState[F, R, O, S, E] =
+    copy(test = test.withRetryPolicy(p))
 
   def trans[G[_]: ExecutionModel](t: F ~~> G): Self[G, R, O, S, E] =
     test.trans(t).withInitialState(initialState)
@@ -283,6 +293,14 @@ final case class TestWithInitialState[F[_], R, O, S, E](test: Test[F, R, O, S, E
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
 
 final case class RunnableTest[F[_], R, O, S, E](test: Test[F, R, O, S, E], initialState: S, refFn: () => () => R) {
+  def plan = test.plan
+  def recover = test.attempt
+  def observer = test.observer
+  def retryPolicy = test.retryPolicy
+
+  def withRetryPolicy(p: Retry.Policy): RunnableTest[F, R, O, S, E] =
+    copy(test = test.withRetryPolicy(p))
+
   def run(): F[Report[E]] =
     Runner.run(test)(initialState, refFn())
 }
