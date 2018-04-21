@@ -141,7 +141,7 @@ object RetryTest extends TestSuite {
   val observer = Observer((_: Ref).toObs())
 
   def assertRetryWorks(plan: *.Plan, refMod: Ref => Unit = _ => ()): Unit = {
-    val test = plan.addInvariants(invariant).test(observer).stateless.withRef(() => (new Ref)(refMod))
+    val test = plan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
     debug()
 
     // With appropriate retry
@@ -160,7 +160,7 @@ object RetryTest extends TestSuite {
   }
 
   def assertInvariantFails(plan: *.Plan, refMod: Ref => Unit = _ => ()): Unit = {
-    val test = plan.addInvariants(invariant).test(observer).stateless.withRef(() => (new Ref)(refMod))
+    val test = plan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
     val result: Report[String] = test.withRetryPolicy(hugeRetryPolicy).run()
     val report = result.format
     assert(result.failed, report.contains("invariantOk should be true"))
@@ -194,7 +194,7 @@ object RetryTest extends TestSuite {
     'initial {
       'ref {
         val refMod = explodingRef()
-        val test = *.emptyPlan.addInvariants(invariant).test(observer).stateless.withRef(() => (new Ref) (refMod))
+        val test = *.emptyPlan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
         val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
         assert(!result.failed)
       }
@@ -209,7 +209,7 @@ object RetryTest extends TestSuite {
 
     'action {
       // 'ref {
-      //   // Needs withRefByName. Meh for now.
+      //   // TODO
       //   var refFn: Ref => Unit = _ => ()
       //   val test = *.emptyPlan.addInvariants(invariant).test(observer).stateless.withRefByName((new Ref) (refFn))
       //   val result: Report[String] = test.withRetryPolicy(retryPolicy).run()

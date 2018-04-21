@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 import org.openqa.selenium.{WebDriver, WebElement}
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 
-object SeleniumTest extends TestSuite {
+object SeleniumExample extends TestSuite {
 
   type Ref = WebDriver
 
@@ -47,7 +47,7 @@ object SeleniumTest extends TestSuite {
       plan
         .test(observer)
         .stateless
-        .withRef(() => openBrowser())
+        .withLazyRef(openBrowser())
         .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200, 12000))
         .run()
         .assert()

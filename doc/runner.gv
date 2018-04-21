@@ -7,7 +7,7 @@ edge[color="#333333"]
   i [label="Invariants"]
   is [label="Initial\nState"]
   o [label="Observer"]
-  ref [label="⇒ Ref"]
+  ref [label="Ref"]
 }
 
 // Nearly always provided automatically
@@ -41,8 +41,8 @@ plan -> test [label=".test"]
 planS -> testS [label=".test"]
 test -> testS [label=".withInitialState"]
 
-ref -> run
-testS -> testR [label="  .withRef{,ByName,Const}\l  .withoutRef\l"]
+ref -> testR
+testS -> testR [label="  .withRef\l  .withRefByName\l  .withLazyRef\l  .withoutRef\l"]
 testR -> run [label=".run()"]
 
 test -> test [label=".withRetryPolicy"]

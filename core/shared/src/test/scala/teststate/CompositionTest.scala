@@ -33,7 +33,7 @@ object CompositionTest extends TestSuite {
       import CoproductExample._
       import Top._
       val top = new Top(7, "e")
-      val r = test.withInitialState(State(Type.Num, 7, "e")).withRefConst(top).run()
+      val r = test.withInitialState(State(Type.Num, 7, "e")).withRef(top).run()
       r.assert()
     }
 
