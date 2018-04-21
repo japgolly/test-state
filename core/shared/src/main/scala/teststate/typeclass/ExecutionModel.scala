@@ -107,7 +107,12 @@ object ExecutionModel {
         val promise = Promise[A]()
         val timerTask = new TimerTask {
           override def run(): Unit =
-            ec.execute(() => promise.completeWith(task))
+            ec.execute(new Runnable {
+              override def run(): Unit = {
+                promise.completeWith(task)
+                ()
+              }
+            })
         }
         timer.schedule(timerTask, new Date(startAt.toEpochMilli))
         promise.future
