@@ -208,13 +208,14 @@ object RetryTest extends TestSuite {
     }
 
     'action {
-      // 'ref {
-      //   // TODO
-      //   var refFn: Ref => Unit = _ => ()
-      //   val test = *.emptyPlan.addInvariants(invariant).test(observer).stateless.withRefByName((new Ref) (refFn))
-      //   val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
-      //   assert(!result.failed)
-      // }
+       'ref {
+         val ref = new Ref
+         var refFn = (_: Ref) => ()
+         val plan = Plan.action(*.action("hack")(_ => refFn = explodingRef()) >> *.emptyAction)
+         val test = plan.addInvariants(invariant).test(observer).stateless.withRefByName(ref(refFn))
+         val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
+         result.assert()
+       }
       'obs {
         val plan = Plan.action(failOnValue >> *.emptyAction +> valueCalls.assert(5))
         assertRetryWorks(plan)

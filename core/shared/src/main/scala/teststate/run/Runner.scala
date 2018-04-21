@@ -212,52 +212,13 @@ object Runner {
     def noCause: Option[Failure[E]] =
       self.map(Failure NoCause _)
   }
-
-  class RetryFns[F[_]](retryPolicy: Retry.Policy)(implicit EM: ExecutionModel[F]) {
-
-    final def withRetry[A](impureRun: () => A)(failed: A => Boolean)
-                          (implicit stats: Stats.Mutable): F[A] =
-      _withRetryF(impureRun())(EM.point(impureRun()), failed)
-
-    final def withRetryF[A](impureRun: => F[A])(failed: A => Boolean)
-                           (implicit stats: Stats.Mutable): F[A] =
-      EM.flatMap(impureRun)(_withRetryF(_)(impureRun, failed))
-
-    final def withRetryF1[A](firstAttempt: => F[A], repeatAttempts: => F[A])(failed: A => Boolean)
-                            (implicit stats: Stats.Mutable): F[A] =
-      EM.flatMap(firstAttempt)(_withRetryF(_)(repeatAttempts, failed))
-
-    final def _withRetryF[A](initialA: A)(retryF: => F[A], failed: A => Boolean)
-                            (implicit stats: Stats.Mutable): F[A] = {
-      type InProgress = (A, Option[Retry.Ctx])
-      EM.tailrec[InProgress, A]((initialA, None)) {
-        case (a, retryCtx1) =>
-          if (failed(a))
-            EM.flatMap(EM.now) { now2 =>
-              val retryCtx2 = retryCtx1.fold(Retry.Ctx.init(now2))(_.add(now2))
-              val result: F[InProgress Or A] =
-                retryPolicy(retryCtx2, now2) match {
-                  case Some(at) =>
-                    stats.retries += 1
-                    EM.schedule(EM.map(retryF)(a2 => Left((a2, Some(retryCtx2)))), at)
-                  case None =>
-                    // No more retries
-                    EM.pure(Right(initialA))
-                }
-              result
-            }
-          else
-            EM.pure(Right(a))
-      }
-    }
-  }
 }
 
 /**
   * Internal use only. Not thread-safe (due to mutable stats). Don't expose.
   */
 private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
-                                            (implicit EM: ExecutionModel[F], attempt: Attempt[E]) extends Runner.RetryFns[F](retryPolicy) {
+                                            (implicit EM: ExecutionModel[F], attempt: Attempt[E]) {
   import Runner._
 
   private type FE   = Failure[E]
@@ -269,6 +230,24 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
 
   // TODO Ref result should be in an F
   // TODO Observer result should be in an F
+
+  private def withRetry[A](impureRun: () => A)(failed: A => Boolean)
+                          (implicit stats: Stats.Mutable): F[A] =
+    _withRetryF(impureRun())(EM.point(impureRun()), failed)
+
+  private def withRetryF[A](impureRun: => F[A])(failed: A => Boolean)
+                           (implicit stats: Stats.Mutable): F[A] =
+    EM.flatMap(impureRun)(_withRetryF(_)(impureRun, failed))
+
+  private def withRetryF1[A](firstAttempt: => F[A], repeatAttempts: => F[A])(failed: A => Boolean)
+                            (implicit stats: Stats.Mutable): F[A] =
+    EM.flatMap(firstAttempt)(_withRetryF(_)(repeatAttempts, failed))
+
+  private def _withRetryF[A](initialA: A)(retryF: => F[A], failed: A => Boolean)
+                            (implicit stats: Stats.Mutable): F[A] = {
+    def retryWithStats = EM.flatMap(EM.point(stats.retries += 1))(_ => retryF)
+    retryPolicy.retryI(initialA)(failed, retryWithStats)
+  }
 
   private def observe(test: Test, ref: R): F[FE Or O] =
     withRetry[FE Or O](() => observeNoRetry(test, ref))(_.isLeft)
@@ -283,11 +262,11 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
       stats = new Stats.Mutable
       stats.startTimer()
 
-      // The types don't really support this - I was younger then...
-      val refFnWithRetry: () => R = {
-        val idRetry = new Runner.RetryFns[Id](retryPolicy)
-        () => idRetry.withRetry(() => Attempt.id.attempt(refFn()))(_.isLeft).recover[R](f => throw f.theCause)
-      }
+      val refFnWithRetry: () => R =
+        () => retryPolicy.unsafeRetryOnException(refFn(), {
+          stats.retries += 1
+          refFn()
+        })
 
       val ref = refFnWithRetry()
 
@@ -296,7 +275,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
 
           case Right(obs) =>
             val ros = new ROS(ref, obs, initialState)
-            EM.map(subtest(test, Sack.empty, refFn, ros, true))(_.history)
+            EM.map(subtest(test, Sack.empty, refFnWithRetry, ros, true))(_.history)
+            // TODO Using refFnWithRetry is the easy answer for now but it's incorrect
+            // It should be F[Error \/ Ref] without retry so that the get-ref-and-observe blocks
+            // have a proper retry that covers ref failures AND obs failures
 
           case Left(e) =>
             val s = History.Step(Observation, Fail(e))
@@ -627,27 +609,27 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
   private def hist2Fn(r: Result[FE], hs: History.Step[FE]): Name => H =
     n => History(vector1(History.Step(n, r)) :+ hs)
 
-  private def observeAndTest(refFn: () => R, test: Test,
-                             nextStateFn: O => E Or S, postChecks: ROS => HH)
-                            : F[(String, FE) Or (ROS, HH)] = {
-    val ref = refFn()
-    EM.flatMap(observe(test, ref)) {
-      case Right(obs) =>
-        val updateStateF: F[Failure.WithCause[E] Or (E Or S)] =
-          withRetry(() => attempt.attempt(nextStateFn(obs)))(notRightRight)
-        EM.map(updateStateF) {
-          case Right(Right(state)) =>
-            val ros = ROS(ref, obs, state)
-            Right((ros, postChecks(ros)))
-          case Right(Left(e)) => Left((UpdateState, Failure NoCause e))
-          case Left(fe) => Left((UpdateState, fe))
-        }
-      case Left(e) => EM pure Left((Observation, e))
-    }
-  }
-
   private def observeAndTestWithRetry(refFn: () => R, test: Test,
                                       nextStateFn: O => E Or S, postChecks: ROS => HH)
-                                      : F[(String, FE) Or (ROS, HH)] =
-    withRetryF(observeAndTest(refFn, test, nextStateFn, postChecks))(obsAndTestFailed)
+                                      : F[(String, FE) Or (ROS, HH)] = {
+
+    def withoutRetry: F[(String, FE) Or (ROS, HH)] = {
+      val ref = refFn()
+      EM.flatMap(observe(test, ref)) {
+        case Right(obs) =>
+          val updateStateF: F[Failure.WithCause[E] Or (E Or S)] =
+            withRetry(() => attempt.attempt(nextStateFn(obs)))(notRightRight)
+          EM.map(updateStateF) {
+            case Right(Right(state)) =>
+              val ros = ROS(ref, obs, state)
+              Right((ros, postChecks(ros)))
+            case Right(Left(e)) => Left((UpdateState, Failure NoCause e))
+            case Left(fe) => Left((UpdateState, fe))
+          }
+        case Left(e) => EM pure Left((Observation, e))
+      }
+    }
+
+    withRetryF(withoutRetry)(obsAndTestFailed)
+  }
 }
