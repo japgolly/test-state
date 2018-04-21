@@ -70,5 +70,5 @@ Plan(action, invariants)            // Plan                [Id, Ref, Obs, Int, S
 | `ExecutionModel[F[_]]` | Typeclass required to run tests in custom contexts. |
 | `Observer[-R, +O, +E]` | Creates observations. As indicate by type variance, ref comes in, observation or error come out. |
 | `Or[+A,+B]` | Disjunction. Internal replacement for stdlib's atrocious `Either`. Implicit conversions exist from: <ul><li>`scala.util.Either[A, B]`.</li><li>`cats.data.Xor[A,B]` if using the Cats module.</li><li>`scalaz.\/[A,B]` if using the Scalaz module.</li></ul> |
-| `Recover[+E]` | Turns a `Throwable` into an `E`. |
+| `Attempt[+E]` | Turns a `Throwable` into an `E`. |
 | `Report.AssertionSettings` | Typeclass that specifies how to display pass/fail results on a `Report`. |

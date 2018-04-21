@@ -6,18 +6,20 @@ import teststate.typeclass.Empty
 
 case class Stats(performedActions: Int,
                  performedChecks: Int,
+                 retries: Int,
                  totalTime: FiniteDuration) {
 
   def +(that: Stats): Stats =
     Stats(
       this.performedActions + that.performedActions,
       this.performedChecks  + that.performedChecks,
+      this.retries          + that.retries,
       this.totalTime        + that.totalTime)
 }
 
 object Stats {
 
-  def empty = Stats(0, 0, FiniteDuration(0, NANOSECONDS))
+  def empty = Stats(0, 0, 0, FiniteDuration(0, NANOSECONDS))
 
   implicit def emptyInstance: Empty[Stats] =
     Empty(empty)
@@ -27,11 +29,12 @@ object Stats {
     def startTimer(): Unit = startTime = System.nanoTime()
     def stopTimer(): Unit = endTime = System.nanoTime()
 
-    var actions, checks = 0
+    var actions, checks, retries = 0
 
     def result() = Stats(
       actions,
       checks,
+      retries,
       FiniteDuration(endTime - startTime, NANOSECONDS))
   }
 

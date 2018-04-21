@@ -58,7 +58,7 @@ object RunnerTest extends TestSuite {
   override def tests = TestSuite {
     'pass1 {
       val v = newState
-      assertRun(test.run(v),
+      assertRun(test.withRef(v).run(),
         """
           |✓ A1
           |✓ A2
@@ -71,7 +71,7 @@ object RunnerTest extends TestSuite {
 
     'pass2 {
       val v = newState
-      assertRun(test2.run(v),
+      assertRun(test2.withRef(v).run(),
         """
           |✓ A12
           |  ✓ Pre-conditions
@@ -95,7 +95,7 @@ object RunnerTest extends TestSuite {
       'action {
         val e = new RuntimeException("hurr")
         val test = Plan.action(*.action("A")(_ => throw e)).test(Observer(_.s)).stateless
-        val r = test.run(newState)
+        val r = test.withRef(newState).run()
         r.failureReason match {
           case Some(Failure.WithCause(_, f)) => assert(e eq f)
           case x => fail("Got: " + x)
@@ -104,7 +104,7 @@ object RunnerTest extends TestSuite {
       'after {
         val e = new RuntimeException("hurr")
         val test = Plan.action(*.action("A")(_ => ()) +> *.test("x")(_ => throw e)).test(Observer(_.s)).stateless
-        val r = test.run(newState)
+        val r = test.withRef(newState).run()
         r.failureReason match {
           case Some(Failure.WithCause(_, f)) => assert(e eq f)
           case x => fail("Got: " + x)
@@ -119,7 +119,7 @@ object RunnerTest extends TestSuite {
 
       'action {
         val test = Plan.action(*.action("A")(_ => sys error "Crash!")).test(Observer(_.s)).stateless
-        assertRun(test.run(newState),
+        assertRun(test.withRef(newState).run(),
           """
             |✘ A -- Caught exception: java.lang.RuntimeException: Crash!
             |Performed 1 action, 0 checks.
@@ -128,7 +128,7 @@ object RunnerTest extends TestSuite {
 
       'before {
         val test = Plan(nop, badPoint.before).test(Observer(_.s)).stateless
-        assertRun(test.run(newState),
+        assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
@@ -140,7 +140,7 @@ object RunnerTest extends TestSuite {
       // All point-invariants are run both before and after actions.
       'after {
         val test = Plan(nop, badPoint.after).test(Observer(_.s)).stateless
-        assertRun(test.run(newState),
+        assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
@@ -150,7 +150,7 @@ object RunnerTest extends TestSuite {
 
       'around {
         val test = Plan(nop, *.focus("").value(_ => 0).testAround(_ => "what?")((_: Any, _: Any) => sys error "Crashhh!")).test(Observer(_.s)).stateless
-        assertRun(test.run(newState),
+        assertRun(test.withRef(newState).run(),
           """
             |✘ NOP
             |  ✓ Action
@@ -162,7 +162,7 @@ object RunnerTest extends TestSuite {
 
       'invariants {
         val test = Plan(nop, badPoint).test(Observer(_.s)).stateless
-        assertRun(test.run(newState),
+        assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
             |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
@@ -172,7 +172,7 @@ object RunnerTest extends TestSuite {
 
       'coproduct - {
         val test = Plan(nop, *.chooseInvariant("Who knows?!")(_ => sys error "NO!")).test(Observer(_.s)).stateless
-        assertRun(test.run(newState),
+        assertRun(test.withRef(newState).run(),
         """
           |✘ Initial state.
           |  ✘ Who knows?! -- Caught exception: java.lang.RuntimeException: NO!
@@ -182,7 +182,7 @@ object RunnerTest extends TestSuite {
 
       'obs1 {
         val test = Plan.action(nop).test(Observer watch (sys error "NO!")).stateless
-        assertRun(test.run(newState),
+        assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
             |  ✘ Observation -- Caught exception: java.lang.RuntimeException: NO!
@@ -192,7 +192,7 @@ object RunnerTest extends TestSuite {
 
       'obs2 {
         val test = Plan.action(nop).test(Observer(delayCrash(1)(_.s))).stateless
-        assertRun(test.run(newState),
+        assertRun(test.withRef(newState).run(),
           """
             |✘ NOP
             |  ✓ Action
@@ -232,7 +232,7 @@ object RunnerTest extends TestSuite {
       'nextState {
         val a = *.action("Merf")(_ => ()).updateStateBy(_ => sys error "BERF")
         val test = Plan.action(a).test(Observer(_.s)).stateless
-        assertRun(test.run(newState),
+        assertRun(test.withRef(newState).run(),
           """
             |✘ Merf
             |  ✓ Action
@@ -246,7 +246,7 @@ object RunnerTest extends TestSuite {
       var i = 3
       val * = Dsl[Int, Unit, Unit]
       val inc = *.action("inc")(x => i = x.ref + 1)
-      val h = Plan.action(inc.times(4)).testU.stateless.run(i)
+      val h = Plan.action(inc.times(4)).testU.stateless.withRefByName(i).run()
       assertEq(h.failure, None)
       assertEq(i, 7)
     }
@@ -258,7 +258,7 @@ object RunnerTest extends TestSuite {
         .updateState(_ + 8)
         .updateStateBy(_.state - 3)
         .updateState(_ - 4)
-      val h = Plan.action(inc.times(3)).test(Observer watch i).run(i, ())
+      val h = Plan.action(inc.times(3)).test(Observer watch i).withInitialState(i).runU()
       assertEq(h.failure, None)
       assertEq(i, 12)
     }
@@ -268,7 +268,7 @@ object RunnerTest extends TestSuite {
         var i = 0
         val a = *.action("A")(_ => i += 1).skip
         val test = Plan.action(a).test(Observer(_.s)).stateless
-        test.run(newState)
+        test.withRef(newState).run()
         assertEq(i, 0)
       }
 
@@ -276,7 +276,7 @@ object RunnerTest extends TestSuite {
         var i = 0
         val c = *.point("X")(_ => {i += 1; None}).skip
         val test = Plan(a(1), c).test(Observer(_.s)).stateless
-        test.run(newState)
+        test.withRef(newState).run()
         assertEq(i, 0)
       }
 
@@ -285,7 +285,7 @@ object RunnerTest extends TestSuite {
         val c = *.point("X")(_ => {i += 1; None}).skip
         val d = *.around("Y")(_ => {i += 1; i})((_, _) => {i += 1; None}).skip
         val test = Plan.action(a(1) addCheck c.beforeAndAfter addCheck d).test(Observer(_.s)).stateless
-        test.run(newState)
+        test.withRef(newState).run()
         assertEq(i, 0)
       }
     }

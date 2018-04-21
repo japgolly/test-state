@@ -44,14 +44,16 @@ trait Exports
   type PlanWithInitialState[F[_], R, O, S, E] = teststate.run.PlanWithInitialState[F, R, O, S, E]
   val PlanWithInitialState = teststate.run.PlanWithInitialState
 
-  type Recover[+E] = teststate.typeclass.Recover[E]
-  val Recover = teststate.typeclass.Recover
+  type Attempt[+E] = teststate.typeclass.Attempt[E]
+  val Attempt = teststate.typeclass.Attempt
 
   type Report[+E] = teststate.run.Report[E]
   val Report = teststate.run.Report
 
   type Result[+E] = teststate.data.Result[E]
   val Result = teststate.data.Result
+
+  val Retry = teststate.run.Retry
 
   type Test[F[_], R, O, S, E] = teststate.run.Test[F, R, O, S, E]
   val Test = teststate.run.Test
@@ -65,8 +67,8 @@ trait Exports
   implicit def testStateAssertionSettings: Report.AssertionSettings =
     Report.AssertionSettings.default
 
-  implicit def testStateRecoverString: Recover[String] =
-    Recover.byToString
+  implicit def testStateAttemptString: Attempt[String] =
+    Attempt.byToString
 }
 
 object Exports extends Exports

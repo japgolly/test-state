@@ -4,9 +4,9 @@ import acyclic.file
 import java.io.PrintStream
 import teststate.data._
 
-final case class Recover[+E](toE: Throwable => E) extends AnyVal {
-  def map[EE](f: E => EE): Recover[EE] =
-    Recover(f compose toE)
+final case class Attempt[+E](toE: Throwable => E) extends AnyVal {
+  def map[EE](f: E => EE): Attempt[EE] =
+    Attempt(f compose toE)
 
   def apply(t: Throwable): Failure.WithCause[E] =
     Failure.WithCause(toE(t), t)
@@ -30,16 +30,16 @@ final case class Recover[+E](toE: Throwable => E) extends AnyVal {
   }
 }
 
-object Recover {
+object Attempt {
 
-  val id: Recover[Throwable] =
-    Recover(identity)
+  val id: Attempt[Throwable] =
+    Attempt(identity)
 
-  val byToString: Recover[String] =
-    Recover("Caught exception: " + _.toString)
+  val byToString: Attempt[String] =
+    Attempt("Caught exception: " + _.toString)
 
-  def printFirst[A](r: Recover[A], stream: PrintStream = System.err): Recover[A] =
-    Recover { t =>
+  def printFirst[A](r: Attempt[A], stream: PrintStream = System.err): Attempt[A] =
+    Attempt { t =>
       stream.println()
       t.printStackTrace(stream)
       stream.println()

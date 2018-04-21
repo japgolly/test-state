@@ -2,7 +2,7 @@ package teststate.run
 
 import acyclic.file
 import teststate.data._
-import teststate.typeclass.{Recover, DisplayError}
+import teststate.typeclass.{Attempt, DisplayError}
 import History.{Step, Steps}
 import Result.{Fail, Skip, Pass}
 
@@ -92,22 +92,22 @@ object History {
     def ++=(h: History[FE]): Unit =
       h.steps foreach (this += _)
 
-    def add1[A, B](a: A)(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit recover: Recover[E]): Unit = {
-      val n = recover.name(nameFn(a), nameInput)
-      val r = recover.recover(test(a).toResult, Fail(_))
+    def add1[A, B](a: A)(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit attempt: Attempt[E]): Unit = {
+      val n = attempt.name(nameFn(a), nameInput)
+      val r = attempt.recover(test(a).toResult, Fail(_))
       this += Step(n, r)
     }
 
     def addNE(ne: NamedError[FE]): Unit =
       this += Step(ne.name, Fail(ne.error))
 
-    def addEach[A, B](as: TraversableOnce[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit recover: Recover[E]): Unit =
+    def addEach[A, B](as: TraversableOnce[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit attempt: Attempt[E]): Unit =
       for (a <- as)
-        add1(a)(nameFn)(nameInput, test)(recover)
+        add1(a)(nameFn)(nameInput, test)(attempt)
 
-    def addEachNE[A, B](as: TraversableOnce[NamedError[FE] Or A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit recover: Recover[E]): Unit =
+    def addEachNE[A, B](as: TraversableOnce[NamedError[FE] Or A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit attempt: Attempt[E]): Unit =
       as foreach {
-        case Right(a) => add1(a)(nameFn)(nameInput, test)(recover)
+        case Right(a) => add1(a)(nameFn)(nameInput, test)(attempt)
         case Left(ne) => addNE(ne)
       }
 

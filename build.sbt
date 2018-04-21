@@ -24,4 +24,5 @@ val extScalazJVM      = TestState.extScalazJVM
 val extScalazJS       = TestState.extScalazJS
 
 val examples          = TestState.examples
+val exampleSelenium   = TestState.exampleSelenium
 val exampleReactJS    = TestState.exampleReactJS

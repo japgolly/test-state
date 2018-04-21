@@ -18,7 +18,7 @@ object StackTest extends TestSuite {
     val a = dsl.action("nop")(_ => nop): dsl.Actions
     val as = Iterator.fill(size)(a).reduce(_ >> _)
     val test = Plan.action(as).test(Observer.unit)
-    val fh = test.run((), ())
+    val fh = test.stateless.runU()
     EM.map(fh) { r =>
       assert(r.result == Result.Pass)
       assert(r.history.steps.length == size + 1)

@@ -7,12 +7,12 @@ edge[color="#333333"]
   i [label="Invariants"]
   is [label="Initial\nState"]
   o [label="Observer"]
-  ref [label="⇒ Ref"]
+  ref [label="Ref"]
 }
 
 // Nearly always provided automatically
 { node[style=filled fillcolor="#dddddd"]
-  r [label="Recover"]
+  r [label="Attempt"]
   em [label="ExecutionModel"]
 }
 
@@ -23,9 +23,10 @@ edge[color="#333333"]
   planS [label="PlanWithInitialState"]
   test [label="Test"]
   testS [label="TestWithInitialState"]
+  testR [label="RunnableTest"]
 }
 
-run [label="Report" style=filled fillcolor=lightgreen]
+run [label="Report" style=filled fillcolor="#aaffaa"]
 
 {edge[style=dashed color="#888888" fontcolor="#666666" label=" implicit"]
 r -> test
@@ -40,6 +41,11 @@ plan -> test [label=".test"]
 planS -> testS [label=".test"]
 test -> testS [label=".withInitialState"]
 
-ref -> run
-testS -> run [label=".run"]
+ref -> testR
+testS -> testR [label="  .withRef\l  .withRefByName\l  .withLazyRef\l  .withoutRef\l"]
+testR -> run [label=".run()"]
+
+test -> test [label=".withRetryPolicy"]
+testS -> testS [label=".withRetryPolicy"]
+testR -> testR [label=".withRetryPolicy"]
 }

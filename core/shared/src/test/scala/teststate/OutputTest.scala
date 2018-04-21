@@ -1081,7 +1081,7 @@ object OutputTest extends TestSuite {
             |✘ Press button.
             |  ✓ Action
             |  ✘ Post-conditions
-            |    ✘ Evil should be 666. -- Expected 666, not 777.
+            |    ✘ Evil should be 666. -- Got 777, expected 666.
             |Performed 1 action, 1 check.
           """.stripMargin)
       }

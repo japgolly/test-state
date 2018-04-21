@@ -51,21 +51,25 @@ object DslTest extends TestSuite {
     'incrementBy {
       'pos - testName(*.focus("Counter").value(_ => 7).assert.increaseBy(2),
         "Counter should increase by 2.",
-        "Counter should be 9.")
+        "Counter should increase by 2.")
+//        "Counter should be 9.")
 
       'neg - testName(*.focus("Counter").value(_ => 7).assert.not.increaseBy(2),
         "Counter shouldn't increase by 2.",
-        "Counter shouldn't be 9.")
+        "Counter shouldn't increase by 2.")
+//        "Counter shouldn't be 9.")
     }
 
     'decrementBy {
       'pos - testName(*.focus("Counter").value(_ => 7).assert.decreaseBy(2),
         "Counter should decrease by 2.",
-        "Counter should be 5.")
+        "Counter should decrease by 2.")
+//        "Counter should be 5.")
 
       'neg - testName(*.focus("Counter").value(_ => 7).assert.not.decreaseBy(2),
         "Counter shouldn't decrease by 2.",
-        "Counter shouldn't be 5.")
+        "Counter shouldn't decrease by 2.")
+//        "Counter shouldn't be 5.")
     }
 
   }
