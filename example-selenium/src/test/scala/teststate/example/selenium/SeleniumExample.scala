@@ -37,13 +37,12 @@ object SeleniumExample extends TestSuite {
 
   val clickGet = *.action("Click GET")(_.obs.button.click())
 
-  // TODO Need focus().option()
-  val responseText = *.focus("Response text").collection(_.obs.responseText.toList)
+  val responseText = *.focus("Response text").option(_.obs.responseText)
 
   override def tests = CI match {
     case None => TestSuite {
 
-      val plan = Plan.action(clickGet +> responseText.assert.exists("Has Response", _.contains("Response")))
+      val plan = Plan.action(clickGet +> responseText.assert.exists("Response", _ contains "Response"))
       plan
         .test(observer)
         .stateless

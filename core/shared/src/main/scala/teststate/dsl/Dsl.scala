@@ -157,6 +157,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
     def value[A: Display](f: OS => A) =
       new FocusValue(focusName, f)
 
+    def option[A](f: OS => Option[A]) =
+      new FocusOption(focusName, f)
+
     def collection[T[x] <: TraversableOnce[x], A](f: OS => T[A]) =
       new FocusColl(focusName, f)
 
@@ -263,6 +266,89 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
         decreaseBy(n.one)(n, q, f, s)
     }
   } // FocusValue
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  final class FocusOption[A](focusName: => String, focusFn: OS => Option[A]) {
+
+    def rename(n: => String) = new FocusOption[A](n, focusFn)
+    def run = focusFn
+
+    def filter(f: A => Boolean): FocusOption[A] =
+      mapOption(_ filter f)
+
+    def map[B](f: A => B): FocusOption[B] =
+      mapOption(_ map f)
+
+    def mapOption[B](f: Option[A] => Option[B]): FocusOption[B] =
+      new FocusOption(focusName, f compose focusFn)
+
+    def value(implicit s: Display[Option[A]]) =
+      new FocusValue[Option[A]](focusName, focusFn)
+
+    def valueBy[B](f: Option[A] => B)(implicit s: Display[B]) =
+      new FocusValue[B](focusName, f compose focusFn)
+
+    def isEmpty: FocusValue[Boolean] =
+      valueBy(_.isEmpty).rename(focusName + " is empty")
+
+    def isDefined: FocusValue[Boolean] =
+      valueBy(_.isDefined).rename(focusName + " is defined")
+
+    def assertB(positive: Boolean): AssertOps =
+      new AssertOps(positive)
+
+    def assert: AssertOps =
+      new AssertOps(true)
+
+    @inline def assert(expect: Option[A])(implicit eq: Equal[Option[A]], f: DisplayFailure[Option[A], E]): Points =
+      assert.equal(expect)(eq, f)
+
+    final class AssertOps(positive: Boolean) {
+      def not = new AssertOps(!positive)
+
+      import OptionAssertions._
+
+//      private def wrapExp1[I](f: I => Boolean): I => Boolean =
+//        if (positive) f else f.andThen(!_)
+
+//      def empty(implicit eq: Equal[Boolean], f: DisplayFailure[Boolean, E]): Points =
+//        isEmpty.assert(positive)
+//
+//      def defined(implicit eq: Equal[Boolean], f: DisplayFailure[Boolean, E]): Points =
+//        isDefined.assert(positive)
+
+      def equal(expect: Option[A])(implicit eq: Equal[Option[A]], f: DisplayFailure[Option[A], E]): Points =
+        value.assertB(positive).equal(expect)
+
+      def equalBy(expect: OS => Option[A])(implicit eq: Equal[Option[A]], f: DisplayFailure[Option[A], E]): Points =
+        value.assertB(positive).equalBy(expect)
+
+      def contains[B >: A](query: B)(implicit sa: Display[B], ea: Equal[B], ev: Contains.Failure[B] => E): Points =
+        point(Contains(positive).name(focusName, sa(query)))(
+          os => Contains(positive)(focusFn(os), query).map(ev))
+
+//      def existenceOf(query: A)(expect: OS => Boolean)
+//                     (implicit sa: Display[A], ea: Equal[A], ev: Contains.Failure[A] => E): Points = {
+//        val e = wrapExp1(expect)
+//        point(Contains.nameFn(e, focusName, sa(query)))(
+//          os => Contains(e(os))(focusFn(os), query).map(ev))
+//      }
+
+      def forall(criteriaDesc: => String, criteria: A => Boolean)(implicit d: Display[A], ev: Forall.Failure[A] => E): Points = {
+        val q = Forall(positive)
+        point(q.name(focusName, criteriaDesc))(os =>
+          q(focusFn(os))(criteria).map(ev))
+      }
+
+      def exists(criteriaDesc: => String, criteria: A => Boolean)(implicit d: Display[A], ev: Exists.Failure[A] => E): Points = {
+        val q = Exists(positive)
+        point(q.name(focusName, criteriaDesc))(os =>
+          q(focusFn(os))(criteria).map(ev))
+      }
+
+    }
+  } // FocusOption
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

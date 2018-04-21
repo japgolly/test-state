@@ -99,10 +99,12 @@ object TestState {
   def macroParadisePlugin =
     compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.full)
 
-  def utestSettings = ConfigureBoth(
+  def testSettings = ConfigureBoth(
     _.settings(
-      libraryDependencies += "com.lihaoyi" %%% "utest" % Ver.MTest % Test,
-      testFrameworks      += new TestFramework("utest.runner.Framework")))
+      libraryDependencies ++= Seq(
+        "com.lihaoyi"                   %%% "utest"     % Ver.MTest     % Test,
+        "com.github.japgolly.microlibs" %%% "test-util" % Ver.Microlibs % Test),
+      testFrameworks += new TestFramework("utest.runner.Framework")))
     .jsConfigure(
       _.settings(jsEnv in Test := new JSDOMNodeJSEnv))
 
@@ -135,7 +137,7 @@ object TestState {
   lazy val coreMacrosJS  = coreMacros.js
   lazy val coreMacros = crossProject
     .in(file("core-macros"))
-    .configureCross(commonSettings, publicationSettings, utestSettings)
+    .configureCross(commonSettings, publicationSettings, testSettings)
     .bothConfigure(definesMacros)
     .settings(moduleName := "core-macros")
 
@@ -144,7 +146,7 @@ object TestState {
   lazy val core = crossProject
     .configureCross(commonSettings, publicationSettings)
     .dependsOn(coreMacros)
-    .configureCross(utestSettings)
+    .configureCross(testSettings)
     .settings(
       libraryDependencies ++= Seq(
         "com.github.japgolly.univeq" %%% "univeq"     % Ver.UnivEq,
@@ -158,7 +160,7 @@ object TestState {
   lazy val domZipperJS  = domZipper.js
   lazy val domZipper = crossProject
     .in(file("dom-zipper"))
-    .configureCross(commonSettings, publicationSettings, utestSettings)
+    .configureCross(commonSettings, publicationSettings, testSettings)
     .settings(moduleName := "dom-zipper")
     .jsSettings(
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
@@ -166,15 +168,14 @@ object TestState {
 
   lazy val domZipperSelenium = project
     .in(file("dom-zipper-selenium"))
-    .configure(commonSettings.jvm, publicationSettings.jvm, utestSettings.jvm)
+    .configure(commonSettings.jvm, publicationSettings.jvm, testSettings.jvm)
     .dependsOn(domZipperJVM)
     .settings(
       moduleName := "dom-zipper-selenium",
       libraryDependencies ++= Seq(
-        "org.seleniumhq.selenium"        % "selenium-api"            % Ver.Selenium,
-        "org.seleniumhq.selenium"        % "selenium-chrome-driver"  % Ver.Selenium % Test,
-        "org.seleniumhq.selenium"        % "selenium-firefox-driver" % Ver.Selenium % Test,
-        "com.github.japgolly.microlibs" %% "test-util"               % Ver.Microlibs % Test),
+        "org.seleniumhq.selenium" % "selenium-api"            % Ver.Selenium,
+        "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium % Test,
+        "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium % Test),
       fork in Test := true,
       javaOptions in Test ++= Seq(
         "-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath,
@@ -183,7 +184,7 @@ object TestState {
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
+    .configure(commonSettings.js, publicationSettings.js, testSettings.js)
     .dependsOn(domZipperJS)
     .settings(
       moduleName     := "dom-zipper-sizzle",
@@ -197,7 +198,7 @@ object TestState {
     .in(file("ext-scalaz"))
     .configureCross(commonSettings, publicationSettings)
     .dependsOn(core)
-    .configureCross(utestSettings)
+    .configureCross(testSettings)
     .settings(
       moduleName          := "ext-scalaz",
       libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
@@ -208,7 +209,7 @@ object TestState {
     .in(file("ext-cats"))
     .configureCross(commonSettings, publicationSettings)
     .dependsOn(core)
-    .configureCross(utestSettings)
+    .configureCross(testSettings)
     .settings(
       moduleName          := "ext-cats",
       libraryDependencies += "org.typelevel" %%% "cats-core" % Ver.Cats)
@@ -219,7 +220,7 @@ object TestState {
     .in(file("ext-nyaya"))
     .configureCross(commonSettings, publicationSettings)
     .dependsOn(core, extScalaz)
-    .configureCross(utestSettings)
+    .configureCross(testSettings)
     .settings(
       moduleName := "ext-nyaya",
       libraryDependencies ++= Seq(
@@ -229,7 +230,7 @@ object TestState {
   lazy val extScalaJsReact = project
     .in(file("ext-scalajs-react"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, publicationSettings.js, utestSettings.js)
+    .configure(commonSettings.js, publicationSettings.js, testSettings.js)
     .dependsOn(domZipperJS)
     .settings(
       moduleName := "ext-scalajs-react",
@@ -247,7 +248,7 @@ object TestState {
 
   lazy val exampleSelenium = project
     .in(file("example-selenium"))
-    .configure(commonSettings.jvm, preventPublication, utestSettings.jvm)
+    .configure(commonSettings.jvm, preventPublication, testSettings.jvm)
     .dependsOn(coreJVM, domZipperSelenium)
     .settings(
       moduleName := "example-selenium",
@@ -260,7 +261,7 @@ object TestState {
   lazy val exampleReactJS = project
     .in(file("example-react"))
     .enablePlugins(ScalaJSPlugin)
-    .configure(commonSettings.js, preventPublication, utestSettings.js)
+    .configure(commonSettings.js, preventPublication, testSettings.js)
     .dependsOn(coreJS, domZipperSizzle, extScalaJsReact)
     .settings(
       moduleName := "example-react",
