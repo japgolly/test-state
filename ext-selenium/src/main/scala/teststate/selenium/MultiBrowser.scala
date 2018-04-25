@@ -3,8 +3,7 @@ package teststate.selenium
 import org.openqa.selenium.WebDriver
 
 /** Create tabs across multiple browsers */
-trait MultiBrowser[D <: WebDriver] {
-  def openTab(): Tab[D]
+trait MultiBrowser[D <: WebDriver] extends MultiTab[D] {
   def closeBrowser(browserIndex: Int, quit: Boolean = true): Unit
   def closeAllBrowsers(quit: Boolean = true): Unit
 }
@@ -17,10 +16,11 @@ object MultiBrowser {
 
       private val outerMutex = Mutex()
 
-      private case class Browser(driver : D,
-                                 mutex  : Mutex,
-                                 rootTab: TabHandle,
-                                 tabs   : Vector[Tab[D]])
+      private case class Browser(driver  : D,
+                                 mutex   : Mutex,
+                                 rootTab : TabHandle,
+                                 multiTab: MultiTab[D],
+                                 tabs    : Vector[Tab[D]])
 
       private var instances: Vector[Browser] =
         Vector.empty
@@ -32,65 +32,21 @@ object MultiBrowser {
           if (instances.indices.contains(i))
             i
           else {
-            val driver  = newDriver
-            val mutex   = Mutex.blocking()
-            val rootTab = tabSupport.active()(driver)
-            instances = instances :+ Browser(driver, mutex, rootTab, Vector.empty)
+            val driver   = newDriver
+            val mutex    = Mutex.blocking()
+            val rootTab  = tabSupport.active()(driver)
+            val multiTab = MultiTab(driver, mutex)(tabSupport)(rootTab)
+            instances = instances :+ Browser(driver, mutex, rootTab, multiTab, Vector.empty)
             instances.length - 1
           }
         }
         val browser  = instances(browserIndex)
-        val tab      = newTab(browser.driver, browser.mutex, browser.rootTab)
+        var tab      = null: Tab[D]
+        tab          = browser.multiTab.openTab().withOnClose(removeTab(browser.driver, tab))
         val browser2 = browser.copy(tabs = browser.tabs :+ tab)
         instances    = instances.updated(browserIndex, browser2)
         tab
       }
-
-      // Locks: none
-      private def newTab(driver: D, browserMutex: Mutex, rootTab: TabHandle): Tab[D] =
-        new Tab[D] {
-
-          private var tab: Option[TabHandle] = None
-          private var closed = false
-
-          // Locks: browser
-          override def use[A](f: D => A): A =
-            browserMutex {
-              implicit def d = driver
-              if (closed)
-                throw new TabAlreadyClosed()
-              val t: TabHandle =
-                tab.getOrElse {
-                  val newTab = tabSupport.open(rootTab)
-                  tab = Some(newTab)
-                  newTab
-                }
-              tabSupport.activate(t)
-              f(driver)
-            }
-
-          // Locks: browser,outer
-          override def closeTab(): Unit = {
-
-            val wasAlreadyClosed =
-              browserMutex {
-                implicit def d = driver
-                val wasAlreadyClosed = closed
-                if (!closed) {
-                  for (t <- tab) {
-                    tabSupport.activate(t)
-                    tabSupport.closeActive()
-                  }
-                  closed = true
-                  tab = None
-                }
-                wasAlreadyClosed
-              }
-
-            if (!wasAlreadyClosed)
-              removeTab(driver, this)
-          }
-        }
 
       // Locks: outer
       private def removeTab(driver: D, tab: Tab[D]): Unit = outerMutex {

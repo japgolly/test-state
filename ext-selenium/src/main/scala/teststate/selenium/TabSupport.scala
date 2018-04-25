@@ -38,7 +38,7 @@ object TabSupport {
       driver.getWindowHandle
 
     override def open(root: TabHandle)(implicit driver: D): TabHandle = {
-      activate(root)
+      // activate(root) // not needed when opening tabs via JS
       val before = driver.getWindowHandles.asScala.toSet
       _open()
       val added = driver.getWindowHandles.asScala.diff(before)

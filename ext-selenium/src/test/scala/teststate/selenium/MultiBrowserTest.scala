@@ -24,7 +24,7 @@ object MultiBrowserTest {
       new FirefoxDriver(options)
     }
 
-    val mb = MultiBrowser(newChrome(), GrowthStrategy.maxTabs(2))
+    val mb = MultiBrowser(newChrome(), GrowthStrategy.maxTabs(3))
 
     def newTab() = Future(mb.openTab())
 
