@@ -13,18 +13,18 @@ object MultiBrowserTest {
 
   def main(args: Array[String]): Unit = {
 
-    val newChromeDriver = () => {
+    def newChrome() = {
       val options = new ChromeOptions()
       options.setHeadless(false)
       new ChromeDriver(options)
     }
-    val newFirefoxDriver = () => {
+    def newFirefox() = {
       val options = new FirefoxOptions()
       options.setHeadless(false)
       new FirefoxDriver(options)
     }
-    val mb = new MultiBrowser(newChromeDriver, GrowthStrategy.maxTabs(2))
-//    val mb = new MultiBrowser(newFirefoxDriver, GrowthStrategy.maxBrowsers(1))
+
+    val mb = MultiBrowser(newChrome(), GrowthStrategy.maxTabs(2))
 
     def newTab() = Future(mb.openTab())
 
