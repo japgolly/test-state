@@ -132,7 +132,7 @@ object RetryTest extends TestSuite {
   val queueUpdate    = *.action("queueUpdate")(_.ref.queueUpdate(123))
   val incNormal      = inc +> incCalls.assert.increment +> valueCalls.assert.increment +> value.assert.increment
   val incFailOnValue = inc +> incCalls.assert.increment +> valueCalls.assert.increaseBy(4) +> value.assert.increment
-  val incFailOnInc   = inc +> incCalls.assert.increaseBy(4) +> valueCalls.assert.increment +> value.assert.increment
+  val incFailOnInc   = inc +> incCalls.assert.increment +> valueCalls.assert.increment +> value.assert.increment // incCalls +1 only cos that's what a successful action does
 
   val retryPolicy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 3)
   val insufficientRetryPolicy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2)
@@ -232,6 +232,10 @@ object RetryTest extends TestSuite {
       'actionGroup {
         val group = (failOnInc >> incFailOnInc >> incNormal).times(4)
         val plan = Plan.action(incNormal >> group >> incNormal)
+        assertRetryWorks(plan)
+      }
+      'actionDueToBadObs {
+        val plan = Plan.action(queueUpdate >> *.action("Throw unless obs.value = 123")(x => assert(x.obs.value == 123)))
         assertRetryWorks(plan)
       }
       'preCondFail {
