@@ -3,7 +3,7 @@ package teststate.selenium
 import org.openqa.selenium.WebDriver
 
 /** Create tabs across multiple browsers */
-trait MultiBrowser[D <: WebDriver] extends MultiTab[D] {
+trait MultiBrowser[+D <: WebDriver] extends MultiTab[D] {
   def closeBrowser(browserIndex: Int, quit: Boolean = true): Unit
   def closeAllBrowsers(quit: Boolean = true): Unit
 }

@@ -2,7 +2,7 @@ package teststate.selenium
 
 import org.openqa.selenium.WebDriver
 
-trait MultiTab[D <: WebDriver] {
+trait MultiTab[+D <: WebDriver] {
   def openTab(): Tab[D]
 }
 
