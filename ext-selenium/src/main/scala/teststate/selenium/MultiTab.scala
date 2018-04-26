@@ -4,6 +4,9 @@ import org.openqa.selenium.WebDriver
 
 trait MultiTab[+D <: WebDriver] {
   def openTab(): Tab[D]
+
+  def openTabTo(url: String): Tab[D] =
+    openTab().tap(_.get(url))
 }
 
 object MultiTab {

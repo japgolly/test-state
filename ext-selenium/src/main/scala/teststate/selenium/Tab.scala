@@ -8,6 +8,11 @@ trait Tab[+D <: WebDriver] {
   /** Focus the tab and perform action within it */
   def use[A](f: D => A): A
 
+  final def tap(f: D => Any): this.type = {
+    use(f)
+    this
+  }
+
   /** Close the tab.
     *
     * @return whether this call was effective.
