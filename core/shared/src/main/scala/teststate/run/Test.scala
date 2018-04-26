@@ -303,6 +303,9 @@ final case class RunnableTest[F[_], R, O, S, E](test: Test[F, R, O, S, E], initi
   def withRetryPolicy(p: Retry.Policy): RunnableTest[F, R, O, S, E] =
     copy(test = test.withRetryPolicy(p))
 
+  def trans[G[_]: ExecutionModel](t: F ~~> G): RunnableTest[G, R, O, S, E] =
+    copy(test = test.trans(t))
+
   def run(): F[Report[E]] =
     Runner.run(test)(initialState, refFnFn())
 }
