@@ -7,6 +7,7 @@ package teststate.example.selenium
   */
 object MyTestState
   extends teststate.Exports
+    with teststate.selenium.Exports
     with teststate.domzipper.selenium.Exports {
 
   lazy val CI: Option[String] =
