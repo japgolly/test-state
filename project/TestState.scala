@@ -108,6 +108,11 @@ object TestState {
     .jsConfigure(
       _.settings(jsEnv in Test := new JSDOMNodeJSEnv))
 
+  def testSettingsCI =
+    testSettings.jvmConfigure(_.settings(
+      fork in Test := true,
+      javaOptions in Test += ("-DCI=" + System.getProperty("CI", ""))))
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   lazy val root =
@@ -121,7 +126,7 @@ object TestState {
       .aggregate(
         coreJVM, coreMacrosJVM,
         domZipperJVM, domZipperSelenium,
-        extScalazJVM, extCatsJVM, extNyayaJVM)
+        extScalazJVM, extCatsJVM, extNyayaJVM, extSelenium)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
@@ -168,7 +173,7 @@ object TestState {
 
   lazy val domZipperSelenium = project
     .in(file("dom-zipper-selenium"))
-    .configure(commonSettings.jvm, publicationSettings.jvm, testSettings.jvm)
+    .configure(commonSettings.jvm, publicationSettings.jvm, testSettingsCI.jvm)
     .dependsOn(domZipperJVM)
     .settings(
       moduleName := "dom-zipper-selenium",
@@ -176,10 +181,7 @@ object TestState {
         "org.seleniumhq.selenium" % "selenium-api"            % Ver.Selenium,
         "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium % Test,
         "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium % Test),
-      fork in Test := true,
-      javaOptions in Test ++= Seq(
-        "-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath,
-        "-DCI=" + System.getProperty("CI", "")))
+      javaOptions in Test += ("-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath))
 
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
@@ -239,6 +241,17 @@ object TestState {
         "com.github.japgolly.scalajs-react" %%% "test" % Ver.ScalaJsReact),
       jsEnv := new JSDOMNodeJSEnv)
 
+  lazy val extSelenium = project
+    .in(file("ext-selenium"))
+    .configure(commonSettings.jvm, publicationSettings.jvm, testSettingsCI.jvm)
+    .dependsOn(coreJVM)
+    .settings(
+      moduleName := "ext-selenium",
+      libraryDependencies ++= Seq(
+        "org.seleniumhq.selenium" % "selenium-api"            % Ver.Selenium,
+        "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium,
+        "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium))
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   lazy val examples =
@@ -248,15 +261,9 @@ object TestState {
 
   lazy val exampleSelenium = project
     .in(file("example-selenium"))
-    .configure(commonSettings.jvm, preventPublication, testSettings.jvm)
-    .dependsOn(coreJVM, domZipperSelenium)
-    .settings(
-      moduleName := "example-selenium",
-      libraryDependencies ++= Seq(
-        "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium % Test,
-        "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium % Test),
-      fork in Test := true,
-      javaOptions in Test += ("-DCI=" + System.getProperty("CI", "")))
+    .configure(commonSettings.jvm, preventPublication, testSettingsCI.jvm)
+    .dependsOn(coreJVM, domZipperSelenium, extSelenium)
+    .settings(moduleName := "example-selenium")
 
   lazy val exampleReactJS = project
     .in(file("example-react"))

@@ -92,17 +92,19 @@ This is a (simplified) model of how tests are executed:
 |-----------------------|-------------|-----------|
 | `core`                | The core module. | JVM + JS |
 | `dom-zipper`          | Standalone utility for observing web DOM with precision with conciseness.<br>This is the base API; concrete implementations below. | JVM + JS |
-| `dom-zipper-selenium` | DOM zipper built on [Selenium](https://www.seleniumhq.org/). | JVM |
+| `dom-zipper-selenium` | DOM zipper built on [Selenium](https://www.seleniumhq.org). | JVM |
 | `dom-zipper-sizzle`   | DOM zipper built on [Sizzle](https://sizzlejs.com/). | JS |
 | `ext-cats`            | Extensions for [Cats](https://github.com/typelevel/cats). | JVM + JS |
 | `ext-nyaya`           | Extensions for [Nyaya](https://github.com/japgolly/nyaya). | JVM + JS |
 | `ext-scalajs-react`   | Extensions for [scalajs-react](https://github.com/japgolly/scalajs-react). | JS |
 | `ext-scalaz`          | Extensions for [Scalaz](https://github.com/scalaz/scalaz). | JVM + JS |
+| `ext-selenium`        | Extensions for [Selenium](https://www.seleniumhq.org). | JVM |
 
 
 # Examples
 
 * [Scala.Js + React](example-react) - Demonstrates DomZipper, invariants, actions, basics.
+* [Selenium](example-selenium) - Demonstrates Selenium testing of external web content, using retry scheduling (instead of `Thread.sleep`), parallelism and concurrency.
 * [TODO] DB triggers.    - real external state, ref.
 * [TODO] Mutable sample. - fuzz, invariants.
 
