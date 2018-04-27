@@ -56,13 +56,18 @@ case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: S
     }
 
   def format[EE >: E](implicit as: AssertionSettings, s: DisplayError[EE]): String =
-    format[EE](if (failed) as.onFail else as.onPass)(s)
+    format[EE]()
+
+  def format[EE >: E](useFailSettingsOnPass: Boolean = false)
+                     (implicit as: AssertionSettings, s: DisplayError[EE]): String =
+    format[EE](if (failed || useFailSettingsOnPass) as.onFail else as.onPass)(s)
 
   def format[EE >: E](f: Format)(implicit s: DisplayError[EE]): String =
     f.format[EE](this)(s) getOrElse ""
 
+  @deprecated("Use .format(true)", "2.2.0")
   def formatF[EE >: E](implicit as: AssertionSettings, s: DisplayError[EE]): String =
-    format(as.failSettingsOnPass, s)
+    format(as.withFailSettingsOnPass, s)
 }
 
 object Report {
