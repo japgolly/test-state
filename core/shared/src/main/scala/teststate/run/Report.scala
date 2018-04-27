@@ -23,16 +23,19 @@ case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: S
       }
     ))
 
+  @deprecated("Use .assert(true)", "2.2.0")
   @elidable(elidable.ASSERTION)
   def assertF[EE >: E]()(implicit as: AssertionSettings, se: DisplayError[EE]): Unit =
-    assert[EE]()(as.failSettingsOnPass, se)
+    assert[EE]()(as.withFailSettingsOnPass, se)
 
   @elidable(elidable.ASSERTION)
-  def assert[EE >: E]()(implicit as: AssertionSettings, se: DisplayError[EE]): Unit =
-    failureReason(se) match {
+  def assert[EE >: E](useFailSettingsOnPass: Boolean = false)
+                     (implicit as: AssertionSettings, de: DisplayError[EE]): Unit =
+    failureReason(de) match {
 
       case None =>
-        as.onPass.print[EE](this)
+        val fmt = if (useFailSettingsOnPass) as.onFail else as.onPass
+        fmt.print[EE](this)
 
       case Some(fe) =>
         as.onFail.print[EE](this)
@@ -76,11 +79,15 @@ object Report {
   val  Stats = teststate.run.Stats
 
 
-  case class AssertionSettings(onPass: Format, onFail: Format) {
+  final case class AssertionSettings(onPass: Format, onFail: Format) {
     def silenceOnPass: AssertionSettings =
       copy(onPass = Format.quiet)
 
+    @deprecated("Use withFailSettingsOnPass", "2.2.0")
     def failSettingsOnPass: AssertionSettings =
+      copy(onPass = onFail)
+
+    def withFailSettingsOnPass: AssertionSettings =
       copy(onPass = onFail)
   }
 
