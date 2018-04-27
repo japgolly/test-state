@@ -1,6 +1,9 @@
 package teststate.selenium
 
+import java.util.concurrent.Executors
 import org.openqa.selenium.WebDriver
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 /** Create tabs across multiple browsers */
 trait MultiBrowser[+D <: WebDriver] extends MultiTab[D] {
@@ -61,13 +64,44 @@ object MultiBrowser {
       }
 
       // Locks: outer(browser)
+      override def closeAllBrowsers(quit: Boolean = true): Unit = {
+        val after: () => Unit =
+          outerMutex {
+            val bs = instances
+            bs.length match {
+              case 0 =>
+                () => ()
+              case 1 =>
+                _closeBrowser(bs.head, quit)
+                () => ()
+              case n =>
+                val threadPool = Executors.newFixedThreadPool(n)
+                implicit val ec = ExecutionContext.fromExecutorService(threadPool)
+                val f = Future.traverse(bs)(b => Future(_closeBrowser(b, quit)))
+                () => {
+                  Await.result(f, Duration.Inf)
+                  threadPool.shutdown()
+                  ec.shutdown()
+                }
+            }
+          }
+        after()
+      }
+
+      // Locks: outer(browser)
       override def closeBrowser(i: Int, quit: Boolean = true): Unit =
         outerMutex {
-          for (b <- instances.lift(i)) {
+          instances.lift(i).foreach(_closeBrowser(_, quit))
+        }
+
+      // Locks: outer(browser)
+      private def _closeBrowser(b: Browser, quit: Boolean): Unit =
+        outerMutex {
+          if (instances.exists(_ eq b)) {
             b.mutex {
               if (quit)
                 b.driver.quit()
-              // Hmmm ↑ this would cause tab.closeTab() to fail
+                // Hmmm ↑ this would cause tab.closeTab() to fail
               else {
                 implicit def d = b.driver
                 b.tabs.foreach(_.closeTab()) // locks browser,outer
@@ -79,11 +113,5 @@ object MultiBrowser {
           }
         }
 
-      // Locks: outer(browser)
-      override def closeAllBrowsers(quit: Boolean = true): Unit =
-        outerMutex {
-          // Parallelism would be nice
-          instances.indices.reverse.foreach(closeBrowser(_, quit))
-        }
     }
 }
