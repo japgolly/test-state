@@ -4,7 +4,7 @@ import org.openqa.selenium.WebDriver
 
 object Exports extends Exports
 
-trait Exports {
+trait Exports extends SeleniumExt {
 
   final type GrowthStrategy                = teststate.selenium.GrowthStrategy
   final val  GrowthStrategy                = teststate.selenium.GrowthStrategy
