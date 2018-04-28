@@ -9,6 +9,9 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 trait MultiBrowser[+D <: WebDriver] extends MultiTab[D] {
   def closeBrowser(browserIndex: Int, quit: Boolean = true): Unit
   def closeAllBrowsers(quit: Boolean = true): Unit
+
+  /** Note: Creates a brand-new, unrelated MultiBrowser instance. */
+  def tapDriver(f: D => Any): MultiBrowser[D]
 }
 
 object MultiBrowser {
@@ -27,6 +30,15 @@ object MultiBrowser {
 
       private var instances: Vector[Browser] =
         Vector.empty
+
+      override def tapDriver(f: D => Any): MultiBrowser[D] = {
+        def newDriver2 = {
+          val d = newDriver
+          f(d)
+          d
+        }
+        MultiBrowser(newDriver2, growthStrategy)(tabSupport)
+      }
 
       // Locks: outer
       override def openTab(): Tab[D] = outerMutex {
