@@ -33,7 +33,7 @@ final class TodoObs($: HtmlDomZipper) {
     $.collect0n("li")
 
   val itemCompleteButtons: Map[String, Option[html.Button]] =
-    items.mapZippers(z =>
+    items.map(z =>
       z("pre").innerText -> z.collect01("button").as[html.Button].doms
     ).toMap
 

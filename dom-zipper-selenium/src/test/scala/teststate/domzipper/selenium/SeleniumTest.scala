@@ -46,7 +46,7 @@ object SeleniumTest extends TestSuite {
       'collect - {
         assertEq(checkboxes.size, 2)
         assertEq(checkboxes.mapDoms(_.isSelected), Vector(true, false))
-        assertEq(checkboxes.mapZippers(_.checked), Vector(true, false))
+        assertEq(checkboxes.map(_.checked), Vector(true, false))
       }
 
       'selectedOption {

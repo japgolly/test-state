@@ -27,7 +27,7 @@ object SeleniumExample extends TestSuite {
       $("button", 1 of 3).dom
 
     val responseText: Option[String] =
-      $.collect01("table").mapZippers(_("td", 2 of 2).innerText)
+      $.collect01("table").map(_("td", 2 of 2).innerText)
 
     // println(s"responseText = ${responseText.toString.replace("\n", " ").take(60)}")
   }

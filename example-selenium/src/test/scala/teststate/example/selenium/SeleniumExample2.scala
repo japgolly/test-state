@@ -47,7 +47,7 @@ object SeleniumExample2 extends TestSuite {
       $.collect0n("[name=q]").doms.head
 
     val resultStats: Option[String] =
-      $.collect01("#resultStats").mapZippers(_.innerText)
+      $.collect01("#resultStats").map(_.innerText)
 
     val resultCount: Option[Long] =
       resultStats.map {

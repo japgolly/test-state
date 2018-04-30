@@ -170,12 +170,16 @@ trait DomZipperModule {
     final def mapDoms[A](f: D => A): Out[C[A]] =
       doms.map(cont.map(_)(f))
 
+    @deprecated("Use .map", "2.2.0")
     final def mapZippers[A](f: DomZipper[D, Next, Out] => A): Out[C[A]] =
+      map(f)
+
+    final def map[A](f: DomZipper[D, Next, Out] => A): Out[C[A]] =
       mapDoms(d => f(addLayer(d)))
 
-    final def outerHTMLs[A]: Out[C[String]] = mapZippers(_.outerHTML)
-    final def innerHTMLs[A]: Out[C[String]] = mapZippers(_.innerHTML)
-    final def innerTexts[A]: Out[C[String]] = mapZippers(_.innerText)
+    final def outerHTMLs[A]: Out[C[String]] = map(_.outerHTML)
+    final def innerHTMLs[A]: Out[C[String]] = map(_.innerHTML)
+    final def innerTexts[A]: Out[C[String]] = map(_.innerText)
   }
 
   object AbstractCollector {
