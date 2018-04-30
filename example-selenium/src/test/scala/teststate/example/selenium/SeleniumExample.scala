@@ -24,7 +24,7 @@ object SeleniumExample extends TestSuite {
     private val $ = DomZipperSelenium.html(ref)
 
     val button: WebElement =
-      $("button", 1 of 3).webElement
+      $("button", 1 of 3).dom
 
     val responseText: Option[String] =
       $.collect01("table").mapZippers(_("td", 2 of 2).innerText)

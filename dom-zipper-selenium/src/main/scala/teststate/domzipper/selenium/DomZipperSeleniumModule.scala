@@ -57,14 +57,14 @@ object DomZipperSeleniumModule extends DomZipperModule {
     override protected def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out] =
       new Collector(this, sel, c)
 
-    def webElement: WebElement =
+    def dom: WebElement =
       curLayer.dom
 
     def getAttribute(name: String): Option[String] =
-      Option(webElement.getAttribute(name))
+      Option(dom.getAttribute(name))
 
     def needAttribute(name: String): Out[String] =
-      h.option(getAttribute(name), s"${webElement.getTagName} doesn't have attribute $name")
+      h.option(getAttribute(name), s"${dom.getTagName} doesn't have attribute $name")
 
     protected override def _outerHTML =
       getAttribute("outerHTML").fold("null")(htmlScrub.run)
@@ -73,17 +73,17 @@ object DomZipperSeleniumModule extends DomZipperModule {
       getAttribute("innerHTML").fold("null")(htmlScrub.run)
 
     override def innerText: String =
-      webElement.getText()
+      dom.getText()
 
     override def value: Out[String] =
-      getAttribute("value") orFail s".value failed on <${webElement.getTagName}>."
+      getAttribute("value") orFail s".value failed on <${dom.getTagName}>."
 
     override def checked: Out[Boolean] =
-      webElement.isSelected
+      dom.isSelected
 
     /** The currently selected option in a &lt;select&gt; dropdown. */
     def selectedOption: Out[Collector[Option, Next, Next, Out]] =
-      webElement.getTagName.toUpperCase match {
+      dom.getTagName.toUpperCase match {
         case "SELECT" => collect01("option[selected]")
         case x        => h.fail(s"<$x> is not a <SELECT>")
       }
