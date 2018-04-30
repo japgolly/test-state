@@ -3,10 +3,8 @@ package teststate.typeclass
 import acyclic.file
 import java.time.Instant
 import java.util.{Date, Timer, TimerTask}
-import java.util.concurrent.{ScheduledThreadPoolExecutor, TimeUnit}
 import scala.annotation.tailrec
 import scala.concurrent._
-import scala.concurrent.duration._
 import teststate.data._
 
 trait ExecutionModel[M[_]] {
