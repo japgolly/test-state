@@ -4,6 +4,7 @@ import java.time.Instant
 import scala.concurrent.duration._
 import teststate.Exports._
 import utest._
+import TestUtil._
 
 object RetryTest extends TestSuite {
 
@@ -141,8 +142,16 @@ object RetryTest extends TestSuite {
 
   val observer = Observer((_: Ref).toObs())
 
+  def mkTest(plan: *.Plan, refMod: Ref => Unit = _ => ()) =
+    plan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
+
   def assertRetryWorks(plan: *.Plan, refMod: Ref => Unit = _ => ()): Unit = {
-    val test = plan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
+    _assertRetryWorks(plan, refMod)
+    ()
+  }
+
+  def _assertRetryWorks(plan: *.Plan, refMod: Ref => Unit = _ => ()): Report[String] = {
+    val test = mkTest(plan, refMod)
     debug()
 
     // With appropriate retry
@@ -158,6 +167,8 @@ object RetryTest extends TestSuite {
     // val resultWithInsufficientRetry = test.withRetryPolicy(insufficientRetryPolicy).run()
     // assert(resultWithInsufficientRetry.failed)
     // debug()
+
+    retryResult
   }
 
   def assertInvariantFails(plan: *.Plan, refMod: Ref => Unit = _ => ()): Unit = {
@@ -320,6 +331,23 @@ object RetryTest extends TestSuite {
       'invariant {
         val plan = Plan.action(*.action("invalidate invariant")(_.ref.invalidateInvariant()))
         assertInvariantFails(plan)
+      }
+
+      'reportObsErrorAfterActionError {
+        val plan = Plan.action(*.action("I love my little one, Nim") { x =>
+          x.ref.failOnValue.simFail(3)
+          ???
+        })
+        val report = mkTest(plan).withRetryPolicy(retryPolicy).run()
+        assertRun(report,
+          """
+            |✓ Initial state.
+            |  ✓ invariantOk should be true.
+            |✘ I love my little one, Nim
+            |  ✘ Action -- Caught exception: scala.NotImplementedError: an implementation is missing
+            |  ✘ Observation -- Caught exception: java.lang.RuntimeException: SimFailure on value(): 0 failures remaining
+            |Performed 1 action, 1 check (with 3 retries).
+          """.stripMargin)
       }
     }
 

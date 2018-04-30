@@ -43,7 +43,7 @@ object Retry {
                       EM.schedule(EM.map(retryF)(a2 => Left((a2, Some(retryCtx2))): Out), at)
                     case None =>
                       // No more retries
-                      EM.pure(Right(initialA))
+                      EM.pure(Right(a))
                   }
                 result
               }

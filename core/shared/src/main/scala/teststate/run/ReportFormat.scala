@@ -145,6 +145,11 @@ object ReportFormat {
           units(sb, s.performedActions, "action")
           sb append ", "
           units(sb, s.performedChecks, "check")
+          if (s.retries > 0) {
+            sb append " (with "
+            sb append s.retries
+            sb append " retries)"
+          }
           ()
         }
 
@@ -162,11 +167,6 @@ object ReportFormat {
       val default: StatsFormat =
         StatsFormat { (sb, s) =>
           _withoutTime.run(sb, s)
-          if (s.retries > 0) {
-            sb append " (with "
-            sb append s.retries
-            sb append " retries)"
-          }
           sb append " in "
           sb append sec1(s.totalTime)
           sb append '.'

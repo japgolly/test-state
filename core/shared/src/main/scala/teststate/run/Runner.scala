@@ -242,6 +242,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                             (implicit stats: Stats.Mutable): F[A] =
     EM.flatMap(firstAttempt)(_withRetryF(_)(repeatAttempts, failed))
 
+  private def withRetryF1I[A](firstAttempt: => F[A])(repeatAttempts: A => F[A], failed: A => Boolean)
+                            (implicit stats: Stats.Mutable): F[A] =
+    EM.flatMap(firstAttempt)(a0 => _withRetryF(a0)(repeatAttempts(a0), failed))
+
   private def _withRetryF[A](initialA: A)(retryF: => F[A], failed: A => Boolean)
                             (implicit stats: Stats.Mutable): F[A] = {
     def retryWithStats = EM.flatMap(EM.point(stats.retries += 1))(_ => retryF)
@@ -473,7 +477,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
     case class ActionFail[+A](failure: FE, a: A) extends ActionResult[Nothing, A] {
       override def retry = true
     }
-    case class ObsFail[+A](failure: FE, a: A) extends ActionResult[Nothing, A] {
+    case class ObsFail[+A](actionFailure: Option[FE], obsFailure: FE, a: A) extends ActionResult[Nothing, A] {
       override def retry = true
     }
   }
@@ -483,9 +487,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                            ros0     : ROS,
                            preChecks: ROS => ActionResult.PreCheckFail Or X): F[ActionResult[O => E Or S, X]] = {
 
-    type Result = F[ActionResult[O => E Or S, X]]
+    type Result = ActionResult[O => E Or S, X]
+    type ResultF = F[Result]
 
-    def go(ros: ROS): Result =
+    def go(ros: ROS): ResultF =
       actionFn(ros) match {
         case Some(act1) =>
 
@@ -506,15 +511,21 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
           EM.pure(ActionResult.Skip)
       }
 
-    lazy val obsX = preChecks(ros0)
+    lazy val initialPreCheck = preChecks(ros0)
 
-    def onRetry: Result =
+    def onRetry(initialFailure: Result): ResultF =
       EM.flatMap(reObserve()) {
         case Right((r, o)) => go(ROS(r, o, ros0.state))
-        case Left(e)       => EM.pure(obsX.fold(identity, ActionResult.ObsFail(e, _)))
+        case Left(e)       =>
+          val actionFailure: Option[FE] =
+            initialFailure match {
+              case ActionResult.ActionFail(fe, _) => Some(fe)
+              case _ => None // The shit types don't let me prove this but this isn't possible
+            }
+          EM.pure(initialPreCheck.fold(identity, ActionResult.ObsFail(actionFailure, e, _)))
       }
 
-    withRetryF1(go(ros0), onRetry)(_.retry)
+    withRetryF1I(go(ros0))(onRetry, _.retry)
   }
 
   private def subtest(test: Test,
@@ -575,7 +586,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                       case ActionResult.ActionFail(e, (_, onComplete)) =>
                         EM pure fail(onComplete, hist1Fn(Fail(e)))
 
-                      case ActionResult.ObsFail(e, (_, onComplete)) =>
+                      case ActionResult.ObsFail(Some(ae), oe, (_, onComplete)) =>
+                        EM pure fail(onComplete, hist2Fn(Fail(ae), History.Step(Observation, Fail(oe))))
+
+                      case ActionResult.ObsFail(None, e, (_, onComplete)) =>
                         EM pure fail(onComplete, hist1Fn(Fail(e)))
 
                       case ActionResult.Skip =>
