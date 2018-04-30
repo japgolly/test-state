@@ -70,8 +70,8 @@ object SeleniumExample2 extends TestSuite {
     val testsAsync   = tests.map(t => t.trans(ExecutionModel.toFuture))
     val asyncResults = Future.traverse(testsAsync)(_.run())
     val results      = Await.result(asyncResults, 1 minute)
-    results.foreach(_.assert(true))
     mb.closeAllBrowsers()
+    results.foreach(_.assert(true))
   }
 
   override def tests = CI match {

@@ -17,6 +17,9 @@ object SeleniumTest extends TestSuite {
     options.setHeadless(true)
     options.addArguments("--no-sandbox") // Travis workaround: https://github.com/SeleniumHQ/selenium/issues/4961
     val driver = new ChromeDriver(options)
+    Runtime.getRuntime.addShutdownHook(new Thread() {
+      override def run(): Unit = driver.quit()
+    })
     driver.get("file://" + testHtmlPath)
     DomZipperSelenium.html(driver)
   }

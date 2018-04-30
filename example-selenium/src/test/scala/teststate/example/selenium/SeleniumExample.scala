@@ -3,6 +3,7 @@ package teststate.example.selenium
 import utest._
 import MyTestState._
 import java.util.concurrent.TimeUnit
+import scala.concurrent.duration._
 import org.openqa.selenium.{WebDriver, WebElement}
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 
@@ -42,14 +43,16 @@ object SeleniumExample extends TestSuite {
   override def tests = CI match {
     case None => TestSuite {
 
+      val driver = openBrowser()
       val plan = Plan.action(clickGet +> responseText.assert.exists("Response", _ contains "Response"))
-      plan
+      val report = plan
         .test(observer)
         .stateless
-        .withLazyRef(openBrowser())
-        .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200, 12000))
+        .withRef(driver)
+        .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 12 seconds))
         .run()
-        .assert()
+      driver.quit()
+      report.assert()
     }
 
     case Some(_) => TestSuite {}
