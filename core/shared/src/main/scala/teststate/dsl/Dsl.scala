@@ -11,7 +11,7 @@ import CoreExports._
 
 object Dsl {
   def full[F[_]: ExecutionModel, R, O, S, E] =
-    new Dsl[F, R, O, S, E]
+    new Dsl[F, R, O, S, E](identity)
 
   def apply[R, O, S] =
     full[Id, R, O, S, String]
@@ -41,7 +41,8 @@ object Dsl {
 }
 
 
-final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Types[F, R, O, S, E] {
+final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Action.Single[F, R, O, S, E])
+                                 (implicit EM: ExecutionModel[F]) extends Dsl.Types[F, R, O, S, E] {
 
   // Allows: import dsl.Types._
   val Types = Dsl.Types[F, R, O, S, E]
@@ -135,8 +136,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
       full(i => EM.map(f(i))(os => Right(os.andThen(Right(_)))))
 
     def full[U](f: ROS => F[E Or (O => E Or S)]): Actions = {
-      val a = Action.Single[F, R, O, S, E](i => Some(() => f(i)))
-      Action.liftInner(a)(actionName)
+      val a1 = Action.Single[F, R, O, S, E](i => Some(() => f(i)))
+      val a2 = actionMod(a1)
+      Action.liftInner(a2)(actionName)
     }
   }
 
@@ -147,6 +149,9 @@ final class Dsl[F[_], R, O, S, E](implicit EM: ExecutionModel[F]) extends Dsl.Ty
     action(name)(i => EM.point {
       println(f(i))
     })
+
+  def withActionMod(f: Action.Single[F, R, O , S, E] => Action.Single[F, R, O , S, E]): Dsl[F, R, O, S, E] =
+    new Dsl(f compose actionMod)
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

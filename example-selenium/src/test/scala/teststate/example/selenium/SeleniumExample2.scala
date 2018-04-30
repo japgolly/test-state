@@ -2,6 +2,7 @@ package teststate.example.selenium
 
 import utest._
 import MyTestState._
+import java.time.Instant
 import java.util.concurrent.{Executors, TimeUnit}
 import org.openqa.selenium.{Keys, WebDriver, WebElement}
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
@@ -27,8 +28,20 @@ object SeleniumExample2 extends TestSuite {
 
   val resultRegex = "^About ([0-9,]+) .*".r
 
+  private var debugOn = false
+  private val debugLock = new AnyRef
+
+  private def debug(msg: => String): Unit =
+    if (debugOn)
+      debugLock.synchronized {
+        System.out.println("%s [%-6d] %s".format(Instant.now().toString, Thread.currentThread().getId, msg))
+        System.out.flush()
+      }
+
   class Obs(driver: WebDriver, name: String) {
     private val $ = DomZipperSelenium.html(driver)
+
+    debug(s"Observing $name...")
 
     val searchField: WebElement =
       $.collect0n("[name=q]").doms.head
@@ -41,12 +54,12 @@ object SeleniumExample2 extends TestSuite {
         case resultRegex(numStr) => numStr.replace(",", "").toLong
       }
 
-    // println(s"$name - $resultCount")
+    debug(s"Observed $name. Result count = ${resultCount.fold("N/A")(_.toString)}")
   }
 
   val observer: Observer[Ref, Obs, String] = Observer(_.observe())
 
-  val * = Dsl[Ref, Obs, Unit]
+  val * = Dsl[Ref, Obs, Unit].withSeleniumTab(_.tab)
 
   def searchFor(term: String) =
     *.action(s"Search for '$term'")(_.obs.searchField.sendKeys(term + Keys.ENTER))
@@ -59,7 +72,7 @@ object SeleniumExample2 extends TestSuite {
     )
       .test(observer)
       .stateless
-      .withRetryPolicy(Retry.Policy.fixedIntervalAndAttempts(200 millis, 20))
+      .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 2 seconds))
 
   def testInParallel() = {
     implicit val ec  = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))

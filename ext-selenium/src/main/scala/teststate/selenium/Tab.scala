@@ -2,7 +2,10 @@ package teststate.selenium
 
 import org.openqa.selenium.WebDriver
 
-/** Access to a specific tab in a browser. */
+/** Access to a specific tab in a browser.
+  *
+  * Ensure that you call `.withSeleniumTab` on your TestState DSL when using this.
+  */
 trait Tab[+D <: WebDriver] {
 
   /** Focus the tab and perform action within it */
