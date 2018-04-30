@@ -69,17 +69,32 @@ object Retry {
         else
           None)
 
-    def fixedIntervalWithTimeout(interval: Duration, timeout: Duration): Policy =
-      fixedIntervalWithTimeout(interval.toMillis, timeout.toMillis)
-
-    def fixedIntervalWithTimeout(intervalMs: Long, timeoutMs: Long): Policy =
+    def fixedIntervalWithTimeout(interval: Duration, timeout: Duration): Policy = {
+      val intervalMs = interval.toMillis
+      val timeoutMs = timeout.toMillis
       apply { (ctx, now) =>
-        val limit = ctx.firstFailure.plusMillis(timeoutMs)
-        if (now.isAfter(limit))
-          None
-        else
-          Some(ctx.lastFailure.plusMillis(intervalMs))
+        val deadline = ctx.firstFailure.plusMillis(timeoutMs)
+        if (now.isAfter(deadline)) {
+          // Because retries are scheduled they aren't guaranteed to execute on time
+          // It isn't uncommon with high concurrency to see one attempt then a huuuuugue delay due to
+          // thread contention, then finally we arrive here and see that now+interval > deadline
+          // Before giving up, we should try once *at* the deadline.
+          if (ctx.lastFailure.isBefore(deadline))
+            Some(now)
+          else
+            None
+        } else
+          Some {
+            val t = ctx.lastFailure.plusMillis(intervalMs)
+            if (t.isAfter(deadline))
+              deadline
+            else if (t.isBefore(now))
+              now
+            else
+              t
+          }
       }
+    }
   }
 
   // ===================================================================================================================

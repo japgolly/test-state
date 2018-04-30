@@ -1,6 +1,7 @@
 package teststate
 
-import scala.concurrent.duration.Duration
+import java.time.Instant
+import scala.concurrent.duration._
 import teststate.Exports._
 import utest._
 
@@ -176,6 +177,18 @@ object RetryTest extends TestSuite {
         ()
   }
 
+  def retryCtx(i1: Instant, in: Instant*): Retry.Ctx = {
+    val is = i1 +: in.toVector
+    Retry.Ctx(is.init, is.last)
+  }
+
+  implicit class InstantExt(private val self: Instant) extends AnyVal {
+    def +[B](d: Duration): Instant = self.plusMillis(d.toMillis)
+    def -[B](d: Duration): Instant = self.minusMillis(d.toMillis)
+  }
+
+
+
   override def tests = TestSuite {
 
     'stackSafe {
@@ -189,6 +202,51 @@ object RetryTest extends TestSuite {
           .runU()
       // println(result.format)
       assert(result.failed)
+    }
+
+    'policy {
+      'timeout {
+        val interval = 1 second
+        val timeout = 6 seconds
+        val policy = Retry.Policy.fixedIntervalWithTimeout(interval, timeout)
+        val now = Instant.now()
+        def test(ds: Duration*)(expect: Option[Instant]) = {
+          val is = ds.map(now - _)
+          val ctx = retryCtx(is.head, is.tail: _*)
+          val actual = policy.nextTry(ctx, now)
+          assert(actual == expect)
+        }
+
+        //   +--- 1s --+ (interval)
+        //   |    .    |
+        // -200ms | +800ms
+        'interval1 - test(200.millis)(Some(now + 800.millis))
+
+        // 4s + interval is in the past! result should be now
+        // -4s  |  +0ms
+        'limitToNow - test(4.seconds)(Some(now))
+
+        //   +-------------- 6s --------------+
+        //   +-- 5.3s --+-- 0.5s --|-- 0.2s --+
+        //   |          |          .          |
+        // -5.8s      -0.5s        |        +0.2s
+        'limitToTimeout - test(5.8.seconds,0.5.seconds)(Some(now + 200.millis))
+
+        //  +-- 4s --+-- 1s --+ (interval)
+        //  |        |    .   |
+        // -4.3s   -0.3s  | +0.7s
+        'interval2 - test(4.3.seconds, 0.3.seconds)(Some(now + 0.7.seconds))
+
+        //  +-- 9s --+-- 0s --+ (scheduler caused huge delay, try once after deadline)
+        //  |        |        |
+        // -9s       |       +0s
+        'overOnce - test(9.seconds)(Some(now))
+
+        //   +--- 6s ---+---- 1s ----+ (stop, already tried once past deadline)
+        //   |          |        |   |
+        // -6.8s    deadline   -0.2s |
+        'overTwice - test(6.8.seconds, 0.2.seconds)(None)
+      }
     }
 
     'initial {
