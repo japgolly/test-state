@@ -218,6 +218,27 @@ object Runner {
     case Right((_, h)) => h.failed
     case _ => true
   }
+
+  val retryCheckAround0: ActionResult.PreCheckFail[Any] Or Any => Boolean = {
+    case Left(x) => x.retry
+    case _ => false
+  }
+
+  sealed trait ActionResultF[+V, +A, +P, +FE] {
+    def retry = false
+  }
+  object ActionResult {
+    case class Success[+V, +A](s: V, a: A) extends ActionResultF[V, A, Nothing, Nothing]
+    case object Skip extends ActionResultF[Nothing, Nothing, Nothing, Nothing]
+    case class PreCheckFail[+P](progress: P, override val retry: Boolean) extends ActionResultF[Nothing, Nothing, P, Nothing]
+    case class ActionFail[+A, +FE](failure: FE, a: A) extends ActionResultF[Nothing, A, Nothing, FE] {
+      override def retry = true
+    }
+    case class ObsFail[+A, +FE](actionFailure: Option[FE], obsFailure: FE, a: A) extends ActionResultF[Nothing, A, Nothing, FE] {
+      override def retry = true
+    }
+  }
+
 }
 
 /**
@@ -225,7 +246,7 @@ object Runner {
   */
 private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                                             (implicit EM: ExecutionModel[F], attempt: Attempt[E]) {
-  import Runner._
+  import Runner.{ActionResultF => _, _}
 
   private type FE   = Failure[E]
   private type H    = History[FE]
@@ -233,6 +254,8 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
   private type ROS  = teststate.data.ROS[R, O, S]
   private type Test = teststate.run.Test[F, R, O, S, E]
   private type P    = Progress[F, R, O, S, E]
+
+  private type ActionResult[+V, +A] = Runner.ActionResultF[V, A, P, FE]
 
   // TODO Ref result should be in an F
   // TODO Observer result should be in an F
@@ -331,10 +354,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                            p0        : P,
                            run       : PostCheckFn => F[(H, ROS, HH)]): F[P] = {
 
-    def runPreChecks1(p: P): ActionResult.PreCheckFail Or (PostCheckFn, (H, ROS, HH) => P) =
+    def runPreChecks1(p: P): ActionResult.PreCheckFail[P] Or (PostCheckFn, (H, ROS, HH) => P) =
       runPreChecks(name, invariants, arounds, collapse, p)
 
-    def runPreChecks2: F[ActionResult.PreCheckFail Or (PostCheckFn, (H, ROS, HH) => P)] =
+    def runPreChecks2: F[ActionResult.PreCheckFail[P] Or (PostCheckFn, (H, ROS, HH) => P)] =
       EM.map(reObserve()) {
         case Right((r, o)) => runPreChecks1(p0.copy(ros = ROS(r, o, p0.ros.state)))
         case Left(_) => runPreChecks1(p0)
@@ -350,16 +373,11 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
     }
   }
 
-  private val retryCheckAround0: ActionResult.PreCheckFail Or Any => Boolean = {
-    case Left(x) => x.retry
-    case _ => false
-  }
-
   private def runPreChecks(name      : Name,
                            invariants: Invariants[O, S, E],
                            arounds   : Arounds[O, S, E],
                            collapse  : Boolean,
-                           p         : P): ActionResult.PreCheckFail Or (PostCheckFn, (H, ROS, HH) => P) = {
+                           p         : P): ActionResult.PreCheckFail[P] Or (PostCheckFn, (H, ROS, HH) => P) = {
 
     // Perform before
     val preResults: (PreCheck[H], PreCheck[UnpackChecks[List, O, S, E]]) = {
@@ -474,25 +492,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
     PostCheckResults(post, invs)
   }
 
-  private sealed trait ActionResult[+V, +A] {
-    def retry = false
-  }
-  private object ActionResult {
-    case class Success[+V, +A](s: V, a: A) extends ActionResult[V, A]
-    case object Skip extends ActionResult[Nothing, Nothing]
-    case class PreCheckFail(progress: P, override val retry: Boolean) extends ActionResult[Nothing, Nothing]
-    case class ActionFail[+A](failure: FE, a: A) extends ActionResult[Nothing, A] {
-      override def retry = true
-    }
-    case class ObsFail[+A](actionFailure: Option[FE], obsFailure: FE, a: A) extends ActionResult[Nothing, A] {
-      override def retry = true
-    }
-  }
-
   private def runAction[X](actionFn : ROS => Option[() => F[E Or (O => E Or S)]],
                            reObserve: () => F[FE Or (R, O)],
                            ros0     : ROS,
-                           preChecks: ROS => ActionResult.PreCheckFail Or X): F[ActionResult[O => E Or S, X]] = {
+                           preChecks: ROS => ActionResult.PreCheckFail[P] Or X): F[ActionResult[O => E Or S, X]] = {
 
     type Result = ActionResult[O => E Or S, X]
     type ResultF = F[Result]
