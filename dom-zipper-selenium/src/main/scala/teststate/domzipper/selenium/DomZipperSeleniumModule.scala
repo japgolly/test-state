@@ -55,7 +55,7 @@ object DomZipperSeleniumModule extends DomZipperModule {
       new DomZipper(prevLayers :+ curLayer, nextLayer, htmlScrub)
 
     override protected def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out] =
-      new Collector(this, sel, c)
+      new Collector(this, sel, c, None)
 
     def dom: WebElement =
       curLayer.dom
@@ -103,7 +103,12 @@ object DomZipperSeleniumModule extends DomZipperModule {
 
   final class Collector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
                                                                    sel: String,
-                                                                   cont: Container[C, Out])
+                                                                   cont: Container[C, Out],
+                                                                   colFilter: Option[NextBase => Boolean])
                                                                   (implicit h: ErrorHandler[Out])
-      extends AbstractCollector[C, D, Next, Out](from, sel, cont)
+      extends AbstractCollector[C, D, Next, Out](from, sel, cont, colFilter) {
+
+    override protected def withFilter(colFilter: Option[NextBase => Boolean]): Collector[C, D, Next, Out] =
+      new Collector(from, sel, cont, colFilter)
+  }
 }
