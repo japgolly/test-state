@@ -85,6 +85,9 @@ trait DomZipperModule {
     final def exists(sel: String): Boolean =
       collect0n(sel).nonEmpty
 
+    final def exists(sel: String, suchThat: DomZipper[Next, Next, Out] => Boolean): Boolean =
+      collect0n(sel).filter(suchThat).nonEmpty
+
     final def editables01 = collect01(DomZipperModule.EditableSel)
     final def editables0n = collect0n(DomZipperModule.EditableSel)
     final def editables1n = collect1n(DomZipperModule.EditableSel)
