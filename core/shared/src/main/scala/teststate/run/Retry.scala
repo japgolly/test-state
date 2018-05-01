@@ -13,21 +13,21 @@ object Retry {
     */
   final case class Policy(nextTry: (Ctx, Instant) => Option[Instant]) extends AnyVal {
 
-    def unsafeRetryOnException[A](a: => A)(implicit EM: ExecutionModel[Id]): A =
-      unsafeRetryOnException(a, a)
+    def unsafeRetryOnException[A](scope: Scope, a: => A)(implicit EM: ExecutionModel[Id]): A =
+      unsafeRetryOnException(scope, a, a)
 
-    def unsafeRetryOnException[A](first: => A, subsequent: => A)(implicit EM: ExecutionModel[Id]): A = {
+    def unsafeRetryOnException[A](scope: Scope, first: => A, subsequent: => A)(implicit EM: ExecutionModel[Id]): A = {
       type X = Failure.WithCause[Throwable] Or A
       def firstId: Id[X] = Attempt.id.attempt(first)
       def subsequentId: Id[X] = Attempt.id.attempt(subsequent)
-      retryI(firstId)(_.isLeft, subsequentId).recover[A](f => throw f.theCause)
+      retryI(scope, firstId)(_.isLeft, subsequentId).recover[A](f => throw f.theCause)
     }
 
-    def retry[F[_], A](task: => F[A])(failed: A => Boolean)
+    def retry[F[_], A](scope: Scope, task: => F[A])(failed: A => Boolean)
                       (implicit EM: ExecutionModel[F]): F[A] =
-      EM.flatMap(task)(retryI(_)(failed, task))
+      EM.flatMap(task)(retryI(scope, _)(failed, task))
 
-    def retryI[F[_], A](initialA: A)(failed: A => Boolean, retryF: => F[A])
+    def retryI[F[_], A](scope: Scope, initialA: A)(failed: A => Boolean, retryF: => F[A])
                        (implicit EM: ExecutionModel[F]): F[A] =
       if (failed(initialA)) {
         type InProgress = (A, Option[Retry.Ctx])
@@ -36,7 +36,7 @@ object Retry {
           case (a, retryCtx1) =>
             if (failed(a))
               EM.flatMap(EM.now) { now2 =>
-                val retryCtx2 = retryCtx1.fold(Retry.Ctx.init(now2))(_.add(now2))
+                val retryCtx2 = retryCtx1.fold(Retry.Ctx.init(scope, now2))(_.add(now2))
                 val result: F[Out] =
                   nextTry(retryCtx2, now2) match {
                     case Some(at) =>
@@ -99,7 +99,7 @@ object Retry {
 
   // ===================================================================================================================
 
-  final case class Ctx(failuresFirstToSecondLast: Vector[Instant], lastFailure: Instant) {
+  final case class Ctx(scope: Scope, failuresFirstToSecondLast: Vector[Instant], lastFailure: Instant) {
     def firstFailure: Instant =
       failuresFirstToSecondLast.headOption getOrElse lastFailure
 
@@ -113,11 +113,23 @@ object Retry {
       retryCount + 1
 
     def add(newerFailure: Instant): Ctx =
-      Ctx(failuresFirstToLast, newerFailure)
+      Ctx(scope, failuresFirstToLast, newerFailure)
   }
 
   object Ctx {
-    def init(at: Instant): Ctx =
-      apply(Vector.empty, at)
+    def init(scope: Scope, at: Instant): Ctx =
+      apply(scope, Vector.empty, at)
+  }
+
+  sealed trait Scope
+  object Scope {
+    case object Reference extends Scope
+    case object Observation extends Scope
+    case object InitialInvariants extends Scope
+    case object PreConditions extends Scope
+    case object Action extends Scope
+    /** Re-observation and state update */
+    case object PostAction extends Scope
+    case object PostConditions extends Scope
   }
 }

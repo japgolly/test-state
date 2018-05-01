@@ -185,7 +185,7 @@ object RetryTest extends TestSuite {
 
   def retryCtx(i1: Instant, in: Instant*): Retry.Ctx = {
     val is = i1 +: in.toVector
-    Retry.Ctx(is.init, is.last)
+    Retry.Ctx(Retry.Scope.Action, is.init, is.last)
   }
 
   implicit class InstantExt(private val self: Instant) extends AnyVal {

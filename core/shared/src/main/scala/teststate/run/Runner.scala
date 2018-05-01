@@ -260,30 +260,30 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
   // TODO Ref result should be in an F
   // TODO Observer result should be in an F
 
-  private def withRetry[A](impureRun: () => A)(failed: A => Boolean)
+  private def withRetry[A](scope: Retry.Scope, impureRun: () => A)(failed: A => Boolean)
                           (implicit stats: Stats.Mutable): F[A] =
-    _withRetryF(impureRun())(EM.point(impureRun()), failed)
+    _withRetryF(scope, impureRun())(EM.point(impureRun()), failed)
 
-  private def withRetryF[A](impureRun: => F[A])(failed: A => Boolean)
+  private def withRetryF[A](scope: Retry.Scope, impureRun: => F[A])(failed: A => Boolean)
                            (implicit stats: Stats.Mutable): F[A] =
-    EM.flatMap(impureRun)(_withRetryF(_)(impureRun, failed))
+    EM.flatMap(impureRun)(_withRetryF(scope, _)(impureRun, failed))
 
-  private def withRetryF1[A](firstAttempt: => F[A], repeatAttempts: => F[A])(failed: A => Boolean)
+  private def withRetryF1[A](scope: Retry.Scope, firstAttempt: => F[A], repeatAttempts: => F[A])(failed: A => Boolean)
                             (implicit stats: Stats.Mutable): F[A] =
-    EM.flatMap(firstAttempt)(_withRetryF(_)(repeatAttempts, failed))
+    EM.flatMap(firstAttempt)(_withRetryF(scope, _)(repeatAttempts, failed))
 
-  private def withRetryF1I[A](firstAttempt: => F[A])(repeatAttempts: A => F[A], failed: A => Boolean)
+  private def withRetryF1I[A](scope: Retry.Scope, firstAttempt: => F[A])(repeatAttempts: A => F[A], failed: A => Boolean)
                             (implicit stats: Stats.Mutable): F[A] =
-    EM.flatMap(firstAttempt)(a0 => _withRetryF(a0)(repeatAttempts(a0), failed))
+    EM.flatMap(firstAttempt)(a0 => _withRetryF(scope, a0)(repeatAttempts(a0), failed))
 
-  private def _withRetryF[A](initialA: A)(retryF: => F[A], failed: A => Boolean)
+  private def _withRetryF[A](scope: Retry.Scope, initialA: A)(retryF: => F[A], failed: A => Boolean)
                             (implicit stats: Stats.Mutable): F[A] = {
     def retryWithStats = EM.flatMap(EM.point(stats.retries += 1))(_ => retryF)
-    retryPolicy.retryI(initialA)(failed, retryWithStats)
+    retryPolicy.retryI(scope, initialA)(failed, retryWithStats)
   }
 
   private def observeWithRetry(test: Test, ref: R): F[FE Or O] =
-    withRetry[FE Or O](() => observeNoRetry(test, ref))(_.isLeft)
+    withRetry[FE Or O](Retry.Scope.Observation, () => observeNoRetry(test, ref))(_.isLeft)
 
   private def observeNoRetry(test: Test, ref: R): FE Or O =
     attempt.recover(test.observer(ref).leftMap(Failure NoCause _), Left(_))
@@ -296,7 +296,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
       stats.startTimer()
 
       val refFnWithRetry: () => R =
-        () => retryPolicy.unsafeRetryOnException(refFn(), {
+        () => retryPolicy.unsafeRetryOnException(Retry.Scope.Reference, refFn(), {
           stats.retries += 1
           refFn()
         })
@@ -363,7 +363,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
         case Left(_) => runPreChecks1(p0)
       }
 
-    def runPreChecksF = withRetryF1(EM.point(runPreChecks1(p0)), runPreChecks2)(retryCheckAround0)
+    def runPreChecksF = withRetryF1(Retry.Scope.PreConditions, EM.point(runPreChecks1(p0)), runPreChecks2)(retryCheckAround0)
 
     EM.flatMap(runPreChecksF) {
       case Right((postCheckFn, onComplete)) =>
@@ -535,7 +535,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
           EM.pure(initialPreCheck.fold(identity, ActionResult.ObsFail(actionFailure, e, _)))
       }
 
-    withRetryF1I(go(ros0))(onRetry, _.retry)
+    withRetryF1I(Retry.Scope.Action, go(ros0))(onRetry, _.retry)
   }
 
   private def subtest(test: Test,
@@ -627,7 +627,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                           }
 
                         def postCheckWithRetry: F[(ROS, HH)] =
-                          _withRetryF(initialPostCheck)(reObserveAndPostCheck, _._2.retry)
+                          _withRetryF(Retry.Scope.PostConditions, initialPostCheck)(reObserveAndPostCheck, _._2.retry)
 
                         EM.map(postCheckWithRetry)(x => ((_: Name) => childResults.history, x._1, x._2))
                       })
@@ -722,7 +722,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
     }
 
     val runInvariantsWithRetry: F[FE Or (ROS, H)] =
-      _withRetryF[FE Or (ROS, H)](Right(runInvariants(initROS)))(EM.point(runInvariantsOnRetry()), retryInvariants)
+      _withRetryF[FE Or (ROS, H)](
+        Retry.Scope.InitialInvariants,
+        Right(runInvariants(initROS)))(
+        EM.point(runInvariantsOnRetry()), retryInvariants)
 
     EM.flatMap(runInvariantsWithRetry) {
       case Right((ros, h)) => runAfterInvariants(ros, h)
@@ -747,21 +750,19 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
 
     def withoutRetry: F[(String, FE) Or (ROS, HH)] = {
       val ref = refFn()
-      EM.flatMap(observeWithRetry(test, ref)) {
+      EM.map(observeWithRetry(test, ref)) {
         case Right(obs) =>
-          val updateStateF: F[Failure.WithCause[E] Or (E Or S)] =
-            withRetry(() => attempt.attempt(nextStateFn(obs)))(notRightRight)
-          EM.map(updateStateF) {
+          attempt.attempt(nextStateFn(obs)) match {
             case Right(Right(state)) =>
               val ros = ROS(ref, obs, state)
               Right((ros, postChecks(ros)))
             case Right(Left(e)) => Left((UpdateState, Failure NoCause e))
             case Left(fe) => Left((UpdateState, fe))
           }
-        case Left(e) => EM pure Left((Observation, e))
+        case Left(e) => Left((Observation, e))
       }
     }
 
-    withRetryF(withoutRetry)(obsAndTestFailed)
+    withRetryF(Retry.Scope.PostAction, withoutRetry)(obsAndTestFailed)
   }
 }
