@@ -377,7 +377,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
     def valueBy[B](f: C[A] => B)(implicit s: Display[B]) =
       new FocusValue[B](focusName, f compose focusFn)
 
-    def size = valueBy(_.size)
+    def size = valueBy(_.size).rename(focusName + " size")
 
     def assertB(positive: Boolean): AssertOps =
       new AssertOps(positive)
