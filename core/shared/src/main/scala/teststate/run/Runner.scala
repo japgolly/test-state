@@ -40,7 +40,7 @@ object Runner {
   }
 
   val obsAndTestFailed: (Any Or (Any, PostCheckResults[Any])) => Boolean = {
-    case Right((_, hh)) => hh.post.failed
+    case Right((_, hh)) => hh.retry
     case _ => true
   }
 
@@ -191,6 +191,8 @@ object Runner {
 
   final case class PreCheck[+A](pre: A, invariants: A)
   final case class PostCheckResults[+A](post: History[A], invariants: History[A]) {
+    def retry: Boolean =
+      post.failed || invariants.failed
     def both: History[A] =
       post ++ invariants
   }
@@ -210,6 +212,11 @@ object Runner {
   @inline implicit class RunnerOptionExt[E](private val self: Option[E]) extends AnyVal {
     def noCause: Option[Failure[E]] =
       self.map(Failure NoCause _)
+  }
+
+  val retryInvariants: Any Or (Any, History[Any]) => Boolean = {
+    case Right((_, h)) => h.failed
+    case _ => true
   }
 }
 
@@ -252,7 +259,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
     retryPolicy.retryI(initialA)(failed, retryWithStats)
   }
 
-  private def observe(test: Test, ref: R): F[FE Or O] =
+  private def observeWithRetry(test: Test, ref: R): F[FE Or O] =
     withRetry[FE Or O](() => observeNoRetry(test, ref))(_.isLeft)
 
   private def observeNoRetry(test: Test, ref: R): FE Or O =
@@ -274,7 +281,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
       val ref = refFnWithRetry()
 
       val history: F[H] =
-        EM.flatMap(observe(test, ref)) {
+        EM.flatMap(observeWithRetry(test, ref)) {
 
           case Right(obs) =>
             val ros = new ROS(ref, obs, initialState)
@@ -467,7 +474,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
     PostCheckResults(post, invs)
   }
 
-  private sealed trait ActionResult[+S, +A] {
+  private sealed trait ActionResult[+V, +A] {
     def retry = false
   }
   private object ActionResult {
@@ -617,7 +624,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                           }
 
                         def postCheckWithRetry: F[(ROS, HH)] =
-                          _withRetryF(initialPostCheck)(reObserveAndPostCheck, _._2.post.failed)
+                          _withRetryF(initialPostCheck)(reObserveAndPostCheck, _._2.retry)
 
                         EM.map(postCheckWithRetry)(x => ((_: Name) => childResults.history, x._1, x._2))
                       })
@@ -649,9 +656,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
         EM.map(processNextStep)(p => Progress.prepareNext(queue.tail, p.ros, p.history))
       }
 
-    val finalResult: F[P] = {
-      val ros = initROS
-
+    def runInvariants(ros: ROS): (ROS, H) = {
       val invariantsPoints = {
         val ps = new UniqueListBuilder[Point[OS[O, S], E]]
         val es = new UniqueListBuilder[NamedError[FE]]
@@ -666,7 +671,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
         (pi ++ ei).toList
       }
 
-      val firstSteps: H =
+      val h: H =
         if (invariantsPoints.isEmpty)
           History.empty
         else {
@@ -678,14 +683,23 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
           History(History.parent(InitialState, children))
         }
 
-      val fh: F[P] =
-        if (firstSteps.failed)
-          EM.pure(Progress[F, R, O, S, E](None, ros, firstSteps))
-        else
-          start(test.actions, ros, firstSteps)
+      (ros, h)
+    }
 
-      EM.map(fh) { omg =>
-        import omg.{history => h}
+    def runInvariantsOnRetry(): FE Or (ROS, H) = {
+      val r = refFn()
+      observeNoRetry(test, r).map(o => runInvariants(ROS(r, o, initROS.state)))
+    }
+
+    def runAfterInvariants(ros: ROS, initialHistory: H): F[P] = {
+      val fh: F[P] =
+        if (initialHistory.failed)
+          EM.pure(Progress[F, R, O, S, E](None, ros, initialHistory))
+        else
+          start(test.actions, ros, initialHistory)
+
+      EM.map(fh) { p =>
+        import p.{history => h}
 
         // Summarise
         val h2: H =
@@ -700,11 +714,20 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
           else
             h
 
-        omg.copy(history = h2)
+        p.copy(history = h2)
       }
     }
 
-    finalResult
+    val runInvariantsWithRetry: F[FE Or (ROS, H)] =
+      _withRetryF[FE Or (ROS, H)](Right(runInvariants(initROS)))(EM.point(runInvariantsOnRetry()), retryInvariants)
+
+    EM.flatMap(runInvariantsWithRetry) {
+      case Right((ros, h)) => runAfterInvariants(ros, h)
+      case Left(e) =>
+        val s = History.Step(Observation, Fail(e))
+        val h = History(History.parent(InitialState, History(s)))
+        EM.pure(Progress[F, R, O, S, E](None, initROS, h))
+    }
   }
 
   private def hist1Fn(r: Result[FE]): Name => H =
@@ -721,7 +744,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
 
     def withoutRetry: F[(String, FE) Or (ROS, HH)] = {
       val ref = refFn()
-      EM.flatMap(observe(test, ref)) {
+      EM.flatMap(observeWithRetry(test, ref)) {
         case Right(obs) =>
           val updateStateF: F[Failure.WithCause[E] Or (E Or S)] =
             withRetry(() => attempt.attempt(nextStateFn(obs)))(notRightRight)

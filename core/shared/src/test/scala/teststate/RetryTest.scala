@@ -47,18 +47,20 @@ object RetryTest extends TestSuite {
     val failOnValue = new SimFailure("value()")
     val failOnInc = new SimFailure("inc()")
 
-    var _invariantOk = true
+    var _invariantKO = 0
 
     var _onValue = List.empty[() => Unit]
 
     def invariantOk(): Boolean = synchronized {
-      val x = _invariantOk
-      _invariantOk = true
-      x
+      if (_invariantKO > 0) {
+        _invariantKO -= 1
+        false
+      } else
+        true
     }
 
     def invalidateInvariant() = synchronized {
-      _invariantOk = false
+      _invariantKO = 3
     }
 
     def queueUpdate(newValue: Int): Unit = synchronized {
@@ -171,13 +173,6 @@ object RetryTest extends TestSuite {
     retryResult
   }
 
-  def assertInvariantFails(plan: *.Plan, refMod: Ref => Unit = _ => ()): Unit = {
-    val test = plan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
-    val result: Report[String] = test.withRetryPolicy(hugeRetryPolicy).run()
-    val report = result.format
-    assert(result.failed, report.contains("invariantOk should be true"))
-  }
-
   def explodingRef(): Ref => Unit = {
     var i = 3
     _ =>
@@ -197,8 +192,6 @@ object RetryTest extends TestSuite {
     def +[B](d: Duration): Instant = self.plusMillis(d.toMillis)
     def -[B](d: Duration): Instant = self.minusMillis(d.toMillis)
   }
-
-
 
   override def tests = TestSuite {
 
@@ -272,7 +265,7 @@ object RetryTest extends TestSuite {
         assertRetryWorks(plan, _.failOnValue.simFail(3))
       }
       'invariant {
-        assertInvariantFails(*.emptyPlan, _.invalidateInvariant())
+        assertRetryWorks(*.emptyPlan, _.invalidateInvariant())
       }
     }
 
@@ -330,7 +323,7 @@ object RetryTest extends TestSuite {
       // }
       'invariant {
         val plan = Plan.action(*.action("invalidate invariant")(_.ref.invalidateInvariant()))
-        assertInvariantFails(plan)
+        assertRetryWorks(plan)
       }
 
       'reportObsErrorAfterActionError {

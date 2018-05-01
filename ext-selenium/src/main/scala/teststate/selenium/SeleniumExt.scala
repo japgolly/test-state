@@ -2,7 +2,6 @@ package teststate.selenium
 
 import org.openqa.selenium.{Point, WebElement}
 
-
 object SeleniumExt {
 
   class WebElementExt(private val e: WebElement) extends AnyVal {
