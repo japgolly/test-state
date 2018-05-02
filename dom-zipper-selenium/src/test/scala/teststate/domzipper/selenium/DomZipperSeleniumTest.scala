@@ -9,7 +9,7 @@ import scalaz.std.option._
 import scalaz.std.vector._
 import Exports._
 
-object SeleniumTest extends TestSuite {
+object DomZipperSeleniumTest extends TestSuite {
 
   lazy val $ : DomZipperSelenium = {
     val testHtmlPath = SeleniumTestUtil.testResource("test.html").getAbsoluteFile
