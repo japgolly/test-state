@@ -81,6 +81,14 @@ object DomZipperSeleniumModule extends DomZipperModule {
     override def checked: Out[Boolean] =
       dom.isSelected
 
+    override def classes: Set[String] = {
+      val clsStr = dom.getAttribute("class").trim
+      if (clsStr.isEmpty)
+        Set.empty
+      else
+        clsStr.split(" +").toSet
+    }
+
     /** The currently selected option in a &lt;select&gt; dropdown. */
     def selectedOption: Out[Collector[Option, Next, Next, Out]] =
       dom.getTagName.toUpperCase match {

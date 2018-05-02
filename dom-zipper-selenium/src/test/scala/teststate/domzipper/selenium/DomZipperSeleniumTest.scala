@@ -3,9 +3,11 @@ package teststate.domzipper.selenium
 import japgolly.microlibs.testutil.TestUtil._
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 import utest._
+import scalaz.Equal
 import scalaz.std.anyVal._
 import scalaz.std.string._
 import scalaz.std.option._
+import scalaz.std.set._
 import scalaz.std.vector._
 import Exports._
 
@@ -26,7 +28,7 @@ object DomZipperSeleniumTest extends TestSuite {
 
   def name = $("#name")
   def nameLabelHtml = """<label for="name">Name:</label>"""
-  def nameInputHtml = """<input type="text" id="name" name="user_name" value="Bob Loblaw">"""
+  def nameInputHtml = """<input type="text" id="name" name="user_name" value="Bob Loblaw" class=" a b  c ">"""
   def checkboxes = $.collect0n("input[type=checkbox]")
 
   override def tests = SeleniumTestUtil.CI match {
@@ -47,6 +49,11 @@ object DomZipperSeleniumTest extends TestSuite {
         assertEq(checkboxes.size, 2)
         assertEq(checkboxes.mapDoms(_.isSelected), Vector(true, false))
         assertEq(checkboxes.map(_.checked), Vector(true, false))
+      }
+
+      'classes {
+        'none - assertEq($("form").classes, Set.empty[String])
+        'some - assertEq(name.classes, Set("a", "b", "c"))
       }
 
       'selectedOption {

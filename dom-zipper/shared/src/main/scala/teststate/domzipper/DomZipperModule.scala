@@ -76,6 +76,8 @@ trait DomZipperModule {
 
     def checked: Out[Boolean]
 
+    def classes: Set[String]
+
     protected def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out]
 
     final def collect01(sel: String): Collector[Option, Next, Next, Out] = collect(sel, new Container01)

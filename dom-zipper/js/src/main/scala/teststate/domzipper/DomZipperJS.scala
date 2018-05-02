@@ -105,6 +105,15 @@ object DomZipperJS extends DomZipperModule {
     override def checked: Out[Boolean] =
       dynamicMethod[Boolean](_.checked) orFail s".checked failed on $dom."
 
+    override def classes: Set[String] =
+      dom match {
+        case h: html.Element =>
+          val c = h.classList
+          (0 until c.length).map(c.apply)(collection.breakOut)
+        case _ =>
+          Set.empty
+      }
+
     /** The currently selected option in a &lt;select&gt; dropdown. */
     def selectedOption: Out[Option[html.Option]] =
       domAs[html.Select].map(s =>
