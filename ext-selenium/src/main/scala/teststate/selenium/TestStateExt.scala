@@ -1,27 +1,41 @@
 package teststate.selenium
 
 import org.openqa.selenium.WebDriver
+import scala.concurrent.duration.Duration
+import teststate.data.Id
 import teststate.dsl.Dsl
 import teststate.typeclass.ExecutionModel
+import TestStateExt._
 
 object TestStateExt {
 
+  final class DslIdExt[R, O, S, E](private val dsl: Dsl[Id, R, O, S, E]) extends AnyVal {
+
+    def withSeleniumTab(tab: R => Tab[WebDriver]): Dsl[Id, R, O, S, E] =
+      dsl.withActionMod(_.mod(actionDef => ros =>
+        actionDef(ros).map(actionFn =>
+          () => tab(ros.ref).use(_ => actionFn()))))
+  }
+
   final class DslExt[F[_], R, O, S, E](private val dsl: Dsl[F, R, O, S, E]) extends AnyVal {
 
-    def withSeleniumTab(tab: R => Tab[WebDriver])(implicit EM: ExecutionModel[F]): Dsl[F, R, O, S, E] =
+    def withSeleniumTab(tab: R => Tab[WebDriver],
+                        lockWait: Duration,
+                        lockRetry: Duration)
+                       (implicit EM: ExecutionModel[F]): Dsl[F, R, O, S, E] =
       dsl.withActionMod(_.mod(actionDef => ros =>
-        actionDef(ros).map(actionFn => () =>
-          EM.flatten(EM.point(tab(ros.ref).use(_ =>
-            actionFn()))))))
+        actionDef(ros).map(actionFn =>
+          () => tab(ros.ref).useM(_ => actionFn(), lockWait, lockRetry))))
   }
 
 }
 
-
-trait TestStateExt {
-  import TestStateExt._
-
+trait TestStateExtLowPri {
   implicit def testStateSeleniumDslExt[F[_], R, O, S, E](dsl: Dsl[F, R, O, S, E]): DslExt[F, R, O, S, E] =
     new DslExt(dsl)
+}
 
+trait TestStateExt extends TestStateExtLowPri {
+  implicit def testStateSeleniumDslIdExt[R, O, S, E](dsl: Dsl[Id, R, O, S, E]): DslIdExt[R, O, S, E] =
+    new DslIdExt(dsl)
 }

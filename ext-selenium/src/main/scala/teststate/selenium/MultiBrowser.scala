@@ -48,7 +48,7 @@ object MultiBrowser {
             i
           else {
             val driver   = newDriver
-            val mutex    = Mutex.blocking()
+            val mutex    = Mutex()
             val rootTab  = tabSupport.active()(driver)
             val multiTab = MultiTab(driver, mutex)(tabSupport)(rootTab)
             instances = instances :+ Browser(driver, mutex, rootTab, multiTab, Vector.empty)
