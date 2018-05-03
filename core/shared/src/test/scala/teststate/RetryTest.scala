@@ -123,7 +123,9 @@ object RetryTest extends TestSuite {
   case class Obs(value: Int, valueCalls: Int, incCalls: Int, invariantOk: Boolean, value2: () => Int)
    */
 
-  val * = Dsl[Ref, Obs, Unit]
+  type State = Int
+
+  val * = Dsl[Ref, Obs, State]
 
   val value          = *.focus("value").value(_.obs.value)
   val valueCalls     = *.focus("valueCalls").value(_.obs.valueCalls)
@@ -145,7 +147,7 @@ object RetryTest extends TestSuite {
   val observer = Observer((_: Ref).toObs())
 
   def mkTest(plan: *.Plan, refMod: Ref => Unit = _ => ()) =
-    plan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
+    plan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
 
   def assertRetryWorks(plan: *.Plan, refMod: Ref => Unit = _ => ()): Unit = {
     _assertRetryWorks(plan, refMod)
@@ -256,7 +258,7 @@ object RetryTest extends TestSuite {
     'initial {
       'ref {
         val refMod = explodingRef()
-        val test = *.emptyPlan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
+        val test = *.emptyPlan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
         val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
         assert(!result.failed)
       }
@@ -274,7 +276,7 @@ object RetryTest extends TestSuite {
          val ref = new Ref
          var refFn = (_: Ref) => ()
          val plan = Plan.action(*.action("hack")(_ => refFn = explodingRef()) >> *.emptyAction)
-         val test = plan.addInvariants(invariant).test(observer).stateless.withRefByName(ref(refFn))
+         val test = plan.addInvariants(invariant).test(observer).withInitialState(0).withRefByName(ref(refFn))
          val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
          result.assert()
        }
@@ -341,6 +343,14 @@ object RetryTest extends TestSuite {
             |  ✘ Observation -- Caught exception: java.lang.RuntimeException: SimFailure on value(): 0 failures remaining
             |Performed 1 action, 1 check (with 3 retries).
           """.stripMargin)
+      }
+
+      'state {
+        val plan = Plan.action(
+          (failOnInc >> incFailOnInc >> incNormal).updateState(_ + 1) >>
+          *.action("blah")(_ => ()) +> *.focus("state").value(_.state).assert(1)
+        )
+        assertRetryWorks(plan)
       }
     }
 
