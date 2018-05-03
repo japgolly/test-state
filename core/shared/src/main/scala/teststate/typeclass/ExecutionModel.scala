@@ -122,11 +122,25 @@ object ExecutionModel {
         promise.future
       }
 
-      override def doFinally[A, B](main: => Future[A], last: => Future[B]): Future[A] =
-        main.transformWith(ta => last.transform {
-          case ScalaSuccess(_) => ta
-          case ScalaFailure(t) => ScalaFailure(t)
-        })
+      override def doFinally[A, B](main: => Future[A], last: => Future[B]): Future[A] = {
+
+        // Scala 2.12+
+        // main.transformWith(ta => last.transform {
+        //   case ScalaSuccess(_) => ta
+        //   case ScalaFailure(t) => ScalaFailure(t)
+        // })
+
+        val p = Promise[A]()
+        val fa = main
+        fa.onComplete { ta =>
+          val fb = last
+          fb.onComplete {
+            case ScalaSuccess(_) => p.complete(ta)
+            case ScalaFailure(f) => p.failure(f)
+          }
+        }
+        p.future
+      }
     }
 
   def toFuture(implicit ec: ExecutionContext): Id ~~> Future =
