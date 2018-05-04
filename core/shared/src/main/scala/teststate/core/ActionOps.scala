@@ -333,8 +333,12 @@ object ActionOps {
                 _.emapO(f).fold(e => Sack Value Left(NamedError(n(None), Failure NoCause e)), p(_) pmapO f))
           }
 
-        override def modS[F[_], R, O, S, E](x: Actions[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
-          x.rmap(_.map(_ modS m))
+        override def modS[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(f: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+          actions match {
+            case Value(v)         => Value(v.map(_ modS f))
+            case Product(ss)      => if (ss.isEmpty) Product(ss) else Product(ss.init :+ ss.last.modS(f))
+            case CoProduct(nf, p) => CoProduct(nf, ros => p(ros).modS(f))
+          }
 
         override def times[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(n: Int) =
           actions match {

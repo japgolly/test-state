@@ -76,6 +76,8 @@ trait DomZipperModule {
 
     def checked: Out[Boolean]
 
+    def classes: Set[String]
+
     protected def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out]
 
     final def collect01(sel: String): Collector[Option, Next, Next, Out] = collect(sel, new Container01)
@@ -84,6 +86,9 @@ trait DomZipperModule {
 
     final def exists(sel: String): Boolean =
       collect0n(sel).nonEmpty
+
+    final def exists(sel: String, suchThat: DomZipper[Next, Next, Out] => Boolean): Boolean =
+      collect0n(sel).filter(suchThat).nonEmpty
 
     final def editables01 = collect01(DomZipperModule.EditableSel)
     final def editables0n = collect0n(DomZipperModule.EditableSel)
@@ -137,14 +142,22 @@ trait DomZipperModule {
 
   type Collector[C[_], D <: Next, Next <: NextBase, Out[_]] <: AbstractCollector[C, D, Next, Out]
 
+  // Note: Herein, NextBase is manually cast to D.
+  // This is for JS convenience and a typical example is NextBase=HTMLElement, D=HTMLButton
   abstract class AbstractCollector[C[_], D <: Next, Next <: NextBase, Out[_]] protected (
       from: DomZipper[_, Next, Out],
       sel: String,
-      cont: Container[C, Out])
+      cont: Container[C, Out],
+      colFilter: Option[NextBase => Boolean])
      (implicit h: ErrorHandler[Out]) {
 
+    protected def withFilter(colFilter: Option[NextBase => Boolean]): Collector[C, D, Next, Out]
+
     // Eager! DOM could change!
-    private final val result = from.directSelect(sel)
+    private final val result: Vector[NextBase] = {
+      val r = from.directSelect(sel)
+      colFilter.fold(r)(r.filter)
+    }
 
     final def isEmpty: Boolean =
       result.isEmpty
@@ -170,12 +183,22 @@ trait DomZipperModule {
     final def mapDoms[A](f: D => A): Out[C[A]] =
       doms.map(cont.map(_)(f))
 
+    @deprecated("Use .map", "2.2.0")
     final def mapZippers[A](f: DomZipper[D, Next, Out] => A): Out[C[A]] =
+      map(f)
+
+    final def map[A](f: DomZipper[D, Next, Out] => A): Out[C[A]] =
       mapDoms(d => f(addLayer(d)))
 
-    final def outerHTMLs[A]: Out[C[String]] = mapZippers(_.outerHTML)
-    final def innerHTMLs[A]: Out[C[String]] = mapZippers(_.innerHTML)
-    final def innerTexts[A]: Out[C[String]] = mapZippers(_.innerText)
+    final def filter(f: DomZipper[D, Next, Out] => Boolean): Collector[C, D, Next, Out] = {
+      val f2: NextBase => Boolean = nb => f(addLayer(nb.asInstanceOf[D]))
+      val f3: NextBase => Boolean = colFilter.fold(f2)(f0 => d => f0(d) && f2(d))
+      withFilter(Some(f3))
+    }
+
+    final def outerHTMLs[A]: Out[C[String]] = map(_.outerHTML)
+    final def innerHTMLs[A]: Out[C[String]] = map(_.innerHTML)
+    final def innerTexts[A]: Out[C[String]] = map(_.innerText)
   }
 
   object AbstractCollector {

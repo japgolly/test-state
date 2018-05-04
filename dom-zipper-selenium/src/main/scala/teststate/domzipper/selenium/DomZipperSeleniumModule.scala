@@ -55,16 +55,16 @@ object DomZipperSeleniumModule extends DomZipperModule {
       new DomZipper(prevLayers :+ curLayer, nextLayer, htmlScrub)
 
     override protected def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out] =
-      new Collector(this, sel, c)
+      new Collector(this, sel, c, None)
 
-    def webElement: WebElement =
+    def dom: WebElement =
       curLayer.dom
 
     def getAttribute(name: String): Option[String] =
-      Option(webElement.getAttribute(name))
+      Option(dom.getAttribute(name))
 
     def needAttribute(name: String): Out[String] =
-      h.option(getAttribute(name), s"${webElement.getTagName} doesn't have attribute $name")
+      h.option(getAttribute(name), s"${dom.getTagName} doesn't have attribute $name")
 
     protected override def _outerHTML =
       getAttribute("outerHTML").fold("null")(htmlScrub.run)
@@ -73,17 +73,25 @@ object DomZipperSeleniumModule extends DomZipperModule {
       getAttribute("innerHTML").fold("null")(htmlScrub.run)
 
     override def innerText: String =
-      webElement.getText()
+      dom.getText()
 
     override def value: Out[String] =
-      getAttribute("value") orFail s".value failed on <${webElement.getTagName}>."
+      getAttribute("value") orFail s".value failed on <${dom.getTagName}>."
 
     override def checked: Out[Boolean] =
-      webElement.isSelected
+      dom.isSelected
+
+    override def classes: Set[String] = {
+      val clsStr = dom.getAttribute("class").trim
+      if (clsStr.isEmpty)
+        Set.empty
+      else
+        clsStr.split(" +").toSet
+    }
 
     /** The currently selected option in a &lt;select&gt; dropdown. */
     def selectedOption: Out[Collector[Option, Next, Next, Out]] =
-      webElement.getTagName.toUpperCase match {
+      dom.getTagName.toUpperCase match {
         case "SELECT" => collect01("option[selected]")
         case x        => h.fail(s"<$x> is not a <SELECT>")
       }
@@ -103,7 +111,12 @@ object DomZipperSeleniumModule extends DomZipperModule {
 
   final class Collector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
                                                                    sel: String,
-                                                                   cont: Container[C, Out])
+                                                                   cont: Container[C, Out],
+                                                                   colFilter: Option[NextBase => Boolean])
                                                                   (implicit h: ErrorHandler[Out])
-      extends AbstractCollector[C, D, Next, Out](from, sel, cont)
+      extends AbstractCollector[C, D, Next, Out](from, sel, cont, colFilter) {
+
+    override protected def withFilter(colFilter: Option[NextBase => Boolean]): Collector[C, D, Next, Out] =
+      new Collector(from, sel, cont, colFilter)
+  }
 }

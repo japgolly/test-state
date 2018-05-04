@@ -1,8 +1,10 @@
 package teststate
 
-import scala.concurrent.duration.Duration
+import java.time.Instant
+import scala.concurrent.duration._
 import teststate.Exports._
 import utest._
+import TestUtil._
 
 object RetryTest extends TestSuite {
 
@@ -45,18 +47,20 @@ object RetryTest extends TestSuite {
     val failOnValue = new SimFailure("value()")
     val failOnInc = new SimFailure("inc()")
 
-    var _invariantOk = true
+    var _invariantKO = 0
 
     var _onValue = List.empty[() => Unit]
 
     def invariantOk(): Boolean = synchronized {
-      val x = _invariantOk
-      _invariantOk = true
-      x
+      if (_invariantKO > 0) {
+        _invariantKO -= 1
+        false
+      } else
+        true
     }
 
     def invalidateInvariant() = synchronized {
-      _invariantOk = false
+      _invariantKO = 3
     }
 
     def queueUpdate(newValue: Int): Unit = synchronized {
@@ -119,7 +123,9 @@ object RetryTest extends TestSuite {
   case class Obs(value: Int, valueCalls: Int, incCalls: Int, invariantOk: Boolean, value2: () => Int)
    */
 
-  val * = Dsl[Ref, Obs, Unit]
+  type State = Int
+
+  val * = Dsl[Ref, Obs, State]
 
   val value          = *.focus("value").value(_.obs.value)
   val valueCalls     = *.focus("valueCalls").value(_.obs.valueCalls)
@@ -140,8 +146,16 @@ object RetryTest extends TestSuite {
 
   val observer = Observer((_: Ref).toObs())
 
+  def mkTest(plan: *.Plan, refMod: Ref => Unit = _ => ()) =
+    plan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
+
   def assertRetryWorks(plan: *.Plan, refMod: Ref => Unit = _ => ()): Unit = {
-    val test = plan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
+    _assertRetryWorks(plan, refMod)
+    ()
+  }
+
+  def _assertRetryWorks(plan: *.Plan, refMod: Ref => Unit = _ => ()): Report[String] = {
+    val test = mkTest(plan, refMod)
     debug()
 
     // With appropriate retry
@@ -157,13 +171,8 @@ object RetryTest extends TestSuite {
     // val resultWithInsufficientRetry = test.withRetryPolicy(insufficientRetryPolicy).run()
     // assert(resultWithInsufficientRetry.failed)
     // debug()
-  }
 
-  def assertInvariantFails(plan: *.Plan, refMod: Ref => Unit = _ => ()): Unit = {
-    val test = plan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
-    val result: Report[String] = test.withRetryPolicy(hugeRetryPolicy).run()
-    val report = result.format
-    assert(result.failed, report.contains("invariantOk should be true"))
+    retryResult
   }
 
   def explodingRef(): Ref => Unit = {
@@ -174,6 +183,16 @@ object RetryTest extends TestSuite {
         ???
       } else
         ()
+  }
+
+  def retryCtx(i1: Instant, in: Instant*): Retry.Ctx = {
+    val is = i1 +: in.toVector
+    Retry.Ctx(Retry.Scope.Action, is.init, is.last)
+  }
+
+  implicit class InstantExt(private val self: Instant) extends AnyVal {
+    def +[B](d: Duration): Instant = self.plusMillis(d.toMillis)
+    def -[B](d: Duration): Instant = self.minusMillis(d.toMillis)
   }
 
   override def tests = TestSuite {
@@ -191,10 +210,55 @@ object RetryTest extends TestSuite {
       assert(result.failed)
     }
 
+    'policy {
+      'timeout {
+        val interval = 1 second
+        val timeout = 6 seconds
+        val policy = Retry.Policy.fixedIntervalWithTimeout(interval, timeout)
+        val now = Instant.now()
+        def test(ds: Duration*)(expect: Option[Instant]) = {
+          val is = ds.map(now - _)
+          val ctx = retryCtx(is.head, is.tail: _*)
+          val actual = policy.nextTry(ctx, now)
+          assert(actual == expect)
+        }
+
+        //   +--- 1s --+ (interval)
+        //   |    .    |
+        // -200ms | +800ms
+        'interval1 - test(200.millis)(Some(now + 800.millis))
+
+        // 4s + interval is in the past! result should be now
+        // -4s  |  +0ms
+        'limitToNow - test(4.seconds)(Some(now))
+
+        //   +-------------- 6s --------------+
+        //   +-- 5.3s --+-- 0.5s --|-- 0.2s --+
+        //   |          |          .          |
+        // -5.8s      -0.5s        |        +0.2s
+        'limitToTimeout - test(5.8.seconds,0.5.seconds)(Some(now + 200.millis))
+
+        //  +-- 4s --+-- 1s --+ (interval)
+        //  |        |    .   |
+        // -4.3s   -0.3s  | +0.7s
+        'interval2 - test(4.3.seconds, 0.3.seconds)(Some(now + 0.7.seconds))
+
+        //  +-- 9s --+-- 0s --+ (scheduler caused huge delay, try once after deadline)
+        //  |        |        |
+        // -9s       |       +0s
+        'overOnce - test(9.seconds)(Some(now))
+
+        //   +--- 6s ---+---- 1s ----+ (stop, already tried once past deadline)
+        //   |          |        |   |
+        // -6.8s    deadline   -0.2s |
+        'overTwice - test(6.8.seconds, 0.2.seconds)(None)
+      }
+    }
+
     'initial {
       'ref {
         val refMod = explodingRef()
-        val test = *.emptyPlan.addInvariants(invariant).test(observer).stateless.withLazyRef((new Ref)(refMod))
+        val test = *.emptyPlan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
         val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
         assert(!result.failed)
       }
@@ -203,7 +267,7 @@ object RetryTest extends TestSuite {
         assertRetryWorks(plan, _.failOnValue.simFail(3))
       }
       'invariant {
-        assertInvariantFails(*.emptyPlan, _.invalidateInvariant())
+        assertRetryWorks(*.emptyPlan, _.invalidateInvariant())
       }
     }
 
@@ -212,7 +276,7 @@ object RetryTest extends TestSuite {
          val ref = new Ref
          var refFn = (_: Ref) => ()
          val plan = Plan.action(*.action("hack")(_ => refFn = explodingRef()) >> *.emptyAction)
-         val test = plan.addInvariants(invariant).test(observer).stateless.withRefByName(ref(refFn))
+         val test = plan.addInvariants(invariant).test(observer).withInitialState(0).withRefByName(ref(refFn))
          val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
          result.assert()
        }
@@ -261,7 +325,32 @@ object RetryTest extends TestSuite {
       // }
       'invariant {
         val plan = Plan.action(*.action("invalidate invariant")(_.ref.invalidateInvariant()))
-        assertInvariantFails(plan)
+        assertRetryWorks(plan)
+      }
+
+      'reportObsErrorAfterActionError {
+        val plan = Plan.action(*.action("I love my little one, Nim") { x =>
+          x.ref.failOnValue.simFail(3)
+          ???
+        })
+        val report = mkTest(plan).withRetryPolicy(retryPolicy).run()
+        assertRun(report,
+          """
+            |✓ Initial state.
+            |  ✓ invariantOk should be true.
+            |✘ I love my little one, Nim
+            |  ✘ Action -- Caught exception: scala.NotImplementedError: an implementation is missing
+            |  ✘ Observation -- Caught exception: java.lang.RuntimeException: SimFailure on value(): 0 failures remaining
+            |Performed 1 action, 1 check (with 3 retries).
+          """.stripMargin)
+      }
+
+      'state {
+        val plan = Plan.action(
+          (failOnInc >> incFailOnInc >> incNormal).updateState(_ + 1) >>
+          *.action("blah")(_ => ()) +> *.focus("state").value(_.state).assert(1)
+        )
+        assertRetryWorks(plan)
       }
     }
 

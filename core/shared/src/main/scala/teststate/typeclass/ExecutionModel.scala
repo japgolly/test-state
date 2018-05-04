@@ -3,10 +3,8 @@ package teststate.typeclass
 import acyclic.file
 import java.time.Instant
 import java.util.{Date, Timer, TimerTask}
-import java.util.concurrent.{ScheduledThreadPoolExecutor, TimeUnit}
 import scala.annotation.tailrec
 import scala.concurrent._
-import scala.concurrent.duration._
 import teststate.data._
 
 trait ExecutionModel[M[_]] {
@@ -20,6 +18,7 @@ trait ExecutionModel[M[_]] {
   def recover[E, A](f: => F[Failure[E] Or A])(implicit attempt: Attempt[E]): F[Failure[E] Or A]
   def now: F[Instant]
   def schedule[A](task: => F[A], startAt: Instant): F[A]
+  def doFinally[A, B](main: => F[A], last: => F[B]): F[A]
 
   def flatten[A](ffa: F[F[A]]): F[A] =
     flatMap(ffa)(identity)
@@ -55,6 +54,9 @@ object ExecutionModel {
       override def flatten[A]   (a: A)            = a
       override def now                            = Instant.now()
 
+      override def doFinally[A, B](main: => A, last: => B): A =
+        try main finally {last; ()}
+
       def tailrec[A, B](start: A)(rec: A => A Or B): F[B] = {
         @tailrec
         def go(e: A Or B): B =
@@ -88,6 +90,8 @@ object ExecutionModel {
 
   implicit def scalaFuture(implicit ec: ExecutionContext): ExecutionModel[Future] =
     new AlreadyStackSafe[Future] {
+      import scala.util.{Failure => ScalaFailure, Success => ScalaSuccess}
+
       private val timer = new Timer(true)
 
       override def point  [A]   (a: => A)                = Future(a)
@@ -116,6 +120,26 @@ object ExecutionModel {
         }
         timer.schedule(timerTask, new Date(startAt.toEpochMilli))
         promise.future
+      }
+
+      override def doFinally[A, B](main: => Future[A], last: => Future[B]): Future[A] = {
+
+        // Scala 2.12+
+        // main.transformWith(ta => last.transform {
+        //   case ScalaSuccess(_) => ta
+        //   case ScalaFailure(t) => ScalaFailure(t)
+        // })
+
+        val p = Promise[A]()
+        val fa = main
+        fa.onComplete { ta =>
+          val fb = last
+          fb.onComplete {
+            case ScalaSuccess(_) => p.complete(ta)
+            case ScalaFailure(f) => p.failure(f)
+          }
+        }
+        p.future
       }
     }
 
