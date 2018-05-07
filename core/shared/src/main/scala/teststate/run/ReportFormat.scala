@@ -11,10 +11,18 @@ trait ReportFormat {
   def format[E](report: Report[E])(implicit de: DisplayError[E]): Option[String]
 
   def print[E](report: Report[E])(implicit de: DisplayError[E]): Unit =
-    format(report) foreach println
+    for (s <- format(report))
+      ReportFormat.printMutex.synchronized {
+        System.err.flush()
+        System.out.flush()
+        System.out.println(s)
+        System.out.flush()
+      }
 }
 
 object ReportFormat {
+
+  val printMutex = new AnyRef
 
   val quiet: ReportFormat =
     new ReportFormat {
