@@ -11,7 +11,7 @@ import teststate.typeclass._
 object CollectionAssertions {
 
   private def formatSet(s: TraversableOnce[_]): String =
-    s.mkString("", ", ", ".")
+    s.mkString(", ")
 
   protected final def tallyElements[A](neg: TraversableOnce[A], pos: TraversableOnce[A]): mutable.HashMap[A, Int] = {
     val m = mutable.HashMap.empty[A, Int]
@@ -388,7 +388,7 @@ object CollectionAssertions {
 
     case class Mismatch[+A](missing: Vector[A], excess: Vector[A])(implicit s: Display[A]) extends Failure[A] {
       private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Display[AA]): Option[String] =
-        if (as.isEmpty) None else Some(name + ": " +formatSet(as.iterator.map(s(_))))
+        if (as.isEmpty) None else Some(name + ": " +formatSet(as.iterator.map(s(_))) + ".")
       override def errorString =
         (fmt("Missing", missing).toList ::: fmt("Excess", excess).toList).mkString(" ")
     }
@@ -431,10 +431,10 @@ object CollectionAssertions {
     sealed trait Failure[+A] extends HasErrorString with Product with Serializable
 
     case class Mismatch[+A](actual: Vector[A], expect: Vector[A])(implicit s: Display[A]) extends Failure[A] {
-      private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Display[AA]): Option[String] =
-        if (as.isEmpty) None else Some(name + ": " +formatSet(as.iterator.map(s(_))))
+      private def fmt[AA >: A](name: String, as: Vector[AA])(implicit s: Display[AA]): String =
+        name + ": " +formatSet(as.iterator.map(s(_)))
       override def errorString =
-        (fmt("Actual", actual).toList ::: fmt("Expect", expect).toList).mkString(" ")
+        fmt("Actual", actual) + "\n" + fmt("Expect", expect)
     }
 
     case object Matched extends Failure[Nothing] {
