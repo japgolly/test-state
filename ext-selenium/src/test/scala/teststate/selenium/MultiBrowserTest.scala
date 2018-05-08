@@ -26,10 +26,10 @@ object MultiBrowserTest extends TestSuite {
         s"$expectBeforeFirst, $expectAfterFirst, $expectBeforeEach, $expectAfterEach")
 
     val t = mb.openTabTo(google)
-      .withBeforeFirstUse(_ => beforeFirst += 1)
-      .withAfterFirstUse(_ => afterFirst += 1)
-      .withBeforeEachUse(_ => beforeEach += 1)
-      .withAfterEachUse(_ => afterEach += 1)
+      .beforeFirstUse(_ => beforeFirst += 1)
+      .afterFirstUse(_ => afterFirst += 1)
+      .beforeEachUse(_ => beforeEach += 1)
+      .afterEachUse(_ => afterEach += 1)
     assertCB(0, 0, 0, 0) // tab usage is lazy
     assertEq("Tab count before new tab is used", tabCount(), 1)
     assertEq(t.use(_.getCurrentUrl), google)

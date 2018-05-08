@@ -71,7 +71,7 @@ object MultiBrowser {
         }
         val browser  = instances(browserIndex)
         var tab      = null: Tab[D]
-        tab          = browser.multiTab.openTab().withOnClose(removeTab(browser.driver, tab))
+        tab          = browser.multiTab.openTab().afterClose(removeTab(_, tab))
         val browser2 = browser.copy(tabs = browser.tabs :+ tab)
         instances    = instances.updated(browserIndex, browser2)
         tab

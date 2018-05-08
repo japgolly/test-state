@@ -6,7 +6,7 @@ trait MultiTab[+D <: WebDriver] {
   def openTab(): Tab[D]
 
   def openTabTo(url: String): Tab[D] =
-    openTab().withBeforeFirstUse(_.get(url))
+    openTab().beforeFirstUse(_.get(url))
 }
 
 object MultiTab {
