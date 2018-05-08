@@ -34,6 +34,7 @@ trait Tab[+D <: WebDriver] {
 
   def aroundFirstUse(around: D => Tab.ProcMod): this.type
   def aroundEachUse (around: D => Tab.ProcMod): this.type
+  def beforeClose   (callback: D => Unit): this.type
   def afterClose    (callback: D => Unit): this.type
 
   final def beforeFirstUse(f: D => Unit): this.type = aroundFirstUse(d => Tab.ProcMod.before(f(d)))
@@ -51,11 +52,12 @@ object Tab {
     new Tab[D] {
       import tabSupport.TabHandle
 
-      private var tab        = Option.empty[TabHandle]
-      private var closed     = false
-      private var onFirstUse = Option.empty[D => ProcMod]
-      private var onEachUse  = Option.empty[D => ProcMod]
-      private var afterClose = doNothing1: D => Unit
+      private var tab         = Option.empty[TabHandle]
+      private var closed      = false
+      private var onFirstUse  = Option.empty[D => ProcMod]
+      private var onEachUse   = Option.empty[D => ProcMod]
+      private var beforeClose = doNothing1: D => Unit
+      private var afterClose  = doNothing1: D => Unit
 
       private def prepareWithoutLocking(): D = {
         implicit def d = driver
@@ -115,6 +117,10 @@ object Tab {
           if (affect) {
             implicit def d = driver
             for (t <- tab) {
+              if (beforeClose ne doNothing1) {
+                tabSupport.activate(t)
+                beforeClose(d)
+              }
               tabSupport.activate(t)
               tabSupport.closeActive()
             }
@@ -134,6 +140,12 @@ object Tab {
       override def aroundEachUse(around: D => Tab.ProcMod): this.type =
         mutex {
           onEachUse = Some(mergeProcMods(onEachUse, around))
+          this
+        }
+
+      override def beforeClose(callback: D => Unit): this.type =
+        mutex {
+          beforeClose = beforeClose >> callback
           this
         }
 
