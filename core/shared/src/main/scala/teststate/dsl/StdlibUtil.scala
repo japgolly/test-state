@@ -95,8 +95,8 @@ object StdlibUtil {
   implicit def NamedVectorToVector[A](n: NamedVector[A]): Vector[A] = n.underlying
 
   final class TestStateTraversableExt[A](private val self: Traversable[A]) extends AnyVal {
-    def named(name: String): NamedVector[A] =
-      new NamedVector(name, self.toVector)
+    def named(namePlural: String): NamedVector[A] =
+      new NamedVector(namePlural, self.toVector)
   }
 
 }
