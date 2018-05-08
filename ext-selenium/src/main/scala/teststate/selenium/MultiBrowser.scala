@@ -10,8 +10,13 @@ trait MultiBrowser[+D <: WebDriver] extends MultiTab[D] {
   def closeBrowser(browserIndex: Int, quit: Boolean = true): Unit
   def closeAllBrowsers(quit: Boolean = true): Unit
 
-  /** Note: Creates a brand-new, unrelated MultiBrowser instance. */
-  def tapDriver(f: D => Any): MultiBrowser[D]
+  /** Creates a brand-new, unrelated MultiBrowser instance that, for all new driver instances before use,
+    * executes the given proc on the driver. */
+  def withDriverSetup(f: D => Unit): MultiBrowser[D]
+
+  /** Creates a brand-new, unrelated MultiBrowser instance that, for all new driver instances before use,
+    * creates a new tab, runs the given proc, then closes the tab. */
+  def withSetupInTab(f: Tab[D] => Unit): MultiBrowser[D]
 }
 
 object MultiBrowser {
@@ -31,7 +36,7 @@ object MultiBrowser {
       private var instances: Vector[Browser] =
         Vector.empty
 
-      override def tapDriver(f: D => Any): MultiBrowser[D] = {
+      override def withDriverSetup(f: D => Unit): MultiBrowser[D] = {
         def newDriver2 = {
           val d = newDriver
           f(d)
@@ -39,6 +44,15 @@ object MultiBrowser {
         }
         MultiBrowser(newDriver2, growthStrategy)(tabSupport)
       }
+
+      override def withSetupInTab(f: Tab[D] => Unit): MultiBrowser[D] =
+        withDriverSetup { implicit d =>
+          val root = tabSupport.active()
+          val tab = Tab(d, Mutex(), tabSupport)(root)
+          f(tab)
+          tab.closeTab()
+          tabSupport.activate(root)
+        }
 
       // Locks: outer
       override def openTab(): Tab[D] = outerMutex {
