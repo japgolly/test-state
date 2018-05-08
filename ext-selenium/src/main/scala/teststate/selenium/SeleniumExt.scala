@@ -13,6 +13,9 @@ object SeleniumExt {
         case _ =>
           throw new JavaScriptNotSupported(cmd)
       }
+
+    def unsetOnBeforeUnload(): Unit =
+      executeJsOrThrow("window.onbeforeunload = undefined")
   }
 
   class WebElementExt(private val self: WebElement) extends AnyVal {
