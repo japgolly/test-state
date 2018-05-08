@@ -16,6 +16,7 @@ trait MultiBrowser[+D <: WebDriver] extends MultiTab[D] {
 
   def onNewDriver(f: D => Unit): this.type
   def onNewDriverWithTempTab(f: Tab[D] => Unit): this.type
+  def onNewTab(f: Tab[D] => Unit): this.type
 }
 
 object MultiBrowser {
@@ -35,6 +36,7 @@ object MultiBrowser {
       private var instances    = Vector.empty[Browser]
       private var onNewDriver  = doNothing1: D => Unit
       private var onNewDriverT = doNothing1: Tab[D] => Unit
+      private var onNewTab     = doNothing1: Tab[D] => Unit
 
       // Locks: outer
       override def onNewDriver(f: D => Unit): this.type =
@@ -47,6 +49,13 @@ object MultiBrowser {
       override def onNewDriverWithTempTab(f: Tab[D] => Unit): this.type =
         outerMutex {
           onNewDriverT = onNewDriverT >> f
+          this
+        }
+
+      // Locks: outer
+      override def onNewTab(f: Tab[D] => Unit): this.type =
+        outerMutex {
+          onNewTab = onNewTab >> f
           this
         }
 
@@ -77,6 +86,7 @@ object MultiBrowser {
         tab          = browser.multiTab.openTab().afterClose(removeTab(_, tab))
         val browser2 = browser.copy(tabs = browser.tabs :+ tab)
         instances    = instances.updated(browserIndex, browser2)
+        onNewTab(tab)
         tab
       }
 
