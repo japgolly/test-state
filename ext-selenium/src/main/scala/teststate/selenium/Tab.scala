@@ -4,6 +4,7 @@ import org.openqa.selenium.WebDriver
 import scala.concurrent.duration.Duration
 import teststate.data.Id
 import teststate.typeclass.ExecutionModel
+import Internal._
 
 /** Access to a specific tab in a browser.
   *
@@ -124,9 +125,6 @@ object Tab {
           affect
         }
 
-      private def mergeProcMods(o: Option[D => ProcMod], f: D => ProcMod): D => ProcMod =
-        o.fold(f)(o => d => o(d).andThen(f(d)))
-
       override def aroundFirstUse(around: D => Tab.ProcMod): this.type =
         mutex {
           onFirstUse = Some(mergeProcMods(onFirstUse, around))
@@ -141,17 +139,10 @@ object Tab {
 
       override def afterClose(callback: D => Unit): this.type =
         mutex {
-          val old = afterClose
-          afterClose = d => {
-            old(d)
-            callback(d)
-          }
+          afterClose = afterClose >> callback
           this
         }
   }
-
-  private[this] val doNothing0 = () => ()
-  private[this] val doNothing1 = (_: Any) => ()
 
   // ===================================================================================================================
 

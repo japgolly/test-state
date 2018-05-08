@@ -4,19 +4,18 @@ import java.util.concurrent.Executors
 import org.openqa.selenium.WebDriver
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
+import Internal._
 
-/** Create tabs across multiple browsers */
+/** Creates tabs across multiple browsers.
+  *
+  * Note: This is mutable.
+  */
 trait MultiBrowser[+D <: WebDriver] extends MultiTab[D] {
   def closeBrowser(browserIndex: Int, quit: Boolean = true): Unit
   def closeAllBrowsers(quit: Boolean = true): Unit
 
-  /** Creates a brand-new, unrelated MultiBrowser instance that, for all new driver instances before use,
-    * executes the given proc on the driver. */
-  def withDriverSetup(f: D => Unit): MultiBrowser[D]
-
-  /** Creates a brand-new, unrelated MultiBrowser instance that, for all new driver instances before use,
-    * creates a new tab, runs the given proc, then closes the tab. */
-  def withSetupInTab(f: Tab[D] => Unit): MultiBrowser[D]
+  def onNewDriver(f: D => Unit): this.type
+  def onNewDriverWithTempTab(f: Tab[D] => Unit): this.type
 }
 
 object MultiBrowser {
@@ -33,48 +32,63 @@ object MultiBrowser {
                                  multiTab: MultiTab[D],
                                  tabs    : Vector[Tab[D]])
 
-      private var instances: Vector[Browser] =
-        Vector.empty
+      private var instances    = Vector.empty[Browser]
+      private var onNewDriver  = doNothing1: D => Unit
+      private var onNewDriverT = doNothing1: Tab[D] => Unit
 
-      override def withDriverSetup(f: D => Unit): MultiBrowser[D] = {
-        def newDriver2 = {
-          val d = newDriver
-          f(d)
-          d
-        }
-        MultiBrowser(newDriver2, growthStrategy)(tabSupport)
-      }
-
-      override def withSetupInTab(f: Tab[D] => Unit): MultiBrowser[D] =
-        withDriverSetup { implicit d =>
-          val root = tabSupport.active()
-          val tab = Tab(d, Mutex(), tabSupport)(root)
-          f(tab)
-          tab.closeTab()
-          tabSupport.activate(root)
+      // Locks: outer
+      override def onNewDriver(f: D => Unit): this.type =
+        outerMutex {
+          onNewDriver = onNewDriver >> f
+          this
         }
 
       // Locks: outer
-      override def openTab(): Tab[D] = outerMutex {
-        val browserIndex = {
-          val i = growthStrategy.nextBrowser(instances.map(_.tabs.length))
-          if (instances.indices.contains(i))
-            i
-          else {
-            val driver   = newDriver
-            val mutex    = Mutex()
-            val rootTab  = tabSupport.active()(driver)
-            val multiTab = MultiTab(driver, mutex)(tabSupport)(rootTab)
-            instances = instances :+ Browser(driver, mutex, rootTab, multiTab, Vector.empty)
-            instances.length - 1
-          }
+      override def onNewDriverWithTempTab(f: Tab[D] => Unit): this.type =
+        outerMutex {
+          onNewDriverT = onNewDriverT >> f
+          this
         }
+
+      private def createAndAddDriverWithoutLocking(): Int = {
+        val driver       = newDriver
+        val mutex        = Mutex()
+        val rootTab      = tabSupport.active()(driver)
+        val multiTab     = MultiTab(driver, mutex)(tabSupport)(rootTab)
+        val browser      = Browser(driver, mutex, rootTab, multiTab, Vector.empty)
+        val browserIndex = instances.length
+
+        instances = instances :+ browser
+
+        onNewDriver(driver)
+
+        if (onNewDriverT ne doNothing1) {
+          val tab = createTabWithoutLocking(browserIndex)
+          onNewDriverT(tab)
+          tab.closeTab()
+        }
+
+        browserIndex
+      }
+
+      private def createTabWithoutLocking(browserIndex: Int): Tab[D] = {
         val browser  = instances(browserIndex)
         var tab      = null: Tab[D]
         tab          = browser.multiTab.openTab().afterClose(removeTab(_, tab))
         val browser2 = browser.copy(tabs = browser.tabs :+ tab)
         instances    = instances.updated(browserIndex, browser2)
         tab
+      }
+
+      // Locks: outer
+      override def openTab(): Tab[D] = outerMutex {
+        val i = growthStrategy.nextBrowser(instances.map(_.tabs.length))
+        val browserIndex =
+          if (instances.indices.contains(i))
+            i
+          else
+            createAndAddDriverWithoutLocking()
+        createTabWithoutLocking(browserIndex)
       }
 
       // Locks: outer

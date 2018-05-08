@@ -47,6 +47,26 @@ object MultiBrowserTest extends TestSuite {
     case Some(_) => TestSuite {}
     case None => TestSuite {
 
+      'onNewDriverWithTempTab - {
+        var tabCountAtTempTab = -1
+        var tempTabInvocations = 0
+        mb.onNewDriverWithTempTab { t =>
+          t.use { _ =>
+            tabCountAtTempTab = tabCount()
+            tempTabInvocations += 1
+          }
+        }
+        val t = mb.openTab()
+        t.use { _ =>
+          assertEq("open tabs (A)", tabCount(), 2)
+        }
+        assertEq("open tabs (B)", tabCount(), 2)
+        t.closeTab()
+        assertEq("open tabs (C)", tabCount(), 1)
+        assertEq("open tabs (S)", tabCountAtTempTab, 2)
+        assertEq("invocations (S)", tempTabInvocations, 1)
+      }
+
       'openAndClose1 - testOpenAndClose()
       'openAndClose2 - testOpenAndClose()
 
