@@ -36,6 +36,7 @@ trait Tab[+D <: WebDriver] {
   def aroundEachUse (around: D => Tab.ProcMod): this.type
   def beforeClose   (callback: D => Unit): this.type
   def afterClose    (callback: D => Unit): this.type
+  def afterClosed   (callback: => Unit): this.type
 
   final def beforeFirstUse(f: D => Unit): this.type = aroundFirstUse(d => Tab.ProcMod.before(f(d)))
   final def afterFirstUse (f: D => Unit): this.type = aroundFirstUse(d => Tab.ProcMod.after (f(d)))
@@ -58,6 +59,7 @@ object Tab {
       private var onEachUse   = Option.empty[D => ProcMod]
       private var beforeClose = doNothing1: D => Unit
       private var afterClose  = doNothing1: D => Unit
+      private var afterClosed = doNothing0
 
       private def prepareWithoutLocking(): D = {
         implicit def d = driver
@@ -111,8 +113,9 @@ object Tab {
         mutex.monadic(EM.flatMap(driver)(f2), lockWait, lockRetry)
       }
 
-      override def closeTab(): Boolean =
-        mutex {
+      override def closeTab(): Boolean = {
+        // Close the tab with lock held
+        val callback = mutex {
           val affect = !closed
           if (affect) {
             implicit def d = driver
@@ -127,12 +130,25 @@ object Tab {
             closed = true
             tab = None
             afterClose(d)
-          }
-          affect
+            afterClosed
+          } else
+            null
         }
+
+        // Run the afterClosed callback without the browser lock
+        if (callback eq null)
+          false
+        else {
+          if (callback ne doNothing0)
+            callback()
+          true
+        }
+      }
 
       override def aroundFirstUse(around: D => Tab.ProcMod): this.type =
         mutex {
+          if (tab.isDefined)
+            sys.error("Attempting to add a {before,after,around}FirstUse callback to a tab after its first use.")
           onFirstUse = Some(mergeProcMods(onFirstUse, around))
           this
         }
@@ -152,6 +168,12 @@ object Tab {
       override def afterClose(callback: D => Unit): this.type =
         mutex {
           afterClose = afterClose >> callback
+          this
+        }
+
+      override def afterClosed(callback: => Unit): this.type =
+        mutex {
+          afterClosed = afterClosed >> callback
           this
         }
   }

@@ -8,6 +8,14 @@ private[selenium] object Internal {
 
   val doNothing1 = (_: Any) => ()
 
+  implicit class Fn0UnitExt[A](private val self: () => Unit) extends AnyVal {
+    def >>(next: => Unit): () => Unit =
+      () => {
+        self()
+        next
+      }
+  }
+
   implicit class AnyToUnitExt[A](private val self: A => Unit) extends AnyVal {
     def >>(next: A => Unit): A => Unit =
       a => {
