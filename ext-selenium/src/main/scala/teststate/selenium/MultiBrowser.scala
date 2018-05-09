@@ -71,12 +71,6 @@ object MultiBrowser {
 
         onNewDriver(driver)
 
-        if (onNewDriverT ne doNothing1) {
-          val tab = createTabWithoutLocking(browserIndex)
-          onNewDriverT(tab)
-          tab.closeTab()
-        }
-
         browserIndex
       }
 
@@ -90,15 +84,43 @@ object MultiBrowser {
         tab
       }
 
-      // Locks: outer
-      override def openTab(): Tab[D] = outerMutex {
-        val i = growthStrategy.nextBrowser(instances.map(_.tabs.length))
-        val browserIndex =
-          if (instances.indices.contains(i))
-            i
-          else
-            createAndAddDriverWithoutLocking()
-        createTabWithoutLocking(browserIndex)
+      // Locks: outer, browser
+      override def openTab(): Tab[D] = {
+
+        // Hold outer lock and be quick
+        val (tab, setup) = outerMutex {
+          val i = growthStrategy.nextBrowser(instances.map(_.tabs.length))
+
+          if (instances.indices.contains(i)) {
+            // Use existing browser
+            val browserIndex = i
+            val tab = createTabWithoutLocking(browserIndex)
+            (tab, None)
+
+          } else {
+            // Start new browser
+            val browserIndex = createAndAddDriverWithoutLocking()
+            val setup =
+              if (onNewDriverT eq doNothing1)
+                None
+              else
+                Some {
+                  val setupTab = createTabWithoutLocking(browserIndex)
+                  val setupFn = onNewDriverT
+                  () => {
+                    setupFn(setupTab)
+                    setupTab.closeTab()
+                  }
+                }
+            val tab = createTabWithoutLocking(browserIndex)
+            (tab, setup)
+          }
+        }
+
+        // Do per-browser setup with browser lock only
+        setup.foreach(_.apply())
+
+        tab
       }
 
       // Locks: outer
