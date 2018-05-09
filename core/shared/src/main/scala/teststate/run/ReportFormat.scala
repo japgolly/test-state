@@ -5,16 +5,25 @@ import scala.concurrent.duration.FiniteDuration
 import teststate.data.{Failure, Result}
 import teststate.typeclass.DisplayError
 import History.{Step, Steps}
-import Result.{Fail, Skip, Pass}
+import Result.{Fail, Pass, Skip}
+import scala.annotation.tailrec
 
 trait ReportFormat {
   def format[E](report: Report[E])(implicit de: DisplayError[E]): Option[String]
 
   def print[E](report: Report[E])(implicit de: DisplayError[E]): Unit =
-    format(report) foreach println
+    for (s <- format(report))
+      ReportFormat.printMutex.synchronized {
+        System.err.flush()
+        System.out.flush()
+        System.out.println(s)
+        System.out.flush()
+      }
 }
 
 object ReportFormat {
+
+  val printMutex = new AnyRef
 
   val quiet: ReportFormat =
     new ReportFormat {
@@ -51,17 +60,36 @@ object ReportFormat {
 
       def showStep(step: Step[Failure[E]], indent: Int): Unit = {
         val showChildren = step.children.steps.nonEmpty && s.showChildren(step.children)
-        val error = if (showChildren) None else step.result.failure
+        val optionFailure = if (showChildren) None else step.result.failure
 
         appendIndent(indent)
         appendResultFlag(step.result)
         sb append ' '
         sb append step.name.value
-        for (err <- error) {
-          val e = de.display(err.failure)
-          if (e.nonEmpty) {
-            sb append " -- "
-            sb append e
+        for (failure <- optionFailure) {
+          val errorMsg = de.display(failure.failure)
+          if (errorMsg.nonEmpty) {
+            val firstLine = errorMsg.takeWhile(_ != '\n')
+            if (firstLine.length == errorMsg.length) {
+              // Single line error msg
+              sb append s.failureDetail
+              sb append " -- "
+              sb append errorMsg
+            } else {
+              // Multi-line error msg
+              val indent2 = indent + 2
+              @tailrec
+              def go(line: String, remainderWithLine: String): Unit = {
+                val remainder = remainderWithLine.drop(line.length + 1)
+                sb append s.eol
+                appendIndent(indent2)
+                sb append s.failureDetail
+                sb append line
+                if (remainder.nonEmpty)
+                  go(remainder.takeWhile(_ != '\n'), remainder)
+              }
+              go(firstLine, errorMsg)
+            }
           }
         }
         sb append s.eol
@@ -174,13 +202,14 @@ object ReportFormat {
         }
     }
 
-    case class Settings(indent      : String,
-                        onPass      : String,
-                        onSkip      : String,
-                        onFail      : String,
-                        eol         : String,
-                        showChildren: History[Any] => Boolean,
-                        stats       : StatsFormat) {
+    case class Settings(indent       : String,
+                        onPass       : String,
+                        onSkip       : String,
+                        onFail       : String,
+                        failureDetail: String,
+                        eol          : String,
+                        showChildren : History[Any] => Boolean,
+                        stats        : StatsFormat) {
 
       def alwaysShowChildren =
         copy(showChildren = _ => true)
@@ -196,21 +225,23 @@ object ReportFormat {
       s.apply
 
     val uncoloured = Settings(
-      indent       = "  ",
-      onPass       = "✓", // ✓ ✔
-      onSkip       = "-", // ⇣ ↶ ↷
-      onFail       = "✘", // ✗ ✘
-      eol          = "\n",
-      showChildren = _.failure.isDefined,
-      stats        = StatsFormat.default)
+      indent        = "  ",
+      onPass        = "✓", // ✓ ✔
+      onSkip        = "-", // ⇣ ↶ ↷
+      onFail        = "✘", // ✗ ✘
+      failureDetail = "",
+      eol           = "\n",
+      showChildren  = _.failure.isDefined,
+      stats         = StatsFormat.default)
 
     val coloured = Settings(
-      indent       = "  ",
-      onPass       = BOLD + GREEN + uncoloured.onPass + RESET + WHITE,
-      onSkip       = BOLD + YELLOW + uncoloured.onSkip + BLACK,
-      onFail       = RED + uncoloured.onFail + BOLD,
-      eol          = RESET + uncoloured.eol,
-      showChildren = uncoloured.showChildren,
-      stats        = uncoloured.stats.before(_ append WHITE))
+      indent        = "  ",
+      onPass        = BOLD + GREEN + uncoloured.onPass + RESET + WHITE,
+      onSkip        = BOLD + YELLOW + uncoloured.onSkip + BLACK,
+      onFail        = RED + uncoloured.onFail + BOLD,
+      failureDetail = RESET + RED + uncoloured.failureDetail,
+      eol           = RESET + uncoloured.eol,
+      showChildren  = uncoloured.showChildren,
+      stats         = uncoloured.stats.before(_ append WHITE))
   }
 }

@@ -4,6 +4,20 @@ import org.openqa.selenium._
 
 object SeleniumExt {
 
+  class WebDriverExt(private val self: WebDriver) extends AnyVal {
+    def executeJsOrThrow(cmd: String): Unit =
+      self match {
+        case j: JavascriptExecutor =>
+          j.executeScript(cmd)
+          ()
+        case _ =>
+          throw new JavaScriptNotSupported(cmd)
+      }
+
+    def unsetOnBeforeUnload(): Unit =
+      executeJsOrThrow("window.onbeforeunload = undefined")
+  }
+
   class WebElementExt(private val self: WebElement) extends AnyVal {
     def clearAndSendKeys(keys: String): Unit = {
       self.clear()
@@ -21,16 +35,11 @@ object SeleniumExt {
     def scrollToY(d: WebDriver): Unit =
       _scrollTo(d, None, Some(self.getLocation.y))
 
-    private def _scrollTo(d: WebDriver, x: Option[Int], y: Option[Int]): Unit =
-      d match {
-        case j: JavascriptExecutor =>
-          val xx = x.fold("window.scrollX")(_.toString)
-          val yy = y.fold("window.scrollY")(_.toString)
-          j.executeScript(s"window.scrollTo($xx,$yy)")
-          ()
-        case _ =>
-          throw new JavaScriptNotSupported("Scrolling without JS not supported.")
-      }
+    private def _scrollTo(d: WebDriver, x: Option[Int], y: Option[Int]): Unit = {
+      val xx = x.fold("window.scrollX")(_.toString)
+      val yy = y.fold("window.scrollY")(_.toString)
+      new WebDriverExt(d).executeJsOrThrow(s"window.scrollTo($xx,$yy)")
+    }
 
     def scrollToAndClick(d: WebDriver): Unit = {
       scrollTo(d)
@@ -44,11 +53,12 @@ object SeleniumExt {
       p.x >= 0 && p.y >= 0
   }
 
-  final class JavaScriptNotSupported(msg: String) extends RuntimeException
+  final class JavaScriptNotSupported(cmd: String) extends RuntimeException("Unable to execute: " + cmd)
 }
 
 trait SeleniumExt {
   import SeleniumExt._
+  implicit def WebDriverExt (d: WebDriver) : WebDriverExt  = new WebDriverExt(d)
   implicit def WebElementExt(e: WebElement): WebElementExt = new WebElementExt(e)
   implicit def PointExt     (p: Point)     : PointExt      = new PointExt(p)
 }

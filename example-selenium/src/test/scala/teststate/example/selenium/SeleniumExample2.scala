@@ -28,7 +28,7 @@ object SeleniumExample2 extends TestSuite {
 
   val resultRegex = "^About ([0-9,]+) .*".r
 
-  private var debugOn = false
+  private val debugOn = false
   private val debugLock = new AnyRef
 
   private def debug(msg: => String): Unit =
@@ -44,7 +44,7 @@ object SeleniumExample2 extends TestSuite {
     debug(s"Observing $name...")
 
     val searchField: WebElement =
-      $.collect0n("[name=q]").doms.head
+      $.collect0n("[name=q]").doms.named("search fields").head
 
     val resultStats: Option[String] =
       $.collect01("#resultStats").map(_.innerText)

@@ -57,6 +57,19 @@ trait ExtScalaz extends T.Equal.ImplicitsLowPri {
 
   implicit def scalazEqualToTestState[A](implicit e: Equal[A]): T.Equal[A] =
     T.Equal(e.equal)
+
+  implicit def toStateTestDisjStringExt[A](e: String \/ A): ExtScalaz.StateTestDisjStringExt[A] =
+    new ExtScalaz.StateTestDisjStringExt(e)
 }
 
-object ExtScalaz extends ExtScalaz
+object ExtScalaz extends ExtScalaz {
+
+  final class StateTestDisjStringExt[A](private val self: String \/ A) extends AnyVal {
+    def getOrThrow(): A =
+      self match {
+        case \/-(a) => a
+        case -\/(e) => sys.error(e)
+      }
+  }
+
+}

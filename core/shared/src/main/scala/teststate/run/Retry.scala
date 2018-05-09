@@ -2,7 +2,7 @@ package teststate.run
 
 import acyclic.file
 import java.time.Instant
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, TimeUnit}
 import teststate.data._
 import teststate.typeclass.{Attempt, ExecutionModel}
 
@@ -62,16 +62,32 @@ object Retry {
     /** @param maxAttempts This many retries will be attempted resulting in this+1 failures before giving up.
       * @param interval Interval to wait between attempts.
       */
+    def fixedIntervalAndAttempts(interval: Long, intervalTU: TimeUnit, maxAttempts: Int): Policy =
+      fixedIntervalAndAttempts(intervalTU.toMillis(interval), maxAttempts)
+
+    /** @param maxAttempts This many retries will be attempted resulting in this+1 failures before giving up.
+      * @param interval Interval to wait between attempts.
+      */
     def fixedIntervalAndAttempts(interval: Duration, maxAttempts: Int): Policy =
+      fixedIntervalAndAttempts(interval.toMillis, maxAttempts)
+
+    /** @param maxAttempts This many retries will be attempted resulting in this+1 failures before giving up.
+      * @param intervalMs Interval to wait between attempts.
+      */
+    def fixedIntervalAndAttempts(intervalMs: Long, maxAttempts: Int): Policy =
       apply((ctx, _) =>
         if (ctx.retryCount < maxAttempts)
-          Some(ctx.lastFailure.plusMillis(interval.toMillis))
+          Some(ctx.lastFailure.plusMillis(intervalMs))
         else
           None)
 
-    def fixedIntervalWithTimeout(interval: Duration, timeout: Duration): Policy = {
-      val intervalMs = interval.toMillis
-      val timeoutMs = timeout.toMillis
+    def fixedIntervalWithTimeout(interval: Long, intervalTU: TimeUnit, timeout: Long, timeoutTU: TimeUnit): Policy =
+      fixedIntervalWithTimeout(intervalTU.toMillis(interval), timeoutTU.toMillis(timeout))
+
+    def fixedIntervalWithTimeout(interval: Duration, timeout: Duration): Policy =
+      fixedIntervalWithTimeout(interval.toMillis, timeout.toMillis)
+
+    def fixedIntervalWithTimeout(intervalMs: Long, timeoutMs: Long): Policy =
       apply { (ctx, now) =>
         val deadline = ctx.firstFailure.plusMillis(timeoutMs)
         if (now.isAfter(deadline)) {
@@ -94,7 +110,6 @@ object Retry {
               t
           }
       }
-    }
   }
 
   // ===================================================================================================================

@@ -1,64 +1,76 @@
 package teststate.selenium
 
-import org.openqa.selenium.{By, Keys, WebDriver}
-import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
-import org.openqa.selenium.firefox.{FirefoxDriver, FirefoxOptions}
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration._
-import scala.util.Random
+import scalaz.std.string._
+import scalaz.std.anyVal._
+import TestUtil._
+import utest._
 
-// TODO This should be a proper test-state test with retries on
-object MultiBrowserTest {
+object MultiBrowserTest extends TestSuite {
 
-  def main(args: Array[String]): Unit = {
+  implicit lazy val d = newChrome()
+  lazy val mb = MultiBrowser(d, GrowthStrategy.singleBrowser)
+  def tabCount() = d.getWindowHandles.size
 
-    def newChrome() = {
-      val options = new ChromeOptions()
-      options.setHeadless(false)
-      new ChromeDriver(options)
-    }
-    def newFirefox() = {
-      val options = new FirefoxOptions()
-      options.setHeadless(false)
-      new FirefoxDriver(options)
-    }
+  def testOpenAndClose(): Unit = {
+    var beforeFirst = 0
+    var afterFirst = 0
+    var beforeEach = 0
+    var afterEach = 0
+    def assertCB(
+                  expectBeforeFirst: Int,
+                  expectAfterFirst: Int,
+                  expectBeforeEach: Int,
+                  expectAfterEach: Int): Unit =
+      assertEq(
+        s"$beforeFirst, $afterFirst, $beforeEach, $afterEach",
+        s"$expectBeforeFirst, $expectAfterFirst, $expectBeforeEach, $expectAfterEach")
 
-    val mb = MultiBrowser(newChrome(), GrowthStrategy.maxTabs(3))
-
-    def newTab() = Future(mb.openTab())
-
-    def useTab(t: Tab[WebDriver], search: String) = Future {
-      t.use { driver =>
-        driver.get("http://www.google.com")
-        driver.findElement(By.name("q")).sendKeys(search)
-        driver.findElement(By.name("q")).sendKeys(Keys.ENTER)
-      }
-    }
-
-    def useTab2(t: Tab[WebDriver], search: String) = Future {
-      t.use { driver =>
-        val realSearch = driver.findElement(By.id("lst-ib")).getAttribute("value")
-        val stats = driver.findElement(By.id("resultStats")).getText()
-        System.out.println(s"[$search] '$realSearch' - $stats")
-      }
-    }
-
-    val searches = List("one", "two", "three", "four")
-
-    val rnd = new Random()
-    val f =
-    for {
-      tabAndSearches <- Future.traverse(rnd shuffle searches)(s => newTab().map((_, s)))
-      _ <- Future.traverse(rnd shuffle tabAndSearches)(x => useTab(x._1, x._2))
-      _ <- Future(Thread.sleep(3000))
-      _ <- Future.traverse(rnd shuffle tabAndSearches)(x => useTab2(x._1, x._2))
-    } yield ()
-
-    Await.result(f, 60 seconds)
-
-    mb.closeAllBrowsers(quit = false)
-    ()
+    val t = mb.openTabTo(google)
+      .beforeFirstUse(_ => beforeFirst += 1)
+      .afterFirstUse(_ => afterFirst += 1)
+      .beforeEachUse(_ => beforeEach += 1)
+      .afterEachUse(_ => afterEach += 1)
+    assertCB(0, 0, 0, 0) // tab usage is lazy
+    assertEq("Tab count before new tab is used", tabCount(), 1)
+    assertEq(t.use(_.getCurrentUrl), google)
+    assertCB(1, 1, 1, 1)
+    assertEq(t.use(_.getCurrentUrl), google)
+    assertCB(1, 1, 2, 2)
+    assertEq("Tab count after new tab is used", tabCount(), 2)
+    assertEq("Tab close when effective", t.closeTab(), true)
+    assertEq("Tab count after tab closed", tabCount(), 1)
+    assertEq("Tab close when not effective", t.closeTab(), false)
+    assertEq("Tab count after double close", tabCount(), 1)
   }
 
+  override def tests = CI match {
+    case Some(_) => TestSuite {}
+    case None => TestSuite {
+
+      'onNewDriverWithTempTab - {
+        var tabCountAtTempTab = -1
+        var tempTabInvocations = 0
+        mb.onNewDriverWithTempTab { t =>
+          t.use { _ =>
+            tabCountAtTempTab = tabCount()
+            tempTabInvocations += 1
+          }
+        }
+        val t = mb.openTab()
+        t.use { _ =>
+          assertEq("open tabs (A)", tabCount(), 2)
+        }
+        assertEq("open tabs (B)", tabCount(), 2)
+        t.closeTab()
+        assertEq("open tabs (C)", tabCount(), 1)
+        assertEq("open tabs (S)", tabCountAtTempTab, 2)
+        assertEq("invocations (S)", tempTabInvocations, 1)
+      }
+
+      'openAndClose1 - testOpenAndClose()
+      'openAndClose2 - testOpenAndClose()
+
+      'close - mb.closeAllBrowsers()
+    }
+  }
 }

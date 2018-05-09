@@ -16,6 +16,7 @@ object OutputTest extends TestSuite {
   val action    = mockAction("Press button.")
   val action2   = mockAction("Pull lever.")
   val actionF   = *.action("Press button!").attempt(_ => Some("BUTTON'S BROKEN"))
+  val actionFN  = *.action("Press button!").attempt(_ => Some("This has\nmultiple\nlines!!"))
   val actionG   = (action >> action2).group("Groupiness.")
   val actionGF1 = (actionF >> action2).group("Groupiness.")
   val actionGF2 = (action >> actionF).group("Groupiness.")
@@ -215,12 +216,33 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 0 checks.
           """.stripMargin)
 
+        'multiline - t(actionFN)(
+          """
+            |✘ Press button!
+            |    This has
+            |    multiple
+            |    lines!!
+            |Performed 1 action, 0 checks.
+          """.stripMargin)
+
         'beforeA - t(actionF addCheck checkPoint.before)(
           """
             |✘ Press button!
             |  ✓ Pre-conditions
             |    ✓ Check stuff.
             |  ✘ Action -- BUTTON'S BROKEN
+            |Performed 1 action, 1 check.
+          """.stripMargin)
+
+        'multilineBeforeA - t(actionFN addCheck checkPoint.before)(
+          """
+            |✘ Press button!
+            |  ✓ Pre-conditions
+            |    ✓ Check stuff.
+            |  ✘ Action
+            |      This has
+            |      multiple
+            |      lines!!
             |Performed 1 action, 1 check.
           """.stripMargin)
 

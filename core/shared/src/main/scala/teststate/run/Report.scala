@@ -30,40 +30,44 @@ case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: S
 
   @elidable(elidable.ASSERTION)
   def assert[EE >: E](useFailSettingsOnPass: Boolean = false)
-                     (implicit as: AssertionSettings, de: DisplayError[EE]): Unit =
-    failureReason(de) match {
+                     (implicit as: AssertionSettings, de: DisplayError[EE]): Unit = {
+    print[EE](useFailSettingsOnPass)
+    exception[EE].foreach(throw _)
+  }
 
-      case None =>
-        val fmt = if (useFailSettingsOnPass) as.onFail else as.onPass
-        fmt.print[EE](this)
+  /** Print the report to stdout */
+  def print[EE >: E](useFailSettingsOnPass: Boolean = false)
+                    (implicit as: AssertionSettings, de: DisplayError[EE]): Unit = {
+    val fmt = if (useFailSettingsOnPass || failed) as.onFail else as.onPass
+    fmt.print[EE](this)
+  }
 
-      case Some(fe) =>
-        as.onFail.print[EE](this)
+  def exception[EE >: E](implicit de: DisplayError[EE]): Option[Throwable] =
+    failureReason(de) map { fe =>
+      fe.cause match {
+        case Some(NonFatal(e)) =>
+          e
 
-        throw fe.cause match {
-          case Some(NonFatal(e)) =>
-            e
+        case Some(e) =>
+          // Because UndefinedBehaviourErrors (and presumably other fatal errors) freeze Scala.JS
+          val x = new RuntimeException(e.getMessage)
+          x.setStackTrace(e.getStackTrace)
+          x
 
-          case Some(e) =>
-            // Because UndefinedBehaviourErrors (and presumably other fatal errors) freeze Scala.JS
-            val x = new RuntimeException(e.getMessage)
-            x.setStackTrace(e.getStackTrace)
-            x
-
-          case None =>
-            new AssertionError(fe.failure)
-        }
+        case None =>
+          new AssertionError(fe.failure)
+      }
     }
 
   def format[EE >: E](implicit as: AssertionSettings, s: DisplayError[EE]): String =
     format[EE]()
 
   def format[EE >: E](useFailSettingsOnPass: Boolean = false)
-                     (implicit as: AssertionSettings, s: DisplayError[EE]): String =
-    format[EE](if (failed || useFailSettingsOnPass) as.onFail else as.onPass)(s)
+                     (implicit as: AssertionSettings, de: DisplayError[EE]): String =
+    format[EE](if (failed || useFailSettingsOnPass) as.onFail else as.onPass)(de)
 
-  def format[EE >: E](f: Format)(implicit s: DisplayError[EE]): String =
-    f.format[EE](this)(s) getOrElse ""
+  def format[EE >: E](f: Format)(implicit de: DisplayError[EE]): String =
+    f.format[EE](this)(de) getOrElse ""
 
   @deprecated("Use .format(true)", "2.2.0")
   def formatF[EE >: E](implicit as: AssertionSettings, s: DisplayError[EE]): String =

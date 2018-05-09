@@ -144,7 +144,7 @@ object CollectionAssertionsTest extends TestSuite {
 
       'containsAllP - test(ContainsAll(true))(
         _.name("A", "B"), "A should contain all B.")(
-        _ ("abc", "cde".toSet), "Missing: 'd', 'e'.")
+        _ ("abc", "cde".toSet), "Missing: 'd', 'e'")
 
       'containsAllF - test(ContainsAll(false))(
         _.name("A", "B"), "A shouldn't contain all B.")(
@@ -156,11 +156,11 @@ object CollectionAssertionsTest extends TestSuite {
 
       'containsAnyF - test(ContainsAny(false))(
         _.name("A", "B"), "A shouldn't contain any B.")(
-        _ ("abcde", "cdx".toSet), "Found: 'c', 'd'.")
+        _ ("abcde", "cdx".toSet), "Found: 'c', 'd'")
 
       'containsOnlyP - test(ContainsOnly(true))(
         _.name("A", "B"), "A should only contain B.")(
-        _ ("abcde", "bcd".toSet), "Found: 'a', 'e'.")
+        _ ("abcde", "bcd".toSet), "Found: 'a', 'e'")
 
       'containsOnlyF - test(ContainsOnly(false))(
         _.name("A", "B"), "A should contain other than B.")(
@@ -168,7 +168,7 @@ object CollectionAssertionsTest extends TestSuite {
 
       'distinctP - test(Distinct(true))(
         _.name("A"), "A should be distinct.")(
-        _ ("beabcdbfe"), "Dups: 'b' → 3, 'e' → 2.")
+        _ ("beabcdbfe"), "Dups: 'b' → 3, 'e' → 2")
 
       'distinctF - test(Distinct(false))(
         _.name("A"), "A should contain duplicates.")(
@@ -181,7 +181,7 @@ object CollectionAssertionsTest extends TestSuite {
         _ ("qwe", "qwe"), "Set members match.")
 
       'equalIncludingOrderP - testNoName(EqualIncludingOrder(true))(
-        _ ("abc", "acb"), "Actual: 'a', 'b', 'c'. Expect: 'a', 'c', 'b'.")
+        _ ("abc", "acb"), "Actual: 'a', 'b', 'c'\nExpect: 'a', 'c', 'b'")
 
       'equalIncludingOrderF - testNoName(EqualIncludingOrder(false))(
         _ ("qwe", "qwe"), "Set members match.")
@@ -237,7 +237,7 @@ object CollectionAssertionsTest extends TestSuite {
 
       'forallP - test(Forall(true))(
         _.name("ints", "be large"), "All ints should be large.")(
-        _ (List(1,9,2))(_ > 5), "2 of 3 elements failed: 1, 2.")
+        _ (List(1,9,2))(_ > 5), "2 of 3 elements failed: 1, 2")
 
       'forallF - test(Forall(false))(
         _.name("ints", "be large"), "Not all ints should be large.")(
@@ -249,7 +249,7 @@ object CollectionAssertionsTest extends TestSuite {
 
       'existsF - test(Exists(false))(
         _.name("ints", "be large"), "Of all ints, none should be large.")(
-        _ (List(1,9,3))(_ > 5), "1 of 3 elements satisfied criteria: 9.")
+        _ (List(1,9,3))(_ > 5), "1 of 3 elements satisfied criteria: 9")
 
     }
   }
