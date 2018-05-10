@@ -2,7 +2,9 @@ package teststate.run
 
 import acyclic.file
 import java.time.Instant
-import scala.concurrent.duration.{Duration, TimeUnit}
+import java.time.{Duration => JavaDuration}
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.{Duration => ScalaDuration}
 import teststate.data._
 import teststate.typeclass.{Attempt, ExecutionModel}
 
@@ -68,7 +70,13 @@ object Retry {
     /** @param maxAttempts This many retries will be attempted resulting in this+1 failures before giving up.
       * @param interval Interval to wait between attempts.
       */
-    def fixedIntervalAndAttempts(interval: Duration, maxAttempts: Int): Policy =
+    def fixedIntervalAndAttempts(interval: JavaDuration, maxAttempts: Int): Policy =
+      fixedIntervalAndAttempts(interval.toMillis, maxAttempts)
+
+    /** @param maxAttempts This many retries will be attempted resulting in this+1 failures before giving up.
+      * @param interval Interval to wait between attempts.
+      */
+    def fixedIntervalAndAttempts(interval: ScalaDuration, maxAttempts: Int): Policy =
       fixedIntervalAndAttempts(interval.toMillis, maxAttempts)
 
     /** @param maxAttempts This many retries will be attempted resulting in this+1 failures before giving up.
@@ -84,7 +92,10 @@ object Retry {
     def fixedIntervalWithTimeout(interval: Long, intervalTU: TimeUnit, timeout: Long, timeoutTU: TimeUnit): Policy =
       fixedIntervalWithTimeout(intervalTU.toMillis(interval), timeoutTU.toMillis(timeout))
 
-    def fixedIntervalWithTimeout(interval: Duration, timeout: Duration): Policy =
+    def fixedIntervalWithTimeout(interval: JavaDuration, timeout: JavaDuration): Policy =
+      fixedIntervalWithTimeout(interval.toMillis, timeout.toMillis)
+
+    def fixedIntervalWithTimeout(interval: ScalaDuration, timeout: ScalaDuration): Policy =
       fixedIntervalWithTimeout(interval.toMillis, timeout.toMillis)
 
     def fixedIntervalWithTimeout(intervalMs: Long, timeoutMs: Long): Policy =
