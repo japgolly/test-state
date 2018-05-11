@@ -70,7 +70,7 @@ object MultiBrowserTest extends TestSuite {
       'openAndClose1 - testOpenAndClose()
       'openAndClose2 - testOpenAndClose()
 
-      'close - mb.closeAllBrowsers()
+      'close - mb.close()
     }
   }
 }

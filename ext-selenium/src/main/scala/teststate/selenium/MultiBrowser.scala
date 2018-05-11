@@ -11,8 +11,24 @@ import Internal._
   * Note: This is mutable.
   */
 trait MultiBrowser[+D <: WebDriver] extends MultiTab[D] {
-  def closeBrowser(browserIndex: Int, quit: Boolean = true): Unit
-  def closeAllBrowsers(quit: Boolean = true): Unit
+
+  /** Closes all opened browsers.
+    *
+    * @param quit If true, calls `.quit()` on [[WebDriver]] which terminates the browser entirely, regardless of its state.
+    *             If false, closes all managed tabs and then the root tab which, if no other tabs are open, results in
+    *             the browser instance closing.
+    */
+  def close(quit: Boolean = true): Unit
+
+  /** Close all tabs in all browsers that have been opened by this. */
+  def closeManagedTabs(): Unit
+
+  /** Close all root (empty) tabs in all browsers, and disassociate the browsers if they remain open.
+    *
+    * Caution: this will prevent associated [[Tab]] instances from focusing themselves.
+    * Do not call this method if you intend to continue using associated tabs.
+    */
+  def closeRoot(): Unit
 
   def onNewDriver(f: D => Unit): this.type
   def onNewDriverWithTempTab(f: Tab[D] => Unit): this.type
@@ -31,7 +47,13 @@ object MultiBrowser {
                                  mutex   : Mutex,
                                  rootTab : TabHandle,
                                  multiTab: MultiTab[D],
-                                 tabs    : Vector[Tab[D]])
+                                 tabs    : Vector[Tab[D]]) {
+        def closeRoot(): Unit = mutex {
+          implicit def d = driver
+          tabSupport.activate(rootTab)
+          tabSupport.closeActive()
+        }
+      }
 
       private var instances    = Vector.empty[Browser]
       private var onNewDriver  = doNothing1: D => Unit
@@ -133,55 +155,47 @@ object MultiBrowser {
         }
       }
 
-      // Locks: outer(browser)
-      override def closeAllBrowsers(quit: Boolean = true): Unit = {
-        val after: () => Unit =
-          outerMutex {
-            val bs = instances
-            bs.length match {
-              case 0 =>
-                () => ()
-              case 1 =>
-                _closeBrowser(bs.head, quit)
-                () => ()
-              case n =>
-                val threadPool = Executors.newFixedThreadPool(n)
-                implicit val ec = ExecutionContext.fromExecutorService(threadPool)
-                val f = Future.traverse(bs)(b => Future(_closeBrowser(b, quit)))
-                () => {
-                  Await.result(f, Duration.Inf)
-                  threadPool.shutdown()
-                  ec.shutdown()
-                }
-            }
+      // Locks: outer, browser, outer
+      override def close(quit: Boolean = true): Unit =
+        if (quit)
+          foreachBrowser(true)(b => b.mutex(b.driver.quit()))
+        else
+          foreachBrowser(true) { b =>
+            b.tabs.foreach(_.closeTab())
+            b.closeRoot()
           }
-        after()
+
+      // Locks: outer, browser, outer
+      override def closeManagedTabs(): Unit =
+        foreachBrowser(false)(_.tabs.foreach(_.closeTab()))
+
+      // Locks: outer, browser
+      override def closeRoot(): Unit =
+        foreachBrowser(true)(_.closeRoot())
+
+      // Locks: outer. `f` is executed without any locks held.
+      private def foreachBrowser(clear: Boolean)(f: Browser => Unit): Unit = {
+        val bs = outerMutex {
+          val copy = instances
+          if (clear)
+            instances = Vector.empty
+          copy
+        }
+        par(bs)(f)
       }
 
-      // Locks: outer(browser)
-      override def closeBrowser(i: Int, quit: Boolean = true): Unit =
-        outerMutex {
-          instances.lift(i).foreach(_closeBrowser(_, quit))
+      private def par[A](as: Vector[A])(f: A => Unit): Unit = {
+        as.length match {
+          case 0 => ()
+          case 1 => f(as.head)
+          case n =>
+            val threadPool = Executors.newFixedThreadPool(n)
+            implicit val ec = ExecutionContext.fromExecutorService(threadPool)
+            val fs = Future.traverse(as)(b => Future(f(b)))
+            Await.result(fs, Duration.Inf)
+            threadPool.shutdown()
+            ec.shutdown()
         }
-
-      // Locks: outer(browser)
-      private def _closeBrowser(b: Browser, quit: Boolean): Unit =
-        outerMutex {
-          if (instances.exists(_ eq b)) {
-            b.mutex {
-              if (quit)
-                b.driver.quit()
-                // Hmmm ↑ this would cause tab.closeTab() to fail
-              else {
-                implicit def d = b.driver
-                b.tabs.foreach(_.closeTab()) // locks browser,outer
-                tabSupport.activate(b.rootTab) // just in case
-                b.driver.close() // closes root which should close the browser
-              }
-            }
-            instances = instances.filter(_ ne b)
-          }
-        }
-
+      }
     }
 }

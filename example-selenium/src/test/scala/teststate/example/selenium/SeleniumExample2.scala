@@ -83,7 +83,7 @@ object SeleniumExample2 extends TestSuite {
     val testsAsync   = tests.map(t => t.trans(ExecutionModel.toFuture))
     val asyncResults = Future.traverse(testsAsync)(_.run())
     val results      = Await.result(asyncResults, 1 minute)
-    mb.closeAllBrowsers()
+    mb.close()
     results.foreach(_.assert(true))
   }
 
