@@ -54,11 +54,16 @@ object TabSupport {
     }
 
     override def closeActive()(implicit driver: D): Unit = {
-      val before = driver.getWindowHandles.size
-      _close()
-      val after = driver.getWindowHandles.size
-      val change = after - before
-      assert(change == -1, s"Failed to close tab. Expected tab count to change by -1, instead was $change")
+      val expect = driver.getWindowHandles.size - 1
+      if (expect == 0) {
+        // Firefox: _close() doesn't work
+        // Chrome: after _close() driver.getWindowHandles throws
+        driver.close()
+      } else {
+        _close()
+        val after = driver.getWindowHandles.size
+        assert(after == expect, s"Failed to close tab. Expected tab count to become $expect, but is instead $after")
+      }
     }
   }
 

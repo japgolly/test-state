@@ -6,6 +6,7 @@ import org.openqa.selenium.WebDriver
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 import org.openqa.selenium.firefox.{FirefoxDriver, FirefoxOptions}
 import scala.collection.JavaConverters._
+import scala.util.Try
 import scalaz.Equal
 import scalaz.std.anyVal._
 import scalaz.std.string._
@@ -64,8 +65,14 @@ object TabSupportTest extends TestSuite {
       testClose(tab3)
       testClose(tab4)
 
-    } finally
-      driver.quit()
+      tabSupport.activate(root)
+      tabSupport.closeActive() // testing that it works even when closing the driver
+      assert(Try(tabs()).isFailure) // because driver is closed
+
+    } finally {
+      Try(driver.quit())
+      ()
+    }
 
   override def tests = CI match {
     case None => TestSuite {
