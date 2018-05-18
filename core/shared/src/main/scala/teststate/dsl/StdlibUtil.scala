@@ -110,8 +110,8 @@ object StdlibUtil {
 
   final class NamedMap[K, +V](namePlural: String, val underlying: Map[K, V]) {
 
-    def filter(desc: String, f: (K, V) => Boolean): NamedMap[K, V] =
-      new NamedMap(s"$namePlural($desc)", underlying filter f.tupled)
+    def filter(desc: String, f: ((K, V)) => Boolean): NamedMap[K, V] =
+      new NamedMap(s"$namePlural($desc)", underlying filter f)
 
     def get(k: K): NamedOption[V] =
       new NamedOption(namePlural, underlying.get(k))
