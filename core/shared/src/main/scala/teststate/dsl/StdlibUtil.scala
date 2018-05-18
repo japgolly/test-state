@@ -110,6 +110,9 @@ object StdlibUtil {
 
   final class NamedMap[K, +V](namePlural: String, val underlying: Map[K, V]) {
 
+    def toVector: NamedVector[(K, V)] =
+      new NamedVector(namePlural, underlying.toVector)
+
     def filter(desc: String, f: ((K, V)) => Boolean): NamedMap[K, V] =
       new NamedMap(s"$namePlural($desc)", underlying filter f)
 
