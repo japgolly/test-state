@@ -19,6 +19,10 @@ object SeleniumExt {
   }
 
   class WebElementExt(private val self: WebElement) extends AnyVal {
+    def setValueTo(value: String): Unit =
+      if (value != self.getAttribute("value"))
+        clearAndSendKeys(value)
+
     def clearAndSendKeys(keys: String): Unit = {
       self.clear()
       self.sendKeys(keys)
