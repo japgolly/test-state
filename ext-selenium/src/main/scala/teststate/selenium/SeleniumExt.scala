@@ -19,6 +19,18 @@ object SeleniumExt {
   }
 
   class WebElementExt(private val self: WebElement) extends AnyVal {
+    def classes: Set[String] = {
+      // Duplicated in DomZipperSeleniumModule in order to avoid the dependency
+      val clsStr = self.getAttribute("class").trim
+      if (clsStr.isEmpty)
+        Set.empty
+      else
+        clsStr.split(" +").toSet
+    }
+
+    def getValue(): Option[String] =
+      Option(self.getAttribute("value"))
+
     def setValueTo(value: String): Unit =
       if (value != self.getAttribute("value"))
         clearAndSendKeys(value)

@@ -82,6 +82,7 @@ object DomZipperSeleniumModule extends DomZipperModule {
       dom.isSelected
 
     override def classes: Set[String] = {
+      // Duplicated in SeleniumExt in order to avoid the dependency
       val clsStr = dom.getAttribute("class").trim
       if (clsStr.isEmpty)
         Set.empty
