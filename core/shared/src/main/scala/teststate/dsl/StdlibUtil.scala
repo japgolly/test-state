@@ -21,6 +21,12 @@ trait StdlibUtil {
     new TestStateTraversableExt(as)
 
   type NamedVector[+A] = StdlibUtil.NamedVector[A]
+
+  implicit def TestStateMapExt[K, V](a: Map[K, V]): TestStateMapExt[K, V] =
+    new TestStateMapExt(a)
+
+  type NamedMap[K, +V] = StdlibUtil.NamedMap[K, V]
+
 }
 
 object StdlibUtil {
@@ -97,6 +103,31 @@ object StdlibUtil {
   final class TestStateTraversableExt[A](private val self: Traversable[A]) extends AnyVal {
     def named(namePlural: String): NamedVector[A] =
       new NamedVector(namePlural, self.toVector)
+  }
+
+
+  // ===================================================================================================================
+
+  final class NamedMap[K, +V](namePlural: String, val underlying: Map[K, V]) {
+
+    def filter(desc: String, f: (K, V) => Boolean): NamedMap[K, V] =
+      new NamedMap(s"$namePlural($desc)", underlying filter f.tupled)
+
+    def get(k: K): NamedOption[V] =
+      new NamedOption(namePlural, underlying.get(k))
+
+    def apply(k: K): V =
+      underlying.get(k) match {
+        case Some(v) => v
+        case None => sys.error(s"$namePlural doesn't contain $k; it contains ${underlying.keys.mkString("[", ", ", "]")}")
+      }
+  }
+
+  implicit def NamedMapToMap[K, V](n: NamedMap[K, V]): Map[K, V] = n.underlying
+
+  final class TestStateMapExt[K, V](private val self: Map[K, V]) extends AnyVal {
+    def named(namePlural: String): NamedMap[K, V] =
+      new NamedMap(namePlural, self.toMap)
   }
 
 }
