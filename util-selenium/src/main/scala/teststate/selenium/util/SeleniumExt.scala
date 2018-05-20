@@ -1,8 +1,20 @@
-package teststate.selenium
+package teststate.selenium.util
 
 import org.openqa.selenium._
 
-object SeleniumExt {
+object SeleniumExt extends SeleniumExt
+
+trait SeleniumExt {
+  implicit def WebDriverExt (d: WebDriver) : Internals.WebDriverExt  = new Internals.WebDriverExt(d)
+  implicit def WebElementExt(e: WebElement): Internals.WebElementExt = new Internals.WebElementExt(e)
+  implicit def PointExt     (p: Point)     : Internals.PointExt      = new Internals.PointExt(p)
+
+  final type JavaScriptNotSupported = Internals.JavaScriptNotSupported
+  final val  JavaScriptNotSupported = Internals.JavaScriptNotSupported
+}
+
+object Internals {
+  private implicit def WebDriverExt(d: WebDriver): WebDriverExt = new WebDriverExt(d)
 
   class WebDriverExt(private val self: WebDriver) extends AnyVal {
     def executeJsOrThrow(cmd: String): Unit =
@@ -11,7 +23,7 @@ object SeleniumExt {
           j.executeScript(cmd)
           ()
         case _ =>
-          throw new JavaScriptNotSupported(cmd)
+          throw JavaScriptNotSupported(cmd)
       }
 
     def unsetOnBeforeUnload(): Unit =
@@ -19,8 +31,7 @@ object SeleniumExt {
   }
 
   class WebElementExt(private val self: WebElement) extends AnyVal {
-    def classes: Set[String] = {
-      // Duplicated in DomZipperSeleniumModule in order to avoid the dependency
+    def classes(): Set[String] = {
       val clsStr = self.getAttribute("class").trim
       if (clsStr.isEmpty)
         Set.empty
@@ -54,14 +65,13 @@ object SeleniumExt {
     private def _scrollTo(d: WebDriver, x: Option[Int], y: Option[Int]): Unit = {
       val xx = x.fold("window.scrollX")(_.toString)
       val yy = y.fold("window.scrollY")(_.toString)
-      new WebDriverExt(d).executeJsOrThrow(s"window.scrollTo($xx,$yy)")
+      d.executeJsOrThrow(s"window.scrollTo($xx,$yy)")
     }
 
     def scrollToAndClick(d: WebDriver): Unit = {
       scrollTo(d)
       self.click()
     }
-
   }
 
   class PointExt(private val p: Point) extends AnyVal {
@@ -69,12 +79,5 @@ object SeleniumExt {
       p.x >= 0 && p.y >= 0
   }
 
-  final class JavaScriptNotSupported(cmd: String) extends RuntimeException("Unable to execute: " + cmd)
-}
-
-trait SeleniumExt {
-  import SeleniumExt._
-  implicit def WebDriverExt (d: WebDriver) : WebDriverExt  = new WebDriverExt(d)
-  implicit def WebElementExt(e: WebElement): WebElementExt = new WebElementExt(e)
-  implicit def PointExt     (p: Point)     : PointExt      = new PointExt(p)
+  final case class JavaScriptNotSupported(cmd: String) extends RuntimeException("Unable to execute: " + cmd)
 }

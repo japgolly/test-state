@@ -3,6 +3,7 @@ package teststate.domzipper.selenium
 import teststate.domzipper._
 import org.openqa.selenium.{By, WebDriver, WebElement}
 import scala.collection.JavaConverters._
+import teststate.selenium.util.SeleniumExt._
 import ErrorHandler._
 
 object DomZipperSeleniumModule extends DomZipperModule {
@@ -79,16 +80,10 @@ object DomZipperSeleniumModule extends DomZipperModule {
       getAttribute("value") orFail s".value failed on <${dom.getTagName}>."
 
     override def checked: Out[Boolean] =
-      dom.isSelected
+      dom.isSelected()
 
-    override def classes: Set[String] = {
-      // Duplicated in SeleniumExt in order to avoid the dependency
-      val clsStr = dom.getAttribute("class").trim
-      if (clsStr.isEmpty)
-        Set.empty
-      else
-        clsStr.split(" +").toSet
-    }
+    override def classes: Set[String] =
+      dom.classes()
 
     /** The currently selected option in a &lt;select&gt; dropdown. */
     def selectedOption: Out[Collector[Option, Next, Next, Out]] =

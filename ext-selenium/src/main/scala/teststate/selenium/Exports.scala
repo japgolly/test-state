@@ -4,7 +4,7 @@ import org.openqa.selenium.WebDriver
 
 object Exports extends Exports
 
-trait Exports extends SeleniumExt with TestStateExt {
+trait Exports extends util.SeleniumExt with TestStateExt {
 
   final type GrowthStrategy                = teststate.selenium.GrowthStrategy
   final val  GrowthStrategy                = teststate.selenium.GrowthStrategy
@@ -23,4 +23,3 @@ trait Exports extends SeleniumExt with TestStateExt {
   final val  TabSupport                    = teststate.selenium.TabSupport
 
 }
-

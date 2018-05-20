@@ -126,7 +126,8 @@ object TestState {
       .aggregate(
         coreJVM, coreMacrosJVM,
         domZipperJVM, domZipperSelenium,
-        extScalazJVM, extCatsJVM, extNyayaJVM, extSelenium)
+        extScalazJVM, extCatsJVM, extNyayaJVM, extSelenium,
+        utilSelenium)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
@@ -174,11 +175,10 @@ object TestState {
   lazy val domZipperSelenium = project
     .in(file("dom-zipper-selenium"))
     .configure(commonSettings.jvm, publicationSettings.jvm, testSettingsCI.jvm)
-    .dependsOn(domZipperJVM)
+    .dependsOn(domZipperJVM, utilSelenium)
     .settings(
       moduleName := "dom-zipper-selenium",
       libraryDependencies ++= Seq(
-        "org.seleniumhq.selenium" % "selenium-api"            % Ver.Selenium,
         "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium % Test,
         "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium % Test),
       javaOptions in Test += ("-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath))
@@ -244,13 +244,20 @@ object TestState {
   lazy val extSelenium = project
     .in(file("ext-selenium"))
     .configure(commonSettings.jvm, publicationSettings.jvm, testSettingsCI.jvm)
-    .dependsOn(coreJVM)
+    .dependsOn(coreJVM, utilSelenium)
     .settings(
       moduleName := "ext-selenium",
       libraryDependencies ++= Seq(
-        "org.seleniumhq.selenium" % "selenium-api"            % Ver.Selenium,
         "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium,
         "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium))
+
+  lazy val utilSelenium = project
+    .in(file("util-selenium"))
+    .configure(commonSettings.jvm, publicationSettings.jvm, testSettingsCI.jvm)
+    .settings(
+      moduleName := "util-selenium",
+      libraryDependencies ++= Seq(
+        "org.seleniumhq.selenium" % "selenium-api" % Ver.Selenium))
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
