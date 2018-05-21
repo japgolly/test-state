@@ -98,7 +98,7 @@ trait DomZipperModule {
     // Descent
     // =======
 
-    final def directSelect(sel: String): CssSelResult =
+    final def runCssQuery(sel: String): CssSelResult =
       $.run(sel, curLayer.dom)
 
     final def apply(sel: String): Out[DomZipper[Next, Next, Out]] =
@@ -111,7 +111,7 @@ trait DomZipperModule {
       apply(name, sel, MofN.Sole)
 
     final def apply(name: String, sel: String, which: MofN): Out[DomZipper[Next, Next, Out]] = {
-      val results = directSelect(sel)
+      val results = runCssQuery(sel)
       if (results.length != which.n)
         h fail {
           val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
@@ -155,7 +155,7 @@ trait DomZipperModule {
 
     // Eager! DOM could change!
     private final val result: Vector[NextBase] = {
-      val r = from.directSelect(sel)
+      val r = from.runCssQuery(sel)
       colFilter.fold(r)(r.filter)
     }
 
