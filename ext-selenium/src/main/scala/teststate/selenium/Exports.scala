@@ -1,10 +1,13 @@
 package teststate.selenium
 
-import org.openqa.selenium.WebDriver
+import japgolly.univeq.UnivEq
+import org.openqa.selenium.{WebDriver, WebElement}
 
 object Exports extends Exports
 
 trait Exports extends util.SeleniumExt with TestStateExt {
+
+  final implicit def univEqWebElement: UnivEq[WebElement] = UnivEq.force
 
   final type GrowthStrategy                = teststate.selenium.GrowthStrategy
   final val  GrowthStrategy                = teststate.selenium.GrowthStrategy

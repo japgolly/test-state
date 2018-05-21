@@ -1,13 +1,14 @@
 package teststate.selenium.util
 
 import org.openqa.selenium._
+import scala.collection.JavaConverters._
 
 object SeleniumExt extends SeleniumExt
 
 trait SeleniumExt {
-  implicit def WebDriverExt (d: WebDriver) : Internals.WebDriverExt  = new Internals.WebDriverExt(d)
-  implicit def WebElementExt(e: WebElement): Internals.WebElementExt = new Internals.WebElementExt(e)
-  implicit def PointExt     (p: Point)     : Internals.PointExt      = new Internals.PointExt(p)
+  implicit def testStateExtWebDriver (d: WebDriver) : Internals.WebDriverExt  = new Internals.WebDriverExt(d)
+  implicit def testStateExtWebElement(e: WebElement): Internals.WebElementExt = new Internals.WebElementExt(e)
+  implicit def testStateExtPoint     (p: Point)     : Internals.PointExt      = new Internals.PointExt(p)
 
   final type JavaScriptNotSupported = Internals.JavaScriptNotSupported
   final val  JavaScriptNotSupported = Internals.JavaScriptNotSupported
@@ -30,6 +31,8 @@ object Internals {
       executeJsOrThrow("window.onbeforeunload = undefined")
   }
 
+  private val childrenXpath = By.xpath("./*")
+
   class WebElementExt(private val self: WebElement) extends AnyVal {
     def classes(): Set[String] = {
       val clsStr = self.getAttribute("class").trim
@@ -38,6 +41,9 @@ object Internals {
       else
         clsStr.split(" +").toSet
     }
+
+    def children(): Vector[WebElement] =
+      self.findElements(childrenXpath).asScala.toVector
 
     def getValue(): Option[String] =
       Option(self.getAttribute("value"))

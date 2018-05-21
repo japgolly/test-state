@@ -15,7 +15,7 @@ object DomZipperSeleniumModule extends DomZipperModule {
   final class Constructors[Out[_]](implicit h: ErrorHandler[Out]) {
 
     def root(tag: String, driver: WebDriver)(implicit scrub: HtmlScrub): DomZipper[WebElement, WebElement, Out] =
-      apply(tag, driver.findElement(By.tagName(tag)))
+      apply(tag, driver.findElement(By.tagName(tag)))(scrub, driver)
 
     def html(driver: WebDriver)(implicit scrub: HtmlScrub): DomZipper[WebElement, WebElement, Out] =
       root("html", driver)
@@ -23,11 +23,17 @@ object DomZipperSeleniumModule extends DomZipperModule {
     def body(driver: WebDriver)(implicit scrub: HtmlScrub): DomZipper[WebElement, WebElement, Out] =
       root("body", driver)
 
-    def apply[W <: Base](dom: W)(implicit scrub: HtmlScrub): DomZipper[W, WebElement, Out] =
+    def apply[W <: Base](dom: W, driver: WebDriver)(implicit scrub: HtmlScrub): DomZipper[W, WebElement, Out] =
+      apply(dom)(scrub, driver)
+
+    def apply[W <: Base](name: String, webElement: W, driver: WebDriver)(implicit scrub: HtmlScrub): DomZipper[W, WebElement, Out] =
+      apply(name, webElement)(scrub, driver)
+
+    def apply[W <: Base](dom: W)(implicit scrub: HtmlScrub, driver: WebDriver): DomZipper[W, WebElement, Out] =
       apply("<provided>", dom)
 
-    def apply[W <: Base](name: String, webElement: W)(implicit scrub: HtmlScrub): DomZipper[W, WebElement, Out] =
-      new DomZipper(Vector.empty, Layer(name, "", webElement), scrub)(h)
+    def apply[W <: Base](name: String, webElement: W)(implicit scrub: HtmlScrub, driver: WebDriver): DomZipper[W, WebElement, Out] =
+      new DomZipper(Vector.empty, Layer(name, "", webElement), scrub)(h, driver)
   }
 
   private val cssSelSelenium: CssSelEngine =
@@ -43,23 +49,39 @@ object DomZipperSeleniumModule extends DomZipperModule {
   final class DomZipper[+Cur <: Base, Next <: NextBase, Out[_]] private[selenium](prevLayers: Vector[Layer[Base]],
                                                                                   curLayer: Layer[Cur],
                                                                                   htmlScrub: HtmlScrub)
-                                                                                 (implicit h: ErrorHandler[Out])
+                                                                                 (implicit h: ErrorHandler[Out],
+                                                                                  driver: WebDriver)
     extends AbstractDomZipper[Cur, Next, Out](prevLayers, curLayer, htmlScrub)(cssSelSelenium, h) {
 
     override protected def setScrubHtml(f: HtmlScrub): DomZipper[Cur, Next, Out] =
       new DomZipper(prevLayers, curLayer, f)
 
     override def failBy[Result[_]](errorHandler: ErrorHandler[Result]): DomZipper[Cur, Next, Result] =
-      new DomZipper(prevLayers, curLayer, htmlScrub)(errorHandler)
+      new DomZipper(prevLayers, curLayer, htmlScrub)(errorHandler, driver)
 
     override protected[domzipper] def addLayer[NewCur <: WebElement](nextLayer: Layer[NewCur]): DomZipper[NewCur, Next, Out] =
       new DomZipper(prevLayers :+ curLayer, nextLayer, htmlScrub)
 
     override protected def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out] =
-      new Collector(this, sel, c, None)
+      new Collector(this, sel, runCssQuery(sel), c, None)
+
+    override protected def collectChildren[C[_]](desc: String, c: Container[C, Out]): Collector[C, Next, Next, Out] =
+      new Collector(this, desc, dom.children(), c, None)
+
+    override protected def collectChildren[C[_]](desc: String, sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out] = {
+      // WebElement implements hashCode and equals sensibly
+      val all: Set[WebElement] = runCssQuery(sel).toSet
+      new Collector(this, desc, dom.children().filter(all.contains), c, None)
+    }
 
     def dom: WebElement =
       curLayer.dom
+
+    override def matches(sel: String): Out[Boolean] = {
+      val all = driver.findElements(By.cssSelector(sel)).asScala
+      val dom = this.dom
+      all.contains(dom) // WebElement implements hashCode and equals sensibly
+    }
 
     def getAttribute(name: String): Option[String] =
       Option(dom.getAttribute(name))
@@ -106,13 +128,14 @@ object DomZipperSeleniumModule extends DomZipperModule {
   // ===================================================================================================================
 
   final class Collector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
-                                                                   sel: String,
+                                                                   desc: String,
+                                                                   rawResult: CssSelResult,
                                                                    cont: Container[C, Out],
                                                                    colFilter: Option[NextBase => Boolean])
                                                                   (implicit h: ErrorHandler[Out])
-      extends AbstractCollector[C, D, Next, Out](from, sel, cont, colFilter) {
+      extends AbstractCollector[C, D, Next, Out](from, desc, rawResult, cont, colFilter) {
 
     override protected def withFilter(colFilter: Option[NextBase => Boolean]): Collector[C, D, Next, Out] =
-      new Collector(from, sel, cont, colFilter)
+      new Collector(from, desc, rawResult, cont, colFilter)
   }
 }

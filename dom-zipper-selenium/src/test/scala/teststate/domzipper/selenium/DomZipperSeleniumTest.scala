@@ -1,9 +1,9 @@
 package teststate.domzipper.selenium
 
 import japgolly.microlibs.testutil.TestUtil._
+import java.util.concurrent.TimeUnit
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 import utest._
-import scalaz.Equal
 import scalaz.std.anyVal._
 import scalaz.std.string._
 import scalaz.std.option._
@@ -19,6 +19,7 @@ object DomZipperSeleniumTest extends TestSuite {
     options.setHeadless(true)
     options.addArguments("--no-sandbox") // Travis workaround: https://github.com/SeleniumHQ/selenium/issues/4961
     val driver = new ChromeDriver(options)
+    driver.manage().timeouts().implicitlyWait(1, TimeUnit.NANOSECONDS)
     Runtime.getRuntime.addShutdownHook(new Thread() {
       override def run(): Unit = driver.quit()
     })
@@ -36,9 +37,9 @@ object DomZipperSeleniumTest extends TestSuite {
 
       'outerHTML - assertEq(name.outerHTML, nameInputHtml)
 
-      'innerHTML - assertEq($("div", 1 of 3).innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
+      'innerHTML - assertEq($("div.name").innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
 
-      'innerText - assertEq($("div", 1 of 3).innerText, "Name:")
+      'innerText - assertEq($("div.name").innerText, "Name:")
 
       'value - assertEq(name.value, "Bob Loblaw")
 
@@ -69,6 +70,30 @@ object DomZipperSeleniumTest extends TestSuite {
         'child - assertEq(child.map(_.outerHTML), Some(html))
         'self - assertEq(child.flatMap(_.findSelfOrChildWithAttribute(attr).map(_.outerHTML)), Some(html))
       }
+
+      'matches - {
+        val x = $("input[type=checkbox]", 1 of 2)
+        assert(x.matches("input"))
+        assert(!x.matches("a"))
+        assert(x.matches("input[type=checkbox]"))
+        assert(!x.matches("input[type=text]"))
+        assert(x.matches("div > input"))
+        assert(!x.matches("body a input"))
+      }
+
+      'child - {
+        'sole - assertEq($("form").child("h3").innerText, "HI")
+        'nOfM - assertEq($("form").child("div", 2 of 3)("h3").innerText, "EH??")
+      }
+
+      'children - {
+        'nullary - assertEq(
+          $("form").children1n.doms.map(_.getTagName.toLowerCase),
+          Vector("div", "select", "select", "div", "h3", "div"))
+
+        'sel - assertEq($("form").children1n("h3").innerTexts, Vector("HI"))
+      }
+
     }
 
     case Some(_) => TestSuite {}

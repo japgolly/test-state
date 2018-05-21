@@ -5,7 +5,7 @@ import teststate.domzipper.DomZipperJS.{DomZipper => DZ}
 import DomZipperJS.{Base, NextBase, Root, Constructors}
 import ErrorHandler.{Id, Throw}
 
-trait Exports extends SharedExports {
+trait Exports extends SharedExports with JsDomExt {
 
   final type DomZipperAt[+D <: Base] = DZ[D, NextBase, Id]
   final type DomZipper               = DomZipperAt[Base]

@@ -5,6 +5,7 @@ import org.scalajs.dom.html
 import scala.reflect.ClassTag
 import scala.scalajs.js
 import ErrorHandler._
+import JsDomExt._
 
 object DomZipperJS extends DomZipperModule {
   import AbstractCollector._
@@ -36,10 +37,10 @@ object DomZipperJS extends DomZipperModule {
     * @tparam Out  The shape of all output that can potentially fail.
     */
   final class DomZipper[+Cur <: Base, Next <: NextBase, Out[_]] private[domzipper](prevLayers: Vector[Layer[Base]],
-                                                                                 curLayer  : Layer[Cur],
-                                                                                 htmlScrub : HtmlScrub)
-                                                                                (implicit $: CssSelEngine,
-                                                                                 h: ErrorHandler[Out])
+                                                                                   curLayer  : Layer[Cur],
+                                                                                   htmlScrub : HtmlScrub)
+                                                                                  (implicit $: CssSelEngine,
+                                                                                   h: ErrorHandler[Out])
       extends AbstractDomZipper[Cur, Next, Out](prevLayers, curLayer, htmlScrub) {
 
     override protected def setScrubHtml(f: HtmlScrub): DomZipper[Cur, Next, Out] =
@@ -82,8 +83,27 @@ object DomZipperJS extends DomZipperModule {
     def forceDomAs[NewCur <: Base]: NewCur =
       dom.asInstanceOf[NewCur]
 
+    override def matches(sel: String): Out[Boolean] =
+      dom match {
+        case e: org.scalajs.dom.Element => e.matches(sel)
+        case x => h fail s"Not an element: " + x
+      }
+
     override def collect[C[_]](sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out] =
-      new Collector(this, sel, c, None)
+      new Collector(this, sel, runCssQuery(sel), c, None)
+
+    private def childIterator: Iterator[Next] =
+      dom.childNodes.iterator.collect {
+        case e: org.scalajs.dom.Element => e.asInstanceOf[Next] // asInstanceOf! oh god...
+      }
+
+    override protected def collectChildren[C[_]](desc: String, c: Container[C, Out]): Collector[C, Next, Next, Out] =
+      new Collector(this, desc, childIterator.toVector, c, None)
+
+    override protected def collectChildren[C[_]](desc: String, sel: String, c: Container[C, Out]): Collector[C, Next, Next, Out] = {
+      val all = runCssQuery(sel).toSet
+      new Collector(this, desc, childIterator.filter(all.contains).toVector, c, None)
+    }
 
     /** Cast DOM to [[js.Dynamic]] and invoke a method expected to return `A` if successful. */
     def dynamicMethod[A](f: js.Dynamic => Any): Option[A] =
@@ -97,7 +117,7 @@ object DomZipperJS extends DomZipperModule {
     protected override def _innerHTML = htmlScrub run dynamicString(_.innerHTML)
 
     override def innerText: String =
-      dom.textContent
+      dom.textContent.trim
 
     override def value: Out[String] =
       dynamicMethod[String](_.value.toString) orFail s".value failed on $dom."
@@ -127,9 +147,9 @@ object DomZipperJS extends DomZipperModule {
     def selectedOptionText: Out[Option[String]] =
       selectedOption.map(_.map(_.text))
 
-    def findSelfOrChildWithAttribute[DD >: Cur <: Base](attr: String)(implicit ev: DomZipper[Next, Next, Out] <:< DomZipper[DD, Next, Out]): Out[Option[DomZipper[DD, Next, Out]]] =
+    def findSelfOrChildWithAttribute(attr: String): Out[Option[DomZipper[Base, Next, Out]]] =
       dom.attributes.getNamedItem(attr) match {
-        case null => collect01(s"*[$attr]").zippers.map(_.map(ev))
+        case null => collect01(s"*[$attr]").zippers.map(z => z)
         case _ => Some(this)
       }
   }
@@ -137,14 +157,15 @@ object DomZipperJS extends DomZipperModule {
   // ===================================================================================================================
 
   final class Collector[C[_], D <: Next, Next <: NextBase, Out[_]](from: DomZipper[_, Next, Out],
-                                                                   sel: String,
+                                                                   desc: String,
+                                                                   rawResult: CssSelResult,
                                                                    cont: Container[C, Out],
                                                                    colFilter: Option[NextBase => Boolean])
                                                                   (implicit h: ErrorHandler[Out])
-      extends AbstractCollector[C, D, Next, Out](from, sel, cont, colFilter) {
+      extends AbstractCollector[C, D, Next, Out](from, desc, rawResult, cont, colFilter) {
 
     override protected def withFilter(colFilter: Option[NextBase => Boolean]): Collector[C, D, Next, Out] =
-      new Collector(from, sel, cont, colFilter)
+      new Collector(from, desc, rawResult, cont, colFilter)
 
     def as[DD <: D]: Collector[C, DD, Next, Out] =
       this.asInstanceOf[Collector[C, DD, Next, Out]]
