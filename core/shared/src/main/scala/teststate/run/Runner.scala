@@ -381,15 +381,15 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
 
     // Perform before
     val preResults: (PreCheck[H], PreCheck[UnpackChecks[List, O, S, E]]) = {
-      val checksPreI = UnpackChecks.invariants(invariants, p.ros.os)
-      val checksPreA = UnpackChecks.arounds(arounds, p.ros.os)
+      val checksPreI = UnpackChecks.invariants(invariants, p.ros)
+      val checksPreA = UnpackChecks.arounds(arounds, p.ros)
       val checksPre = PreCheck(checksPreA, checksPreI)
       val bI = History.newBuilder[E](stats)
       val bA = History.newBuilder[E](stats)
       checksPreA.errors foreach bA.addNE
       checksPreI.errors foreach bI.addNE
-      bA.addEach(checksPreA.befores)(_.name)(p.ros.sos, _.test(p.ros.os).noCause)
-      bI.addEach(checksPreI.befores)(_.name)(p.ros.sos, _.test(p.ros.os).noCause)
+      bA.addEach(checksPreA.befores)(_.name)(p.ros.some, _.test(p.ros).noCause)
+      bI.addEach(checksPreI.befores)(_.name)(p.ros.some, _.test(p.ros).noCause)
       val pre = PreCheck(bA.group(PreName), bI.group(PreName))
       (pre, checksPre)
     }
@@ -409,7 +409,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
         var b = prepend
         for (d0 <- deltas) {
           val d = d0.aux
-          val r = attempt.attempt(d.before(p.ros.os)).fold[Tri[FE, d.A]](Failed(_), _.noCause)
+          val r = attempt.attempt(d.before(p.ros)).fold[Tri[FE, d.A]](Failed(_), _.noCause)
           b :+= HalfCheck(d)(r)
         }
         b
@@ -466,8 +466,8 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
     var checksPostA = checksPre.pre
     var checksPostI = checksPre.invariants
     if (checksPostA.coproductFound || checksPostI.coproductFound) {
-      checksPostA = UnpackChecks.arounds(arounds, ros2.os)
-      checksPostI = UnpackChecks.invariants(invariants, ros2.os)
+      checksPostA = UnpackChecks.arounds(arounds, ros2)
+      checksPostI = UnpackChecks.invariants(invariants, ros2)
     }
 
     // Post conditions
@@ -475,9 +475,9 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
       val b = History.newBuilder[E](stats)
       checksPostA.errors foreach b.addNE
       b.addEach(hcs)(
-        c => c.check.name)(Some(BeforeAfter(p.ros.os, ros2.os)),
-        c => c.before.flatMap(a => Tri failedOption c.check.test(ros2.os, a).noCause)) // Perform around-post
-      b.addEach(checksPostA.afters)(_.name)(ros2.sos, _.test(ros2.os).noCause) // Perform post
+        c => c.check.name)(Some(BeforeAfter(p.ros, ros2)),
+        c => c.before.flatMap(a => Tri failedOption c.check.test(ros2, a).noCause)) // Perform around-post
+      b.addEach(checksPostA.afters)(_.name)(ros2.some, _.test(ros2).noCause) // Perform post
       b.group(PostName)
     }
 
@@ -485,7 +485,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
     val invs = {
       val b = History.newBuilder[E](stats)
       checksPostI.errors foreach b.addNE
-      b.addEach(checksPostI.afters)(_.name)(ros2.sos, _.test(ros2.os).noCause)
+      b.addEach(checksPostI.afters)(_.name)(ros2.some, _.test(ros2).noCause)
       b.group(InvariantsName)
     }
 
@@ -663,7 +663,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
       val invariantsPoints = {
         val ps = new UniqueListBuilder[Point[OS[O, S], E]]
         val es = new UniqueListBuilder[NamedError[FE]]
-        foreachSackE(test.invariants)(ros.os) {
+        foreachSackE(test.invariants)(ros) {
           case Right(Invariant.Point(p)) => ps += p
           case Right(Invariant.Delta(_)) => ()
           case Left(e)                   => es += e
@@ -680,7 +680,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
         else {
           val children = {
             val b = History.newBuilder[E](stats)
-            b.addEachNE(invariantsPoints)(_.name)(ros.sos, _.test(ros.os).noCause)
+            b.addEachNE(invariantsPoints)(_.name)(ros.some, _.test(ros).noCause)
             b.history()
           }
           History(History.parent(InitialState, children))

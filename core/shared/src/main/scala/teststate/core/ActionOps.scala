@@ -224,12 +224,12 @@ object ActionOps {
         override def pmapR[F[_], R, O, S, E, X](x: Inner[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]) =
           x match {
             case Single(run) =>
-              Single(ros => tryPrepare(f(ros.ref))(r => run(ros.copy(ref = r))))
+              Single(ros => tryPrepare(f(ros.ref))(r => run(ros.withRef(r))))
 
             case Group(a) =>
               Group(
                 ros => f(ros.ref) match {
-                  case Right(r) => a(ros.copy(ref = r)).map(_ pmapR f)
+                  case Right(r) => a(ros.withRef(r)).map(_ pmapR f)
                   case Left(e)  => someFailActions("Action requires correct reference.", e)
                 })
 
@@ -242,12 +242,12 @@ object ActionOps {
             case Single(run) =>
               Single(
                 ros => tryPrepare(f(ros.obs))(o =>
-                  run(ros.copy(obs = o)).map(fn => () => em.map(fn())(_.map(g => (x: X) => f(x) flatMap g)))))
+                  run(ros.withObs(o)).map(fn => () => em.map(fn())(_.map(g => (x: X) => f(x) flatMap g)))))
 
             case Group(a) =>
               Group(
                 ros => f(ros.obs) match {
-                  case Right(o) => a(ros.copy(obs = o)).map(_ pmapO f)
+                  case Right(o) => a(ros.withObs(o)).map(_ pmapO f)
                   case Left(err) => someFailActions("Action requires correct observation.", err)
                 })
 
