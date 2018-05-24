@@ -2,7 +2,7 @@ package teststate.data
 
 import acyclic.file
 
-sealed class OS[+O, +S](final val obs: O, final val state: S) {
+sealed class OS[+O, +S](val obs: O, val state: S) {
   override def hashCode(): Int =
     obs.## * 31 + state.##
 
@@ -29,7 +29,7 @@ object OS {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-final class ROS[+R, +O, +S](val ref: R, obs: O, state: S) extends OS[O, S](obs, state) {
+final class ROS[+R, +O, +S](val ref: R, override val obs: O, override val state: S) extends OS[O, S](obs, state) {
   override def hashCode(): Int =
     ref.## + super.hashCode * 31
 
