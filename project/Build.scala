@@ -22,7 +22,7 @@ object TestState {
     final val Nyaya           = "0.8.1"
     final val Scala211        = "2.11.12"
     final val Scala212        = "2.12.6"
-    final val ScalaJsDom      = "0.9.5"
+    final val ScalaJsDom      = "0.9.6"
     final val ScalaJsReact    = "1.2.0"
     final val ScalaJsJavaTime = "0.2.4"
     final val Scalaz          = "7.2.23"
