@@ -15,6 +15,10 @@ object Action {
     def mod[F2[_], R2, O2, S2, E2](f: (ROS[R, O, S] => Prepared[F, O, S, E]) => ROS[R2, O2, S2] => Prepared[F2, O2, S2, E2]): Single[F2, R2, O2, S2, E2] =
       Single(f(run))
   }
+  object Single {
+    def empty[F[_], R, O, S, E](implicit F: ExecutionModel[F]): Single[F, R, O, S, E] =
+      apply(ros => Some(() => F.pure(Right((_: O) => Right(ros.state)))))
+  }
 
   final case class Group[F[_], R, O, S, E](action: ROS[R, O, S] => Option[Actions[F, R, O, S, E]]) extends Inner[F, R, O, S, E]
 

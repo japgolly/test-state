@@ -94,6 +94,31 @@ object OutputTest extends TestSuite {
           |✓ All pass.
           |Performed 0 actions, 2 checks.
         """.stripMargin)
+
+      'state - {
+        val * = Dsl[Unit, Unit, Int]
+        val s = *.focus("state").value(_.state)
+
+        val r = Plan.action(
+          s.assert(3) +> *.emptyAction.updateState(_ + 1) // 3 -> 4
+            >> *.emptyAction.updateState(_ + 3) // -> 7
+            >> *.emptyAction.updateState(_ + 7) +> s.assert(14) // -> 14
+        ).testU.runU(3)
+        assertRun(r,
+          """
+            |✓ Update state.
+            |  ✓ Pre-conditions
+            |    ✓ state should be 3.
+            |  ✓ Action
+            |✓ Update state.
+            |✓ Update state.
+            |  ✓ Action
+            |  ✓ Post-conditions
+            |    ✓ state should be 14.
+            |✓ All pass.
+            |Performed 3 actions, 2 checks.
+          """.stripMargin)
+      }
     }
 
     'invariants {

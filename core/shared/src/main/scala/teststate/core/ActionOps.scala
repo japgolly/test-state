@@ -21,7 +21,11 @@ trait ActionOps[A[_[_], _, _, _, _]] {
 
   def pmapO[F[_], R, O, S, E, X](x: A[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]): A[F, R, X, S, E]
 
-  def modS[F[_], R, O, S, E](x: A[F, R, O, S, E])(f: O => S => E Or S)(implicit em: ExecutionModel[F]): A[F, R, O, S, E]
+  /**
+    * @param name When defined and the underlying action is empty, a no-op one with the given name will be created.
+    *             Otherwise, an empty action will be returned.
+    */
+  def modS[F[_], R, O, S, E](x: A[F, R, O, S, E])(name: Option[String], f: O => S => E Or S)(implicit em: ExecutionModel[F]): A[F, R, O, S, E]
 }
 
 trait ActionOps2[A[_[_], _, _, _, _]] {
@@ -59,21 +63,27 @@ object ActionOps {
     def pmapO[X](f: X => E Or O)(implicit em: ExecutionModel[F]) =
       tc.pmapO(a)(f)
 
-    private[core] def modS(f: O => S => E Or S)(implicit em: ExecutionModel[F]) =
-      tc.modS(a)(f)
+    /**
+      * @param name When defined and the underlying action is empty, a no-op one with the given name will be created.
+      *             Otherwise, an empty action will be returned.
+      */
+    private[core] def modS(name: Option[String], f: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+      tc.modS(a)(name, f)
 
     def updateState(f: S => S)(implicit em: ExecutionModel[F]) =
       updateStateAttempt(s => Right(f(s)))
 
     def updateStateAttempt(f: S => E Or S)(implicit em: ExecutionModel[F]) =
-      modS(_ => f)
+      modS(stateUpdateName, _ => f)
 
     def updateStateBy(f: OS[O, S] => S)(implicit em: ExecutionModel[F]) =
       updateStateAttemptBy(i => Right(f(i)))
 
     def updateStateAttemptBy(f: OS[O, S] => E Or S)(implicit em: ExecutionModel[F]) =
-      modS(o => s => f(OS(o, s)))
+      modS(stateUpdateName, o => s => f(OS(o, s)))
   }
+
+  private val stateUpdateName = Some("Update state.")
 
   final class Ops2[A[_[_], _, _, _, _], F[_], R, O, S, E](private val a: A[F, R, O, S, E])(implicit tc: ActionOps2[A]) {
 
@@ -255,7 +265,7 @@ object ActionOps {
               SubTest(a pmapO f, i pmapO f)
           }
 
-        override def modS[F[_], R, O, S, E](x: Inner[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+        override def modS[F[_], R, O, S, E](x: Inner[F, R, O, S, E])(name: Option[String], m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
           x match {
             case Single(run) =>
               Single[F, R, O, S, E](
@@ -263,8 +273,8 @@ object ActionOps {
                   _.map(g => (o: O) => g(o) flatMap m(o))
                 )))
 
-            case Group(a)      => Group(a(_).map(_ modS m))
-            case SubTest(a, i) => SubTest(a modS m, i)
+            case Group(a)      => Group(a(_).map(_.modS(name, m)))
+            case SubTest(a, i) => SubTest(a.modS(name, m), i)
           }
       }
 
@@ -289,8 +299,8 @@ object ActionOps {
         override def pmapO[F[_], R, O, S, E, X](x: Outer[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
           Outer(x.name pmapO f, x.inner pmapO f, x.check pmapO f)
 
-        override def modS[F[_], R, O, S, E](x: Outer[F, R, O, S, E])(m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
-          Outer(x.name, x.inner modS m, x.check)
+        override def modS[F[_], R, O, S, E](x: Outer[F, R, O, S, E])(name: Option[String], m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+          Outer(x.name, x.inner.modS(name, m), x.check)
 
         override def times[F[_], R, O, S, E](a: Outer[F, R, O, S, E])(n: Int) =
           _times(n, a.name, a.nameMod(_).lift)
@@ -333,11 +343,22 @@ object ActionOps {
                 _.emapO(f).fold(e => Sack Value Left(NamedError(n(None), Failure NoCause e)), p(_) pmapO f))
           }
 
-        override def modS[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(f: O => S => E Or S)(implicit em: ExecutionModel[F]) =
+        override def modS[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(name: Option[String], f: O => S => E Or S)(implicit em: ExecutionModel[F]) =
           actions match {
-            case Value(v)         => Value(v.map(_ modS f))
-            case Product(ss)      => if (ss.isEmpty) Product(ss) else Product(ss.init :+ ss.last.modS(f))
-            case CoProduct(nf, p) => CoProduct(nf, ros => p(ros).modS(f))
+            case Value(v)         => Value(v.map(_.modS(name, f)))
+            case CoProduct(nf, p) => CoProduct(nf, ros => p(ros).modS(name, f))
+            case Product(ss) =>
+              if (ss.isEmpty)
+                name match {
+                  case Some(n) =>
+                    val inner = Action.Single[F, R, O, S, E](ros => Some(() => em.point(Right((o: O) => f(o)(ros.state)))))
+                    val action = Action.liftInner(inner)(n)
+                    Product(Vector.empty :+ action)
+                  case None =>
+                    Product(Vector.empty)
+                }
+              else
+                Product(ss.init :+ ss.last.modS(name, f))
           }
 
         override def times[F[_], R, O, S, E](actions: Actions[F, R, O, S, E])(n: Int) =
