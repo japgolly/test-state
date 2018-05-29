@@ -1,6 +1,7 @@
 package teststate.selenium.util
 
 import org.openqa.selenium._
+import org.openqa.selenium.interactions.Actions
 import scala.collection.JavaConverters._
 
 object SeleniumExt extends SeleniumExt
@@ -56,6 +57,9 @@ object Internals {
       self.clear()
       self.sendKeys(keys)
     }
+
+    def moveTo(d: WebDriver): Unit =
+      new Actions(d).moveToElement(self).build().perform()
 
     def scrollTo(d: WebDriver): Unit = {
       val p = self.getLocation

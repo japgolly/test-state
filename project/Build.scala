@@ -257,7 +257,8 @@ object TestState {
     .settings(
       moduleName := "util-selenium",
       libraryDependencies ++= Seq(
-        "org.seleniumhq.selenium" % "selenium-api" % Ver.Selenium))
+        "org.seleniumhq.selenium" % "selenium-api" % Ver.Selenium,
+        "org.seleniumhq.selenium" % "selenium-remote-driver" % Ver.Selenium))
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
