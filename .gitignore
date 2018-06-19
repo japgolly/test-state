@@ -6,6 +6,7 @@
 .*.swp
 .*.swo
 .*.swn
+.DS_Store
 
 .project
 target
