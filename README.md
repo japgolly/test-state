@@ -9,13 +9,13 @@ Test **stateful** stuff **statelessly**, and reasonably.
 - [What is this?](#what-is-this)
 - [How does this work?](#how-does-this-work)
 - How do I use this?
-  - [Usage](doc/USAGE.md).
-  - [Types](doc/TYPES.md).
-  - [DSL](doc/DSL.md).
-  - [Composability](doc/COMPOSE.md).
+  - [Usage](doc/USAGE.md)
+  - [Types](doc/TYPES.md)
+  - [DSL](doc/DSL.md)
+  - [Composability](doc/COMPOSE.md)
 - [Modules](#modules)
 - [Examples](#examples)
-- [Changelogs](doc/changelog) — [Latest](doc/changelog/2.1.3.md).
+- [Changelogs](doc/changelog) — [Latest](doc/changelog/2.1.3.md)
 - [Support](#supportexamples)
 
 
@@ -84,10 +84,10 @@ When retries are enabled, then test execution is
 [like this](https://rawgit.com/japgolly/test-state/master/doc/retries.gv.svg).
 
 # How do I use this?
-  - [Usage](doc/USAGE.md).
-  - [Types](doc/TYPES.md).
-  - [DSL](doc/DSL.md).
-  - [Composability](doc/COMPOSE.md).
+  - [Usage](doc/USAGE.md)
+  - [Types](doc/TYPES.md)
+  - [DSL](doc/DSL.md)
+  - [Composability](doc/COMPOSE.md)
 
 # Modules
 
