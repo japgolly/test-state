@@ -1,0 +1,34 @@
+digraph G {
+
+start [shape=circle,style=filled,color=black,fontsize=1,height=.3]
+end [shape=doublecircle,style=filled,color=black,fontsize=1,height=.3]
+
+node[style=filled fillcolor="#ffeecc"]
+obs1 [label="Observe"]
+act [label="Perform action"]
+obs [label="Observe"]
+obsP [label="Re-observe"]
+obsA [label="Re-observe"]
+
+node[fillcolor="#eeeeee"]
+inv1 [label="Test invariants"]
+more [label="More actions?" fillcolor="#ffffff"]
+pre [label="Test action's\npre-conditions"]
+state [label="Action updates\nexpected state"]
+post [label="Test action's\npost-conditions"]
+inv [label="Test invariants"]
+
+start -> obs1 -> inv1 -> more -> pre -> act -> obs -> state -> post -> inv -> more -> end
+obsP -> pre // invariants too
+obsA -> act
+inv -> end [style=invis]
+
+edge[color="#cc0000" fontcolor="#cc0000"]
+obs1 -> obs1 [dir=back]
+inv1 -> obs1
+obsP -> pre [dir=back]
+obsA -> act [dir=back]
+obs -> obs [dir=back]
+state,post,inv -> obs
+
+}
