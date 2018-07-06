@@ -58,6 +58,12 @@ object Internals {
       self.sendKeys(keys)
     }
 
+    def dragAndDrop(to: WebElement)(implicit d: WebDriver): Unit =
+      new Actions(d).dragAndDrop(self, to).build().perform()
+
+    def dragAndDropBy(offsetX: Int, offsetY: Int)(implicit d: WebDriver): Unit =
+      new Actions(d).dragAndDropBy(self, offsetX, offsetY).build().perform()
+
     def moveMouseTo(d: WebDriver): Unit =
       new Actions(d).moveToElement(self).build().perform()
 
