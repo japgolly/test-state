@@ -1,7 +1,7 @@
 package teststate.typeclass
 
 import acyclic.file
-import java.io.PrintStream
+import java.io.{PrintStream, PrintWriter, StringWriter}
 import teststate.data._
 
 final case class Attempt[+E](toE: Throwable => E) extends AnyVal {
@@ -35,8 +35,33 @@ object Attempt {
   val id: Attempt[Throwable] =
     Attempt(identity)
 
+  private val prefix = "Caught exception: "
+
   val byToString: Attempt[String] =
-    Attempt("Caught exception: " + _.toString)
+    Attempt(prefix + _)
+
+  def toStringWithStackTrace: Attempt[String] =
+    toStringWithStackTrace(identity)
+
+  def toStringWithStackTrace(stackTraceMod: List[String] => List[String]): Attempt[String] =
+    Attempt { err =>
+      val st = stackTraceMod(stackTrace(err).split('\n').toList).mkString("\n").trim
+      if (st.isEmpty)
+        s"$prefix$err"
+      else
+        s"$prefix$err\n$st"
+    }
+
+  def stackTrace(t: Throwable): String = {
+    val sw = new StringWriter()
+    try {
+      val pw = new PrintWriter(sw)
+      try {
+        t.printStackTrace(pw)
+        sw.toString
+      } finally pw.close()
+    } finally sw.close()
+  }
 
   def printFirst[A](r: Attempt[A], stream: PrintStream = System.err): Attempt[A] =
     Attempt { t =>
