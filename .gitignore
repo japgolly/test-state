@@ -20,3 +20,4 @@ target
 .cache
 .classpath
 .metadata
+.bloop
