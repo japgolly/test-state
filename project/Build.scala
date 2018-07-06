@@ -1,8 +1,11 @@
 import sbt._
 import Keys._
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
 import org.scalajs.sbtplugin.ScalaJSPlugin
-import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.{crossProject => _, CrossType => _, _}
 import org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv
+import sbtcrossproject.CrossPlugin.autoImport._
+import scalajscrossproject.ScalaJSCrossPlugin.autoImport._
 import Lib._
 
 object TestState {
@@ -141,7 +144,7 @@ object TestState {
 
   lazy val coreMacrosJVM = coreMacros.jvm
   lazy val coreMacrosJS  = coreMacros.js
-  lazy val coreMacros = crossProject
+  lazy val coreMacros = crossProject(JSPlatform, JVMPlatform)
     .in(file("core-macros"))
     .configureCross(commonSettings, publicationSettings, testSettings)
     .bothConfigure(definesMacros)
@@ -149,7 +152,7 @@ object TestState {
 
   lazy val coreJVM = core.jvm
   lazy val coreJS  = core.js
-  lazy val core = crossProject
+  lazy val core = crossProject(JSPlatform, JVMPlatform)
     .configureCross(commonSettings, publicationSettings)
     .dependsOn(coreMacros)
     .configureCross(testSettings)
@@ -164,7 +167,7 @@ object TestState {
 
   lazy val domZipperJVM = domZipper.jvm
   lazy val domZipperJS  = domZipper.js
-  lazy val domZipper = crossProject
+  lazy val domZipper = crossProject(JSPlatform, JVMPlatform)
     .in(file("dom-zipper"))
     .configureCross(commonSettings, publicationSettings, testSettings)
     .settings(moduleName := "dom-zipper")
@@ -196,7 +199,7 @@ object TestState {
 
   lazy val extScalazJVM = extScalaz.jvm
   lazy val extScalazJS  = extScalaz.js
-  lazy val extScalaz = crossProject
+  lazy val extScalaz = crossProject(JSPlatform, JVMPlatform)
     .in(file("ext-scalaz"))
     .configureCross(commonSettings, publicationSettings)
     .dependsOn(core)
@@ -207,7 +210,7 @@ object TestState {
 
   lazy val extCatsJVM = extCats.jvm
   lazy val extCatsJS  = extCats.js
-  lazy val extCats = crossProject
+  lazy val extCats = crossProject(JSPlatform, JVMPlatform)
     .in(file("ext-cats"))
     .configureCross(commonSettings, publicationSettings)
     .dependsOn(core)
@@ -218,7 +221,7 @@ object TestState {
 
   lazy val extNyayaJVM = extNyaya.jvm
   lazy val extNyayaJS  = extNyaya.js
-  lazy val extNyaya = crossProject
+  lazy val extNyaya = crossProject(JSPlatform, JVMPlatform)
     .in(file("ext-nyaya"))
     .configureCross(commonSettings, publicationSettings)
     .dependsOn(core, extScalaz)
