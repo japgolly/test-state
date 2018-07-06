@@ -65,6 +65,9 @@ trait DomZipperModule {
     // DOM & DOM inspection
     // ====================
 
+    def getAttribute(name: String): Option[String]
+    def needAttribute(name: String): Out[String]
+
     protected def _outerHTML: String
     protected def _innerHTML: String
     final def outerHTML: String = htmlScrub run _outerHTML

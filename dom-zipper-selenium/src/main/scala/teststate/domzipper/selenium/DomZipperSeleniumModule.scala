@@ -83,10 +83,10 @@ object DomZipperSeleniumModule extends DomZipperModule {
       all.contains(dom) // WebElement implements hashCode and equals sensibly
     }
 
-    def getAttribute(name: String): Option[String] =
+    override def getAttribute(name: String): Option[String] =
       Option(dom.getAttribute(name))
 
-    def needAttribute(name: String): Out[String] =
+    override def needAttribute(name: String): Out[String] =
       h.option(getAttribute(name), s"${dom.getTagName} doesn't have attribute $name")
 
     protected override def _outerHTML =

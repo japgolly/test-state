@@ -113,6 +113,12 @@ object DomZipperJS extends DomZipperModule {
     def dynamicString(f: js.Dynamic => Any): String =
       dynamicMethod[Any](f).fold("undefined")(_.toString)
 
+    override def getAttribute(name: String): Option[String] =
+      Option(dom.attributes.getNamedItem(name)).map(_.value)
+
+    override def needAttribute(name: String): Out[String] =
+      h.option(getAttribute(name), s"${dom.nodeName} doesn't have attribute $name")
+
     protected override def _outerHTML = htmlScrub run dynamicString(_.outerHTML)
     protected override def _innerHTML = htmlScrub run dynamicString(_.innerHTML)
 
