@@ -64,7 +64,7 @@ object Internals {
     def dragAndDropBy(offsetX: Int, offsetY: Int)(implicit d: WebDriver): Unit =
       new Actions(d).dragAndDropBy(self, offsetX, offsetY).build().perform()
 
-    def moveMouseTo(implicit d: WebDriver): Unit =
+    def hoverMouseOver()(implicit d: WebDriver): Unit =
       new Actions(d).moveToElement(self).build().perform()
 
     def scrollTo(implicit d: WebDriver): Unit = {
