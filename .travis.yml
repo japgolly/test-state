@@ -3,12 +3,12 @@ sudo: false
 
 scala:
   - 2.11.12
-  - 2.12.4
+  - 2.12.6
 jdk:
   - oraclejdk8
 #addons:
 #  chrome: stable
-  
+
 #before_script:
 #  - wget http://chromedriver.storage.googleapis.com/2.7/chromedriver_linux64.zip
 #  - unzip chromedriver_linux64.zip chromedriver
