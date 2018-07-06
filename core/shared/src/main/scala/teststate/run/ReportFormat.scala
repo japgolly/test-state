@@ -234,14 +234,26 @@ object ReportFormat {
       showChildren  = _.failure.isDefined,
       stats         = StatsFormat.default)
 
-    val coloured = Settings(
-      indent        = "  ",
-      onPass        = BOLD + GREEN + uncoloured.onPass + RESET + WHITE,
-      onSkip        = BOLD + YELLOW + uncoloured.onSkip + BLACK,
-      onFail        = RED + uncoloured.onFail + BOLD,
-      failureDetail = RESET + RED + uncoloured.failureDetail,
-      eol           = RESET + uncoloured.eol,
-      showChildren  = uncoloured.showChildren,
-      stats         = uncoloured.stats.before(_ append WHITE))
+    val coloured: Settings = {
+      // scala.Console.BOLD exists but not BRIGHT
+      // The difference affects OS X
+      val BRIGHT_BLACK  = "\u001b[90m"
+      val BRIGHT_RED    = "\u001b[91m"
+      val BRIGHT_GREEN  = "\u001b[92m"
+      val BRIGHT_YELLOW = "\u001b[93m"
+      // val BRIGHT_BLUE    = "\u001b[94m"
+      // val BRIGHT_MAGENTA = "\u001b[95m"
+      // val BRIGHT_CYAN    = "\u001b[96m"
+      // val BRIGHT_WHITE   = "\u001b[97m"
+      Settings(
+        indent        = "  ",
+        onPass        = BOLD + BRIGHT_GREEN + uncoloured.onPass + RESET + WHITE,
+        onSkip        = BOLD + BRIGHT_YELLOW + uncoloured.onSkip + RESET + BRIGHT_BLACK,
+        onFail        = BRIGHT_RED + uncoloured.onFail + BOLD,
+        failureDetail = RESET + RED + uncoloured.failureDetail,
+        eol           = RESET + uncoloured.eol,
+        showChildren  = uncoloured.showChildren,
+        stats         = uncoloured.stats.before(_ append WHITE))
+    }
   }
 }
