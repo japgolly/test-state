@@ -339,8 +339,8 @@ object RetryTest extends TestSuite {
             |✓ Initial state.
             |  ✓ invariantOk should be true.
             |✘ I love my little one, Nim
-            |  ✘ Action -- Caught exception: scala.NotImplementedError: an implementation is missing
-            |  ✘ Observation -- Caught exception: java.lang.RuntimeException: SimFailure on value(): 0 failures remaining
+            |  ✘ Action -- scala.NotImplementedError: an implementation is missing
+            |  ✘ Observation -- java.lang.RuntimeException: SimFailure on value(): 0 failures remaining
             |Performed 1 action, 1 check (with 3 retries).
           """.stripMargin)
       }

@@ -121,7 +121,7 @@ object RunnerTest extends TestSuite {
         val test = Plan.action(*.action("A")(_ => sys error "Crash!")).test(Observer(_.s)).stateless
         assertRun(test.withRef(newState).run(),
           """
-            |✘ A -- Caught exception: java.lang.RuntimeException: Crash!
+            |✘ A -- java.lang.RuntimeException: Crash!
             |Performed 1 action, 0 checks.
           """.stripMargin)
       }
@@ -131,7 +131,7 @@ object RunnerTest extends TestSuite {
         assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
-            |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+            |  ✘ OMG -- java.lang.RuntimeException: Crash!
             |Performed 0 actions, 1 check.
           """.stripMargin)
       }
@@ -143,7 +143,7 @@ object RunnerTest extends TestSuite {
         assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
-            |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+            |  ✘ OMG -- java.lang.RuntimeException: Crash!
             |Performed 0 actions, 1 check.
           """.stripMargin)
       }
@@ -155,7 +155,7 @@ object RunnerTest extends TestSuite {
             |✘ NOP
             |  ✓ Action
             |  ✘ Post-conditions
-            |    ✘ what? -- Caught exception: java.lang.RuntimeException: Crashhh!
+            |    ✘ what? -- java.lang.RuntimeException: Crashhh!
             |Performed 1 action, 1 check.
           """.stripMargin)
       }
@@ -165,7 +165,7 @@ object RunnerTest extends TestSuite {
         assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
-            |  ✘ OMG -- Caught exception: java.lang.RuntimeException: Crash!
+            |  ✘ OMG -- java.lang.RuntimeException: Crash!
             |Performed 0 actions, 1 check.
           """.stripMargin)
       }
@@ -175,7 +175,7 @@ object RunnerTest extends TestSuite {
         assertRun(test.withRef(newState).run(),
         """
           |✘ Initial state.
-          |  ✘ Who knows?! -- Caught exception: java.lang.RuntimeException: NO!
+          |  ✘ Who knows?! -- java.lang.RuntimeException: NO!
           |Performed 0 actions, 1 check.
         """.stripMargin)
       }
@@ -185,7 +185,7 @@ object RunnerTest extends TestSuite {
         assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
-            |  ✘ Observation -- Caught exception: java.lang.RuntimeException: NO!
+            |  ✘ Observation -- java.lang.RuntimeException: NO!
             |Performed 0 actions, 0 checks.
           """.stripMargin)
       }
@@ -196,7 +196,7 @@ object RunnerTest extends TestSuite {
           """
             |✘ NOP
             |  ✓ Action
-            |  ✘ Observation -- Caught exception: java.lang.RuntimeException: NO MORE!
+            |  ✘ Observation -- java.lang.RuntimeException: NO MORE!
             |Performed 1 action, 0 checks.
           """.stripMargin)
       }
@@ -223,7 +223,7 @@ object RunnerTest extends TestSuite {
             |✘ NOP
             |  ✓ Action
             |  ✘ Post-conditions
-            |    ✘ Blah should change. -- Caught exception: java.lang.ClassCastException
+            |    ✘ Blah should change. -- java.lang.ClassCastException
             |Performed 1 action, 1 check.
           """.stripMargin,
           normalise = fixExpectedException)
@@ -236,7 +236,7 @@ object RunnerTest extends TestSuite {
           """
             |✘ Merf
             |  ✓ Action
-            |  ✘ Update expected state -- Caught exception: java.lang.RuntimeException: BERF
+            |  ✘ Update expected state -- java.lang.RuntimeException: BERF
             |Performed 1 action, 0 checks.
           """.stripMargin)
       }

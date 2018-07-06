@@ -2,6 +2,7 @@ package teststate.typeclass
 
 import acyclic.file
 import java.io.{PrintStream, PrintWriter, StringWriter}
+import java.util.regex.Pattern
 import teststate.data._
 
 final case class Attempt[+E](toE: Throwable => E) extends AnyVal {
@@ -35,21 +36,22 @@ object Attempt {
   val id: Attempt[Throwable] =
     Attempt(identity)
 
-  private val prefix = "Caught exception: "
-
   val byToString: Attempt[String] =
-    Attempt(prefix + _)
+    Attempt(_.toString)
 
   def toStringWithStackTrace: Attempt[String] =
-    toStringWithStackTrace(identity)
+    toStringWithStackTrace(l => l)
+
+  def toStringWithStackTrace(pattern: Pattern): Attempt[String] =
+    toStringWithStackTrace(_.filter(pattern.matcher(_).find()).map(_.trim))
 
   def toStringWithStackTrace(stackTraceMod: List[String] => List[String]): Attempt[String] =
     Attempt { err =>
       val st = stackTraceMod(stackTrace(err).split('\n').toList).mkString("\n").trim
       if (st.isEmpty)
-        s"$prefix$err"
+        err.toString
       else
-        s"$prefix$err\n$st"
+        s"$err\n$st"
     }
 
   def stackTrace(t: Throwable): String = {
