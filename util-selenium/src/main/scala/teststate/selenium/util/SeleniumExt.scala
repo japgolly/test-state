@@ -58,7 +58,7 @@ object Internals {
       self.sendKeys(keys)
     }
 
-    def moveTo(d: WebDriver): Unit =
+    def moveMouseTo(d: WebDriver): Unit =
       new Actions(d).moveToElement(self).build().perform()
 
     def scrollTo(d: WebDriver): Unit = {
