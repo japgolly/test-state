@@ -64,18 +64,18 @@ object Internals {
     def dragAndDropBy(offsetX: Int, offsetY: Int)(implicit d: WebDriver): Unit =
       new Actions(d).dragAndDropBy(self, offsetX, offsetY).build().perform()
 
-    def moveMouseTo(d: WebDriver): Unit =
+    def moveMouseTo(implicit d: WebDriver): Unit =
       new Actions(d).moveToElement(self).build().perform()
 
-    def scrollTo(d: WebDriver): Unit = {
+    def scrollTo(implicit d: WebDriver): Unit = {
       val p = self.getLocation
       _scrollTo(d, Some(p.x), Some(p.y))
     }
 
-    def scrollToX(d: WebDriver): Unit =
+    def scrollToX(implicit d: WebDriver): Unit =
       _scrollTo(d, Some(self.getLocation.x), None)
 
-    def scrollToY(d: WebDriver): Unit =
+    def scrollToY(implicit d: WebDriver): Unit =
       _scrollTo(d, None, Some(self.getLocation.y))
 
     private def _scrollTo(d: WebDriver, x: Option[Int], y: Option[Int]): Unit = {
@@ -84,7 +84,7 @@ object Internals {
       d.executeJsOrThrow(s"window.scrollTo($xx,$yy)")
     }
 
-    def scrollToAndClick(d: WebDriver): Unit = {
+    def scrollToAndClick(implicit d: WebDriver): Unit = {
       scrollTo(d)
       self.click()
     }
