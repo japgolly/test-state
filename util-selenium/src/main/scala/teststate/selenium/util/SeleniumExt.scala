@@ -13,6 +13,12 @@ trait SeleniumExt {
 
   final type JavaScriptNotSupported = Internals.JavaScriptNotSupported
   final val  JavaScriptNotSupported = Internals.JavaScriptNotSupported
+
+  final val  ScrollLogic = Internals.ScrollLogic
+  final type ScrollLogic = Internals.ScrollLogic
+
+  implicit def testStateScrollLogic: ScrollLogic =
+    ScrollLogic.simple
 }
 
 object Internals {
@@ -67,25 +73,22 @@ object Internals {
     def hoverMouseOver()(implicit d: WebDriver): Unit =
       new Actions(d).moveToElement(self).build().perform()
 
-    def scrollTo(implicit d: WebDriver): Unit = {
-      val p = self.getLocation
-      _scrollTo(d, Some(p.x), Some(p.y))
+    def scrollTo()(implicit d: WebDriver, s: ScrollLogic): Unit = {
+      import ScrollLogic._
+      val loc         = self.getLocation
+      val jsX: String = s.x(State(loc.x, Line.jsWindowScrollX))
+      val jsY: String = s.y(State(loc.y, Line.jsWindowScrollY))
+      d.executeJsOrThrow(s"window.scrollTo($jsX,$jsY)")
     }
 
-    def scrollToX(implicit d: WebDriver): Unit =
-      _scrollTo(d, Some(self.getLocation.x), None)
+    def scrollToX()(implicit d: WebDriver, s: ScrollLogic): Unit =
+      scrollTo()(d, s.copy(y = ScrollLogic.Query.dontScroll))
 
-    def scrollToY(implicit d: WebDriver): Unit =
-      _scrollTo(d, None, Some(self.getLocation.y))
+    def scrollToY()(implicit d: WebDriver, s: ScrollLogic): Unit =
+      scrollTo()(d, s.copy(x = ScrollLogic.Query.dontScroll))
 
-    private def _scrollTo(d: WebDriver, x: Option[Int], y: Option[Int]): Unit = {
-      val xx = x.fold("window.scrollX")(_.toString)
-      val yy = y.fold("window.scrollY")(_.toString)
-      d.executeJsOrThrow(s"window.scrollTo($xx,$yy)")
-    }
-
-    def scrollToAndClick(implicit d: WebDriver): Unit = {
-      scrollTo(d)
+    def scrollToAndClick()(implicit d: WebDriver, s: ScrollLogic): Unit = {
+      scrollTo()(d, s)
       self.click()
     }
   }
@@ -96,4 +99,50 @@ object Internals {
   }
 
   final case class JavaScriptNotSupported(cmd: String) extends RuntimeException("Unable to execute: " + cmd)
+
+  final case class ScrollLogic(x: ScrollLogic.Query, y: ScrollLogic.Query)
+  object ScrollLogic {
+
+    final case class Line[A](start: A, size: A, mid: A, end: A)
+
+    final case class State(elementStart: Int, windowJS: Line[String])
+
+    /** Result is a JavaScript expression that returns a number, which is the location to scroll to. */
+    type Query = State => String
+
+    object Line {
+      def startAndSize(start: Int, size: Int): Line[Int] =
+        Line(
+          start = start,
+          size  = size,
+          mid   = start + size >> 1,
+          end   = start + size)
+
+      def startAndEnd(start: Int, end: Int): Line[Int] =
+        startAndSize(
+          start = start min end,
+          size  = (start - end).abs)
+
+      def startAndSizeJs(start: String, size: String): Line[String] =
+        Line(
+          start = start,
+          size  = size,
+          mid   = s"($start + $size/2)",
+          end   = s"($start + $size)")
+
+      val jsWindowScrollX: Line[String] =
+        startAndSizeJs("window.scrollX", "window.innerWidth")
+
+      val jsWindowScrollY: Line[String] =
+        startAndSizeJs("window.scrollY", "window.innerHeight")
+    }
+
+    object Query {
+      val simple    : Query = _.elementStart.toString
+      val dontScroll: Query = _.windowJS.start
+    }
+
+    val simple: ScrollLogic =
+      apply(Query.simple, Query.simple)
+  }
 }
