@@ -6,8 +6,16 @@ scala:
   - 2.12.6
 jdk:
   - oraclejdk8
-#addons:
-#  chrome: stable
+
+addons:
+  firefox: latest
+  chrome: stable
+before_install:
+  - wget http://chromedriver.storage.googleapis.com/2.40/chromedriver_linux64.zip
+  - unzip chromedriver_linux64.zip -d bin
+  - wget https://github.com/mozilla/geckodriver/releases/download/v0.18.0/geckodriver-v0.18.0-linux64.tar.gz
+  - tar xf geckodriver-v0.18.0-linux64.tar.gz -C bin
+  - export PATH=$PWD/bin:$PATH
 
 install:
   - . $HOME/.nvm/nvm.sh
@@ -17,25 +25,17 @@ install:
   - npm install
   - npm install jsdom source-map-support
 
-#before_script:
-#  - wget http://chromedriver.storage.googleapis.com/2.7/chromedriver_linux64.zip
-#  - unzip chromedriver_linux64.zip chromedriver
-#  - sudo cp chromedriver /usr/local/bin/.
-#  - sudo chmod +x /usr/local/bin/chromedriver
-
 script:
-  - sbt -DCI=travis ++$TRAVIS_SCALA_VERSION test:compile JS/test:fastOptJS JS/test:fullOptJS
+  #- sbt -DCI=travis ++$TRAVIS_SCALA_VERSION test:compile JS/test:fastOptJS JS/test:fullOptJS
   - sbt -DCI=travis ++$TRAVIS_SCALA_VERSION test
   # TODO Investigate
-  #  - sbt ++$TRAVIS_SCALA_VERSION 'set scalaJSStage in Global := FullOptStage' JS/test
+  #- sbt -DCI=travis ++$TRAVIS_SCALA_VERSION 'set scalaJSStage in Global := FullOptStage' JS/test
 
-# Taken from https://github.com/typelevel/cats/blob/master/.travis.yml
 cache:
   directories:
-  - $HOME/.sbt/0.13/dependency
-  - $HOME/.sbt/boot/scala*
-  - $HOME/.sbt/launchers
-  - $HOME/.ivy2/cache
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt
+    - $HOME/.coursier/cache
 before_cache:
   - find $HOME/.sbt -name "*.lock" -type f -delete
   - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete

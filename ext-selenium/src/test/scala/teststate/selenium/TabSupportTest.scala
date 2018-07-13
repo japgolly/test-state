@@ -3,8 +3,6 @@ package teststate.selenium
 import utest._
 import TestUtil._
 import org.openqa.selenium.WebDriver
-import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
-import org.openqa.selenium.firefox.{FirefoxDriver, FirefoxOptions}
 import scala.collection.JavaConverters._
 import scala.util.Try
 import scalaz.Equal
@@ -74,22 +72,14 @@ object TabSupportTest extends TestSuite {
       ()
     }
 
-  override def tests = CI match {
-    case None => TestSuite {
+  override def tests = TestSuite {
 
-      'chrome {
-        val options = new ChromeOptions()
-        options.setHeadless(true)
-        test(new ChromeDriver(options), i => s"file://nope-$i.html/")
-      }
-
-      'firefox {
-        val options = new FirefoxOptions()
-        options.setHeadless(true)
-        test(new FirefoxDriver(options), "https://www.google.com/?tab=" + _)
-      }
+    'chrome {
+      test(newChrome(), i => s"file://nope-$i.html/")
     }
 
-    case Some(_) => TestSuite {}
+    'firefox {
+      test(newFirefox(), "https://www.google.com/?tab=" + _)
+    }
   }
 }

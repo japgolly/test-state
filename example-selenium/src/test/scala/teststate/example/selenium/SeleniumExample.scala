@@ -1,21 +1,16 @@
 package teststate.example.selenium
 
-import utest._
-import MyTestState._
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration._
 import org.openqa.selenium.{WebDriver, WebElement}
-import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
+import scala.concurrent.duration._
+import teststate.example.selenium.MyTestState._
+import utest._
 
 object SeleniumExample extends TestSuite {
 
   type Ref = WebDriver
 
   def openBrowser(): WebDriver = {
-    val options = new ChromeOptions()
-    options.setHeadless(true)
-    val driver = new ChromeDriver(options)
-    driver.manage().timeouts().implicitlyWait(1, TimeUnit.MILLISECONDS)
+    val driver = newChrome()
     driver.get("https://japgolly.github.io/scalajs-react/#examples/ajax")
     driver
   }
@@ -40,21 +35,18 @@ object SeleniumExample extends TestSuite {
 
   val responseText = *.focus("Response text").option(_.obs.responseText)
 
-  override def tests = CI match {
-    case None => TestSuite {
+  override def tests = TestSuite {
 
-      val driver = openBrowser()
-      val plan = Plan.action(clickGet +> responseText.assert.exists("Response", _ contains "Response"))
-      val report = plan
-        .test(observer)
-        .stateless
-        .withRef(driver)
-        .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 12 seconds))
-        .run()
-      driver.quit()
-      report.assert()
-    }
+    val driver = openBrowser()
+    val plan = Plan.action(clickGet +> responseText.assert.exists("Response", _ contains "Response"))
+    val report = plan
+      .test(observer)
+      .stateless
+      .withRef(driver)
+      .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 12 seconds))
+      .run()
+    driver.quit()
+    report.assert()
 
-    case Some(_) => TestSuite {}
   }
 }

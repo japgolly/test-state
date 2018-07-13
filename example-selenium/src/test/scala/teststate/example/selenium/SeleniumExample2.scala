@@ -1,24 +1,15 @@
 package teststate.example.selenium
 
-import utest._
-import MyTestState._
 import java.time.Instant
-import java.util.concurrent.{Executors, TimeUnit}
+import java.util.concurrent.Executors
 import org.openqa.selenium.{Keys, WebDriver, WebElement}
-import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
+import teststate.example.selenium.MyTestState._
 import teststate.selenium.{GrowthStrategy, Tab}
+import utest._
 
 object SeleniumExample2 extends TestSuite {
-
-  def openBrowser() = {
-    val options = new ChromeOptions()
-    options.setHeadless(true)
-    val driver = new ChromeDriver(options)
-    driver.manage().timeouts().implicitlyWait(1, TimeUnit.MILLISECONDS)
-    driver
-  }
 
   case class Ref(name: String, tab: Tab[WebDriver]) {
     def observe(): Obs = {
@@ -76,7 +67,7 @@ object SeleniumExample2 extends TestSuite {
 
   def testInParallel() = {
     implicit val ec  = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))
-    val mb           = MultiBrowser(openBrowser(), GrowthStrategy.maxBrowsers(2))
+    val mb           = MultiBrowser(newChrome(), GrowthStrategy.maxBrowsers(2))
     val url          = "http://www.google.com"
     val searchTerms  = List("one", "two", "three", "four", "five", "six", "seven")
     val tests        = searchTerms.map(t => simpleTest(t, 1000000).withLazyRef(Ref(t, mb.openTabTo(url))))
@@ -87,11 +78,9 @@ object SeleniumExample2 extends TestSuite {
     results.foreach(_.assert(true))
   }
 
-  override def tests = CI match {
-    case None => TestSuite {
-      testInParallel()
-    }
+  override def tests = TestSuite {
 
-    case Some(_) => TestSuite {}
+    testInParallel()
+
   }
 }

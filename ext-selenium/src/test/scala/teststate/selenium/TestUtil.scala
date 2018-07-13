@@ -13,6 +13,8 @@ object TestUtil extends japgolly.microlibs.testutil.TestUtil {
   def newChrome() = {
     val options = new ChromeOptions()
     options.setHeadless(true)
+    if (CI.contains("travis"))
+      options.addArguments("--no-sandbox")
     new ChromeDriver(options)
   }
 

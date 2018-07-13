@@ -43,34 +43,31 @@ object MultiBrowserTest extends TestSuite {
     assertEq("Tab count after double close", tabCount(), 1)
   }
 
-  override def tests = CI match {
-    case Some(_) => TestSuite {}
-    case None => TestSuite {
+  override def tests = TestSuite {
 
-      'onNewDriverWithTempTab - {
-        var tabCountAtTempTab = -1
-        var tempTabInvocations = 0
-        mb.onNewDriverWithTempTab { t =>
-          t.use { _ =>
-            tabCountAtTempTab = tabCount()
-            tempTabInvocations += 1
-          }
-        }
-        val t = mb.openTab()
+    'onNewDriverWithTempTab - {
+      var tabCountAtTempTab = -1
+      var tempTabInvocations = 0
+      mb.onNewDriverWithTempTab { t =>
         t.use { _ =>
-          assertEq("open tabs (A)", tabCount(), 2)
+          tabCountAtTempTab = tabCount()
+          tempTabInvocations += 1
         }
-        assertEq("open tabs (B)", tabCount(), 2)
-        t.closeTab()
-        assertEq("open tabs (C)", tabCount(), 1)
-        assertEq("open tabs (S)", tabCountAtTempTab, 2)
-        assertEq("invocations (S)", tempTabInvocations, 1)
       }
-
-      'openAndClose1 - testOpenAndClose()
-      'openAndClose2 - testOpenAndClose()
-
-      'close - mb.close()
+      val t = mb.openTab()
+      t.use { _ =>
+        assertEq("open tabs (A)", tabCount(), 2)
+      }
+      assertEq("open tabs (B)", tabCount(), 2)
+      t.closeTab()
+      assertEq("open tabs (C)", tabCount(), 1)
+      assertEq("open tabs (S)", tabCountAtTempTab, 2)
+      assertEq("invocations (S)", tempTabInvocations, 1)
     }
+
+    'openAndClose1 - testOpenAndClose()
+    'openAndClose2 - testOpenAndClose()
+
+    'close - mb.close()
   }
 }
