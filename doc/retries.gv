@@ -23,9 +23,11 @@ obsP -> pre // invariants too
 obsA -> act
 inv -> end [style=invis]
 
-edge[color="#cc0000" fontcolor="#cc0000"]
+edge[color="#cc0000" fontcolor="#cc0000" label=retry]
 obs1 -> obs1 [dir=back]
 inv1 -> obs1
+obsA -> obsA [dir=back]
+obsP -> obsP [dir=back]
 obsP -> pre [dir=back]
 obsA -> act [dir=back]
 obs -> obs [dir=back]
