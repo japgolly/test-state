@@ -328,51 +328,6 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
   /** First arg is step.failed */
   private type PostCheckFn = Boolean => ROS => HH
 
-  @deprecated("Use the newer methods used within", "2.2.0")
-  private def checkAround[A](name      : Name,
-                             invariants: Invariants[O, S, E],
-                             arounds   : Arounds[O, S, E],
-                             collapse  : Boolean,
-                             reObserve : () => F[FE Or (R, O)],
-                             p         : P)
-                            (prepare   : ROS => Option[A])
-                            (run       : (A, PostCheckFn) => F[(Name => H, ROS, HH)]): F[P] =
-    prepare(p.ros) match {
-      case Some(a) =>
-        val runFn = (y: PostCheckFn) => EM.map(run(a, y))(x => (x._1(ActionName), x._2, x._3))
-        checkAround0(name, invariants, arounds, collapse, reObserve, p, runFn)
-      case None =>
-        EM.pure(p :+ History.Step(name, Skip))
-    }
-
-  @deprecated("Use the newer methods used within", "2.2.0")
-  private def checkAround0(name      : Name,
-                           invariants: Invariants[O, S, E],
-                           arounds   : Arounds[O, S, E],
-                           collapse  : Boolean,
-                           reObserve : () => F[FE Or (R, O)],
-                           p0        : P,
-                           run       : PostCheckFn => F[(H, ROS, HH)]): F[P] = {
-
-    def runPreChecks1(p: P): ActionResult.PreCheckFail[P] Or (PostCheckFn, (H, ROS, HH) => P) =
-      runPreChecks(name, invariants, arounds, collapse, p)
-
-    def runPreChecks2: F[ActionResult.PreCheckFail[P] Or (PostCheckFn, (H, ROS, HH) => P)] =
-      EM.map(reObserve()) {
-        case Right((r, o)) => runPreChecks1(p0.copy(ros = ROS(r, o, p0.ros.state)))
-        case Left(_) => runPreChecks1(p0)
-      }
-
-    def runPreChecksF = withRetryF1(Retry.Scope.PreConditions, EM.point(runPreChecks1(p0)), runPreChecks2)(retryCheckAround0)
-
-    EM.flatMap(runPreChecksF) {
-      case Right((postCheckFn, onComplete)) =>
-        EM.map(run(postCheckFn))(onComplete.tupled)
-      case Left(ActionResult.PreCheckFail(p2, _)) =>
-        EM.pure(p2)
-    }
-  }
-
   private def runPreChecks(name      : Name,
                            invariants: Invariants[O, S, E],
                            arounds   : Arounds[O, S, E],
@@ -455,6 +410,17 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
     }
   }
 
+  private def runPreChecksWithRetry[A, B](preCheckFn: P => ActionResult.PreCheckFail[A] Or B,
+                                          reObserve : () => F[FE Or (R, O)],
+                                          p0        : P): F[ActionResult.PreCheckFail[A] Or B] = {
+    def retry: F[ActionResult.PreCheckFail[A] Or B] =
+      EM.map(reObserve()) {
+        case Right((r, o)) => preCheckFn(p0.copy(ros = ROS(r, o, p0.ros.state)))
+        case Left(_) => preCheckFn(p0)
+      }
+    withRetryF1(Retry.Scope.PreConditions, EM.point(preCheckFn(p0)), retry)(retryCheckAround0)
+  }
+
   private def postChecks(hcs       : Vector[HalfCheck[O, S, E]],
                          checksPre : PreCheck[UnpackChecks[List, O, S, E]],
                          invariants: Invariants[O, S, E],
@@ -491,6 +457,15 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
 
     PostCheckResults(post, invs)
   }
+
+  private def runWithChecksAround(runPreChecksF: => F[ActionResult.PreCheckFail[P] Or (PostCheckFn, (H, ROS, HH) => P)],
+                                  run          : PostCheckFn => F[(H, ROS, HH)]): F[P] =
+    EM.flatMap(runPreChecksF) {
+      case Right((postCheckFn, onComplete)) =>
+        EM.map(run(postCheckFn))(onComplete.tupled)
+      case Left(ActionResult.PreCheckFail(p2, _)) =>
+        EM.pure(p2)
+    }
 
   private def runAction[X](actionFn : ROS => Option[() => F[E Or (O => E Or S)]],
                            reObserve: () => F[FE Or (R, O)],
@@ -609,7 +584,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                   // ==============================================================================
                   case Action.Group(actionFn) =>
 
-                    checkAround(name, invariants, check, false, reObserve, p)(actionFn)((children, postCheckFn) =>
+                    def run(children: Actions[F, R, O, S, E], postCheckFn: PostCheckFn): F[(H, ROS, HH)] =
                       EM.flatMap(start(children, ros))(childResults => {
 
                         val runPostChecks: ROS => (ROS, HH) = {
@@ -629,26 +604,31 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                         def postCheckWithRetry: F[(ROS, HH)] =
                           _withRetryF(Retry.Scope.PostConditions, initialPostCheck)(reObserveAndPostCheck, _._2.retry)
 
-                        EM.map(postCheckWithRetry)(x => ((_: Name) => childResults.history, x._1, x._2))
+                        EM.map(postCheckWithRetry)(x => (childResults.history, x._1, x._2))
                       })
-                    )
+
+                    actionFn(p.ros) match {
+                      case Some(children) =>
+                        val preChecks1 = (p: P) => runPreChecks(name, invariants, check, false, p)
+                        def preChecksF = runPreChecksWithRetry(preChecks1, reObserve, p)
+                        runWithChecksAround(preChecksF, run(children, _))
+
+                      case None =>
+                        EM.pure(p :+ History.Step(name, Skip))
+                    }
 
                   // ==============================================================================
                   case Action.SubTest(action, subInvariants) =>
                     val runFn = (postChks: PostCheckFn) => {
-                      val t = Plan(action, subInvariants).test(test.observer)
+                      val t    = Plan(action, subInvariants).test(test.observer)
                       val subP = subtest(t, invariants, refFn, ros, false)
                       EM.map(subP)(s => (s.history, s.ros, postChks(s.history.failed)(s.ros)))
                     }
-                    val omg2F = checkAround0(
-                      name       = name,
-                      invariants = Sack.empty,
-                      arounds    = check,
-                      collapse   = false,
-                      reObserve  = reObserve,
-                      p0         = p.copy(history = History.empty),
-                      run        = runFn)
-                    EM.map(omg2F)(s => s.copy(history = p.history ++ s.history))
+                    val p0         = p.copy(history = History.empty)
+                    val preChecks1 = (p: P) => runPreChecks(name, Sack.empty, check, false, p)
+                    def preChecksF = runPreChecksWithRetry(preChecks1, reObserve, p0)
+                    val logic      = runWithChecksAround(preChecksF, runFn)
+                    EM.map(logic)(s => s.copy(history = p.history ++ s.history))
                 }
             }
 
