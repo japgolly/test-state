@@ -52,16 +52,16 @@ object Runner {
         case Sack.Product(ss)     => ss foreach go
         case Sack.CoProduct(n, p) =>
           coproductFound = true
-          Attempt.id.attempt(p(i)) match {
+          ErrorHandler.id.attempt(p(i)) match {
             case Right(s) => go(s)
-            case Left(e)  => err(Attempt.byToString.name(n, Some(i)), e.failure)
+            case Left(e)  => err(ErrorHandler.byToString.name(n, Some(i)), e.failure)
           }
       }
     go(sack)
     coproductFound
   }
 
-  def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[Failure[E]] Or B => Unit)(implicit r: Attempt[E]) =
+  def foreachSackE[A, B, E](s: SackE[A, B, E])(a: A)(f: NamedError[Failure[E]] Or B => Unit)(implicit r: ErrorHandler[E]) =
     foreachSack(s)(a)((n, t) => f(Left(NamedError(n, r(t)))))(f)
 
   private case class ActionQueue[F[_], R, O, S, E](head: NamedError[Failure[E]] Or Action.Outer[F, R, O, S, E],
@@ -81,7 +81,7 @@ object Runner {
   private object Progress {
     def prepareNext[F[_], R, O, S, E](actions: Actions[F, R, O, S, E],
                                       ros    : ROS[R, O, S],
-                                      history: History[Failure[E]])(implicit r: Attempt[E]): Progress[F, R, O, S, E] = {
+                                      history: History[Failure[E]])(implicit r: ErrorHandler[E]): Progress[F, R, O, S, E] = {
 
       @tailrec
       def queue(subject: Actions[F, R, O, S, E], tail: Actions[F, R, O, S, E]): Option[ActionQueue[F, R, O, S, E]] =
@@ -141,7 +141,7 @@ object Runner {
   object UnpackChecks {
 
     def invariants[O, S, E](invariants: Invariants[O, S, E], input: OS[O, S])
-                           (implicit r: Attempt[E]): UnpackChecks[List, O, S, E] = {
+                           (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] = {
 
       type Builder[A <: AnyRef] = UniqueListBuilder[A]
       def newBuilder[A <: AnyRef]: Builder[A] = new UniqueListBuilder[A]
@@ -163,7 +163,7 @@ object Runner {
     }
 
     def arounds[O, S, E](arounds: Arounds[O, S, E], input: OS[O, S])
-                        (implicit r: Attempt[E]): UnpackChecks[List, O, S, E] = {
+                        (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] = {
 
       import Around.{Before, After}
 
@@ -245,7 +245,7 @@ object Runner {
   * Internal use only. Not thread-safe (due to mutable stats). Don't expose.
   */
 private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
-                                            (implicit EM: ExecutionModel[F], attempt: Attempt[E]) {
+                                            (implicit EM: ExecutionModel[F], attempt: ErrorHandler[E]) {
   import Runner.{ActionResultF => _, _}
 
   private type FE   = Failure[E]

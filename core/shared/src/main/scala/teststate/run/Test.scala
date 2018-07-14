@@ -129,10 +129,10 @@ final class Plan[F[_], R, O, S, E](override val name: Option[Name],
   def stateless(implicit ev: Unit =:= S) =
     withInitialState(())
 
-  def test(observer: Observer[R, O, E])(implicit a: Attempt[E]) =
+  def test(observer: Observer[R, O, E])(implicit a: ErrorHandler[E]) =
     Test(this, observer, Retry.Policy.never)(a)
 
-  def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], a: Attempt[E]) =
+  def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], a: ErrorHandler[E]) =
     test(ev(Observer.unit))(a)
 }
 
@@ -167,10 +167,10 @@ final case class PlanWithInitialState[F[_], R, O, S, E](override val plan: Plan[
 //  def lift[F2[_], R2, O2, S2, E2](implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Self[F2, R2, O2, S2, E2] =
 //    plan.lift(t).withInitialState(initialState)
 
-  def test(observer: Observer[R, O, E])(implicit a: Attempt[E]) =
+  def test(observer: Observer[R, O, E])(implicit a: ErrorHandler[E]) =
     TestWithInitialState(plan.test(observer)(a), initialState)
 
-  def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], a: Attempt[E]) =
+  def testU(implicit ev: Observer[R, Unit, E] =:= Observer[R, O, E], a: ErrorHandler[E]) =
     test(ev(Observer.unit))(a)
 }
 
@@ -179,7 +179,7 @@ final case class PlanWithInitialState[F[_], R, O, S, E](override val plan: Plan[
 final case class Test[F[_], R, O, S, E](override val plan: Plan[F, R, O, S, E],
                                         observer: Observer[R, O, E],
                                         retryPolicy: Retry.Policy)
-                                       (implicit val attempt: Attempt[E])
+                                       (implicit val attempt: ErrorHandler[E])
     extends PlanLike[F, R, O, S, E, Test[F, R, O, S, E]] {
 
   override type Self[FF[_], RR, OO, SS, EE] = Test[FF, RR, OO, SS, EE]

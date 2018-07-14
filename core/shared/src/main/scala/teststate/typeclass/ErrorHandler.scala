@@ -5,9 +5,9 @@ import java.io.{PrintStream, PrintWriter, StringWriter}
 import java.util.regex.Pattern
 import teststate.data._
 
-final case class Attempt[+E](toE: Throwable => E) extends AnyVal {
-  def map[EE](f: E => EE): Attempt[EE] =
-    Attempt(f compose toE)
+final case class ErrorHandler[+E](toE: Throwable => E) extends AnyVal {
+  def map[EE](f: E => EE): ErrorHandler[EE] =
+    ErrorHandler(f compose toE)
 
   def apply(t: Throwable): Failure.WithCause[E] =
     Failure.WithCause(toE(t), t)
@@ -31,22 +31,22 @@ final case class Attempt[+E](toE: Throwable => E) extends AnyVal {
   }
 }
 
-object Attempt {
+object ErrorHandler {
 
-  val id: Attempt[Throwable] =
-    Attempt(identity)
+  val id: ErrorHandler[Throwable] =
+    ErrorHandler(identity)
 
-  val byToString: Attempt[String] =
-    Attempt(_.toString)
+  val byToString: ErrorHandler[String] =
+    ErrorHandler(_.toString)
 
-  def toStringWithStackTrace: Attempt[String] =
+  def toStringWithStackTrace: ErrorHandler[String] =
     toStringWithStackTrace(l => l)
 
-  def toStringWithStackTrace(pattern: Pattern): Attempt[String] =
+  def toStringWithStackTrace(pattern: Pattern): ErrorHandler[String] =
     toStringWithStackTrace(_.filter(pattern.matcher(_).find()).map(_.trim))
 
-  def toStringWithStackTrace(stackTraceMod: List[String] => List[String]): Attempt[String] =
-    Attempt { err =>
+  def toStringWithStackTrace(stackTraceMod: List[String] => List[String]): ErrorHandler[String] =
+    ErrorHandler { err =>
       val st = stackTraceMod(stackTrace(err).split('\n').toList).mkString("\n").trim
       if (st.isEmpty)
         err.toString
@@ -65,8 +65,8 @@ object Attempt {
     } finally sw.close()
   }
 
-  def printFirst[A](r: Attempt[A], stream: PrintStream = System.err): Attempt[A] =
-    Attempt { t =>
+  def printFirst[A](r: ErrorHandler[A], stream: PrintStream = System.err): ErrorHandler[A] =
+    ErrorHandler { t =>
       stream.println()
       t.printStackTrace(stream)
       stream.println()

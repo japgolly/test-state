@@ -6,7 +6,7 @@ import java.time.{Duration => JavaDuration}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{Duration => ScalaDuration}
 import teststate.data._
-import teststate.typeclass.{Attempt, ExecutionModel}
+import teststate.typeclass.{ErrorHandler, ExecutionModel}
 
 object Retry {
 
@@ -20,8 +20,8 @@ object Retry {
 
     def unsafeRetryOnException[A](scope: Scope, first: => A, subsequent: => A)(implicit EM: ExecutionModel[Id]): A = {
       type X = Failure.WithCause[Throwable] Or A
-      def firstId: Id[X] = Attempt.id.attempt(first)
-      def subsequentId: Id[X] = Attempt.id.attempt(subsequent)
+      def firstId: Id[X] = ErrorHandler.id.attempt(first)
+      def subsequentId: Id[X] = ErrorHandler.id.attempt(subsequent)
       retryI(scope, firstId)(_.isLeft, subsequentId).recover[A](f => throw f.theCause)
     }
 

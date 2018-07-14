@@ -15,7 +15,7 @@ trait ExecutionModel[M[_]] {
   def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
   def tailrec[A, B](a: A)(rec: A => F[A Or B]): F[B]
   def tailrecA[A](a: A)(stop: A => Boolean)(rec: A => F[A]): F[A]
-  def recover[E, A](f: => F[Failure[E] Or A])(implicit attempt: Attempt[E]): F[Failure[E] Or A]
+  def recover[E, A](f: => F[Failure[E] Or A])(implicit attempt: ErrorHandler[E]): F[Failure[E] Or A]
   def now: F[Instant]
   def schedule[A](task: => F[A], startAt: Instant): F[A]
   def doFinally[A, B](main: => F[A], last: => F[B]): F[A]
@@ -77,7 +77,7 @@ object ExecutionModel {
         go(start)
       }
 
-      override def recover[E, A](f: => Failure[E] Or A)(implicit attempt: Attempt[E]): Failure[E] Or A =
+      override def recover[E, A](f: => Failure[E] Or A)(implicit attempt: ErrorHandler[E]): Failure[E] Or A =
         attempt.recover(f, Left(_))
 
       override def schedule[A](task: => A, startAt: Instant): A = {
@@ -99,7 +99,7 @@ object ExecutionModel {
       override def map    [A, B](fa: F[A])(f: A => B)    = fa.map(f)
       override def flatMap[A, B](fa: F[A])(f: A => F[B]) = fa.flatMap(f)
 
-      override def recover[E, A](f: => F[Failure[E] Or A])(implicit attempt: Attempt[E]): F[Failure[E] Or A] =
+      override def recover[E, A](f: => F[Failure[E] Or A])(implicit attempt: ErrorHandler[E]): F[Failure[E] Or A] =
         attempt.recover(
           f.recover { case t: Throwable => Left(attempt(t)) },
           Future successful Left(_))

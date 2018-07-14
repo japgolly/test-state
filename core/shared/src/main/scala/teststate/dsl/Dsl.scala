@@ -59,7 +59,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
   def emptyPlan: Plan =
     Empty.instance
 
-  def emptyTest(observer: Observer[R, O, E])(implicit a: Attempt[E]): Test =
+  def emptyTest(observer: Observer[R, O, E])(implicit a: ErrorHandler[E]): Test =
     emptyPlan.test(observer)(a)
 
   val transformer: Transformer[F, R, O, S, E, F, R, O, S, E] =
