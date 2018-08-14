@@ -55,6 +55,11 @@ object History {
     def failed = failure.isDefined
   }
 
+  object Step {
+    def skip[E](nameFn: NameFn[Nothing])(implicit attempt: ErrorHandler[E]) =
+      Step(attempt.name(nameFn, None), Skip)
+  }
+
   def parent[E](name: Name, children: History[E]): Step[E] =
     Step(name, children.result, children)
 

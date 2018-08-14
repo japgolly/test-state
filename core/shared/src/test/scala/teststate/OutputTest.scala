@@ -1177,6 +1177,20 @@ object OutputTest extends TestSuite {
       }
     }
 
+    // After a failure, the ROS shouldn't be used to try to evaluate future action names.
+    // It will usually be wrong data, thus providing misleading names; sometimes it even crashes.
+    'namesAfterFailure - {
+      val x = *.action(NameFn[Any]("X:" + _))(_ => ???)
+      val y = *.chooseAction(NameFn[Any]("Y:" + _))(_ => ???)
+      test(actionF >> x >> y, *.emptyInvariant)(
+        """
+          |✘ Press button! -- BUTTON'S BROKEN
+          |- X:None
+          |- Y:None
+          |Performed 1 action, 0 checks.
+        """.stripMargin)
+    }
+
     // action combinators
 
   }
