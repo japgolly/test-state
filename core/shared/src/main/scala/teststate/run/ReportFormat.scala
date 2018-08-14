@@ -224,17 +224,23 @@ object ReportFormat {
     implicit def settingsToReportFormat(s: Settings): ReportFormat =
       s.apply
 
-    val uncoloured = Settings(
+    def uncolouredUnicode = Settings(
       indent        = "  ",
       onPass        = "✓", // ✓ ✔
-      onSkip        = "-", // ⇣ ↶ ↷
       onFail        = "✘", // ✗ ✘
+      onSkip        = "-", // ⇣ ↶ ↷
       failureDetail = "",
       eol           = "\n",
       showChildren  = _.failure.isDefined,
       stats         = StatsFormat.default)
 
-    val coloured: Settings = {
+    def uncolouredAscii: Settings =
+      uncolouredUnicode.copy(
+      onPass = "[pass]",
+      onFail = "[fail]",
+      onSkip = "[skip]")
+
+    def addColour(uncoloured: Settings): Settings = {
       // scala.Console.BOLD exists but not BRIGHT
       // The difference affects OS X
       val BRIGHT_BLACK  = "\u001b[90m"
@@ -248,12 +254,18 @@ object ReportFormat {
       Settings(
         indent        = "  ",
         onPass        = BOLD + BRIGHT_GREEN + uncoloured.onPass + RESET + WHITE,
-        onSkip        = BOLD + BRIGHT_YELLOW + uncoloured.onSkip + RESET + BRIGHT_BLACK,
         onFail        = BRIGHT_RED + uncoloured.onFail + BOLD,
+        onSkip        = BOLD + BRIGHT_YELLOW + uncoloured.onSkip + RESET + BRIGHT_BLACK,
         failureDetail = RESET + RED + uncoloured.failureDetail,
         eol           = RESET + uncoloured.eol,
         showChildren  = uncoloured.showChildren,
         stats         = uncoloured.stats.before(_ append WHITE))
     }
+
+    val uncoloured: Settings =
+      uncolouredUnicode
+
+    val coloured: Settings =
+      addColour(uncoloured)
   }
 }
