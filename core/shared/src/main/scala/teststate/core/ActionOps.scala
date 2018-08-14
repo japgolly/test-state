@@ -103,6 +103,12 @@ object ActionOps {
 
     def topLevelNames: Vector[String] =
       tc.topLevelNames(a)
+
+    import teststate.run._
+
+    /** All steps will be marked as skipped. */
+    def toReport: Report[Nothing] =
+      Report(None, History(topLevelNames.map(n => History.Step(Name.now(n),Result.Skip))), Stats.empty)
   }
 
   // Applies to: Sack
