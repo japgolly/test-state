@@ -97,10 +97,14 @@ object Runner {
             }
 
           case Sack.CoProduct(n, p) =>
-            r.attempt(p(ros)) match {
-              case Right(as) => queue(as, tail)
-              case Left(e)   => Some(ActionQueue(Left(NamedError(r.name(n, ros.some), e)), tail))
-            }
+            if (history.failed) {
+              val name = r.name(n, None)
+              Some(ActionQueue(Right(Action.Outer.skip(name)), tail))
+            } else
+              r.attempt(p(ros)) match {
+                case Right(as) => queue(as, tail)
+                case Left(e)   => Some(ActionQueue(Left(NamedError(r.name(n, ros.some), e)), tail))
+              }
         }
 
       Progress(queue(actions, Sack.empty), ros, history)
@@ -531,12 +535,11 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
           queue.head match {
             case Right(Action.Outer(nameFn, innerAction, check)) =>
 
-              val name = attempt.name(nameFn, ros.some)
-
               if (p.failed)
-                EM.pure(p :+ History.Step(name, Skip))
+                EM.pure(p :+ History.Step.skip(nameFn))
 
               else {
+                val name = attempt.name(nameFn, ros.some)
 
                 val reObserve: () => F[FE Or (R, O)] =
                   () => EM.point {

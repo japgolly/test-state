@@ -18,17 +18,20 @@ final case class ErrorHandler[+E](toE: Throwable => E) extends AnyVal {
   def attempt[A](a: => A): Failure.WithCause[E] Or A =
     recover(Right(a), Left(_))
 
-  def name[A](f: NameFn[A], a: Some[A]): Name = {
-    val name: String =
-      attempt(f(a).value) match {
-        case Right(n) => n
-        case Left(_)  => attempt(f(None).value) match {
-          case Right(n) => n
-          case Left(e)  => "Name exception: " + e.toString
+  def name[A](f: NameFn[A], o: Option[A]): Name =
+    o match {
+      case Some(_) =>
+        attempt(f(o).value) match {
+          case Right(n) => Name now n
+          case Left(_)  => name(f, None)
         }
-      }
-    Name now name
-  }
+      case None =>
+        Name.now(
+          attempt(f(None).value) match {
+            case Right(n) => n
+            case Left(e)  => "Name exception: " + e.toString
+          })
+    }
 }
 
 object ErrorHandler {

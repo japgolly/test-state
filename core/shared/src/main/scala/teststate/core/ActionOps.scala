@@ -7,6 +7,7 @@ import Action.{Actions => _, _}
 import Profunctor.ToOps._
 import CoreExports._
 
+// Applies to: Inner, Outer, Sack
 trait ActionOps[A[_[_], _, _, _, _]] {
 
   def trans[F[_], R, O, S, E, G[_]](a: A[F, R, O, S, E])(t: F ~~> G): A[G, R, O, S, E]
@@ -28,15 +29,19 @@ trait ActionOps[A[_[_], _, _, _, _]] {
   def modS[F[_], R, O, S, E](x: A[F, R, O, S, E])(name: Option[String], f: O => S => E Or S)(implicit em: ExecutionModel[F]): A[F, R, O, S, E]
 }
 
+// Applies to: Outer, Sack
 trait ActionOps2[A[_[_], _, _, _, _]] {
 
   def times[F[_], R, O, S, E](a: A[F, R, O, S, E])(n: Int): A[F, R, O, S, E]
 
   def addCheck[F[_], R, O, S, E](a: A[F, R, O, S, E])(c: Arounds[O, S, E]): A[F, R, O, S, E]
+
+  def topLevelNames[F[_], R, O, S, E](a: A[F, R, O, S, E]): Vector[String]
 }
 
 object ActionOps {
 
+  // Applies to: Inner, Outer, Sack
   final class Ops[A[_[_], _, _, _, _], F[_], R, O, S, E](private val a: A[F, R, O, S, E])(implicit tc: ActionOps[A]) {
 
     def trans[G[_]](t: F ~~> G) =
@@ -85,6 +90,7 @@ object ActionOps {
 
   private val stateUpdateName = Some("Update state.")
 
+  // Applies to: Outer, Sack
   final class Ops2[A[_[_], _, _, _, _], F[_], R, O, S, E](private val a: A[F, R, O, S, E])(implicit tc: ActionOps2[A]) {
 
     def times(n: Int) = {
@@ -94,8 +100,18 @@ object ActionOps {
 
     def addCheck(c: Arounds[O, S, E]) =
       tc.addCheck(a)(c)
+
+    def topLevelNames: Vector[String] =
+      tc.topLevelNames(a)
+
+    import teststate.run._
+
+    /** All steps will be marked as skipped. */
+    def toReport: Report[Nothing] =
+      Report(None, History(topLevelNames.map(n => History.Step(Name.now(n),Result.Skip))), Stats.empty)
   }
 
+  // Applies to: Sack
   final class Ops3[F[_], R, O, S, E](private val self: Actions[F, R, O, S, E]) extends AnyVal {
     def group(name: NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] = {
       val i = Group[F, R, O, S, E](Function const Some(self))
@@ -307,6 +323,9 @@ object ActionOps {
 
         override def addCheck[F[_], R, O, S, E](x: Outer[F, R, O, S, E])(c: Arounds[O, S, E]) =
           Outer(x.name, x.inner, x.check & c)
+
+        override def topLevelNames[F[_], R, O, S, E](a: Outer[F, R, O, S, E]): Vector[String] =
+          Vector.empty[String] :+ a.name(None).value
       }
 
     implicit lazy val actionsInstanceActionOps: ActionOps[Actions] with ActionOps2[Actions] =
@@ -378,6 +397,14 @@ object ActionOps {
               _group(_anonGroupName(ss), ss).addCheck(c).lift
             case _ =>
               x.rmap(_ map (_ addCheck c))
+          }
+
+        override def topLevelNames[F[_], R, O, S, E](x: Actions[F, R, O, S, E]): Vector[String] =
+          x match {
+            case Sack.Value(Right(a))    => a.topLevelNames
+            case Sack.Value(Left(e))     => Vector.empty[String] :+ e.name.value
+            case Sack.CoProduct(name, _) => Vector.empty[String] :+ name(None).value
+            case Sack.Product(as)        => as.flatMap(topLevelNames)
           }
       }
 

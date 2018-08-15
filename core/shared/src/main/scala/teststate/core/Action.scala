@@ -18,6 +18,8 @@ object Action {
   object Single {
     def empty[F[_], R, O, S, E](implicit F: ExecutionModel[F]): Single[F, R, O, S, E] =
       apply(ros => Some(() => F.pure(Right((_: O) => Right(ros.state)))))
+    def skip[F[_], R, O, S, E]: Single[F, R, O, S, E] =
+      apply(_ => None)
   }
 
   final case class Group[F[_], R, O, S, E](action: ROS[R, O, S] => Option[Actions[F, R, O, S, E]]) extends Inner[F, R, O, S, E]
@@ -28,6 +30,11 @@ object Action {
   final case class Outer[F[_], R, O, S, E](name : NameFn[ROS[R, O, S]],
                                            inner: Inner[F, R, O, S, E],
                                            check: Arounds[O, S, E])
+
+  object Outer {
+    def skip[F[_], R, O, S, E](name: Name): Outer[F, R, O, S, E] =
+      apply(NameFn.const(name), Single.skip, Sack.empty)
+  }
 
   type Actions[F[_], R, O, S, E] = SackE[ROS[R, O, S], Outer[F, R, O, S, E], E]
 
