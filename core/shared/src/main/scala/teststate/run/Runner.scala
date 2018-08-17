@@ -91,9 +91,10 @@ object Runner {
 
           case Sack.Product(as) =>
             as.length match {
-              case 0 => None
-              case 1 => queue(as.head, tail)
-              case _ => queue(as.head, Sack.append(Sack.Product(as.tail), tail))
+              case 0 if tail.isEmpty => None
+              case 0                 => queue(tail, Sack.empty)
+              case 1                 => queue(as.head, tail)
+              case _                 => queue(as.head, Sack.append(Sack.Product(as.tail), tail))
             }
 
           case Sack.CoProduct(n, p) =>
