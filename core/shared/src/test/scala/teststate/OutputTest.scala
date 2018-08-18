@@ -119,6 +119,17 @@ object OutputTest extends TestSuite {
             |Performed 3 actions, 2 checks.
           """.stripMargin)
       }
+
+      'chooseBefore {
+        val chooseEmpty = *.chooseAction("nada")(_ => emptyAction)
+        test(chooseEmpty >> action, emptyInvariant)(
+          """
+            |✓ nada
+            |✓ Press button.
+            |✓ All pass.
+            |Performed 1 action, 0 checks.
+          """.stripMargin)
+      }
     }
 
     'invariants {
