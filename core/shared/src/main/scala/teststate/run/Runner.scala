@@ -79,15 +79,19 @@ object Runner {
   }
 
   private object Progress {
+    @tailrec
     def prepareNext[F[_], R, O, S, E](actions: Actions[F, R, O, S, E],
                                       ros    : ROS[R, O, S],
                                       history: History[Failure[E]])(implicit r: ErrorHandler[E]): Progress[F, R, O, S, E] = {
 
+      type As = Actions[F, R, O, S, E]
+      type Ret = Name Or (NamedError[Failure[E]] Or Action.Outer[F, R, O, S, E])
+
       @tailrec
-      def queue(subject: Actions[F, R, O, S, E], tail: Actions[F, R, O, S, E]): Option[ActionQueue[F, R, O, S, E]] =
+      def queue(subject: As, tail: As): Option[(Ret, As)] =
         subject match {
           case Sack.Value(a) =>
-            Some(ActionQueue(a, tail))
+            Some((Right(a), tail))
 
           case Sack.Product(as) =>
             as.length match {
@@ -98,17 +102,26 @@ object Runner {
             }
 
           case Sack.CoProduct(n, p) =>
+            def name = r.name(n, None)
             if (history.failed) {
-              val name = r.name(n, None)
-              Some(ActionQueue(Right(Action.Outer.skip(name)), tail))
+              Some((Right(Right(Action.Outer.skip(name))), tail))
             } else
               r.attempt(p(ros)) match {
-                case Right(as) => queue(as, tail)
-                case Left(e)   => Some(ActionQueue(Left(NamedError(r.name(n, ros.some), e)), tail))
+                case Right(as) =>
+                  if (as.isEmpty)
+                    Some((Left(name), tail))
+                  else
+                    queue(as, tail)
+                case Left(e) =>
+                  Some((Right(Left(NamedError(r.name(n, ros.some), e))), tail))
               }
         }
 
-      Progress(queue(actions, Sack.empty), ros, history)
+      queue(actions, Sack.empty) match {
+        case Some((Right(result), tail)) => Progress(Some(ActionQueue(result, tail)), ros, history)
+        case None                        => Progress(None, ros, history)
+        case Some((Left(name), tail))    => prepareNext(tail, ros, history :+ History.Step(name, Result.Pass))
+      }
     }
   }
 
