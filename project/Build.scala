@@ -19,25 +19,25 @@ object TestState {
 
   object Ver {
     final val Acyclic         = "0.1.7"
-    final val Cats            = "1.2.0"
+    final val Cats            = "1.4.0"
     final val KindProjector   = "0.9.7"
     final val MacroParadise   = "2.1.1"
-    final val Microlibs       = "1.16"
-    final val MTest           = "0.4.8"
+    final val Microlibs       = "1.17"
+    final val MTest           = "0.6.5"
     final val Nyaya           = "0.8.1"
     final val Scala211        = "2.11.12"
     final val Scala212        = "2.12.6"
     final val ScalaJsDom      = "0.9.6"
-    final val ScalaJsReact    = "1.2.3"
+    final val ScalaJsReact    = "1.3.0"
     final val ScalaJsJavaTime = "0.2.5"
-    final val Scalaz          = "7.2.25"
+    final val Scalaz          = "7.2.26"
     final val Selenium        = "3.14.0"
     final val Sizzle          = "2.3.0"
     final val UnivEq          = "1.0.2"
 
     // Used in examples only
     final val Monocle       = "1.5.0"
-    final val ReactJs       = "16.2.0"
+    final val ReactJs       = "16.5.1"
   }
 
   def scalacFlags = Seq(

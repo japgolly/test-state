@@ -2,7 +2,6 @@ package teststate.external
 
 import language.reflectiveCalls
 import scala.annotation.implicitNotFound
-import utest.asserts.compileError
 import utest._
 
 abstract class AbstractTest {
