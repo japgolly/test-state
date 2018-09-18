@@ -1,5 +1,7 @@
 package teststate.domzipper
 
+import scala.util.control.NonFatal
+
 trait ErrorHandler[Result[_]] {
 
   def pass[A](a: A): Result[A]
@@ -17,6 +19,11 @@ trait ErrorHandler[Result[_]] {
     o match {
       case Some(a) => pass(a)
       case None => fail(err)
+    }
+
+  def attempt[A](a: => A): Result[A] =
+    try pass(a) catch {
+      case NonFatal(t) => fail(t.getMessage)
     }
 }
 

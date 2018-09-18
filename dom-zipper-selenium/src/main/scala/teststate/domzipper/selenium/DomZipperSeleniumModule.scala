@@ -74,6 +74,9 @@ object DomZipperSeleniumModule extends DomZipperModule {
       new Collector(this, desc, dom.children().filter(all.contains), c, None)
     }
 
+    override protected def _parent: Out[WebElement] =
+      h.attempt(dom.parent()(driver))
+
     def dom: WebElement =
       curLayer.dom
 

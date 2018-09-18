@@ -119,5 +119,12 @@ object DomZipperJsTest extends TestSuite {
       'sel - assertEq($("form").children1n("h3").innerTexts, Vector("HI"))
     }
 
+    'parentAndChild - {
+      val c = $("form").child("div", 3 of 3)("h3")
+      assertEq(c.outerHTML, "<h3>EH?</h3>")
+      assertEq(c.parent.outerHTML, "<div><h3>EH?</h3></div>")
+      assertEq(c.parent.child().outerHTML, "<h3>EH?</h3>")
+    }
+
   }
 }

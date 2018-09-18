@@ -143,7 +143,7 @@ trait DomZipperModule {
     final def child(sel: String): Out[DomZipper[Next, Next, Out]] =
       child("", sel)
 
-    final def child(which: MofN): Out[DomZipper[Next, Next, Out]] =
+    final def child(which: MofN = MofN.Sole): Out[DomZipper[Next, Next, Out]] =
       child("", which)
 
     final def child(sel: String, which: MofN): Out[DomZipper[Next, Next, Out]] =
@@ -164,6 +164,11 @@ trait DomZipperModule {
           zippers(which.m - 1)
       }
     }
+
+    protected def _parent: Out[Base]
+
+    final lazy val parent: Out[DomZipper[Base, Next, Out]] =
+      _parent.map(p => addLayer(Layer("parent", ":parent", p)))
 
     protected[domzipper] def addLayer[NewCur <: Base](nextLayer: Layer[NewCur]): DomZipper[NewCur, Next, Out]
 

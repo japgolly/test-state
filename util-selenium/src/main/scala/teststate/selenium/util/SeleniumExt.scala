@@ -25,17 +25,18 @@ object Internals {
   private implicit def WebDriverExt(d: WebDriver): WebDriverExt = new WebDriverExt(d)
 
   class WebDriverExt(private val self: WebDriver) extends AnyVal {
-    def executeJsOrThrow(cmd: String): Unit =
+    def executeJsOrThrow(cmd: String, args: AnyRef*): AnyRef =
       self match {
         case j: JavascriptExecutor =>
-          j.executeScript(cmd)
-          ()
+          j.executeScript(cmd, args: _*)
         case _ =>
           throw JavaScriptNotSupported(cmd)
       }
 
-    def unsetOnBeforeUnload(): Unit =
+    def unsetOnBeforeUnload(): Unit = {
       executeJsOrThrow("window.onbeforeunload = undefined")
+      ()
+    }
   }
 
   private val childrenXpath = By.xpath("./*")
@@ -79,6 +80,7 @@ object Internals {
       val jsX: String = s.x(State(loc.x, Line.jsWindowScrollX))
       val jsY: String = s.y(State(loc.y, Line.jsWindowScrollY))
       d.executeJsOrThrow(s"window.scrollTo($jsX,$jsY)")
+      ()
     }
 
     def scrollToX()(implicit d: WebDriver, s: ScrollLogic): Unit =
@@ -91,6 +93,9 @@ object Internals {
       scrollTo()(d, s)
       self.click()
     }
+
+    def parent()(implicit d: WebDriver): WebElement =
+      d.executeJsOrThrow("return arguments[0].parentNode", self).asInstanceOf[WebElement]
   }
 
   class PointExt(private val p: Point) extends AnyVal {

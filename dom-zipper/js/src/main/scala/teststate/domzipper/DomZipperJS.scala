@@ -52,6 +52,9 @@ object DomZipperJS extends DomZipperModule {
     override protected[domzipper] def addLayer[NewCur <: Base](nextLayer: DomZipperJS.Layer[NewCur]): DomZipper[NewCur, Next, Out] =
       new DomZipper(prevLayers :+ curLayer, nextLayer, htmlScrub)
 
+    override protected def _parent: Out[Base] =
+      h.attempt(dom.parentNode)
+
     def dom: Cur =
       curLayer.dom
 
