@@ -317,11 +317,11 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
 //      private def wrapExp1[I](f: I => Boolean): I => Boolean =
 //        if (positive) f else f.andThen(!_)
 
-//      def empty(implicit eq: Equal[Boolean], f: DisplayFailure[Boolean, E]): Points =
-//        isEmpty.assert(positive)
-//
-//      def defined(implicit eq: Equal[Boolean], f: DisplayFailure[Boolean, E]): Points =
-//        isDefined.assert(positive)
+      def empty(implicit eq: Equal[Boolean], f: DisplayFailure[Boolean, E]): Points =
+        isEmpty.assert(positive)
+
+      def defined(implicit eq: Equal[Boolean], f: DisplayFailure[Boolean, E]): Points =
+        isDefined.assert(positive)
 
       def equal(expect: Option[A])(implicit eq: Equal[Option[A]], f: DisplayFailure[Option[A], E]): Points =
         value.assertB(positive).equal(expect)
