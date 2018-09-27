@@ -28,12 +28,12 @@ object TestState {
     final val Scala211        = "2.11.12"
     final val Scala212        = "2.12.6"
     final val ScalaJsDom      = "0.9.6"
-    final val ScalaJsReact    = "1.3.0"
+    final val ScalaJsReact    = "1.3.1"
     final val ScalaJsJavaTime = "0.2.5"
     final val Scalaz          = "7.2.26"
     final val Selenium        = "3.14.0"
     final val Sizzle          = "2.3.0"
-    final val UnivEq          = "1.0.2"
+    final val UnivEq          = "1.0.4"
 
     // Used in examples only
     final val Monocle       = "1.5.0"
