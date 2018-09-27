@@ -99,4 +99,6 @@ object Or {
 
   def fromScalaEither[A, B](e: A Either B): A Or B =
     e.fold(Left(_), Right(_))
+
+  val rightTrue = Right(true)
 }

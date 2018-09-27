@@ -114,7 +114,7 @@ object ActionOps {
   // Applies to: Sack
   final class Ops3[F[_], R, O, S, E](private val self: Actions[F, R, O, S, E]) extends AnyVal {
     def group(name: NameFn[ROS[R, O, S]]): Actions[F, R, O, S, E] = {
-      val i = Group[F, R, O, S, E](Function const Some(self))
+      val i = Group.lift(self)
       val o = Outer(name, i, Sack.empty)
       o.lift
     }
@@ -144,8 +144,7 @@ object ActionOps {
   }
 
   private def _group[F[_], R, O, S, E](name: NameFn[ROS[R, O, S]], ss: Vector[Actions[F, R, O, S, E]]) = {
-    val a = Some(Sack.Product(ss))
-    val i = Group[F, R, O, S, E](_ => a)
+    val i = Group.lift(Sack.Product(ss))
     val o = Outer(name, i, Sack.empty)
     o
   }
@@ -161,8 +160,8 @@ object ActionOps {
 
   private def _times[F[_], R, O, S, E](n: Int, name: NameFn[ROS[R, O, S]], make: (Name => Name) => Actions[F,R,O,S,E]) = {
     val name2 = _timesName(n, name)
-    val body = Some(_timesBody(n, make))
-    val g = Group[F, R, O, S, E](_ => body)
+    val body = _timesBody(n, make)
+    val g = Group.lift(body)
     Outer(name2, g, Sack.empty)
   }
 
@@ -176,12 +175,6 @@ object ActionOps {
     def pmapO[X](f: X => Any Or O): NameFn[ROS[R, X, S]] = NameFn(_n).comap(_.emapO(f).toOption)
     def pmapR[X](f: X => Any Or R): NameFn[ROS[X, O, S]] = NameFn(_n).comap(_.emapR(f).toOption)
   }
-
-  private def failAction[F[_], R, O, S, E](name: Name, err: E)(implicit em: ExecutionModel[F]) =
-    Outer(name, Single[F, R, O, S, E](_ => preparedFail(err)), Sack.empty)
-
-  private def someFailActions[F[_], R, O, S, E](name: Name, err: E)(implicit em: ExecutionModel[F]): Some[Actions[F, R, O, S, E]] =
-    Some(failAction(name, err).lift)
 
   private def preparedFail[F[_], O, S, E](err: E)(implicit em: ExecutionModel[F]): Prepared[F, O, S, E] =
     Some(() => em.pure(Left(err)))
@@ -214,14 +207,14 @@ object ActionOps {
         override def trans[F[_], R, O, S, E, G[_]](x: Inner[F, R, O, S, E])(t: F ~~> G) =
           x match {
             case a: Single [F, R, O, S, E] => a.copy(run = a.run(_).map(f => () => t(f())))
-            case a: Group  [F, R, O, S, E] => a.copy(action = a.action(_).map(_ trans t))
+            case a: Group  [F, R, O, S, E] => a.copy(actions = a.actions trans t)
             case a: SubTest[F, R, O, S, E] => a.copy(action = a.action trans t)
           }
 
         override def mapR[F[_], R, O, S, E, X](x: Inner[F, R, O, S, E])(f: X => R) =
           x match {
             case Single (r)    => Single (i => r(i mapR f))
-            case Group  (a)    => Group  (i => a(i mapR f).map(_ mapR f))
+            case Group  (a, c) => Group  (a mapR f, c.mapR(f))
             case SubTest(a, i) => SubTest(a mapR f, i)
           }
 
@@ -233,8 +226,8 @@ object ActionOps {
                 r(i.mapOS(f, g)).map(fn => () =>
                   em.map(fn())(_.map(j => (x: X) => j(f(x)).map(s => h(i.state, s))))))
 
-            case Group(a) =>
-              Group(i => a(i.mapOS(f, g)).map(_.mapOS(f, g)(h)))
+            case Group(a, c) =>
+              Group(a.mapOS(f, g)(h), c.mapOS(f, g))
 
             case SubTest(a, i) =>
               SubTest(a.mapOS(f, g)(h), i.mapOS(f, g))
@@ -243,7 +236,7 @@ object ActionOps {
         override def mapE[F[_], R, O, S, E, X](action: Inner[F, R, O, S, E])(f: E => X)(implicit em: ExecutionModel[F]) =
           action match {
             case Single (r)    => Single(r(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))))
-            case Group  (a)    => Group(a(_).map(_ mapE f))
+            case Group  (a, c) => Group(a mapE f, c mapE f)
             case SubTest(a, i) => SubTest(a mapE f, i mapE f)
           }
 
@@ -252,12 +245,8 @@ object ActionOps {
             case Single(run) =>
               Single(ros => tryPrepare(f(ros.ref))(r => run(ros.withRef(r))))
 
-            case Group(a) =>
-              Group(
-                ros => f(ros.ref) match {
-                  case Right(r) => a(ros.withRef(r)).map(_ pmapR f)
-                  case Left(e)  => someFailActions("Action requires correct reference.", e)
-                })
+            case Group(a, c) =>
+              Group(a pmapR f, c pmapR f)
 
             case SubTest(a, i) =>
               SubTest(a pmapR f, i)
@@ -270,12 +259,8 @@ object ActionOps {
                 ros => tryPrepare(f(ros.obs))(o =>
                   run(ros.withObs(o)).map(fn => () => em.map(fn())(_.map(g => (x: X) => f(x) flatMap g)))))
 
-            case Group(a) =>
-              Group(
-                ros => f(ros.obs) match {
-                  case Right(o) => a(ros.withObs(o)).map(_ pmapO f)
-                  case Left(err) => someFailActions("Action requires correct observation.", err)
-                })
+            case Group(a, c) =>
+              Group(a pmapO f, c pmapO f)
 
             case SubTest(a, i) =>
               SubTest(a pmapO f, i pmapO f)
@@ -288,8 +273,7 @@ object ActionOps {
                 run(_).map(f => () => em.map(f())(
                   _.map(g => (o: O) => g(o) flatMap m(o))
                 )))
-
-            case Group(a)      => Group(a(_).map(_.modS(name, m)))
+            case Group(a, c)   => Group(a.modS(name, m), c.modS(m))
             case SubTest(a, i) => SubTest(a.modS(name, m), i)
           }
       }
