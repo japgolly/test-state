@@ -108,9 +108,10 @@ object Runner {
             } else
               r.attempt(p(ros)) match {
                 case Right(as) =>
-                  if (as.isEmpty)
-                    Some((Left(name), tail))
-                  else
+                  if (as.isEmpty) {
+                    val name2 = r.name(n, ros.some)
+                    Some((Left(name2), tail))
+                  } else
                     queue(as, tail)
                 case Left(e) =>
                   Some((Right(Left(NamedError(r.name(n, ros.some), e))), tail))

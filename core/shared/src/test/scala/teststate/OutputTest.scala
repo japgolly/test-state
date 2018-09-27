@@ -1202,6 +1202,21 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
+    'contextualiseChooseActionOnEmpty - {
+      val a = *.chooseAction(NameFn {
+        case None    => "A"
+        case Some(_) => "B"
+      }) { ros =>
+        *.emptyAction
+      }
+      test(a, *.emptyInvariant)(
+        """
+          |✓ B
+          |✓ All pass.
+          |Performed 0 actions, 0 checks.
+        """.stripMargin)
+    }
+
     // action combinators
 
   }
