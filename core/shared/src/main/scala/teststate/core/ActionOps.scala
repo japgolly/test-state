@@ -112,8 +112,11 @@ object ActionOps {
     import teststate.run._
 
     /** All steps will be marked as skipped. */
-    def toReport: Report[Nothing] =
-      Report(None, History(topLevelNames.map(n => History.Step(Name.now(n),Result.Skip))), Stats.empty)
+    def toReport: Report[Nothing] = {
+      val steps = nameTree.ana[History.Step[Nothing]]((name, children) =>
+        History.Step(Name.now(name), Result.Skip, History(children, Result.Skip)))
+      Report(None, History(steps), Stats.empty)
+    }
   }
 
   // Applies to: Sack

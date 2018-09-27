@@ -42,11 +42,14 @@ object ActionTest extends TestSuite {
     }
 
     'toReport {
-      val report: Report[Nothing] = (a3 >> c1 >> a2).toReport
-      val text = report.format(Report.Format.Default.uncolouredAscii)
+      val report: Report[Nothing] = (a3 >> g1 >> c1 >> a2).toReport
+      val text = report.format(Report.Format.Default.uncolouredAscii.alwaysShowChildren)
       assertEq(text.trim,
         """
           |[skip] A3
+          |[skip] G1
+          |  [skip] A1
+          |  [skip] A2
           |[skip] C1
           |[skip] A2
         """.stripMargin.trim)

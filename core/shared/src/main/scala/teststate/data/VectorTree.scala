@@ -2,7 +2,7 @@ package teststate.data
 
 import VectorTree.Node
 
-final case class VectorTree[+A](elements: Vector[Node[A]]) extends AnyVal {
+final case class VectorTree[+A](elements: Vector[Node[A]]) {
   def map[B](f: A => B): VectorTree[B] =
     VectorTree(elements.map(_.map(f)))
 
@@ -14,6 +14,12 @@ final case class VectorTree[+A](elements: Vector[Node[A]]) extends AnyVal {
 
   def prettyPrintedLines(indent: String = "  "): Iterator[String] =
     iteratorWithLevel().map(x => (indent * x._1) + x._2)
+
+  def ana[B](f: (A, Vector[B]) => B): Vector[B] =
+    elements.map(n => f(n.value, n.children.ana(f)))
+
+  override def toString: String =
+    prettyPrintedLines().mkString("\n")
 }
 
 object VectorTree {
