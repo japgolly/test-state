@@ -22,7 +22,58 @@ object Action {
       apply(_ => None)
   }
 
-  final case class Group[F[_], R, O, S, E](action: ROS[R, O, S] => Option[Actions[F, R, O, S, E]]) extends Inner[F, R, O, S, E]
+  final case class Group[F[_], R, O, S, E](actions: Actions[F, R, O, S, E],
+                                           cond: Group.Cond[R, O, S, E]) extends Inner[F, R, O, S, E]
+
+  object Group {
+
+    def lift[F[_], R, O, S, E](actions: Actions[F, R, O, S, E]): Group[F, R, O, S, E] =
+      apply[F, R, O, S, E](actions, Cond.always)
+
+    final case class Cond[-R, -O, -S, +E](permit: ROS[R, O, S] => E Or Boolean) extends AnyVal { self =>
+      def skip(ros: ROS[R, O, S]): E Or Boolean =
+        permit(ros).map(!_)
+
+      def |+|[RR <: R, OO <: O, SS <: S, EE >: E](next: Cond[RR, OO, SS, EE]): Cond[RR, OO, SS, EE] =
+        if (permit eq Cond.always.permit)
+          next
+        else
+          Cond[RR, OO, SS, EE](ros =>
+            for {
+              a <- self.permit(ros)
+              b <- next.permit(ros)
+            } yield a && b
+          )
+
+      def mapE[A](f: E => A): Cond[R, O, S, A] =
+        Cond(permit(_).leftMap(f))
+
+      def mapR[A](f: A => R): Cond[A, O, S, E] =
+        Cond(ros => permit(ros.mapR(f)))
+
+      def pmapR[A, EE >: E](f: A => EE Or R): Cond[A, O, S, EE] =
+        Cond(ros => ros.emapR(f).flatMap(permit))
+
+      def pmapO[A, EE >: E](f: A => EE Or O): Cond[R, A, S, EE] =
+        Cond(ros => ros.emapO(f).flatMap(permit))
+
+      def mapOS[A, B](f: A => O, g: B => S): Cond[R, A, B, E] =
+        Cond(ros => permit(ros.mapOS(f, g)))
+
+      def modS[OO <: O, SS <: S, EE >: E](m: OO => SS => EE Or SS): Cond[R, OO, SS, EE] =
+        Cond(ros => m(ros.obs)(ros.state).flatMap(s2 => permit(ros.withState(s2))))
+    }
+
+    object Cond {
+      val always = Cond[Any, Any, Any, Nothing](_ => Or.rightTrue)
+
+      def when[R, O, S](f: ROS[R, O, S] => Boolean): Cond[R, O, S, Nothing] =
+        apply(f.andThen(Right(_)))
+
+      def unless[R, O, S](f: ROS[R, O, S] => Boolean): Cond[R, O, S, Nothing] =
+        apply(f.andThen(b => Right(!b)))
+    }
+  }
 
   final case class SubTest[F[_], R, O, S, E](action    : Actions[F, R, O, S, E],
                                              invariants: Invariants[O, S, E]) extends Inner[F, R, O, S, E]
@@ -56,7 +107,7 @@ object Action {
   implicit def actionInnerInstanceConditional[F[_], R, O, S, E]: Conditional[Inner[F, R, O, S, E], ROS[R, O, S]] =
     Conditional((m, f) => m match {
       case a: Single [F, R, O, S, E] => a.copy(run = a.run when f)
-      case a: Group  [F, R, O, S, E] => a.copy(action = a.action when f)
+      case a: Group  [F, R, O, S, E] => a.copy(cond = a.cond |+| Group.Cond.when(f))
       case a: SubTest[F, R, O, S, E] => a.copy(action = a.action when f)
     })
 

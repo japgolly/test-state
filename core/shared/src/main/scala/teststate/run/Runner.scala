@@ -599,10 +599,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                     }
 
                   // ==============================================================================
-                  case Action.Group(actionFn) =>
+                  case Action.Group(actions, cond) =>
 
-                    def run(children: Actions[F, R, O, S, E], postCheckFn: PostCheckFn): F[(H, ROS, HH)] =
-                      EM.flatMap(start(children, ros))(childResults => {
+                    def run(postCheckFn: PostCheckFn): F[(H, ROS, HH)] =
+                      EM.flatMap(start(actions, ros))(childResults => {
 
                         val runPostChecks: ROS => (ROS, HH) = {
                           val f = postCheckFn(childResults.history.failed)
@@ -624,14 +624,21 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                         EM.map(postCheckWithRetry)(x => (childResults.history, x._1, x._2))
                       })
 
-                    actionFn(p.ros) match {
-                      case Some(children) =>
+                    // Retry here doesn't make sense. This bit is pure and deterministic
+                    attempt.attempt(cond.permit(p.ros)) match {
+                      case Right(Right(true)) =>
                         val preChecks1 = (p: P) => runPreChecks(name, invariants, check, false, p)
                         def preChecksF = runPreChecksWithRetry(preChecks1, reObserve, p)
-                        runWithChecksAround(preChecksF, run(children, _))
+                        runWithChecksAround(preChecksF, run)
 
-                      case None =>
+                      case Right(Right(false)) =>
                         EM.pure(p :+ History.Step(name, Skip))
+
+                      case Right(Left(e)) =>
+                        EM.pure(p :+ History.Step(name, Fail(Failure NoCause e)))
+
+                      case Left(e) =>
+                        EM.pure(p :+ History.Step(name, Fail(e)))
                     }
 
                   // ==============================================================================
