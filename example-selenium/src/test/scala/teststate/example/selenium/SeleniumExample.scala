@@ -43,7 +43,7 @@ object SeleniumExample extends TestSuite {
       .test(observer)
       .stateless
       .withRef(driver)
-      .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 12 seconds))
+      .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 60 seconds))
       .run()
     driver.quit()
     report.assert()

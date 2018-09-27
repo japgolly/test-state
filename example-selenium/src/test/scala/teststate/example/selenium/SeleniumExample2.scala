@@ -63,7 +63,7 @@ object SeleniumExample2 extends TestSuite {
     )
       .test(observer)
       .stateless
-      .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 2 seconds))
+      .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 20 seconds))
 
   def testInParallel() = {
     implicit val ec  = ExecutionContext.fromExecutorService(Executors.newFixedThreadPool(4))
