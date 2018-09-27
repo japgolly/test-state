@@ -15,7 +15,7 @@ Test **stateful** stuff **statelessly**, and reasonably.
   - [Composability](doc/COMPOSE.md)
 - [Modules](#modules)
 - [Examples](#examples)
-- [Changelogs](doc/changelog) — [Latest](doc/changelog/2.2.3.md)
+- [Changelogs](doc/changelog)
 - [Support](#supportexamples)
 
 
