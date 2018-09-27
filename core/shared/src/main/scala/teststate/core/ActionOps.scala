@@ -37,6 +37,8 @@ trait ActionOps2[A[_[_], _, _, _, _]] {
   def addCheck[F[_], R, O, S, E](a: A[F, R, O, S, E])(c: Arounds[O, S, E]): A[F, R, O, S, E]
 
   def topLevelNames[F[_], R, O, S, E](a: A[F, R, O, S, E]): Vector[String]
+
+  def nameTree[F[_], R, O, S, E](a: A[F, R, O, S, E]): VectorTree[String]
 }
 
 object ActionOps {
@@ -103,6 +105,9 @@ object ActionOps {
 
     def topLevelNames: Vector[String] =
       tc.topLevelNames(a)
+
+    def nameTree: VectorTree[String] =
+      tc.nameTree(a)
 
     import teststate.run._
 
@@ -310,6 +315,15 @@ object ActionOps {
 
         override def topLevelNames[F[_], R, O, S, E](a: Outer[F, R, O, S, E]): Vector[String] =
           Vector.empty[String] :+ a.name(None).value
+
+        override def nameTree[F[_], R, O, S, E](a: Outer[F, R, O, S, E]): VectorTree[String] = {
+          val name = a.name(None).value
+          a.inner match {
+            case Action.Single(_)      => VectorTree.one(name)
+            case Action.Group(a2, _)   => VectorTree.one(name, a2.nameTree)
+            case Action.SubTest(a2, _) => VectorTree.one(name, a2.nameTree)
+          }
+        }
       }
 
     implicit lazy val actionsInstanceActionOps: ActionOps[Actions] with ActionOps2[Actions] =
@@ -383,12 +397,20 @@ object ActionOps {
               x.rmap(_ map (_ addCheck c))
           }
 
-        override def topLevelNames[F[_], R, O, S, E](x: Actions[F, R, O, S, E]): Vector[String] =
-          x match {
+        override def topLevelNames[F[_], R, O, S, E](s: Actions[F, R, O, S, E]): Vector[String] =
+          s match {
             case Sack.Value(Right(a))    => a.topLevelNames
             case Sack.Value(Left(e))     => Vector.empty[String] :+ e.name.value
             case Sack.CoProduct(name, _) => Vector.empty[String] :+ name(None).value
             case Sack.Product(as)        => as.flatMap(topLevelNames)
+          }
+
+        override def nameTree[F[_], R, O, S, E](s: Actions[F, R, O, S, E]): VectorTree[String] =
+          s match {
+            case Sack.Value(Right(a))    => a.nameTree
+            case Sack.Value(Left(e))     => VectorTree.one(e.name.value)
+            case Sack.Product(as)        => VectorTree(as.iterator.map(_.nameTree).flatMap(_.elements).toVector)
+            case Sack.CoProduct(name, _) => VectorTree.one(name(None).value)
           }
       }
 
