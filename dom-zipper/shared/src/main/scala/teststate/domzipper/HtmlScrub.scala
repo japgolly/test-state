@@ -25,4 +25,7 @@ object HtmlScrub {
     replaceAll("<!--[^\u0000]*?-->", "")
 
   def default = removeComments
+
+  def joinLines: HtmlScrub =
+    replaceAll(">[\n\r\t ]*\n[\n\r\t ]*<", "><") >> replaceAll("[\n\r\t ]*\n[\n\r\t ]*", " ")
 }
