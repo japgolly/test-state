@@ -2,7 +2,6 @@ package teststate
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.test._
-import teststate.domzipper.DomZipperJS.CssSelEngine
 import ExtScalaJsReact._
 
 trait ExtScalaJsReact extends domzipper.Exports {
@@ -29,11 +28,8 @@ object ExtScalaJsReact extends ExtScalaJsReact {
   }
 
   final class ExtScalaJsReactCompExt(private val m: GenericComponent.MountedRaw) extends AnyVal {
-    def domZipper(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperAt[vdom.TopNode] =
-      DomZipper(m.displayName, ReactDOM.findDOMNode(m.raw).get.asElement)($, scrub)
-
-    def htmlDomZipper(implicit $: CssSelEngine, scrub: HtmlScrub): HtmlDomZipper =
-      domZipper($, scrub).asHtml
+    def domZipper(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJs =
+      DomZipperJs(m.displayName, ReactDOM.findDOMNode(m.raw).get.asElement)($, scrub)
   }
 }
 

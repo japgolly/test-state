@@ -10,7 +10,7 @@ import MyTestState._
  *
  * This becomes the stateless snapshot of the component's DOM / what a user would see.
  */
-final class TodoObs($: HtmlDomZipper) {
+final class TodoObs($: DomZipperJs) {
 
   val showCompleteInput =
     $("label:contains('Show') input").domAs[html.Input]
@@ -20,8 +20,8 @@ final class TodoObs($: HtmlDomZipper) {
 
   private val newForm = $("*[data-new-form]")
 
-  val newItemInput  = newForm("input" ).as[html.Input ].dom
-  val newItemButton = newForm("button").as[html.Button].dom
+  val newItemInput  = newForm("input" ).domAs[html.Input ]
+  val newItemButton = newForm("button").domAs[html.Button]
 
   val newItemText: String =
     newItemInput.value
@@ -34,7 +34,7 @@ final class TodoObs($: HtmlDomZipper) {
 
   val itemCompleteButtons: Map[String, Option[html.Button]] =
     items.map(z =>
-      z("pre").innerText -> z.collect01("button").as[html.Button].doms
+      z("pre").innerText -> z.collect01("button").domsAs[html.Button]
     ).toMap
 
   val visibleItemCount: Int =
