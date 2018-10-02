@@ -119,27 +119,6 @@ final class DomZipperJsF[F[_]](override protected val prevLayers: Vector[Layer[D
   def dynamicString(f: js.Dynamic => Any): String =
     dynamicMethod[Any](f).fold("undefined")(_.toString)
 
-  /*
-  def as[NewCur <: Base](implicit ct: ClassTag[NewCur]): Out[DomZipper[NewCur, Next, Out]] =
-    domAs[NewCur].map(d =>
-      new DomZipper(prevLayers, curLayer.copy(dom = d), htmlScrub))
-
-  def asHtml: Out[DomZipper[html.Element, html.Element, Out]] =
-    as[html.Element].map(_.withHtmlChildren)
-
-  def forceAs[NewCur <: Base]: Out[DomZipper[NewCur, Next, Out]] =
-    this.asInstanceOf[Out[DomZipper[NewCur, Next, Out]]]
-
-  def forceChildren[A <: NextBase]: DomZipper[Cur, A, Out] =
-    new DomZipper(prevLayers, curLayer, htmlScrub)
-
-  def widenChildren[A >: Next <: NextBase]: DomZipper[Cur, A, Out] =
-    forceChildren
-
-  def withHtmlChildren: DomZipper[Cur, html.Element, Out] =
-    forceChildren
-  */
-
   def domAs[D <: Dom](implicit ct: ClassTag[D]): F[D] =
     safeCastDom[F, D](dom)
 
