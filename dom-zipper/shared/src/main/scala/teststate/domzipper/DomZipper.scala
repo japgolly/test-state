@@ -3,10 +3,8 @@ package teststate.domzipper
 import DomZipper._
 import ErrorHandler.Id
 
-trait DomZipper[F[_], A] {
+trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   import DomCollection.Container
-
-  final type Collection[C[_]] = DomCollection[Self, F, C, A]
 
   private final def allLayers =
     prevLayers :+ curLayer
@@ -17,8 +15,6 @@ trait DomZipper[F[_], A] {
   // ==================
   // Self configuration
   // ==================
-
-  type Self[G[_]] <: DomZipper[G, A]
 
   protected def self: Self[F]
 
@@ -50,9 +46,9 @@ trait DomZipper[F[_], A] {
 
   protected def _outerHTML: String
   protected def _innerHTML: String
-  protected def collect[C[_]](sel: String, C: Container[F, C]): Collection[C]
-  protected def collectChildren[C[_]](desc: String, C: Container[F, C]): Collection[C]
-  protected def collectChildren[C[_]](desc: String, sel: String, C: Container[F, C]): Collection[C]
+  protected def collect[C[_]](sel: String, C: Container[F, C]): DomCollection[Self, F, C, A]
+  protected def collectChildren[C[_]](desc: String, C: Container[F, C]): DomCollection[Self, F, C, A]
+  protected def collectChildren[C[_]](desc: String, sel: String, C: Container[F, C]): DomCollection[Self, F, C, A]
 
   def matches(css: String): F[Boolean]
 
@@ -77,17 +73,17 @@ trait DomZipper[F[_], A] {
   final def outerHTML: String = htmlScrub run _outerHTML
   final def innerHTML: String = htmlScrub run _innerHTML
 
-  final def collect01(sel: String): Collection[Option] = collect(sel, new DomCollection.Container01)
-  final def collect0n(sel: String): Collection[Vector] = collect(sel, new DomCollection.Container0N)
-  final def collect1n(sel: String): Collection[Vector] = collect(sel, new DomCollection.Container1N)
+  final def collect01(sel: String): DomCollection[Self, F, Option, A] = collect(sel, new DomCollection.Container01)
+  final def collect0n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, new DomCollection.Container0N)
+  final def collect1n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, new DomCollection.Container1N)
 
-  final def children01: Collection[Option] = collectChildren(">*", new DomCollection.Container01)
-  final def children0n: Collection[Vector] = collectChildren(">*", new DomCollection.Container0N)
-  final def children1n: Collection[Vector] = collectChildren(">*", new DomCollection.Container1N)
+  final def children01: DomCollection[Self, F, Option, A] = collectChildren(">*", new DomCollection.Container01)
+  final def children0n: DomCollection[Self, F, Vector, A] = collectChildren(">*", new DomCollection.Container0N)
+  final def children1n: DomCollection[Self, F, Vector, A] = collectChildren(">*", new DomCollection.Container1N)
 
-  final def children01(sel: String): Collection[Option] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container01)
-  final def children0n(sel: String): Collection[Vector] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container0N)
-  final def children1n(sel: String): Collection[Vector] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container1N)
+  final def children01(sel: String): DomCollection[Self, F, Option, A] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container01)
+  final def children0n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container0N)
+  final def children1n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container1N)
 
   final def editables01 = collect01(EditableSel)
   final def editables0n = collect0n(EditableSel)
@@ -204,13 +200,13 @@ object DomZipper {
 
   // ===================================================================================================================
 
-  final class DomCollection[Z[f[_]] <: DomZipper[f, A], F[_], C[_], A](from      : Z[F],
-                                                                       addLayerFn: (Z[F], Layer[A]) => Z[F],
-                                                                       val desc  : String,
-                                                                       rawResult : CssSelResult[A],
-                                                                       filterFn  : Option[A => Boolean],
-                                                                       C         : DomCollection.Container[F, C])
-                                                                      (implicit val F: ErrorHandler[F]) {
+  final class DomCollection[Z[f[_]] <: DomZipper[f, A, Z], F[_], C[_], A](from      : Z[F],
+                                                                          addLayerFn: (Z[F], Layer[A]) => Z[F],
+                                                                          val desc  : String,
+                                                                          rawResult : CssSelResult[A],
+                                                                          filterFn  : Option[A => Boolean],
+                                                                          C         : DomCollection.Container[F, C])
+                                                                         (implicit val F: ErrorHandler[F]) {
 
     private val result: Vector[A] =
       filterFn.fold(rawResult)(rawResult.filter)

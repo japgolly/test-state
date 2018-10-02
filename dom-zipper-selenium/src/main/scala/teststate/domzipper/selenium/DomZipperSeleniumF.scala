@@ -52,9 +52,7 @@ final class DomZipperSeleniumF[F[_]](override protected val prevLayers: Vector[L
                                override protected val htmlScrub: HtmlScrub,
                                override protected val F: ErrorHandler[F],
                                driver: WebDriver
-                             ) extends DomZipper[F, Dom] {
-
-  override type Self[G[_]] = DomZipperSeleniumF[G]
+                             ) extends DomZipper[F, Dom, DomZipperSeleniumF] {
 
   override protected def self = this
 
@@ -73,16 +71,16 @@ final class DomZipperSeleniumF[F[_]](override protected val prevLayers: Vector[L
   override protected def _innerHTML: String =
     getAttribute("innerHTML").getOrElse("null")
 
-  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): Collection[C] =
-    new DomCollection[Self, F, C, Dom](this, _.addLayer(_), desc, result, None, C)
+  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom] =
+    new DomCollection[DomZipperSeleniumF, F, C, Dom](this, _.addLayer(_), desc, result, None, C)
 
-  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): Collection[C] =
+  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom] =
     newDomCollection(sel, runCssQuery(sel), C)
 
-  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): Collection[C] =
+  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom] =
     newDomCollection(desc, dom.children(), C)
 
-  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): Collection[C] = {
+  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom] = {
     // WebElement implements hashCode and equals sensibly
     val all: Set[WebElement] = runCssQuery(sel).toSet
     val children = dom.children().filter(all.contains)
@@ -114,7 +112,7 @@ final class DomZipperSeleniumF[F[_]](override protected val prevLayers: Vector[L
     getAttribute("value") orFail s".value failed on <${dom.getTagName}>."
 
   /** The currently selected option in a &lt;select&gt; dropdown. */
-  def selectedOption: F[Collection[Option]] =
+  def selectedOption: F[DomCollection[DomZipperSeleniumF, F, Option, Dom]] =
     dom.getTagName.toUpperCase match {
       case "SELECT" => F pass collect01("option[selected]")
       case x        => F fail s"<$x> is not a <SELECT>"

@@ -46,9 +46,7 @@ final class DomZipperJsF[F[_]](override protected val prevLayers: Vector[Layer[D
                                override protected val $: CssSelEngine[Dom, Dom],
                                override protected val htmlScrub: HtmlScrub,
                                override protected val F: ErrorHandler[F]
-                             ) extends DomZipper[F, Dom] {
-
-  override type Self[G[_]] = DomZipperJsF[G]
+                             ) extends DomZipper[F, Dom, DomZipperJsF] {
 
   override protected def self = this
 
@@ -67,10 +65,10 @@ final class DomZipperJsF[F[_]](override protected val prevLayers: Vector[Layer[D
   override protected def _innerHTML: String =
     dynamicString(_.innerHTML)
 
-  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): Collection[C] =
-    new DomCollection[Self, F, C, Dom](this, _.addLayer(_), desc, result, None, C)
+  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF, F, C, Dom] =
+    new DomCollection[DomZipperJsF, F, C, Dom](this, _.addLayer(_), desc, result, None, C)
 
-  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): Collection[C] =
+  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF, F, C, Dom] =
     newDomCollection(sel, runCssQuery(sel), C)
 
   private def childIterator: Iterator[Dom] =
@@ -78,10 +76,10 @@ final class DomZipperJsF[F[_]](override protected val prevLayers: Vector[Layer[D
       case e: org.scalajs.dom.Element => e
     }
 
-  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): Collection[C] =
+  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF, F, C, Dom] =
     newDomCollection(desc, childIterator.toVector, C)
 
-  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): Collection[C] = {
+  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF, F, C, Dom] = {
     val all = runCssQuery(sel).toSet
     newDomCollection(desc, childIterator.filter(all.contains).toVector, C)
   }
