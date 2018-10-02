@@ -45,11 +45,11 @@ object DomZipperJsTest extends TestSuite {
       |  </form>
     """.stripMargin.trim
 
-  lazy val $ : HtmlDomZipper = {
+  lazy val $ : DomZipperJs = {
     val div = dom.document.createElement("div")
     div.innerHTML = body
     dom.document.body.appendChild(div)
-    HtmlDomZipper(div.asInstanceOf[dom.html.Element])
+    DomZipperJs(div.asInstanceOf[dom.html.Element])
   }
 
   def name = $("#name")

@@ -55,7 +55,7 @@ object TodoTest extends TestSuite {
   def runTest(plan: dsl.Plan): Report[String] =
     ReactTestUtils.withRenderedIntoDocument(TodoComponent.Component()) { c =>
 
-      def observe() = new TodoObs(c.htmlDomZipper)
+      def observe() = new TodoObs(c.domZipper)
 
       val test = plan
         .addInvariants(invariants)
