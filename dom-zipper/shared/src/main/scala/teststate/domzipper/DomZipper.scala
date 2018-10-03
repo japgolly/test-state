@@ -4,13 +4,11 @@ import DomZipper._
 import ErrorHandler.Id
 
 trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
-  import DomCollection.Container
 
-  private final def allLayers =
-    prevLayers :+ curLayer
+  def describe: String
 
-  final def describeLoc: String =
-    s"DESC: ${allLayers.iterator.map(_.display) mkString " -> "}\nHTML: $outerHTML"
+  @deprecated("Use .describe", "2.3.0")
+  final def describeLoc: String = describe
 
   // ==================
   // Self configuration
@@ -18,23 +16,15 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
 
   protected def self: Self[F]
 
-  protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]): Self[G]
-
-  protected implicit val $: CssSelEngine[A, A]
   protected implicit val F: ErrorHandler[F]
   protected val htmlScrub: HtmlScrub
-  protected val prevLayers: Vector[Layer[A]]
-  protected val curLayer: Layer[A]
-  protected[domzipper] def addLayer(nextLayer: Layer[A]): Self[F]
 
-  final def scrubHtml(f: HtmlScrub): Self[F] =
-    copySelf(htmlScrub >> f, F)
+  def scrubHtml(f: HtmlScrub): Self[F]
 
   final def scrubHtml(f: String => String): Self[F] =
     scrubHtml(HtmlScrub(f))
 
-  final def failBy[G[_]](g: ErrorHandler[G]): Self[G] =
-    copySelf(htmlScrub, g)
+  def failBy[G[_]](g: ErrorHandler[G]): Self[G]
 
   final def failToOption: Self[Option           ] = failBy(ErrorHandler.ReturnOption)
   final def failToEither: Self[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
@@ -46,9 +36,6 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
 
   protected def _outerHTML: String
   protected def _innerHTML: String
-  protected def collect[C[_]](sel: String, C: Container[F, C]): DomCollection[Self, F, C, A]
-  protected def collectChildren[C[_]](desc: String, C: Container[F, C]): DomCollection[Self, F, C, A]
-  protected def collectChildren[C[_]](desc: String, sel: String, C: Container[F, C]): DomCollection[Self, F, C, A]
 
   def matches(css: String): F[Boolean]
 
@@ -64,8 +51,7 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
 
   def value: F[String]
 
-  final def dom: A =
-    curLayer.dom
+  def dom: A
 
   final def needAttribute(name: String): F[String] =
     F.option(getAttribute(name), s"$tagName doesn't have attribute $name")
@@ -73,29 +59,29 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   final def outerHTML: String = htmlScrub run _outerHTML
   final def innerHTML: String = htmlScrub run _innerHTML
 
-  final def collect01(sel: String): DomCollection[Self, F, Option, A] = collect(sel, new DomCollection.Container01)
-  final def collect0n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, new DomCollection.Container0N)
-  final def collect1n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, new DomCollection.Container1N)
+  def collect01(sel: String): DomCollection[Self, F, Option, A]
+  def collect0n(sel: String): DomCollection[Self, F, Vector, A]
+  def collect1n(sel: String): DomCollection[Self, F, Vector, A]
 
-  final def children01: DomCollection[Self, F, Option, A] = collectChildren(">*", new DomCollection.Container01)
-  final def children0n: DomCollection[Self, F, Vector, A] = collectChildren(">*", new DomCollection.Container0N)
-  final def children1n: DomCollection[Self, F, Vector, A] = collectChildren(">*", new DomCollection.Container1N)
+  def children01: DomCollection[Self, F, Option, A]
+  def children0n: DomCollection[Self, F, Vector, A]
+  def children1n: DomCollection[Self, F, Vector, A]
 
-  final def children01(sel: String): DomCollection[Self, F, Option, A] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container01)
-  final def children0n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container0N)
-  final def children1n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container1N)
+  def children01(sel: String): DomCollection[Self, F, Option, A]
+  def children0n(sel: String): DomCollection[Self, F, Vector, A]
+  def children1n(sel: String): DomCollection[Self, F, Vector, A]
 
   final def editables01 = collect01(EditableSel)
   final def editables0n = collect0n(EditableSel)
   final def editables1n = collect1n(EditableSel)
 
-  final def exists(sel: String): Boolean =
+  def exists(sel: String): Boolean =
     collect0n(sel).nonEmpty
 
-  final def exists(sel: String, suchThat: Self[F] => Boolean): Boolean =
+  def exists(sel: String, suchThat: Self[F] => Boolean): Boolean =
     collect0n(sel).filter(suchThat).nonEmpty
 
-  final def findSelfOrChildWithAttribute(attr: String): F[Option[Self[F]]] =
+  def findSelfOrChildWithAttribute(attr: String): F[Option[Self[F]]] =
     getAttribute(attr) match {
       case None    => collect01(s"*[$attr]").zippers
       case Some(_) => F pass Some(self)
@@ -105,66 +91,18 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   // Descent
   // =======
 
-  protected def _parent: F[A]
+  def parent: F[Self[F]]
+  def apply(name: String, sel: String, which: MofN): F[Self[F]]
+  def child(name: String, sel: String, which: MofN): F[Self[F]]
 
-  final def runCssQuery(sel: String): CssSelResult[A] =
-    $.run(sel, curLayer.dom)
+  final def apply(sel: String)              : F[Self[F]] = apply("", sel)
+  final def apply(sel: String, which: MofN) : F[Self[F]] = apply("", sel, which)
+  final def apply(name: String, sel: String): F[Self[F]] = apply(name, sel, MofN.Sole)
 
-  final def apply(sel: String): F[Self[F]] =
-    apply("", sel)
-
-  final def apply(sel: String, which: MofN): F[Self[F]] =
-    apply("", sel, which)
-
-  final def apply(name: String, sel: String): F[Self[F]] =
-    apply(name, sel, MofN.Sole)
-
-  final def apply(name: String, sel: String, which: MofN): F[Self[F]] = {
-    val results = runCssQuery(sel)
-    if (results.length != which.n)
-      F fail {
-        val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-        failMsg(s"${q}uery failed: [$sel]. Expected ${which.n} results, not ${results.length}.")
-      }
-    else
-      F pass {
-        val nextDom = results(which.m - 1)
-        val nextLayer = Layer(name, sel, nextDom)
-        addLayer(nextLayer)
-      }
-  }
-
-  final def child(sel: String): F[Self[F]] =
-    child("", sel)
-
-  final def child(which: MofN = MofN.Sole): F[Self[F]] =
-    child("", which)
-
-  final def child(sel: String, which: MofN): F[Self[F]] =
-    child("", sel, which)
-
-  final def child(name: String, sel: String): F[Self[F]] =
-    child(name, sel, MofN.Sole)
-
-  final def child(name: String, sel: String, which: MofN): F[Self[F]] = {
-    val results = if (sel.isEmpty) children1n else children1n(sel)
-    F.flatMap(results.zippers) { zippers =>
-      if (zippers.length != which.n)
-        F fail {
-          val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-          failMsg(s"${q}uery failed: [${results.desc}]. Expected ${which.n} results, not ${zippers.length}.")
-        }
-      else
-        F pass zippers(which.m - 1)
-    }
-  }
-
-  final lazy val parent: F[Self[F]] =
-    F.map(_parent)(a => addLayer(Layer("parent", ":parent", a)))
-
-  private final def failMsg(msg: String): String =
-    msg + "\n" + describeLoc
-
+  final def child(sel: String)              : F[Self[F]] = child("", sel)
+  final def child(which: MofN = MofN.Sole)  : F[Self[F]] = child("", which)
+  final def child(sel: String, which: MofN) : F[Self[F]] = child("", sel, which)
+  final def child(name: String, sel: String): F[Self[F]] = child(name, sel, MofN.Sole)
 }
 
 // =====================================================================================================================
@@ -188,9 +126,6 @@ object DomZipper {
     def display: String =
       displayNameAndSel(name, sel)
   }
-
-  private val cssCondStart = "(^|, *)".r
-  private def cssPrepend_>(a: String) = cssCondStart.replaceAllIn(a, "$1> ")
 
   /** A CSS selector that finds any currently editable DOM. */
   val EditableSel: String =
