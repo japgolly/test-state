@@ -20,6 +20,7 @@ object TestState {
   object Ver {
     final val Acyclic         = "0.1.7"
     final val Cats            = "1.4.0"
+    final val Jsoup           = "1.11.3"
     final val KindProjector   = "0.9.7"
     final val MacroParadise   = "2.1.1"
     final val Microlibs       = "1.17"
@@ -70,22 +71,7 @@ object TestState {
       releaseTagComment             := s"v${(version in ThisBuild).value}",
       releaseVcsSign                := true,
       addCompilerPlugin("org.spire-math" %% "kind-projector" % Ver.KindProjector))
-    .configure(
-      acyclicSettings,
-      addCommandAliases(
-        "/"   -> "project root",
-        "L"   -> "root/publishLocal",
-        "C"   -> "root/clean",
-        "T"   -> ";root/clean;root/test",
-        "TL"  -> ";T;L",
-        "c"   -> "compile",
-        "tc"  -> "test:compile",
-        "t"   -> "test",
-        "to"  -> "test-only",
-        "tq"  -> "test-quick",
-        "cc"  -> ";clean;compile",
-        "ctc" -> ";clean;test:compile",
-        "ct"  -> ";clean;test")))
+    .configure(acyclicSettings))
 
   def byScalaVersion[A](f: PartialFunction[(Long, Long), Seq[A]]): Def.Initialize[Seq[A]] =
     Def.setting(CrossVersion.partialVersion(scalaVersion.value).flatMap(f.lift).getOrElse(Nil))
@@ -133,7 +119,7 @@ object TestState {
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
         coreJVM, coreMacrosJVM,
-        domZipperJVM, domZipperSelenium,
+        domZipperJVM, domZipperJsoup, domZipperSelenium,
         extScalazJVM, extCatsJVM, extNyayaJVM, extSelenium,
         utilSelenium)
 
@@ -179,6 +165,14 @@ object TestState {
     .jsSettings(
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
       jsEnv               := new JSDOMNodeJSEnv)
+
+  lazy val domZipperJsoup = project
+    .in(file("dom-zipper-jsoup"))
+    .configure(commonSettings.jvm, publicationSettings.jvm, testSettingsCI.jvm)
+    .dependsOn(domZipperJVM)
+    .settings(
+      moduleName := "dom-zipper-jsoup",
+      libraryDependencies += "org.jsoup" % "jsoup" % Ver.Jsoup)
 
   lazy val domZipperSelenium = project
     .in(file("dom-zipper-selenium"))

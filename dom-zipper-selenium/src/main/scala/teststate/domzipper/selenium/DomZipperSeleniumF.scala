@@ -52,7 +52,7 @@ final class DomZipperSeleniumF[F[_]](override protected val prevLayers: Vector[L
                                override protected val htmlScrub: HtmlScrub,
                                override protected val F: ErrorHandler[F],
                                driver: WebDriver
-                             ) extends DomZipper[F, Dom, DomZipperSeleniumF] {
+                             ) extends DomZipperBase[F, Dom, DomZipperSeleniumF] {
 
   override protected def self = this
 

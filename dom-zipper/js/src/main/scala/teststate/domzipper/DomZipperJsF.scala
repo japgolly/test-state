@@ -46,7 +46,7 @@ final class DomZipperJsF[F[_]](override protected val prevLayers: Vector[Layer[D
                                override protected val $: CssSelEngine[Dom, Dom],
                                override protected val htmlScrub: HtmlScrub,
                                override protected val F: ErrorHandler[F]
-                             ) extends DomZipper[F, Dom, DomZipperJsF] {
+                             ) extends DomZipperBase[F, Dom, DomZipperJsF] {
 
   override protected def self = this
 
