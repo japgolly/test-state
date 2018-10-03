@@ -12,6 +12,7 @@ val coreJVM           = TestState.coreJVM
 val coreJS            = TestState.coreJS
 val domZipperJVM      = TestState.domZipperJVM
 val domZipperJS       = TestState.domZipperJS
+val domZipperJsoup    = TestState.domZipperJsoup
 val domZipperSelenium = TestState.domZipperSelenium
 val domZipperSizzle   = TestState.domZipperSizzle
 val extCatsJVM        = TestState.extCatsJVM
