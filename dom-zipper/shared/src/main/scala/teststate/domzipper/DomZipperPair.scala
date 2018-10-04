@@ -113,25 +113,57 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
   override def children0n(sel: String) = ??? //: DomCollection[Self, F, Vector, A]
   //override def children1n(sel: String) = //: DomCollection[Self, F, Vector, A]
 
-  // TODO Dom type here should be fast dom
-  //      - Add to DomZipperPair types
-  //      - Split dom & collection dom types in DomZipper
+  // Dom type here should be fast dom?
+  //      - [N] .filter uses zippers
+  //      - [N] .traverse should be .traverseDoms
+  //      - [N] .doms should return slow doms, dom access is the exit point for this zipper
   // TODO Collection zipper type mismatch
   //      - Either: Map from FastZipper => PairZipper
   //      -     or: add newDomCollection that starts with PairZipper and delegates to Fast internally
-  override def children1n(sel: String): DomCollection[λ[G[_] => DomZipperPair[G, A]], F, Vector, A] =
-    fast.children1n(sel)
+  // TODO Collection dom type mismatch
+
+
+  // idea: Change rawResults so that it includes the original child index
+  // such that it is preserved after filter) and then pass that through the addLayer function
+  // to just select child(sel, n of size)
+
+  // efficiency: retain dom type S of slow path, extract slow.children01
+  // = F[Vector[ S x SlowZipper[S] ]]
+  // = turn F[S | SlowZipper[S]] => A
+
+  type FfsIntellij[G[_]] = DomZipperPair[G, A]
+//  override def children1n(sel: String): DomCollection[λ[G[_] => DomZipperPair[G, A]], F, Vector, A] =
+  override def children1n(sel: String): DomCollection[FfsIntellij, F, Vector, A] = {
+    val fc = fast.children1n(sel)
+    val x = slow.extract.map(_.children1n(sel))
+    val rawResults = Vector.tabulate[A](fc.size)(_ => a)
+    new DomCollection[FfsIntellij, F, Vector, A](
+      from       = this, //: Z[F],
+      addLayerFn = ???, //: (Z[F], Layer[A]) => Z[F],
+      desc       = fc.desc, //: String,
+      rawResult  = rawResults, //: CssSelResult[A],
+      filterFn   = None, //: Option[A => Boolean],
+      C          = new DomCollection.Container1N[F] //: DomCollection.Container[F, C])
+    )
+  }
+
 
   // =======
   // Descent
   // =======
 
   override def parent: F[DomZipperPair[F, A]] =
-    zmap(_.parent, _.parent)
+    zmap(
+      _.parent,
+      _.parent)
 
   override def apply(name: String, sel: String, which: MofN): F[DomZipperPair[F, A]] =
-    zmap(_(name, sel, which), _(name, sel, which))
+    zmap(
+      _(name, sel, which),
+      _(name, sel, which))
 
   override def child(name: String, sel: String, which: MofN): F[DomZipperPair[F, A]] =
-  zmap(_.child(name, sel, which), _.child(name, sel, which))
+    zmap(
+      _.child(name, sel, which),
+      _.child(name, sel, which))
 }
