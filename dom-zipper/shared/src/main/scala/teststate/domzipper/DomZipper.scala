@@ -1,7 +1,6 @@
 package teststate.domzipper
 
 import DomZipper._
-import ErrorHandler.Id
 
 trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
 
@@ -23,12 +22,6 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
 
   final def scrubHtml(f: String => String): Self[F] =
     scrubHtml(HtmlScrub(f))
-
-  def failBy[G[_]](g: ErrorHandler[G]): Self[G]
-
-  final def failToOption: Self[Option           ] = failBy(ErrorHandler.ReturnOption)
-  final def failToEither: Self[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
-  final def throwErrors : Self[Id               ] = failBy(ErrorHandler.Throw)
 
   // ====================
   // DOM & DOM inspection

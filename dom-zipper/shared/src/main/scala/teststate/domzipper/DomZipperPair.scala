@@ -71,11 +71,9 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
     )
   }
 
-  override def describe = fast.describe
+  // ===================================================================================================================
 
-  // ==================
-  // Self configuration
-  // ==================
+  override def describe = fast.describe
 
   protected override def self = this
 
@@ -83,16 +81,6 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
 
   override def scrubHtml(f: HtmlScrub): DomZipperPair[F, A] =
     DomZipperPair.full[F, FastF, FD, SlowF, SD, A](fast.scrubHtml(f), slow.map(_.map(_.scrubHtml(f))), domFn)
-
-//  override def failBy[G[_]](g: ErrorHandler[G]): DomZipperPair[G, A] =
-//    DomZipperPair.full[G, FastF, FD, SlowF, SD, A](
-//      fast.failBy(g),
-//      slow.map(fs => g. _.map(_.failBy(g))),
-//      domFn)
-
-  // ====================
-  // DOM & DOM inspection
-  // ====================
 
   protected override def _outerHTML = fast.outerHTML
   protected override def _innerHTML = fast.innerHTML
@@ -108,6 +96,15 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
 
   override def dom = domFn(() => slow.extract.map(_.dom))
 
+  override def parent: F[DomZipperPair[F, A]] =
+    zmap(_.parent, _.parent)
+
+  override def apply(name: String, sel: String, which: MofN): F[DomZipperPair[F, A]] =
+    zmap(_(name, sel, which), _(name, sel, which))
+
+  override def child(name: String, sel: String, which: MofN): F[DomZipperPair[F, A]] =
+    zmap(_.child(name, sel, which), _.child(name, sel, which))
+
   override def collect01(sel: String) = cmap(_.collect01(sel), _.collect01(sel))
   override def collect0n(sel: String) = cmap(_.collect0n(sel), _.collect0n(sel))
   override def collect1n(sel: String) = cmap(_.collect1n(sel), _.collect1n(sel))
@@ -119,23 +116,4 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
   override def children01 = cmap(_.children01, _.children01)
   override def children0n = cmap(_.children0n, _.children0n)
   override def children1n = cmap(_.children1n, _.children1n)
-
-  // =======
-  // Descent
-  // =======
-
-  override def parent: F[DomZipperPair[F, A]] =
-    zmap(
-      _.parent,
-      _.parent)
-
-  override def apply(name: String, sel: String, which: MofN): F[DomZipperPair[F, A]] =
-    zmap(
-      _(name, sel, which),
-      _(name, sel, which))
-
-  override def child(name: String, sel: String, which: MofN): F[DomZipperPair[F, A]] =
-    zmap(
-      _.child(name, sel, which),
-      _.child(name, sel, which))
 }

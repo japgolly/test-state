@@ -2,6 +2,7 @@ package teststate.domzipper
 
 import DomZipper._
 import DomZipperBase._
+import ErrorHandler.Id
 
 trait DomZipperBase[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] extends DomZipper[F, A, Self] {
   import DomCollection.Container
@@ -27,8 +28,12 @@ trait DomZipperBase[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] extends DomZip
   final override def scrubHtml(f: HtmlScrub): Self[F] =
     copySelf(htmlScrub >> f, F)
 
-  final override def failBy[G[_]](g: ErrorHandler[G]): Self[G] =
+  final def failBy[G[_]](g: ErrorHandler[G]): Self[G] =
     copySelf(htmlScrub, g)
+
+  final def failToOption: Self[Option           ] = failBy(ErrorHandler.ReturnOption)
+  final def failToEither: Self[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
+  final def throwErrors : Self[Id               ] = failBy(ErrorHandler.Throw)
 
   // ====================
   // DOM & DOM inspection
