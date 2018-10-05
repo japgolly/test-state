@@ -18,16 +18,16 @@ object TestState {
     Lib.publicationSettings(ghProject)
 
   object Ver {
-    final val Acyclic         = "0.1.7"
+    final val Acyclic         = "0.1.8"
     final val Cats            = "1.4.0"
     final val Jsoup           = "1.11.3"
-    final val KindProjector   = "0.9.7"
+    final val KindProjector   = "0.9.8"
     final val MacroParadise   = "2.1.1"
     final val Microlibs       = "1.17"
-    final val MTest           = "0.6.5"
+    final val MTest           = "0.6.6"
     final val Nyaya           = "0.8.1"
     final val Scala211        = "2.11.12"
-    final val Scala212        = "2.12.6"
+    final val Scala212        = "2.12.7"
     final val ScalaJsDom      = "0.9.6"
     final val ScalaJsReact    = "1.3.1"
     final val ScalaJsJavaTime = "0.2.5"
