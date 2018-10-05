@@ -20,4 +20,7 @@ final class Store[S, A](val pos: S, val peek: S => A) {
 object Store {
   def apply[S, A](pos: S)(peek: S => A): Store[S, A] =
     new Store(pos, peek)
+
+  def fromUnit[A](a: => A): Store[Unit, A] =
+    apply(())(_ => a)
 }

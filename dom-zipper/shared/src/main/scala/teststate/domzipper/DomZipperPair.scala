@@ -5,32 +5,34 @@ import ErrorHandler._
 object DomZipperPair {
   def apply[
     F[_],
-    A,
+    S,
     Fast[f[_]] <: DomZipper[f, _, Fast],
-    Slow[f[_]] <: DomZipper[f, A, Slow]
+    Slow[f[_]] <: DomZipper[f, S, Slow]
   ](
      fast: Fast[F],
      slow: Slow[F]
    )(
     implicit F: ErrorHandler[F]
-   ): DomZipperPair[F, () => F[A]] =
-    full[F, () => F[A], Fast, Slow](fast, Store(slow)(F.pass), g => () => g().map(_.dom))
+   ): DomZipperPair[F, () => F[S]] =
+    full[F, () => F[S], Fast, Slow, S](fast, Store.fromUnit(F pass slow), identity)
 
   def full[
     F[_],
     A,
     _FastF[f[_]] <: DomZipper[f, _, _FastF],
-    _SlowF[f[_]] <: DomZipper[f, _, _SlowF]
+    _SlowF[f[_]] <: DomZipper[f, _S, _SlowF],
+    _S
   ](
     _fast: _FastF[F],
-    _slow: Store[_SlowF[F], F[_SlowF[F]]],
-    _domFn: (() => F[_SlowF[F]]) => A
+    _slow: Store[Unit, F[_SlowF[F]]],
+    _domFn: (() => F[_S]) => A
    )(
     implicit _F: ErrorHandler[F]
    ): DomZipperPair[F, A] =
     new DomZipperPair[F, A] {
       override protected type FastF[f[_]] = _FastF[f]
       override protected type SlowF[f[_]] = _SlowF[f]
+      override protected type S = _S
       override protected val fast = _fast
       override protected val slow = _slow
       override protected val domFn = _domFn
@@ -41,21 +43,23 @@ object DomZipperPair {
 trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G, A]]] {
   import DomZipper.DomCollection
 
-  protected type FastF[f[_]] <: DomZipper[f, _, FastF]
-  protected type SlowF[f[_]] <: DomZipper[f, _, SlowF]
+  protected type FD
+  protected type S
+  protected type FastF[f[_]] <: DomZipper[f, FD, FastF]
+  protected type SlowF[f[_]] <: DomZipper[f, S, SlowF]
   protected final type Fast = FastF[F]
   protected final type Slow = SlowF[F]
 
   protected val fast: Fast
-  protected val slow: Store[Slow, F[Slow]]
-  protected val domFn: (() => F[Slow]) => A
+  protected val slow: Store[Unit, F[Slow]]
+  protected val domFn: (() => F[S]) => A
   protected implicit val F: ErrorHandler[F]
 
-  private def flatMapSlow(f: Slow => F[Slow]): Store[Slow, F[Slow]] =
+  private def flatMapSlow(f: Slow => F[Slow]): Store[Unit, F[Slow]] =
     slow.map(_.flatMap(f))
 
   private def zmap(f: Fast => F[Fast], s: Slow => F[Slow]): F[DomZipperPair[F, A]] =
-    f(fast).map(DomZipperPair.full[F, A, FastF, SlowF](_, flatMapSlow(s), domFn))
+    f(fast).map(DomZipperPair.full[F, A, FastF, SlowF, S](_, flatMapSlow(s), domFn))
 
   /*
   def getAttribute(name: String): Option[String] =
@@ -99,7 +103,7 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
   override def value     = fast.value
 
   override def dom: A =
-    domFn(() => slow.extract)
+    domFn(() => slow.extract.map(_.dom))
 
   override def collect01(sel: String) = ??? //: DomCollection[Self, F, Option, A]
   override def collect0n(sel: String) = ??? //: DomCollection[Self, F, Vector, A]
@@ -132,18 +136,54 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
   // = turn F[S | SlowZipper[S]] => A
 
   type FfsIntellij[G[_]] = DomZipperPair[G, A]
-//  override def children1n(sel: String): DomCollection[λ[G[_] => DomZipperPair[G, A]], F, Vector, A] =
+////  override def children1n(sel: String): DomCollection[λ[G[_] => DomZipperPair[G, A]], F, Vector, A] =
   override def children1n(sel: String): DomCollection[FfsIntellij, F, Vector, A] = {
-    val fc = fast.children1n(sel)
-    val x = slow.extract.map(_.children1n(sel))
-    val rawResults = Vector.tabulate[A](fc.size)(_ => a)
+    val fastC = fast.children1n(sel)
+    val size = fastC.size
+    val slowCS = slow.map(_.map(_.children1n(sel)))
+    lazy val slowC = slowCS.extract
+    val rawResults = Vector.tabulate(size)(i => i -> domFn(() => slowC.map(_.rawResult(i)._2)))
+
+    val addLayerFn: (MofN, DomZipper.Layer[A]) => FfsIntellij[F] =
+      (mOfN, l) => {
+        val i = mOfN.m
+        val fd = fastC.rawResult(i)._2
+        val f = fastC.addLayerFn(mOfN, l.copy(dom = fd))
+        val s = Store.fromUnit(slowC.flatMap(_.zippers).map(_(i)))
+        DomZipperPair.full[F, A, FastF, SlowF, S](f, s, domFn)
+      }
+
+
     new DomCollection[FfsIntellij, F, Vector, A](
-      from       = this, //: Z[F],
-      addLayerFn = ???, //: (Z[F], Layer[A]) => Z[F],
-      desc       = fc.desc, //: String,
-      rawResult  = rawResults, //: CssSelResult[A],
-      filterFn   = None, //: Option[A => Boolean],
-      C          = new DomCollection.Container1N[F] //: DomCollection.Container[F, C])
+      addLayerFn = addLayerFn,
+      desc       = fastC.desc,
+      rawResult  = rawResults,
+      filterFn   = None,
+      C          = new DomCollection.Container1N[F]
+    )
+  }
+
+
+  import DomZipper.DomCollection2
+  def children1n_v2(sel: String): DomCollection2[FfsIntellij, F, Vector, A] = {
+    val fastC = fast.children1n_v2(sel)
+    val size = fastC.size
+    val slowCS = slow.map(_.map(_.children1n_v2(sel)))
+    lazy val slowC = slowCS.extract
+    val rawResults = Vector.tabulate(size)(i =>
+      //i -> domFn(() => slowC.map(_.rawResults(i).dom))
+      {
+        val f = fastC.rawResults(i)
+        val s = Store.fromUnit(slowC.flatMap(_.zippers).map(_(i)))
+        DomZipperPair.full[F, A, FastF, SlowF, S](f, s, domFn)
+      }
+    )
+
+    new DomCollection2[FfsIntellij, F, Vector, A](
+      desc       = fastC.desc,
+      rawResults = rawResults,
+      filterFn   = None,
+      C          = new DomCollection.Container1N[F]
     )
   }
 
