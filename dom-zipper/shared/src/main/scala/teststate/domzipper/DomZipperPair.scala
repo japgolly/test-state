@@ -8,7 +8,7 @@ object DomZipperPair {
             Slow[f[_]] <: DomZipper[f, SD, Slow], SD]
             (fast: Fast[F], slow: Slow[F])
             (implicit F: ErrorHandler[F]): DomZipperPair[F, () => F[SD]] =
-    full[F, Fast, FD, Slow, SD, () => F[SD]](fast, Store.fromUnit(F pass slow), identity)
+    full[F, Fast, FD, Slow, SD, () => F[SD]](fast, () => F.pass(slow), identity)
 
   def full[
     F[_],
@@ -17,7 +17,7 @@ object DomZipperPair {
     A
   ](
     _fast: _FastF[F],
-    _slow: Store[Unit, F[_SlowF[F]]],
+    _slow: () => F[_SlowF[F]],
     _domFn: (() => F[_SD]) => A
    )(
     implicit _F: ErrorHandler[F]
@@ -45,22 +45,22 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
   protected final type Slow = SlowF[F]
 
   protected val fast: Fast
-  protected val slow: Store[Unit, F[Slow]]
+  protected val slow: () => F[Slow]
   protected val domFn: (() => F[SD]) => A
   protected implicit val F: ErrorHandler[F]
 
   private def zmap(f: Fast => F[Fast], s: Slow => F[Slow]): F[DomZipperPair[F, A]] =
-    f(fast).map(DomZipperPair.full[F, FastF, FD, SlowF, SD, A](_, slow.map(_.flatMap(s)), domFn))
+    f(fast).map(DomZipperPair.full[F, FastF, FD, SlowF, SD, A](_, () => slow().flatMap(s), domFn))
 
   private def cmap[C[_]](runF: Fast => DomCollection[FastF, F, C, FD],
                          runS: Slow => DomCollection[SlowF, F, C, SD]): DomCollection[λ[G[_] => DomZipperPair[G, A]], F, C, A] = {
     val colF = runF(fast)
-    lazy val colS = slow.extract.map(runS)
+    lazy val colS = slow().map(runS)
     val C = colF.C
     val rawResults = Vector.tabulate(colF.size) { i =>
       val f = colF.rawResults(i)
-      val s = Store.fromUnit(colS.flatMap(_.zippers).map(C.get(_, i)))
-      DomZipperPair.full[F, FastF, FD, SlowF, SD, A](f, s, domFn)
+      lazy val s = colS.flatMap(_.zippers).map(C.get(_, i))
+      DomZipperPair.full[F, FastF, FD, SlowF, SD, A](f, () => s, domFn)
     }
 
     new DomCollection[λ[G[_] => DomZipperPair[G, A]], F, C, A](
@@ -79,8 +79,10 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
 
   protected[domzipper] val htmlScrub = fast.htmlScrub
 
-  override def scrubHtml(f: HtmlScrub): DomZipperPair[F, A] =
-    DomZipperPair.full[F, FastF, FD, SlowF, SD, A](fast.scrubHtml(f), slow.map(_.map(_.scrubHtml(f))), domFn)
+  override def scrubHtml(f: HtmlScrub): DomZipperPair[F, A] = {
+    lazy val s = slow().map(_.scrubHtml(f))
+    DomZipperPair.full[F, FastF, FD, SlowF, SD, A](fast.scrubHtml(f), () => s, domFn)
+  }
 
   protected override def _outerHTML = fast.outerHTML
   protected override def _innerHTML = fast.innerHTML
@@ -94,7 +96,7 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
   override def classes   = fast.classes
   override def value     = fast.value
 
-  override def dom = domFn(() => slow.extract.map(_.dom))
+  override def dom = domFn(() => slow().map(_.dom))
 
   override def parent: F[DomZipperPair[F, A]] =
     zmap(_.parent, _.parent)
