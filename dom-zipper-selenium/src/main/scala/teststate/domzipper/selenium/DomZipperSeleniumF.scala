@@ -46,13 +46,13 @@ object DomZipperSeleniumF {
 import DomZipperSeleniumF.Dom
 
 final class DomZipperSeleniumF[F[_]](override protected val prevLayers: Vector[Layer[Dom]],
-                              override protected val curLayer: Layer[Dom]
-                             )(implicit
-                               override protected val $: CssSelEngine[Dom, Dom],
-                               override protected val htmlScrub: HtmlScrub,
-                               override protected val F: ErrorHandler[F],
-                               driver: WebDriver
-                             ) extends DomZipperBase[F, Dom, DomZipperSeleniumF] {
+                                     override protected val curLayer: Layer[Dom]
+                                    )(implicit
+                                      override protected val $: CssSelEngine[Dom, Dom],
+                                      override protected[domzipper] val htmlScrub: HtmlScrub,
+                                      override protected val F: ErrorHandler[F],
+                                      driver: WebDriver
+                                    ) extends DomZipperBase[F, Dom, DomZipperSeleniumF] {
 
   override protected def self = this
 

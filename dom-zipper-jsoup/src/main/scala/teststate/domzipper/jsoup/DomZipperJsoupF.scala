@@ -36,7 +36,7 @@ final class DomZipperJsoupF[F[_]](override protected val prevLayers: Vector[Laye
                                   override protected val curLayer: Layer[Dom]
                                  )(implicit
                                    override protected val $: CssSelEngine[Dom, Dom],
-                                   override protected val htmlScrub: HtmlScrub,
+                                   override protected[domzipper] val htmlScrub: HtmlScrub,
                                    override protected val F: ErrorHandler[F]
                                  ) extends DomZipperBase[F, Dom, DomZipperJsoupF] {
 
