@@ -1,7 +1,6 @@
 package teststate.domzipper
 
 import DomZipper._
-import ErrorHandler.Id
 
 trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
 
@@ -17,18 +16,12 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   protected def self: Self[F]
 
   protected implicit val F: ErrorHandler[F]
-  protected val htmlScrub: HtmlScrub
+  protected[domzipper] def htmlScrub: HtmlScrub
 
   def scrubHtml(f: HtmlScrub): Self[F]
 
   final def scrubHtml(f: String => String): Self[F] =
     scrubHtml(HtmlScrub(f))
-
-  def failBy[G[_]](g: ErrorHandler[G]): Self[G]
-
-  final def failToOption: Self[Option           ] = failBy(ErrorHandler.ReturnOption)
-  final def failToEither: Self[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
-  final def throwErrors : Self[Id               ] = failBy(ErrorHandler.Throw)
 
   // ====================
   // DOM & DOM inspection
@@ -135,16 +128,18 @@ object DomZipper {
 
   // ===================================================================================================================
 
-  final class DomCollection[Z[f[_]] <: DomZipper[f, A, Z], F[_], C[_], A](from      : Z[F],
-                                                                          addLayerFn: (Z[F], Layer[A]) => Z[F],
-                                                                          val desc  : String,
-                                                                          rawResult : CssSelResult[A],
-                                                                          filterFn  : Option[A => Boolean],
-                                                                          C         : DomCollection.Container[F, C])
-                                                                         (implicit val F: ErrorHandler[F]) {
+  final class DomCollection[Z[f[_]] <: DomZipper[f, A, Z], F[_], C[_], A](
+      private[domzipper] val desc      : String,
+      private[domzipper] val rawResults: Vector[Z[F]],
+                             filterFn  : Option[Z[F] => Boolean],
+      private[domzipper] val C         : DomCollection.Container[F, C])
+      (implicit val F: ErrorHandler[F]) {
 
-    private val result: Vector[A] =
-      filterFn.fold(rawResult)(rawResult.filter)
+    private val result: Vector[Z[F]] =
+      filterFn match {
+        case None    => rawResults
+        case Some(f) => rawResults.filter(f)
+      }
 
     def isEmpty: Boolean =
       result.isEmpty
@@ -156,31 +151,27 @@ object DomZipper {
       result.length
 
     def doms: F[C[A]] =
-      C(desc, result)
-
-    def traverse[B](f: A => F[B]): F[C[B]] =
-      F.flatMap(doms)(C.traverse(_)(f))
-
-    private def addLayer(a: A): Z[F] =
-      addLayerFn(from, Layer("collect", desc, a))
-
-    def zippers: F[C[Z[F]]] =
-      mapDoms(addLayer)
+      map(_.dom)
 
     def mapDoms[B](f: A => B): F[C[B]] =
       F.map(doms)(C.map(_)(f))
 
+    def traverse[B](f: A => F[B]): F[C[B]] =
+      F.flatMap(doms)(C.traverse(_)(f))
+
+    def zippers: F[C[Z[F]]] =
+      C(desc, result)
+
     def map[B](f: Z[F] => B): F[C[B]] =
-      mapDoms(d => f(addLayer(d)))
+      C(desc, result.map(f))
 
     @deprecated("Use .map", "2.2.0")
     def mapZippers[B](f: Z[F] => B): F[C[B]] =
       map(f)
 
     def filter(f: Z[F] => Boolean): DomCollection[Z, F, C, A] = {
-      val f2: A => Boolean = a => f(addLayer(a))
-      val f3: A => Boolean = filterFn.fold(f2)(f0 => d => f0(d) && f2(d))
-      new DomCollection(from, addLayerFn, desc, rawResult, Some(f3), C)
+      val f2: Z[F] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
+      new DomCollection(desc, rawResults, Some(f2), C)
     }
 
     def outerHTMLs: F[C[String]] = map(_.outerHTML)
@@ -191,10 +182,23 @@ object DomZipper {
   // ===================================================================================================================
 
   object DomCollection {
+
+    def apply[Z[f[_]] <: DomZipper[f, A, Z], F[_], C[_], A](desc: String,
+                                                            rawResults: Vector[A],
+                                                            C: Container[F, C])
+                                                           (addLayer: Layer[A] => Z[F])
+                                                           (implicit F: ErrorHandler[F]): DomCollection[Z, F, C, A] =
+      new DomCollection[Z, F, C, A](
+        desc,
+        rawResults.map(a => addLayer(Layer("collect", desc, a))),
+        None,
+        C)
+
     trait Container[F[_], C[_]] {
       def apply[A](desc: String, es: CssSelResult[A]): F[C[A]]
       def map[A, B](c: C[A])(f: A => B): C[B]
       def traverse[A, B](c: C[A])(f: A => F[B]): F[C[B]]
+      def get[A](as: C[A], idx: Int): A
     }
 
     final class Container01[F[_]](implicit F: ErrorHandler[F]) extends Container[F, Option] {
@@ -211,6 +215,8 @@ object DomZipper {
           case Some(a) => F.map(f(a))(Some(_))
           case None    => F pass None
         }
+      override def get[A](as: Option[A], idx: Int): A =
+        as.get
     }
 
     final class Container0N[F[_]](implicit F: ErrorHandler[F]) extends Container[F, Vector] {
@@ -220,6 +226,8 @@ object DomZipper {
         c map f
       override def traverse[A, B](c: Vector[A])(f: A => F[B]): F[Vector[B]] =
         vectorTraverse(c)(f)
+      override def get[A](as: Vector[A], idx: Int): A =
+        as(idx)
     }
 
     final class Container1N[F[_]](implicit F: ErrorHandler[F]) extends Container[F, Vector] {
@@ -232,6 +240,8 @@ object DomZipper {
         c map f
       override def traverse[A, B](c: Vector[A])(f: A => F[B]): F[Vector[B]] =
         vectorTraverse(c)(f)
+      override def get[A](as: Vector[A], idx: Int): A =
+        as(idx)
     }
 
     private def vectorTraverse[F[_], A, B](c: Vector[A])(f: A => F[B])(implicit F: ErrorHandler[F]): F[Vector[B]] = {
