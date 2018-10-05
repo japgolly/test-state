@@ -77,7 +77,7 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
 
   protected override def self = this
 
-  protected[domzipper] val htmlScrub = fast.htmlScrub
+  protected[domzipper] def htmlScrub = fast.htmlScrub
 
   override def scrubHtml(f: HtmlScrub): DomZipperPair[F, A] = {
     lazy val s = slow().map(_.scrubHtml(f))

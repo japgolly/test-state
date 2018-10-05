@@ -16,7 +16,7 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   protected def self: Self[F]
 
   protected implicit val F: ErrorHandler[F]
-  protected[domzipper] val htmlScrub: HtmlScrub
+  protected[domzipper] def htmlScrub: HtmlScrub
 
   def scrubHtml(f: HtmlScrub): Self[F]
 
