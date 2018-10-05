@@ -49,7 +49,7 @@ final class DomZipperJsoupF[F[_]](override protected val prevLayers: Vector[Laye
     new DomZipperJsoupF(prevLayers :+ curLayer, nextLayer)
 
   private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, Dom] =
-    new DomCollection[DomZipperJsoupF, F, C, Dom](this, _.addLayer(_), desc, result, None, C)
+    DomCollection[DomZipperJsoupF, F, C, Dom](desc, result, C)(addLayer)
 
   override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, Dom] =
     newDomCollection(sel, runCssQuery(sel), C)
