@@ -232,7 +232,7 @@ object ImplicitsTest2 extends TestSuite {
   implicit def displayX2: Display[X2] =
     Display("X2=" + _.i)
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     // Doesn't affect correctness. Is just an optional nicety so don't ram it down users' throats.
     // Use toString by default and if someone wants to see something different, add their own instance.

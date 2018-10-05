@@ -74,7 +74,7 @@ object CollectionAssertionsTest extends TestSuite {
 
   val charPred = (_: Char) <= 'b'
 
-  override def tests = TestSuite {
+  override def tests = Tests {
     'logic {
 
       def test1(name: String, f: (Boolean, D) => Option[Any], expectPass: D => Boolean) =

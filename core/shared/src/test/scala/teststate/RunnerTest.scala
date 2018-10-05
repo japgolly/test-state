@@ -55,7 +55,7 @@ object RunnerTest extends TestSuite {
     }
   }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
     'pass1 {
       val v = newState
       assertRun(test.withRef(v).run(),

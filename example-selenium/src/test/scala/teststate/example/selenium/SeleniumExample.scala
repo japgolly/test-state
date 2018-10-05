@@ -35,7 +35,7 @@ object SeleniumExample extends TestSuite {
 
   val responseText = *.focus("Response text").option(_.obs.responseText)
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     val driver = openBrowser()
     val plan = Plan.action(clickGet +> responseText.assert.exists("Response", _ contains "Response"))

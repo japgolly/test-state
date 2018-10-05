@@ -57,7 +57,7 @@ object DomZipperJsTest extends TestSuite {
   def nameInputHtml = """<input type="text" id="name" name="user_name" value="Bob Loblaw" class=" a b  c ">"""
   def checkboxes = $.collect0n("input[type=checkbox]")
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'outerHTML - assertEq(name.outerHTML, nameInputHtml)
 

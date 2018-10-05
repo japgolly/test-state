@@ -31,7 +31,7 @@ object OptionAssertionsTest extends TestSuite {
   private val fs = List[Int => Boolean](_ == 1, isOdd, _ >= 3)
   private val none = Option.empty[Int]
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'contains {
       'logic {

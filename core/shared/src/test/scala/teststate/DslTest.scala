@@ -34,7 +34,7 @@ object DslTest extends TestSuite {
     assertEq(n(Some(BeforeAfter(null, null))).value, expectC)
   }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'changeTo {
       'pos - testName(*.focus("Counter").value(_ => 7).assert.changeTo(_ + 1),

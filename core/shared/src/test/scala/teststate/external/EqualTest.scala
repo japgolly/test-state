@@ -26,7 +26,7 @@ object EqualTest extends TestSuite {
 
   class Nope
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'builtin {
       'unit    - assertId(())

@@ -52,7 +52,7 @@ object OutputTest extends TestSuite {
     assertRun(r, expect)
   }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'empty {
       'empty - test(emptyAction, emptyInvariant)("- Nothing to do.")

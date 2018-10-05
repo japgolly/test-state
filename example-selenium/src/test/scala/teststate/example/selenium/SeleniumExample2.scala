@@ -78,7 +78,7 @@ object SeleniumExample2 extends TestSuite {
     results.foreach(_.assert(true))
   }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     testInParallel()
 

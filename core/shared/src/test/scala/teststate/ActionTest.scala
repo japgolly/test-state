@@ -17,7 +17,7 @@ object ActionTest extends TestSuite {
   val c1 = *.chooseAction("C1")(_ => a1)
   val g1 = (a1 >> a2).group("G1")
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'topLevelNames - {
       def test(actual: Vector[String])(expect: String*): Unit =

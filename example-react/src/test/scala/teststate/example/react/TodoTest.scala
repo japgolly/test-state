@@ -67,7 +67,7 @@ object TodoTest extends TestSuite {
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     val plan = Plan.action(
       addItem("hello")

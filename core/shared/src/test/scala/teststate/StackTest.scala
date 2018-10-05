@@ -28,7 +28,7 @@ object StackTest extends TestSuite {
     }
   }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
     'sync - test[Id]("sync")
     'async - test[Future]("async")
   }

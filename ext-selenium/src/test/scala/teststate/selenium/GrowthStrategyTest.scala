@@ -37,7 +37,7 @@ object GrowthStrategyTest extends TestSuite {
       assertEq(state.mkString(","), expect.mkString(","))
   }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'singleBrowser - {
       new Tester(GrowthStrategy.singleBrowser)

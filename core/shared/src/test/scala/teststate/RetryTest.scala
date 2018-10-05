@@ -195,7 +195,7 @@ object RetryTest extends TestSuite {
     def -[B](d: Duration): Instant = self.minusMillis(d.toMillis)
   }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'stackSafe {
       val * = Dsl[Unit, Unit, Unit]

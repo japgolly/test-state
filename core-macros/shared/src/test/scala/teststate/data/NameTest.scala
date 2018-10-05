@@ -7,7 +7,7 @@ import NameImps._
 
 object NameTest extends TestSuite {
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'nonStrict {
       'name {

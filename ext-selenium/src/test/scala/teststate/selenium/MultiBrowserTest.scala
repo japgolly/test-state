@@ -43,7 +43,7 @@ object MultiBrowserTest extends TestSuite {
     assertEq("Tab count after double close", tabCount(), 1)
   }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'onNewDriverWithTempTab - {
       var tabCountAtTempTab = -1

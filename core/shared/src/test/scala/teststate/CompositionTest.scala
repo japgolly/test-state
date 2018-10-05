@@ -28,7 +28,7 @@ object CompositionTest extends TestSuite {
       { case (a, b, c) => results(a >> (b >> c)) })
   }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
     'coproduct {
       import CoproductExample._
       import Top._

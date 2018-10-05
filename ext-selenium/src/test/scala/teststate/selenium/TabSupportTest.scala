@@ -72,7 +72,7 @@ object TabSupportTest extends TestSuite {
       ()
     }
 
-  override def tests = TestSuite {
+  override def tests = Tests {
 
     'chrome {
       test(newChrome(), i => s"file://nope-$i.html/")
