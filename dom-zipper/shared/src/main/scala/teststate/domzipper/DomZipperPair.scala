@@ -2,38 +2,13 @@ package teststate.domzipper
 
 import ErrorHandler._
 
-object DomZipperPair {
-  def apply[F[_],
-            Fast[f[_]] <: DomZipper[f, FD, Fast], FD,
-            Slow[f[_]] <: DomZipper[f, SD, Slow], SD]
-            (fast: Fast[F], slow: Slow[F])
-            (implicit F: ErrorHandler[F]): DomZipperPair[F, () => F[SD]] =
-    full[F, Fast, FD, Slow, SD, () => F[SD]](fast, () => F.pass(slow), identity)
-
-  def full[
-    F[_],
-    _FastF[f[_]] <: DomZipper[f, _FD, _FastF], _FD,
-    _SlowF[f[_]] <: DomZipper[f, _SD, _SlowF], _SD,
-    A
-  ](
-    _fast: _FastF[F],
-    _slow: () => F[_SlowF[F]],
-    _domFn: (() => F[_SD]) => A
-   )(
-    implicit _F: ErrorHandler[F]
-   ): DomZipperPair[F, A] =
-    new DomZipperPair[F, A] {
-      override protected type FastF[f[_]] = _FastF[f]
-      override protected type SlowF[f[_]] = _SlowF[f]
-      override protected type FD = _FD
-      override protected type SD = _SD
-      override protected val fast = _fast
-      override protected val slow = _slow
-      override protected val domFn = _domFn
-      override protected implicit val F = _F
-    }
-}
-
+/** Fusion of two DomZippers over identical content.
+  *
+  * One zipper ("fast") is used for all of the inspection,
+  * the other zipper ("slow") is used when real DOM is needed.
+  *
+  * @since 2.3.0
+  */
 trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G, A]]] {
   import DomZipper.DomCollection
 
@@ -118,4 +93,38 @@ trait DomZipperPair[F[_], A] extends DomZipper[F, A, λ[G[_] => DomZipperPair[G,
   override def children01 = cmap(_.children01, _.children01)
   override def children0n = cmap(_.children0n, _.children0n)
   override def children1n = cmap(_.children1n, _.children1n)
+}
+
+// =====================================================================================================================
+
+object DomZipperPair {
+  def apply[F[_],
+            Fast[f[_]] <: DomZipper[f, FD, Fast], FD,
+            Slow[f[_]] <: DomZipper[f, SD, Slow], SD]
+            (fast: Fast[F], slow: Slow[F])
+            (implicit F: ErrorHandler[F]): DomZipperPair[F, () => F[SD]] =
+    full[F, Fast, FD, Slow, SD, () => F[SD]](fast, () => F.pass(slow), identity)
+
+  def full[
+    F[_],
+    _FastF[f[_]] <: DomZipper[f, _FD, _FastF], _FD,
+    _SlowF[f[_]] <: DomZipper[f, _SD, _SlowF], _SD,
+    A
+  ](
+    _fast: _FastF[F],
+    _slow: () => F[_SlowF[F]],
+    _domFn: (() => F[_SD]) => A
+   )(
+     implicit _F: ErrorHandler[F]
+   ): DomZipperPair[F, A] =
+    new DomZipperPair[F, A] {
+      override protected type FastF[f[_]] = _FastF[f]
+      override protected type SlowF[f[_]] = _SlowF[f]
+      override protected type FD = _FD
+      override protected type SD = _SD
+      override protected val fast = _fast
+      override protected val slow = _slow
+      override protected val domFn = _domFn
+      override protected implicit val F = _F
+    }
 }
