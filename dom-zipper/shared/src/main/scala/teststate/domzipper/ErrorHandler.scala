@@ -25,6 +25,10 @@ trait ErrorHandler[Result[_]] {
     try pass(a) catch {
       case NonFatal(t) => fail(t.getMessage)
     }
+
+  private[domzipper] final val C01 = new DomZipper.DomCollection.Container01()(this)
+  private[domzipper] final val C0N = new DomZipper.DomCollection.Container0N()(this)
+  private[domzipper] final val C1N = new DomZipper.DomCollection.Container1N()(this)
 }
 
 object ErrorHandler {

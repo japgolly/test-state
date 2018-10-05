@@ -42,17 +42,17 @@ trait DomZipperBase[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] extends DomZip
 
   final override def dom: A = curLayer.dom
 
-  final override def collect01(sel: String): DomCollection[Self, F, Option, A] = collect(sel, new DomCollection.Container01)
-  final override def collect0n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, new DomCollection.Container0N)
-  final override def collect1n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, new DomCollection.Container1N)
+  final override def collect01(sel: String): DomCollection[Self, F, Option, A] = collect(sel, F.C01)
+  final override def collect0n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.C0N)
+  final override def collect1n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.C1N)
 
-  final override def children01: DomCollection[Self, F, Option, A] = collectChildren(">*", new DomCollection.Container01)
-  final override def children0n: DomCollection[Self, F, Vector, A] = collectChildren(">*", new DomCollection.Container0N)
-  final override def children1n: DomCollection[Self, F, Vector, A] = collectChildren(">*", new DomCollection.Container1N)
+  final override def children01: DomCollection[Self, F, Option, A] = collectChildren(">*", F.C01)
+  final override def children0n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.C0N)
+  final override def children1n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.C1N)
 
-  final override def children01(sel: String): DomCollection[Self, F, Option, A] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container01)
-  final override def children0n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container0N)
-  final override def children1n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, new DomCollection.Container1N)
+  final override def children01(sel: String): DomCollection[Self, F, Option, A] = collectChildren(cssPrepend_>(sel), sel, F.C01)
+  final override def children0n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.C0N)
+  final override def children1n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.C1N)
 
   // =======
   // Descent

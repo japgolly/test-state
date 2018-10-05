@@ -17,7 +17,7 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   protected def self: Self[F]
 
   protected implicit val F: ErrorHandler[F]
-  protected val htmlScrub: HtmlScrub
+  protected[domzipper] val htmlScrub: HtmlScrub
 
   def scrubHtml(f: HtmlScrub): Self[F]
 
@@ -139,7 +139,7 @@ object DomZipper {
       private[domzipper] val desc      : String,
       private[domzipper] val rawResults: Vector[Z[F]],
                              filterFn  : Option[Z[F] => Boolean],
-                             C         : DomCollection.Container[F, C])
+      private[domzipper] val C         : DomCollection.Container[F, C])
       (implicit val F: ErrorHandler[F]) {
 
     private val result: Vector[Z[F]] =
@@ -205,6 +205,7 @@ object DomZipper {
       def apply[A](desc: String, es: CssSelResult[A]): F[C[A]]
       def map[A, B](c: C[A])(f: A => B): C[B]
       def traverse[A, B](c: C[A])(f: A => F[B]): F[C[B]]
+      def get[A](as: C[A], idx: Int): A
     }
 
     final class Container01[F[_]](implicit F: ErrorHandler[F]) extends Container[F, Option] {
@@ -221,6 +222,8 @@ object DomZipper {
           case Some(a) => F.map(f(a))(Some(_))
           case None    => F pass None
         }
+      override def get[A](as: Option[A], idx: Int): A =
+        as.get
     }
 
     final class Container0N[F[_]](implicit F: ErrorHandler[F]) extends Container[F, Vector] {
@@ -230,6 +233,8 @@ object DomZipper {
         c map f
       override def traverse[A, B](c: Vector[A])(f: A => F[B]): F[Vector[B]] =
         vectorTraverse(c)(f)
+      override def get[A](as: Vector[A], idx: Int): A =
+        as(idx)
     }
 
     final class Container1N[F[_]](implicit F: ErrorHandler[F]) extends Container[F, Vector] {
@@ -242,6 +247,8 @@ object DomZipper {
         c map f
       override def traverse[A, B](c: Vector[A])(f: A => F[B]): F[Vector[B]] =
         vectorTraverse(c)(f)
+      override def get[A](as: Vector[A], idx: Int): A =
+        as(idx)
     }
 
     private def vectorTraverse[F[_], A, B](c: Vector[A])(f: A => F[B])(implicit F: ErrorHandler[F]): F[Vector[B]] = {
