@@ -11,6 +11,9 @@ trait DomZipper2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] {
 
   def duplicate: DomZipper2[F, Self[F, A], Self]
 
+  // or .focus? or .value?
+  def extract: A
+
   def describe: String
 
   // ==================
@@ -47,8 +50,6 @@ trait DomZipper2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] {
   def classes: Set[String]
 
   def value: F[String]
-
-  def dom: A
 
   final def needAttribute(name: String): F[String] =
     F.option(getAttribute(name), s"$tagName doesn't have attribute $name")
@@ -154,14 +155,24 @@ object DomZipper2 {
     def size: Int =
       result.length
 
-    def doms: F[C[A]] =
-      map(_.dom)
+    def extracts: F[C[A]] =
+      map(_.extract)
 
-    def mapDoms[B](f: A => B): F[C[B]] =
-      F.map(doms)(C.map(_)(f))
+    def mapExtract[B](f: A => B): F[C[B]] =
+      F.map(extracts)(C.map(_)(f))
 
-    def traverse[B](f: A => F[B]): F[C[B]] =
-      F.flatMap(doms)(C.traverse(_)(f))
+    def traverseExtracts[B](f: A => F[B]): F[C[B]] =
+      F.flatMap(extracts)(C.traverse(_)(f))
+
+    // Maybe need a D and a Z => D
+//    def doms: F[C[A]] =
+//      map(_.dom)
+//
+//    def mapDoms[B](f: A => B): F[C[B]] =
+//      F.map(doms)(C.map(_)(f))
+//
+//    def traverse[B](f: A => F[B]): F[C[B]] =
+//      F.flatMap(doms)(C.traverse(_)(f))
 
     def zippers: F[C[Z[F, A]]] =
       C(desc, result)
@@ -187,12 +198,12 @@ object DomZipper2 {
 
   object DomCollection {
 
-    def apply[Z[f[_], a] <: DomZipper2[f, a, Z], F[_], C[_], A](desc: String,
-                                                               rawResults: Vector[A],
-                                                               C: Container[F, C])
-                                                              (addLayer: Layer[A] => Z[F, A])
-                                                              (implicit F: ErrorHandler[F]): DomCollection[Z, F, C, A] =
-      new DomCollection[Z, F, C, A](
+    def apply[Z[f[_], a] <: DomZipper2[f, a, Z], F[_], C[_], A, B](desc: String,
+                                                                   rawResults: Vector[A],
+                                                                   C: Container[F, C])
+                                                                   (addLayer: Layer[A] => Z[F, B])
+                                                                   (implicit F: ErrorHandler[F]): DomCollection[Z, F, C, B] =
+      new DomCollection[Z, F, C, B](
         desc,
         rawResults.map(a => addLayer(Layer("collect", desc, a))),
         None,

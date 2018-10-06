@@ -62,6 +62,8 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
   override def duplicate: DomZipperJsF2[F, DomZipperJsF2[F, A]] =
     new DomZipperJsF2(prevLayers, curLayer, new DomZipperJsF2[F, A](_, _, A))
 
+  override def extract: A =
+    A(prevLayers, curLayer)
 
   private def allLayers =
     prevLayers :+ curLayer
@@ -85,65 +87,63 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
   def failToEither: Self[Either[String, ?], A] = failBy(ErrorHandler.ReturnEither)
   def throwErrors : Self[Id               , A] = failBy(ErrorHandler.Throw)
 
-  protected[domzipper] def addLayer(nextLayer: Layer[Dom]) =
-    ??? ///new DomZipperJsF2(prevLayers :+ curLayer, nextLayer)
+  protected[domzipper] def addLayer(nextLayer: Layer[Dom]): DomZipperJsF2[F, A] =
+    new DomZipperJsF2(prevLayers :+ curLayer, nextLayer, A)
 
-  override def dom: A =
-    A(prevLayers, curLayer)
+  def dom: Dom =
+    curLayer.dom
 
-  override def collect01(sel: String): DomCollection[Self, F, Option, A] = ??? //collect(sel, F.XC01)
-  override def collect0n(sel: String): DomCollection[Self, F, Vector, A] = ??? //collect(sel, F.XC0N)
-  override def collect1n(sel: String): DomCollection[Self, F, Vector, A] = ??? //collect(sel, F.XC1N)
+  override def collect01(sel: String): DomCollection[Self, F, Option, A] = collect(sel, F.XC01)
+  override def collect0n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.XC0N)
+  override def collect1n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.XC1N)
 
-  override def children01: DomCollection[Self, F, Option, A] = ??? //collectChildren(">*", F.XC01)
-  override def children0n: DomCollection[Self, F, Vector, A] = ??? //collectChildren(">*", F.XC0N)
-  override def children1n: DomCollection[Self, F, Vector, A] = ??? //collectChildren(">*", F.XC1N)
+  override def children01: DomCollection[Self, F, Option, A] = collectChildren(">*", F.XC01)
+  override def children0n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.XC0N)
+  override def children1n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.XC1N)
 
-  override def children01(sel: String): DomCollection[Self, F, Option, A] = ??? //collectChildren(cssPrepend_>(sel), sel, F.XC01)
-  override def children0n(sel: String): DomCollection[Self, F, Vector, A] = ??? //collectChildren(cssPrepend_>(sel), sel, F.XC0N)
-  override def children1n(sel: String): DomCollection[Self, F, Vector, A] = ??? //collectChildren(cssPrepend_>(sel), sel, F.XC1N)
+  override def children01(sel: String): DomCollection[Self, F, Option, A] = collectChildren(cssPrepend_>(sel), sel, F.XC01)
+  override def children0n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.XC0N)
+  override def children1n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.XC1N)
 
   lazy val parent: F[Self[F, A]] =
     F.map(_parent)(a => addLayer(Layer("parent", ":parent", a)))
 
-  def runCssQuery(sel: String): CssSelResult[A] =
-    ??? //$.run(sel, curLayer.dom)
+  private def runCssQuery(sel: String): CssSelResult[Dom] =
+    $.run(sel, curLayer.dom)
 
   override def apply(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-//    val results = runCssQuery(sel)
-//    if (results.length != which.n)
-//      F fail {
-//        val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-//        failMsg(s"${q}uery failed: [$sel]. Expected ${which.n} results, not ${results.length}.")
-//      }
-//    else
-//      F pass {
-//        val nextDom = results(which.m - 1)
-//        val nextLayer = Layer(name, sel, nextDom)
-//        addLayer(nextLayer)
-//      }
-    ???
+    val results = runCssQuery(sel)
+    if (results.length != which.n)
+      F fail {
+        val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
+        failMsg(s"${q}uery failed: [$sel]. Expected ${which.n} results, not ${results.length}.")
+      }
+    else
+      F pass {
+        val nextDom = results(which.m - 1)
+        val nextLayer = Layer(name, sel, nextDom)
+        addLayer(nextLayer)
+      }
   }
 
   override def child(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-//    val results = if (sel.isEmpty) children1n else children1n(sel)
-//    F.flatMap(results.zippers) { zippers =>
-//      if (zippers.length != which.n)
-//        F fail {
-//          val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-//          failMsg(s"${q}uery failed: [${results.desc}]. Expected ${which.n} results, not ${zippers.length}.")
-//        }
-//      else
-//        F pass zippers(which.m - 1)
-//    }
-    ???
+    val results = if (sel.isEmpty) children1n else children1n(sel)
+    F.flatMap(results.zippers) { zippers =>
+      if (zippers.length != which.n)
+        F fail {
+          val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
+          failMsg(s"${q}uery failed: [${results.desc}]. Expected ${which.n} results, not ${zippers.length}.")
+        }
+      else
+        F pass zippers(which.m - 1)
+    }
   }
 
   private def failMsg(msg: String): String =
     msg + "\n" + describe
 
   protected def _parent: F[Dom] =
-    ??? //liftNode(dom.parentNode)
+    liftNode(dom.parentNode)
 
   override protected def _outerHTML: String =
     dynamicString(_.outerHTML)
@@ -151,37 +151,36 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
   override protected def _innerHTML: String =
     dynamicString(_.innerHTML)
 
-  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF2, F, C, Dom] =
-    DomCollection[DomZipperJsF2, F, C, Dom](desc, result, C)(addLayer)
+  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF2, F, C, A] =
+    DomCollection[DomZipperJsF2, F, C, Dom, A](desc, result, C)(addLayer)
 
-  protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF2, F, C, Dom] =
-    ??? //newDomCollection(sel, runCssQuery(sel), C)
+  protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF2, F, C, A] =
+    newDomCollection(sel, runCssQuery(sel), C)
 
-  private def childIterator: Iterator[Dom] = ???
-//    dom.childNodes.iterator.collect {
-//      case e: org.scalajs.dom.Element => e
-//    }
+  private def childIterator: Iterator[Dom] =
+    dom.childNodes.iterator.collect {
+      case e: org.scalajs.dom.Element => e
+    }
 
-  protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF2, F, C, Dom] =
+  protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF2, F, C, A] =
     newDomCollection(desc, childIterator.toVector, C)
 
-  protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF2, F, C, Dom] = {
-//    val all = runCssQuery(sel).toSet
-//    newDomCollection(desc, childIterator.filter(all.contains).toVector, C)
-    ???
+  protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF2, F, C, A] = {
+    val all = runCssQuery(sel).toSet
+    newDomCollection(desc, childIterator.filter(all.contains).toVector, C)
   }
 
   override def matches(css: String): F[Boolean] =
-    ??? //F pass dom.matches(css)
+    F pass dom.matches(css)
 
   override def getAttribute(name: String): Option[String] =
-    ??? //Option(dom.attributes.getNamedItem(name)).map(_.value)
+    Option(dom.attributes.getNamedItem(name)).map(_.value)
 
   override def tagName: String =
-    ??? //dom.tagName
+    dom.tagName
 
   override def innerText: String =
-    ??? //dom.textContent.trim
+    dom.textContent.trim
 
   override def checked: F[Boolean] =
     dynamicMethod[Boolean](_.checked) orFail s".checked failed on $dom."
@@ -206,25 +205,25 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
   def dynamicString(f: js.Dynamic => Any): String =
     dynamicMethod[Any](f).fold("undefined")(_.toString)
 
-//  def domAs[D <: Dom](implicit ct: ClassTag[D]): F[D] =
-//    safeCastDom[F, D](dom)
-//
-//  def domAsHtml: F[html.Element] =
-//    domAs[html.Element]
-//
-//  def forceDomAs[D <: Dom]: D =
-//    dom.asInstanceOf[D]
-//
-//  /** The currently selected option in a &lt;select&gt; dropdown. */
-//  def selectedOption: F[Option[html.Option]] =
-//    domAs[html.Select].map(s =>
-//      if (s.selectedIndex >= 0)
-//        Some(s.options(s.selectedIndex))
-//      else
-//        None
-//    )
-//
-//  /** The text value of the currently selected option in a &lt;select&gt; dropdown. */
-//  def selectedOptionText: F[Option[String]] =
-//    selectedOption.map(_.map(_.text))
+  def domAs[D <: Dom](implicit ct: ClassTag[D]): F[D] =
+    safeCastDom[F, D](dom)
+
+  def domAsHtml: F[html.Element] =
+    domAs[html.Element]
+
+  def forceDomAs[D <: Dom]: D =
+    dom.asInstanceOf[D]
+
+  /** The currently selected option in a &lt;select&gt; dropdown. */
+  def selectedOption: F[Option[html.Option]] =
+    domAs[html.Select].map(s =>
+      if (s.selectedIndex >= 0)
+        Some(s.options(s.selectedIndex))
+      else
+        None
+    )
+
+  /** The text value of the currently selected option in a &lt;select&gt; dropdown. */
+  def selectedOptionText: F[Option[String]] =
+    selectedOption.map(_.map(_.text))
 }
