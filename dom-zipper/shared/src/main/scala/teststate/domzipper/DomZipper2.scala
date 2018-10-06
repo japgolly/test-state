@@ -9,7 +9,7 @@ trait DomZipper2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] {
 
   def extend[B](f: Self[F, A] => B): Self[F, B]
 
-  def duplicate: DomZipper2[F, Self[F, A], Self]
+  def duplicate: Self[F, Self[F, A]]
 
   // or .focus? or .value?
   def extract: A
@@ -22,7 +22,7 @@ trait DomZipper2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] {
 
   protected def self: Self[F, A]
 
-  protected implicit val F: ErrorHandler[F]
+  protected implicit def F: ErrorHandler[F]
   protected[domzipper] def htmlScrub: HtmlScrub
 
   def scrubHtml(f: HtmlScrub): Self[F, A]
