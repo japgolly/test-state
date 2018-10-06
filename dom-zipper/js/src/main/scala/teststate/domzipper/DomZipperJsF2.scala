@@ -42,7 +42,7 @@ import DomZipperJsF2.{Dom, liftNode, safeCastDom}
 
 final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
                                    protected val curLayer: Layer[Dom],
-                                   A: Dom => A,
+                                   A: (Vector[Layer[Dom]], Layer[Dom]) => A,
                                  )(implicit
                                    protected val $: CssSelEngine[Dom, Dom],
                                    override protected[domzipper] val htmlScrub: HtmlScrub,
@@ -54,14 +54,13 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
   type Self[G[_], B] = DomZipperJsF2[G, B]
 
   override def map[B](f: A => B): DomZipperJsF2[F, B] =
-    ???
+    new DomZipperJsF2(prevLayers, curLayer, (x, y) => f(A(x, y)))
 
   override def extend[B](f: DomZipperJsF2[F, A] => B): DomZipperJsF2[F, B] =
-    ???
+    duplicate.map(f)
 
   override def duplicate: DomZipperJsF2[F, DomZipperJsF2[F, A]] =
-    ???
-
+    new DomZipperJsF2(prevLayers, curLayer, new DomZipperJsF2[F, A](_, _, A))
 
 
   private def allLayers =
@@ -90,7 +89,7 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
     ??? ///new DomZipperJsF2(prevLayers :+ curLayer, nextLayer)
 
   override def dom: A =
-    A(curLayer.dom)
+    A(prevLayers, curLayer)
 
   override def collect01(sel: String): DomCollection[Self, F, Option, A] = ??? //collect(sel, F.XC01)
   override def collect0n(sel: String): DomCollection[Self, F, Vector, A] = ??? //collect(sel, F.XC0N)
