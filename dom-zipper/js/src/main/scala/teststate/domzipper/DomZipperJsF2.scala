@@ -53,6 +53,17 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
 
   type Self[G[_], B] = DomZipperJsF2[G, B]
 
+  override def map[B](f: A => B): DomZipperJsF2[F, B] =
+    ???
+
+  override def extend[B](f: DomZipperJsF2[F, A] => B): DomZipperJsF2[F, B] =
+    ???
+
+  override def duplicate: DomZipperJsF2[F, DomZipperJsF2[F, A]] =
+    ???
+
+
+
   private def allLayers =
     prevLayers :+ curLayer
 
@@ -63,7 +74,7 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
     this
 
   protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]): Self[G, A] =
-    ??? // new DomZipperJsF2(prevLayers, curLayer)($, h, g)
+    new DomZipperJsF2(prevLayers, curLayer, A)($, h, g)
 
   override def scrubHtml(f: HtmlScrub): Self[F, A] =
     copySelf(htmlScrub >> f, F)

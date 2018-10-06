@@ -5,7 +5,11 @@ import ErrorHandler.ErrorHandlerResultOps
 
 trait DomZipper2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] {
   
-//  def map[B](f: A => B): DomZipper2
+  def map[B](f: A => B): Self[F, B]
+
+  def extend[B](f: Self[F, A] => B): Self[F, B]
+
+  def duplicate: DomZipper2[F, Self[F, A], Self]
 
   def describe: String
 
