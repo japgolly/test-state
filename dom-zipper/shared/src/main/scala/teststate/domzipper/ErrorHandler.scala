@@ -29,6 +29,10 @@ trait ErrorHandler[Result[_]] {
   private[domzipper] final val C01 = new DomZipper.DomCollection.Container01()(this)
   private[domzipper] final val C0N = new DomZipper.DomCollection.Container0N()(this)
   private[domzipper] final val C1N = new DomZipper.DomCollection.Container1N()(this)
+
+  private[domzipper] final val XC01 = new DomZipper2.DomCollection.Container01()(this)
+  private[domzipper] final val XC0N = new DomZipper2.DomCollection.Container0N()(this)
+  private[domzipper] final val XC1N = new DomZipper2.DomCollection.Container1N()(this)
 }
 
 object ErrorHandler {
