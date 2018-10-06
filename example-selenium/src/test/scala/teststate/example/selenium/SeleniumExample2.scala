@@ -13,7 +13,10 @@ object SeleniumExample2 extends TestSuite {
 
   case class Ref(name: String, tab: Tab[WebDriver]) {
     def observe(): Obs = {
-      tab.use(new Obs(_, name))
+      tab.use(webDriver =>                // Ensure we're on our allocated tab
+        DomZipperSelenium.html(webDriver) // Create a DomZipper starting at the <html> tag
+          .ensureConsistency($ =>         // Ensure page doesn't change mid-observation
+            new Obs($, name)))            // Observe the page
     }
   }
 
@@ -29,8 +32,7 @@ object SeleniumExample2 extends TestSuite {
         System.out.flush()
       }
 
-  class Obs(driver: WebDriver, name: String) {
-    private val $ = DomZipperSelenium.html(driver)
+  class Obs($: DomZipperSelenium, name: String) {
 
     debug(s"Observing $name...")
 

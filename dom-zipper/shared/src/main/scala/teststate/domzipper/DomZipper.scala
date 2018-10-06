@@ -1,6 +1,7 @@
 package teststate.domzipper
 
 import DomZipper._
+import ErrorHandler.ErrorHandlerResultOps
 
 trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
 
@@ -8,6 +9,63 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
 
   @deprecated("Use .describe", "2.3.0")
   final def describeLoc: String = describe
+
+  /** To ensure that DOM doesn't change in the middle of an observation, use this pattern:
+    *
+    * {{{
+    *   class Obs($: DomZipper) {
+    *
+    *     // Before making any observations...
+    *     private val checkConsistency = startConsistencyCheck()
+    *
+    *     // ... obs here ...
+    *
+    *     // After making all observations...
+    *     checkConsistency()
+    *   }
+    * }}}
+    *
+    * (This assumes you're using ErrorHandler.Throw)
+    */
+  def startConsistencyCheck(): () => F[Unit] = {
+    val initial = outerHTML
+    () => {
+      val current = outerHTML
+      if (initial == current)
+        F.pass(())
+      else
+        F.fail(
+          s"""
+            |Inconsistency detected.
+            |
+            |Initial HTML:
+            |$initial
+            |
+            |Current HTML:
+            |$current
+          """.stripMargin.trim)
+    }
+  }
+
+  /** To ensure that DOM doesn't change in the middle of an observation, replace code like...
+    *
+    * {{{
+    *   new Obs($)
+    * }}}
+    *
+    * ...with code like...
+    *
+    * {{{
+    *   $.ensureConsistency(new Obs(_))
+    * }}}
+    */
+  final def ensureConsistency[B](f: this.type => B): F[B] = {
+    val checkConsistency = startConsistencyCheck()
+    for {
+      b <- F.attempt(f(this))
+      _ <- checkConsistency()
+    } yield b
+  }
 
   // ==================
   // Self configuration
