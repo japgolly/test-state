@@ -114,12 +114,11 @@ object DomZipperPair {
             (implicit F: ErrorHandler[F]): DomZipperPair[F, () => F[SD]] =
     FastAndSlow(fast, () => F.pass(slow)).toDomZipperPairRoot
 
-  final case class FastAndSlow[
-    F[_],
-    FastF[f[_], a] <: DomZipper[f, a, FastF], FD,
-    SlowF[f[_], a] <: DomZipper[f, a, SlowF], SD,
-  ](fast: FastF[F, FD], slow: () => F[SlowF[F, SD]])
-   (implicit val F: ErrorHandler[F]) {
+  final case class FastAndSlow[F[_],
+                               FastF[f[_], a] <: DomZipper[f, a, FastF], FD,
+                               SlowF[f[_], a] <: DomZipper[f, a, SlowF], SD
+                             ](fast: FastF[F, FD], slow: () => F[SlowF[F, SD]])
+                              (implicit val F: ErrorHandler[F]) {
 
     type Fast = FastF[F, FD]
     type Slow = SlowF[F, SD]

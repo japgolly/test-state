@@ -47,7 +47,7 @@ import DomZipperJsF.{CssSelEngine, liftNode, rootDomFn, safeCastDom}
 
 final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Layer[DomZipperJsF.Dom]],
                                   override protected val curLayer: Layer[DomZipperJsF.Dom],
-                                  override protected val peek: ((Vector[Layer[DomZipperJsF.Dom]], Layer[DomZipperJsF.Dom])) => A,
+                                  override protected val peek: ((Vector[Layer[DomZipperJsF.Dom]], Layer[DomZipperJsF.Dom])) => A
                                 )(implicit
                                   override protected val $: CssSelEngine,
                                   override protected[domzipper] val htmlScrub: HtmlScrub,
