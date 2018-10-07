@@ -7,25 +7,6 @@ import ErrorHandler.Id
 trait DomZipperBase[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] extends DomZipper[F, A, Self] {
   import DomCollection.Container
 
-//  protected def extractFn: (Vector[Layer[Dom]], Layer[Dom]) => A
-//
-//  protected def withExtractFn[B]: ((Vector[Layer[Dom]], Layer[Dom]) => B) => Self[F, B]
-//
-//  override def map[B](f: A => B): Self[F, B] =
-//    withExtractFn((x, y) => f(extractFn(x, y)))
-//
-//  override def extend[B](f: Self[F, A] => B): Self[F, B] =
-//    duplicate.map(f)
-//
-//  override def duplicate: Self[F, Self[F, A]] =
-//    new Self(prevLayers, curLayer, new Self[F, A](_, _, A))
-//
-//  override def extract: A =
-//    extractFn(prevLayers, curLayer)
-
-//  override def unfocus =
-//    new Self(prevLayers, curLayer, (_, y) => y.dom)
-
   private final def allLayers =
     prevLayers :+ curLayer
 

@@ -4,21 +4,68 @@ import DomZipper._
 import ErrorHandler.ErrorHandlerResultOps
 
 trait DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] {
-  
-  def map[B](f: A => B): Self[F, B]
-
-  def extend[B](f: Self[F, A] => B): Self[F, B]
-
-  def duplicate: Self[F, Self[F, A]]
-
-  // or .focus? or .value?
-  def extract: A
-
-  type Dom
-  def dom: Dom
-  def unfocus:  Self[F, Dom]
 
   def describe: String
+
+  @deprecated("Use .describe", "2.3.0")
+  final def describeLoc: String = describe
+
+  /** To ensure that DOM doesn't change in the middle of an observation, use this pattern:
+    *
+    * {{{
+    *   class Obs($: DomZipper) {
+    *
+    *     // Before making any observations...
+    *     private val checkConsistency = startConsistencyCheck()
+    *
+    *     // ... obs here ...
+    *
+    *     // After making all observations...
+    *     checkConsistency()
+    *   }
+    * }}}
+    *
+    * (This assumes you're using ErrorHandler.Throw)
+    */
+  def startConsistencyCheck(): () => F[Unit] = {
+    val initial = outerHTML
+    () => {
+      val current = outerHTML
+      if (initial == current)
+        F.pass(())
+      else
+        F.fail(
+          s"""
+            |Inconsistency detected.
+            |
+            |Initial HTML:
+            |$initial
+            |
+            |Current HTML:
+            |$current
+          """.stripMargin.trim)
+    }
+  }
+
+  /** To ensure that DOM doesn't change in the middle of an observation, replace code like...
+    *
+    * {{{
+    *   new Obs($)
+    * }}}
+    *
+    * ...with code like...
+    *
+    * {{{
+    *   $.ensureConsistency(new Obs(_))
+    * }}}
+    */
+  final def ensureConsistency[B](f: this.type => B): F[B] = {
+    val checkConsistency = startConsistencyCheck()
+    for {
+      b <- F.attempt(f(this))
+      _ <- checkConsistency()
+    } yield b
+  }
 
   // ==================
   // Self configuration
@@ -34,9 +81,23 @@ trait DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] {
   final def scrubHtml(f: String => String): Self[F, A] =
     scrubHtml(HtmlScrub(f))
 
+  def map[B](f: A => B): Self[F, B]
+
+  def extend[B](f: Self[F, A] => B): Self[F, B]
+
+  def duplicate: Self[F, Self[F, A]]
+
+  def unfocus:  Self[F, Dom]
+
   // ====================
   // DOM & DOM inspection
   // ====================
+
+  type Dom
+
+  def dom: Dom
+
+  def extract: A
 
   protected def _outerHTML: String
   protected def _innerHTML: String
@@ -159,35 +220,35 @@ object DomZipper {
     def size: Int =
       result.length
 
-    def extracts: F[C[A]] =
-      map(_.extract)
-
-    def mapExtract[B](f: A => B): F[C[B]] =
-      F.map(extracts)(C.map(_)(f))
-
-    def traverseExtracts[B](f: A => F[B]): F[C[B]] =
-      F.flatMap(extracts)(C.traverse(_)(f))
-
     type Dom = Z[F, A]#Dom
 
     def doms: F[C[Dom]] =
       map(_.dom)
 
-    def mapDom[B](f: Dom => B): F[C[B]] =
+    def mapDoms[B](f: Dom => B): F[C[B]] =
       F.map(doms)(C.map(_)(f))
 
     def traverseDoms[B](f: Dom => F[B]): F[C[B]] =
       F.flatMap(doms)(C.traverse(_)(f))
 
+    def extracts: F[C[A]] =
+      map(_.extract)
+
+    def mapExtracts[B](f: A => B): F[C[B]] =
+      F.map(extracts)(C.map(_)(f))
+
+    def traverseExtracts[B](f: A => F[B]): F[C[B]] =
+      F.flatMap(extracts)(C.traverse(_)(f))
+
     def zippers: F[C[Z[F, A]]] =
       C(desc, result)
-
-    def map[B](f: Z[F, A] => B): F[C[B]] =
-      C(desc, result.map(f))
 
     @deprecated("Use .map", "2.2.0")
     def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
       map(f)
+
+    def map[B](f: Z[F, A] => B): F[C[B]] =
+      C(desc, result.map(f))
 
     def filter(f: Z[F, A] => Boolean): DomCollection[Z, F, C, A] = {
       val f2: Z[F, A] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
