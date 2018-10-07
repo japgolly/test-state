@@ -113,7 +113,7 @@ object DomZipperJsTest extends TestSuite {
 
     'children - {
       'nullary - assertEq(
-        $("form").children1n.doms.map(_.tagName.toLowerCase),
+        $("form").children1n.map(_.tagName.toLowerCase),
         Vector("div", "select", "select", "div", "h3", "div"))
 
       'sel - assertEq($("form").children1n("h3").innerTexts, Vector("HI"))
