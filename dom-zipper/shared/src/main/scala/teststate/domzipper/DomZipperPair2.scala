@@ -63,6 +63,10 @@ trait DomZipperPair2[F[_], A] extends DomZipper2[F, A, DomZipperPair2] {
   override def extract: A =
     domFn(fastAndSlow)
 
+  override type Dom_ = () => F[SD]
+  override def dom = fastAndSlow.rootRomFn(fastAndSlow)
+  override def unfocus = fastAndSlow.toDomZipperPair2Root
+
   // ===================================================================================================================
 
   override def describe = fast.describe
@@ -118,8 +122,7 @@ object DomZipperPair2 {
             Slow[f[_], a] <: DomZipper2[f, a, Slow], SD]
             (fast: Fast[F, FD], slow: Slow[F, SD])
             (implicit F: ErrorHandler[F]): DomZipperPair2[F, () => F[SD]] =
-    FastAndSlow(fast, () => F.pass(slow))
-      .toDomZipperPair2(fs => () => fs.slow().map(_.extract))
+    FastAndSlow(fast, () => F.pass(slow)).toDomZipperPair2Root
 
   final case class FastAndSlow[
     F[_],
@@ -141,6 +144,9 @@ object DomZipperPair2 {
       f(fast).map(FastAndSlow[F, FastF, FD, SlowF, SD](_, () => ss))
     }
 
+    val rootRomFn: FastAndSlow[F, FastF, FD, SlowF, SD] => () => F[SD] =
+      f => () => f.slow().map(_.extract)
+
     def toDomZipperPair2[A](f: FastAndSlow[F, FastF, FD, SlowF, SD] => A): DomZipperPair2[F, A] = {
       type _FastF[f[_], a] = FastF[f, a]
       type _SlowF[f[_], a] = SlowF[f, a]
@@ -155,6 +161,8 @@ object DomZipperPair2 {
         override protected val domFn = f
       }
     }
+
+    def toDomZipperPair2Root = toDomZipperPair2(rootRomFn)
   }
 
 }

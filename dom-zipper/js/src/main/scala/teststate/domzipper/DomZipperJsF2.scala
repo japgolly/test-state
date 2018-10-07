@@ -65,6 +65,10 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
   override def extract: A =
     A(prevLayers, curLayer)
 
+  override type Dom_ = Dom
+  override def dom = curLayer.dom
+  override def unfocus = new DomZipperJsF2(prevLayers, curLayer, (_, y) => y.dom)
+
   private def allLayers =
     prevLayers :+ curLayer
 
@@ -89,9 +93,6 @@ final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
 
   protected[domzipper] def addLayer(nextLayer: Layer[Dom]): DomZipperJsF2[F, A] =
     new DomZipperJsF2(prevLayers :+ curLayer, nextLayer, A)
-
-  def dom: Dom =
-    curLayer.dom
 
   override def collect01(sel: String): DomCollection[Self, F, Option, A] = collect(sel, F.XC01)
   override def collect0n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.XC0N)
