@@ -34,8 +34,7 @@ object SeleniumExample extends TestSuite {
 
   val responseText = *.focus("Response text").option(_.obs.responseText)
 
-  override def tests = Tests {
-
+  def runTest() = {
     val driver = openBrowser()
     val plan = Plan.action(clickGet +> responseText.assert.exists("Response", _ contains "Response"))
     val report = plan
@@ -46,6 +45,14 @@ object SeleniumExample extends TestSuite {
       .run()
     driver.quit()
     report.assert()
+  }
 
+  override def tests = CI match {
+
+    case None => Tests {
+      runTest()
+    }
+
+    case Some(_) => Tests {}
   }
 }
