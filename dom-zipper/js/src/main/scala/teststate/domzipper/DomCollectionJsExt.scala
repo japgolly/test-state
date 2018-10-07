@@ -14,7 +14,7 @@ object DomCollectionJsExt {
 final class DomCollectionJsExt[F[_], C[_]](private val self: DomCollection[F, C]) extends AnyVal {
   def domsAs[D <: Dom: ClassTag]: F[C[D]] = {
     implicit val F = self.F
-    self.traverse(safeCastDom[F, D])
+    self.traverseDoms(safeCastDom[F, D])
   }
 
   def domsAsHtml: F[C[html.Element]] =

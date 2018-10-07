@@ -1,10 +1,10 @@
 package teststate.domzipper
 
-import DomZipper2._
-import DomZipperBase2._
+import DomZipper._
+import DomZipperBase._
 import ErrorHandler.Id
 
-trait DomZipperBase2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] extends DomZipper2[F, A, Self] {
+trait DomZipperBase[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] extends DomZipper[F, A, Self] {
   import DomCollection.Container
 
 //  protected def extractFn: (Vector[Layer[Dom]], Layer[Dom]) => A
@@ -66,17 +66,17 @@ trait DomZipperBase2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] extends D
 
   final override def dom: Dom = curLayer.dom
 
-  final override def collect01(sel: String): DomCollection[Self, F, Option, A] = collect(sel, F.XC01)
-  final override def collect0n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.XC0N)
-  final override def collect1n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.XC1N)
+  final override def collect01(sel: String): DomCollection[Self, F, Option, A] = collect(sel, F.C01)
+  final override def collect0n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.C0N)
+  final override def collect1n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.C1N)
 
-  final override def children01: DomCollection[Self, F, Option, A] = collectChildren(">*", F.XC01)
-  final override def children0n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.XC0N)
-  final override def children1n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.XC1N)
+  final override def children01: DomCollection[Self, F, Option, A] = collectChildren(">*", F.C01)
+  final override def children0n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.C0N)
+  final override def children1n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.C1N)
 
-  final override def children01(sel: String): DomCollection[Self, F, Option, A] = collectChildren(cssPrepend_>(sel), sel, F.XC01)
-  final override def children0n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.XC0N)
-  final override def children1n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.XC1N)
+  final override def children01(sel: String): DomCollection[Self, F, Option, A] = collectChildren(cssPrepend_>(sel), sel, F.C01)
+  final override def children0n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.C0N)
+  final override def children1n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.C1N)
 
   // =======
   // Descent
@@ -122,11 +122,11 @@ trait DomZipperBase2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] extends D
     msg + "\n" + describe
 }
 
-object DomZipperBase2 {
+object DomZipperBase {
   private val cssCondStart = "(^|, *)".r
   private def cssPrepend_>(a: String) = cssCondStart.replaceAllIn(a, "$1> ")
 
-  trait Store[F[_], A, Self[G[_], B] <: Store[G, B, Self]] extends DomZipper2[F, A, Self] {
+  trait Store[F[_], A, Self[G[_], B] <: Store[G, B, Self]] extends DomZipper[F, A, Self] {
     protected type Pos
     protected def pos: Pos
     protected def peek: Peek[A]
@@ -150,7 +150,7 @@ object DomZipperBase2 {
       peek(pos)
   }
 
-  trait WithStore[F[_], A, Self[G[_], B] <: WithStore[G, B, Self]] extends DomZipperBase2[F, A, Self]
+  trait WithStore[F[_], A, Self[G[_], B] <: WithStore[G, B, Self]] extends DomZipperBase[F, A, Self]
       with Store[F, A, Self] {
     override final protected type Pos = (Vector[Layer[Dom]], Layer[Dom])
     override final protected def pos = (prevLayers, curLayer)

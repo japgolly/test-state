@@ -5,9 +5,9 @@ import ErrorHandler.{Id, Throw}
 
 trait Exports extends SharedExports with DomCollectionJsExt.Exports with JsDomExt {
 
-  final type DomZipperJsF[F[_]] = teststate.domzipper.DomZipperJsF[F]
+  final type DomZipperJsF[F[_], A] = teststate.domzipper.DomZipperJsF[F, A]
 
-  final type DomZipperJs = DomZipperJsF[Id]
+  final type DomZipperJs = DomZipperJsF[Id, Dom]
   final val  DomZipperJs = new teststate.domzipper.DomZipperJsF.Constructors[Id]()(Throw)
 
   final type DomCollectionF[F[_], C[_]] = DomZipperJsF.DomCollection[F, C]

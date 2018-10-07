@@ -1,9 +1,9 @@
 package teststate.domzipper
 
-import DomZipper2._
+import DomZipper._
 import ErrorHandler.ErrorHandlerResultOps
 
-trait DomZipper2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] {
+trait DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] {
   
   def map[B](f: A => B): Self[F, B]
 
@@ -109,7 +109,7 @@ trait DomZipper2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] {
 
 // =====================================================================================================================
 
-object DomZipper2 {
+object DomZipper {
 
   final case class CssSelEngine[I, O](run: (String, I) => CssSelResult[O]) extends AnyVal
 
@@ -137,7 +137,7 @@ object DomZipper2 {
 
   // ===================================================================================================================
 
-  final class DomCollection[Z[f[_], a] <: DomZipper2[f, a, Z], F[_], C[_], A](
+  final class DomCollection[Z[f[_], a] <: DomZipper[f, a, Z], F[_], C[_], A](
       private[domzipper] val desc      : String,
       private[domzipper] val rawResults: Vector[Z[F, A]],
                              filterFn  : Option[Z[F, A] => Boolean],
@@ -168,15 +168,16 @@ object DomZipper2 {
     def traverseExtracts[B](f: A => F[B]): F[C[B]] =
       F.flatMap(extracts)(C.traverse(_)(f))
 
-    // Maybe need a D and a Z => D
-//    def doms: F[C[A]] =
-//      map(_.dom)
-//
-//    def mapDoms[B](f: A => B): F[C[B]] =
-//      F.map(doms)(C.map(_)(f))
-//
-//    def traverse[B](f: A => F[B]): F[C[B]] =
-//      F.flatMap(doms)(C.traverse(_)(f))
+    type Dom = Z[F, A]#Dom
+
+    def doms: F[C[Dom]] =
+      map(_.dom)
+
+    def mapDom[B](f: Dom => B): F[C[B]] =
+      F.map(doms)(C.map(_)(f))
+
+    def traverseDoms[B](f: Dom => F[B]): F[C[B]] =
+      F.flatMap(doms)(C.traverse(_)(f))
 
     def zippers: F[C[Z[F, A]]] =
       C(desc, result)
@@ -202,7 +203,7 @@ object DomZipper2 {
 
   object DomCollection {
 
-    def apply[Z[f[_], a] <: DomZipper2[f, a, Z], F[_], C[_], A, B](desc: String,
+    def apply[Z[f[_], a] <: DomZipper[f, a, Z], F[_], C[_], A, B](desc: String,
                                                                    rawResults: Vector[A],
                                                                    C: Container[F, C])
                                                                    (addLayer: Layer[A] => Z[F, B])
