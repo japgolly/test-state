@@ -2,7 +2,7 @@ package teststate.domzipper.jsoup
 
 import teststate.domzipper._
 import org.jsoup.nodes.Document
-import DomZipper.{CssSelEngine, CssSelResult, DomCollection, Layer}
+import DomZipper.{CssSelResult, DomCollection, Layer}
 import ErrorHandler.{ErrorHandlerOptionOps, ErrorHandlerResultOps}
 
 object DomZipperJsoupF {
@@ -14,50 +14,60 @@ object DomZipperJsoupF {
   type CssSelEngine = DomZipper.CssSelEngine[Dom, Dom]
 
   private implicit val cssSelJsoup: CssSelEngine =
-    CssSelEngine((css, parent) => parent.select(css))
+    DomZipper.CssSelEngine((css, parent) => parent.select(css))
+
+  private val rootDomFn: ((Vector[Layer[Dom]], Layer[Dom])) => Dom =
+    _._2.dom
 
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
     import org.jsoup.nodes.Element
 
-    def apply(name: String, e: Element)(implicit scrub: HtmlScrub): DomZipperJsoupF[F] =
-      new DomZipperJsoupF(Vector.empty, Layer(name, "", JsoupElement(e)))
+    def apply(name: String, e: Element)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
+      new DomZipperJsoupF(Vector.empty, Layer(name, "", JsoupElement(e)), rootDomFn)
 
-    def apply(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F] =
+    def apply(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
       apply("root", doc)
 
-    def body(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F] =
+    def body(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
       apply("body", doc.body())
   }
 }
 
-import DomZipperJsoupF.Dom
+import DomZipperJsoupF.CssSelEngine
 
-final class DomZipperJsoupF[F[_]](override protected val prevLayers: Vector[Layer[Dom]],
-                                  override protected val curLayer: Layer[Dom]
-                                 )(implicit
-                                   override protected val $: CssSelEngine[Dom, Dom],
-                                   override protected[domzipper] val htmlScrub: HtmlScrub,
-                                   override protected val F: ErrorHandler[F]
-                                 ) extends DomZipperBase[F, Dom, DomZipperJsoupF] {
+final class DomZipperJsoupF[F[_], A](override protected val prevLayers: Vector[Layer[DomZipperJsoupF.Dom]],
+                                     override protected val curLayer: Layer[DomZipperJsoupF.Dom],
+                                     override protected val peek: ((Vector[Layer[DomZipperJsoupF.Dom]], Layer[DomZipperJsoupF.Dom])) => A
+                                    )(implicit
+                                      override protected val $: CssSelEngine,
+                                      override protected[domzipper] val htmlScrub: HtmlScrub,
+                                      override protected val F: ErrorHandler[F]
+                                    ) extends DomZipperBase.WithStore[F, A, DomZipperJsoupF] {
+
+  override type Dom = DomZipperJsoupF.Dom
+
+  override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperJsoupF[F, B] =
+    new DomZipperJsoupF(pos._1, pos._2, peek)
+
+  override def unmap =
+    new DomZipperJsoupF(prevLayers, curLayer, DomZipperJsoupF.rootDomFn)
+
 
   override protected def self = this
 
   override protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]) =
-    new DomZipperJsoupF(prevLayers, curLayer)($, h, g)
+    new DomZipperJsoupF(prevLayers, curLayer, peek)($, h, g)
 
-  override protected[domzipper] def addLayer(nextLayer: Layer[Dom]) =
-    new DomZipperJsoupF(prevLayers :+ curLayer, nextLayer)
+  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, A] =
+    DomCollection[DomZipperJsoupF, F, C, Dom, A](desc, result, C)(addLayer)
 
-  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, Dom] =
-    DomCollection[DomZipperJsoupF, F, C, Dom](desc, result, C)(addLayer)
-
-  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, Dom] =
+  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, A] =
     newDomCollection(sel, runCssQuery(sel), C)
 
-  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, Dom] =
+  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, A] =
     newDomCollection(desc, dom.children, C)
 
-  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, Dom] =
+  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsoupF, F, C, A] =
     newDomCollection(desc, dom.selectChildren(sel), C)
 
   override protected def _parent: F[Dom] =
@@ -91,7 +101,7 @@ final class DomZipperJsoupF[F[_]](override protected val prevLayers: Vector[Laye
     dom.getTagName
 
   /** The currently selected option in a &lt;select&gt; dropdown. */
-  def selectedOption: F[DomCollection[DomZipperJsoupF, F, Option, Dom]] =
+  def selectedOption: F[DomCollection[DomZipperJsoupF, F, Option, A]] =
     dom.getTagName.toUpperCase match {
       case "SELECT" => F pass collect01("option[selected]")
       case x        => F.fail(s"<$x> is not a <SELECT>")

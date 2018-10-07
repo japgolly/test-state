@@ -4,7 +4,7 @@ import org.scalajs.dom
 import org.scalajs.dom.html
 import scala.reflect.ClassTag
 import scala.scalajs.js
-import DomZipper.{CssSelEngine, CssSelResult, DomCollection, Layer}
+import DomZipper.{CssSelResult, DomCollection, Layer}
 import ErrorHandler.{ErrorHandlerOptionOps, ErrorHandlerResultOps, Id}
 import JsDomExt._
 
@@ -12,6 +12,8 @@ object DomZipperJsF {
   type Dom = dom.Element
 
   type DomCollection[F[_], C[_]] = DomZipper.DomCollection[DomZipperJsF, F, C, Dom]
+
+  type CssSelEngine = DomZipper.CssSelEngine[Dom, Dom]
 
   def safeCastDom[F[_], D <: Dom](dom: Dom)(implicit ct: ClassTag[D], F: ErrorHandler[F]): F[D] =
     ct.unapply(dom) orFail s"${dom.nodeName} is not a ${ct.runtimeClass}."
@@ -22,32 +24,32 @@ object DomZipperJsF {
       case x              => F fail s"Not an element: $x"
     }
 
-  val rootDomFn: ((Vector[Layer[Dom]], Layer[Dom])) => Dom =
+  private val rootDomFn: ((Vector[Layer[Dom]], Layer[Dom])) => Dom =
     _._2.dom
 
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
 
-    def root(implicit $: CssSelEngine[Dom, Dom], scrub: HtmlScrub): DomZipperJsF[F, Dom] =
+    def root(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJsF[F, Dom] =
       apply("window.document.children(0)", dom.window.document.children(0))
 
-    def body(implicit $: CssSelEngine[Dom, Dom], scrub: HtmlScrub): DomZipperJsF[F, Dom] =
+    def body(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJsF[F, Dom] =
       apply("window.document.body", dom.window.document.body)
 
-    def apply(dom: Dom)(implicit $: CssSelEngine[Dom, Dom], scrub: HtmlScrub): DomZipperJsF[F, Dom] =
+    def apply(dom: Dom)(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJsF[F, Dom] =
       apply("<provided>", dom)
 
-    def apply(name: String, dom: Dom)(implicit $: CssSelEngine[Dom, Dom], scrub: HtmlScrub): DomZipperJsF[F, Dom] =
+    def apply(name: String, dom: Dom)(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJsF[F, Dom] =
       new DomZipperJsF(Vector.empty, Layer(name, "", dom), rootDomFn)
   }
 }
 
-import DomZipperJsF.{liftNode, rootDomFn, safeCastDom}
+import DomZipperJsF.{CssSelEngine, liftNode, rootDomFn, safeCastDom}
 
 final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Layer[DomZipperJsF.Dom]],
                                   override protected val curLayer: Layer[DomZipperJsF.Dom],
                                   override protected val peek: ((Vector[Layer[DomZipperJsF.Dom]], Layer[DomZipperJsF.Dom])) => A,
                                 )(implicit
-                                  override protected val $: CssSelEngine[DomZipperJsF.Dom, DomZipperJsF.Dom],
+                                  override protected val $: CssSelEngine,
                                   override protected[domzipper] val htmlScrub: HtmlScrub,
                                   override protected val F: ErrorHandler[F]
                                 ) extends DomZipperBase.WithStore[F, A, DomZipperJsF] {
@@ -60,8 +62,7 @@ final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Laye
   override def unmap =
     new DomZipperJsF(prevLayers, curLayer, rootDomFn)
 
-  override protected def self =
-    this
+  override protected def self = this
 
   protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]): DomZipperJsF[G, A] =
     new DomZipperJsF(prevLayers, curLayer, peek)($, h, g)
