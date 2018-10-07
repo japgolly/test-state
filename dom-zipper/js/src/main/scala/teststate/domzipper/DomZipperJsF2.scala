@@ -38,112 +38,32 @@ object DomZipperJsF2 {
 //  }
 }
 
-import DomZipperJsF2.{Dom, liftNode, safeCastDom}
+import DomZipperJsF2.{liftNode, safeCastDom}
 
-final class DomZipperJsF2[F[_], A](protected val prevLayers: Vector[Layer[Dom]],
-                                   protected val curLayer: Layer[Dom],
-                                   A: (Vector[Layer[Dom]], Layer[Dom]) => A,
+final class DomZipperJsF2[F[_], A](override protected val prevLayers: Vector[Layer[DomZipperJsF2.Dom]],
+                                   override protected val curLayer: Layer[DomZipperJsF2.Dom],
+                                   override protected val peek: ((Vector[Layer[DomZipperJsF2.Dom]], Layer[DomZipperJsF2.Dom])) => A,
                                  )(implicit
-                                   protected val $: CssSelEngine[Dom, Dom],
+                                   override protected val $: CssSelEngine[DomZipperJsF2.Dom, DomZipperJsF2.Dom],
                                    override protected[domzipper] val htmlScrub: HtmlScrub,
                                    override protected val F: ErrorHandler[F]
-                                 ) extends DomZipper2[F, A, DomZipperJsF2] {
-  private val cssCondStart = "(^|, *)".r
-  private def cssPrepend_>(a: String) = cssCondStart.replaceAllIn(a, "$1> ")
+                                 ) extends DomZipperBase2.WithStore[F, A, DomZipperJsF2] {
 
-  type Self[G[_], B] = DomZipperJsF2[G, B]
+  override type Dom = DomZipperJsF2.Dom
 
-  override def map[B](f: A => B): DomZipperJsF2[F, B] =
-    new DomZipperJsF2(prevLayers, curLayer, (x, y) => f(A(x, y)))
+  override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperJsF2[F, B] =
+    new DomZipperJsF2(pos._1, pos._2, peek)
 
-  override def extend[B](f: DomZipperJsF2[F, A] => B): DomZipperJsF2[F, B] =
-    duplicate.map(f)
-
-  override def duplicate: DomZipperJsF2[F, DomZipperJsF2[F, A]] =
-    new DomZipperJsF2(prevLayers, curLayer, new DomZipperJsF2[F, A](_, _, A))
-
-  override def extract: A =
-    A(prevLayers, curLayer)
-
-  override type Dom_ = Dom
-  override def dom = curLayer.dom
-  override def unfocus = new DomZipperJsF2(prevLayers, curLayer, (_, y) => y.dom)
-
-  private def allLayers =
-    prevLayers :+ curLayer
-
-  override def describe: String =
-    s"DESC: ${allLayers.iterator.map(_.display) mkString " -> "}\nHTML: $outerHTML"
+  override def unfocus =
+    new DomZipperJsF2(prevLayers, curLayer, _._2.dom)
 
   override protected def self =
     this
 
-  protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]): Self[G, A] =
-    new DomZipperJsF2(prevLayers, curLayer, A)($, h, g)
+  protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]): DomZipperJsF2[G, A] =
+    new DomZipperJsF2(prevLayers, curLayer, peek)($, h, g)
 
-  override def scrubHtml(f: HtmlScrub): Self[F, A] =
-    copySelf(htmlScrub >> f, F)
-
-  def failBy[G[_]](g: ErrorHandler[G]): Self[G, A] =
-    copySelf(htmlScrub, g)
-
-  def failToOption: Self[Option           , A] = failBy(ErrorHandler.ReturnOption)
-  def failToEither: Self[Either[String, ?], A] = failBy(ErrorHandler.ReturnEither)
-  def throwErrors : Self[Id               , A] = failBy(ErrorHandler.Throw)
-
-  protected[domzipper] def addLayer(nextLayer: Layer[Dom]): DomZipperJsF2[F, A] =
-    new DomZipperJsF2(prevLayers :+ curLayer, nextLayer, A)
-
-  override def collect01(sel: String): DomCollection[Self, F, Option, A] = collect(sel, F.XC01)
-  override def collect0n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.XC0N)
-  override def collect1n(sel: String): DomCollection[Self, F, Vector, A] = collect(sel, F.XC1N)
-
-  override def children01: DomCollection[Self, F, Option, A] = collectChildren(">*", F.XC01)
-  override def children0n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.XC0N)
-  override def children1n: DomCollection[Self, F, Vector, A] = collectChildren(">*", F.XC1N)
-
-  override def children01(sel: String): DomCollection[Self, F, Option, A] = collectChildren(cssPrepend_>(sel), sel, F.XC01)
-  override def children0n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.XC0N)
-  override def children1n(sel: String): DomCollection[Self, F, Vector, A] = collectChildren(cssPrepend_>(sel), sel, F.XC1N)
-
-  lazy val parent: F[Self[F, A]] =
-    F.map(_parent)(a => addLayer(Layer("parent", ":parent", a)))
-
-  private def runCssQuery(sel: String): CssSelResult[Dom] =
-    $.run(sel, curLayer.dom)
-
-  override def apply(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-    val results = runCssQuery(sel)
-    if (results.length != which.n)
-      F fail {
-        val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-        failMsg(s"${q}uery failed: [$sel]. Expected ${which.n} results, not ${results.length}.")
-      }
-    else
-      F pass {
-        val nextDom = results(which.m - 1)
-        val nextLayer = Layer(name, sel, nextDom)
-        addLayer(nextLayer)
-      }
-  }
-
-  override def child(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-    val results = if (sel.isEmpty) children1n else children1n(sel)
-    F.flatMap(results.zippers) { zippers =>
-      if (zippers.length != which.n)
-        F fail {
-          val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-          failMsg(s"${q}uery failed: [${results.desc}]. Expected ${which.n} results, not ${zippers.length}.")
-        }
-      else
-        F pass zippers(which.m - 1)
-    }
-  }
-
-  private def failMsg(msg: String): String =
-    msg + "\n" + describe
-
-  protected def _parent: F[Dom] =
+  override protected def _parent: F[Dom] =
     liftNode(dom.parentNode)
 
   override protected def _outerHTML: String =

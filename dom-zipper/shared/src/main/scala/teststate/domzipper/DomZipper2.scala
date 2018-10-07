@@ -14,9 +14,9 @@ trait DomZipper2[F[_], A, Self[G[_], B] <: DomZipper2[G, B, Self]] {
   // or .focus? or .value?
   def extract: A
 
-  type Dom_
-  def dom: Dom_
-  def unfocus:  Self[F, Dom_]
+  type Dom
+  def dom: Dom
+  def unfocus:  Self[F, Dom]
 
   def describe: String
 
