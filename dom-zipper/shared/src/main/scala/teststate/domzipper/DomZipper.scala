@@ -3,7 +3,7 @@ package teststate.domzipper
 import DomZipper._
 import ErrorHandler.ErrorHandlerResultOps
 
-trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
+trait DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] {
 
   def describe: String
 
@@ -71,19 +71,33 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   // Self configuration
   // ==================
 
-  protected def self: Self[F]
+  protected def self: Self[F, A]
 
-  protected implicit val F: ErrorHandler[F]
+  protected implicit def F: ErrorHandler[F]
   protected[domzipper] def htmlScrub: HtmlScrub
 
-  def scrubHtml(f: HtmlScrub): Self[F]
+  def scrubHtml(f: HtmlScrub): Self[F, A]
 
-  final def scrubHtml(f: String => String): Self[F] =
+  final def scrubHtml(f: String => String): Self[F, A] =
     scrubHtml(HtmlScrub(f))
+
+  def map[B](f: A => B): Self[F, B]
+
+  def extend[B](f: Self[F, A] => B): Self[F, B]
+
+  def duplicate: Self[F, Self[F, A]]
+
+  def unmap:  Self[F, Dom]
 
   // ====================
   // DOM & DOM inspection
   // ====================
+
+  type Dom
+
+  def dom: Dom
+
+  def extract: A
 
   protected def _outerHTML: String
   protected def _innerHTML: String
@@ -101,8 +115,6 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   def classes: Set[String]
 
   def value: F[String]
-
-  def dom: A
 
   final def needAttribute(name: String): F[String] =
     F.option(getAttribute(name), s"$tagName doesn't have attribute $name")
@@ -129,10 +141,10 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   def exists(sel: String): Boolean =
     collect0n(sel).nonEmpty
 
-  def exists(sel: String, suchThat: Self[F] => Boolean): Boolean =
+  def exists(sel: String, suchThat: Self[F, A] => Boolean): Boolean =
     collect0n(sel).filter(suchThat).nonEmpty
 
-  def findSelfOrChildWithAttribute(attr: String): F[Option[Self[F]]] =
+  def findSelfOrChildWithAttribute(attr: String): F[Option[Self[F, A]]] =
     getAttribute(attr) match {
       case None    => collect01(s"*[$attr]").zippers
       case Some(_) => F pass Some(self)
@@ -142,18 +154,18 @@ trait DomZipper[F[_], A, Self[G[_]] <: DomZipper[G, A, Self]] {
   // Descent
   // =======
 
-  def parent: F[Self[F]]
-  def apply(name: String, sel: String, which: MofN): F[Self[F]]
-  def child(name: String, sel: String, which: MofN): F[Self[F]]
+  def parent: F[Self[F, A]]
+  def apply(name: String, sel: String, which: MofN): F[Self[F, A]]
+  def child(name: String, sel: String, which: MofN): F[Self[F, A]]
 
-  final def apply(sel: String)              : F[Self[F]] = apply("", sel)
-  final def apply(sel: String, which: MofN) : F[Self[F]] = apply("", sel, which)
-  final def apply(name: String, sel: String): F[Self[F]] = apply(name, sel, MofN.Sole)
+  final def apply(sel: String)              : F[Self[F, A]] = apply("", sel)
+  final def apply(sel: String, which: MofN) : F[Self[F, A]] = apply("", sel, which)
+  final def apply(name: String, sel: String): F[Self[F, A]] = apply(name, sel, MofN.Sole)
 
-  final def child(sel: String)              : F[Self[F]] = child("", sel)
-  final def child(which: MofN = MofN.Sole)  : F[Self[F]] = child("", which)
-  final def child(sel: String, which: MofN) : F[Self[F]] = child("", sel, which)
-  final def child(name: String, sel: String): F[Self[F]] = child(name, sel, MofN.Sole)
+  final def child(sel: String)              : F[Self[F, A]] = child("", sel)
+  final def child(which: MofN = MofN.Sole)  : F[Self[F, A]] = child("", which)
+  final def child(sel: String, which: MofN) : F[Self[F, A]] = child("", sel, which)
+  final def child(name: String, sel: String): F[Self[F, A]] = child(name, sel, MofN.Sole)
 }
 
 // =====================================================================================================================
@@ -186,14 +198,14 @@ object DomZipper {
 
   // ===================================================================================================================
 
-  final class DomCollection[Z[f[_]] <: DomZipper[f, A, Z], F[_], C[_], A](
+  final class DomCollection[Z[f[_], a] <: DomZipper[f, a, Z], F[_], C[_], A](
       private[domzipper] val desc      : String,
-      private[domzipper] val rawResults: Vector[Z[F]],
-                             filterFn  : Option[Z[F] => Boolean],
+      private[domzipper] val rawResults: Vector[Z[F, A]],
+                             filterFn  : Option[Z[F, A] => Boolean],
       private[domzipper] val C         : DomCollection.Container[F, C])
       (implicit val F: ErrorHandler[F]) {
 
-    private val result: Vector[Z[F]] =
+    private val result: Vector[Z[F, A]] =
       filterFn match {
         case None    => rawResults
         case Some(f) => rawResults.filter(f)
@@ -208,27 +220,38 @@ object DomZipper {
     def size: Int =
       result.length
 
-    def doms: F[C[A]] =
+    type Dom = Z[F, A]#Dom
+
+    def doms: F[C[Dom]] =
       map(_.dom)
 
-    def mapDoms[B](f: A => B): F[C[B]] =
+    def mapDoms[B](f: Dom => B): F[C[B]] =
       F.map(doms)(C.map(_)(f))
 
-    def traverse[B](f: A => F[B]): F[C[B]] =
+    def traverseDoms[B](f: Dom => F[B]): F[C[B]] =
       F.flatMap(doms)(C.traverse(_)(f))
 
-    def zippers: F[C[Z[F]]] =
+    def extracts: F[C[A]] =
+      map(_.extract)
+
+    def mapExtracts[B](f: A => B): F[C[B]] =
+      F.map(extracts)(C.map(_)(f))
+
+    def traverseExtracts[B](f: A => F[B]): F[C[B]] =
+      F.flatMap(extracts)(C.traverse(_)(f))
+
+    def zippers: F[C[Z[F, A]]] =
       C(desc, result)
 
-    def map[B](f: Z[F] => B): F[C[B]] =
-      C(desc, result.map(f))
-
     @deprecated("Use .map", "2.2.0")
-    def mapZippers[B](f: Z[F] => B): F[C[B]] =
+    def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
       map(f)
 
-    def filter(f: Z[F] => Boolean): DomCollection[Z, F, C, A] = {
-      val f2: Z[F] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
+    def map[B](f: Z[F, A] => B): F[C[B]] =
+      C(desc, result.map(f))
+
+    def filter(f: Z[F, A] => Boolean): DomCollection[Z, F, C, A] = {
+      val f2: Z[F, A] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
       new DomCollection(desc, rawResults, Some(f2), C)
     }
 
@@ -241,12 +264,12 @@ object DomZipper {
 
   object DomCollection {
 
-    def apply[Z[f[_]] <: DomZipper[f, A, Z], F[_], C[_], A](desc: String,
-                                                            rawResults: Vector[A],
-                                                            C: Container[F, C])
-                                                           (addLayer: Layer[A] => Z[F])
-                                                           (implicit F: ErrorHandler[F]): DomCollection[Z, F, C, A] =
-      new DomCollection[Z, F, C, A](
+    def apply[Z[f[_], a] <: DomZipper[f, a, Z], F[_], C[_], A, B](desc: String,
+                                                                  rawResults: Vector[A],
+                                                                  C: Container[F, C])
+                                                                 (addLayer: Layer[A] => Z[F, B])
+                                                                 (implicit F: ErrorHandler[F]): DomCollection[Z, F, C, B] =
+      new DomCollection[Z, F, C, B](
         desc,
         rawResults.map(a => addLayer(Layer("collect", desc, a))),
         None,
