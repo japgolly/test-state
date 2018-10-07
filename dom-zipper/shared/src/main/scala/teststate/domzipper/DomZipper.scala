@@ -87,7 +87,7 @@ trait DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] {
 
   def duplicate: Self[F, Self[F, A]]
 
-  def unfocus:  Self[F, Dom]
+  def unmap:  Self[F, Dom]
 
   // ====================
   // DOM & DOM inspection

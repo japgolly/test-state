@@ -57,7 +57,7 @@ final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Laye
   override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperJsF[F, B] =
     new DomZipperJsF(pos._1, pos._2, peek)
 
-  override def unfocus =
+  override def unmap =
     new DomZipperJsF(prevLayers, curLayer, rootDomFn)
 
   override protected def self =

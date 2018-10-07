@@ -57,7 +57,7 @@ sealed trait DomZipperPair[F[_], A] extends DomZipper[F, A, DomZipperPair] with 
 
   override final type Dom = () => F[SD]
   override final def dom = pos.rootRomFn(pos)
-  override final def unfocus = pos.toDomZipperPairRoot
+  override final def unmap = pos.toDomZipperPairRoot
 
   // ===================================================================================================================
 
