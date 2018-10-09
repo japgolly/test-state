@@ -11,7 +11,7 @@ object DomZipperSeleniumF {
 
   type Dom = WebElement
 
-  type DomCollection[F[_], C[_]] = DomZipper.DomCollection[DomZipperSeleniumF, F, C, Dom]
+  type DomCollection[F[_], C[_], A] = DomZipper.DomCollection[DomZipperSeleniumF, F, C, Dom, A]
 
   type CssSelEngine = DomZipper.CssSelEngine[Dom, Dom]
 
@@ -46,17 +46,17 @@ object DomZipperSeleniumF {
   }
 }
 
-final class DomZipperSeleniumF[F[_], A](override protected val prevLayers: Vector[Layer[DomZipperSeleniumF.Dom]],
-                                        override protected val curLayer: Layer[DomZipperSeleniumF.Dom],
-                                        override protected val peek: ((Vector[Layer[DomZipperSeleniumF.Dom]], Layer[DomZipperSeleniumF.Dom])) => A
+import DomZipperSeleniumF.Dom
+
+final class DomZipperSeleniumF[F[_], A](override protected val prevLayers: Vector[Layer[Dom]],
+                                        override protected val curLayer: Layer[Dom],
+                                        override protected val peek: ((Vector[Layer[Dom]], Layer[Dom])) => A
                                        )(implicit
                                          override protected val $: DomZipperSeleniumF.CssSelEngine,
                                          override protected[domzipper] val htmlScrub: HtmlScrub,
                                          override protected val F: ErrorHandler[F],
                                          driver: WebDriver
-                                       ) extends DomZipperBase.WithStore[F, A, DomZipperSeleniumF] {
-
-  override type Dom = DomZipperSeleniumF.Dom
+                                       ) extends DomZipperBase.WithStore[F, Dom, A, DomZipperSeleniumF] {
 
   override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperSeleniumF[F, B] =
     new DomZipperSeleniumF(pos._1, pos._2, peek)
@@ -78,16 +78,16 @@ final class DomZipperSeleniumF[F[_], A](override protected val prevLayers: Vecto
   override protected def _innerHTML: String =
     getAttribute("innerHTML").getOrElse("null")
 
-  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, A] =
-    DomCollection[DomZipperSeleniumF, F, C, Dom, A](desc, result, C)(addLayer)
+  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =
+    DomCollection[DomZipperSeleniumF, F, C, Dom, Dom, A](desc, result, C)(addLayer)
 
-  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, A] =
+  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =
     newDomCollection(sel, runCssQuery(sel), C)
 
-  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, A] =
+  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =
     newDomCollection(desc, dom.children(), C)
 
-  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, A] = {
+  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] = {
     // WebElement implements hashCode and equals sensibly
     val all: Set[WebElement] = runCssQuery(sel).toSet
     val children = dom.children().filter(all.contains)
@@ -119,7 +119,7 @@ final class DomZipperSeleniumF[F[_], A](override protected val prevLayers: Vecto
     getAttribute("value") orFail s".value failed on <${dom.getTagName}>."
 
   /** The currently selected option in a &lt;select&gt; dropdown. */
-  def selectedOption: F[DomCollection[DomZipperSeleniumF, F, Option, A]] =
+  def selectedOption: F[DomCollection[DomZipperSeleniumF, F, Option, Dom, A]] =
     dom.getTagName.toUpperCase match {
       case "SELECT" => F pass collect01("option[selected]")
       case x        => F fail s"<$x> is not a <SELECT>"

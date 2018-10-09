@@ -3,7 +3,7 @@ package teststate.domzipper
 import DomZipper._
 import ErrorHandler.ErrorHandlerResultOps
 
-trait DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] {
+trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
 
   def describe: String
 
@@ -93,8 +93,6 @@ trait DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] {
   // DOM & DOM inspection
   // ====================
 
-  type Dom
-
   def dom: Dom
 
   def extract: A
@@ -122,17 +120,17 @@ trait DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] {
   final def outerHTML: String = htmlScrub run _outerHTML
   final def innerHTML: String = htmlScrub run _innerHTML
 
-  def collect01(sel: String): DomCollection[Self, F, Option, A]
-  def collect0n(sel: String): DomCollection[Self, F, Vector, A]
-  def collect1n(sel: String): DomCollection[Self, F, Vector, A]
+  def collect01(sel: String): DomCollection[Self, F, Option, Dom, A]
+  def collect0n(sel: String): DomCollection[Self, F, Vector, Dom, A]
+  def collect1n(sel: String): DomCollection[Self, F, Vector, Dom, A]
 
-  def children01: DomCollection[Self, F, Option, A]
-  def children0n: DomCollection[Self, F, Vector, A]
-  def children1n: DomCollection[Self, F, Vector, A]
+  def children01: DomCollection[Self, F, Option, Dom, A]
+  def children0n: DomCollection[Self, F, Vector, Dom, A]
+  def children1n: DomCollection[Self, F, Vector, Dom, A]
 
-  def children01(sel: String): DomCollection[Self, F, Option, A]
-  def children0n(sel: String): DomCollection[Self, F, Vector, A]
-  def children1n(sel: String): DomCollection[Self, F, Vector, A]
+  def children01(sel: String): DomCollection[Self, F, Option, Dom, A]
+  def children0n(sel: String): DomCollection[Self, F, Vector, Dom, A]
+  def children1n(sel: String): DomCollection[Self, F, Vector, Dom, A]
 
   final def editables01 = collect01(EditableSel)
   final def editables0n = collect0n(EditableSel)
@@ -198,7 +196,7 @@ object DomZipper {
 
   // ===================================================================================================================
 
-  final class DomCollection[Z[f[_], a] <: DomZipper[f, a, Z], F[_], C[_], A](
+  final class DomCollection[Z[f[_], a] <: DomZipper[f, Dom, a, Z], F[_], C[_], Dom, A](
       private[domzipper] val desc      : String,
       private[domzipper] val rawResults: Vector[Z[F, A]],
                              filterFn  : Option[Z[F, A] => Boolean],
@@ -219,8 +217,6 @@ object DomZipper {
 
     def size: Int =
       result.length
-
-    type Dom = Z[F, A]#Dom
 
     def doms: F[C[Dom]] =
       map(_.dom)
@@ -250,7 +246,7 @@ object DomZipper {
     def map[B](f: Z[F, A] => B): F[C[B]] =
       C(desc, result.map(f))
 
-    def filter(f: Z[F, A] => Boolean): DomCollection[Z, F, C, A] = {
+    def filter(f: Z[F, A] => Boolean): DomCollection[Z, F, C, Dom, A] = {
       val f2: Z[F, A] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
       new DomCollection(desc, rawResults, Some(f2), C)
     }
@@ -264,12 +260,12 @@ object DomZipper {
 
   object DomCollection {
 
-    def apply[Z[f[_], a] <: DomZipper[f, a, Z], F[_], C[_], A, B](desc: String,
-                                                                  rawResults: Vector[A],
-                                                                  C: Container[F, C])
-                                                                 (addLayer: Layer[A] => Z[F, B])
-                                                                 (implicit F: ErrorHandler[F]): DomCollection[Z, F, C, B] =
-      new DomCollection[Z, F, C, B](
+    def apply[Z[f[_], a] <: DomZipper[f, D, a, Z], F[_], C[_], D, A, B](desc: String,
+                                                                        rawResults: Vector[A],
+                                                                        C: Container[F, C])
+                                                                       (addLayer: Layer[A] => Z[F, B])
+                                                                       (implicit F: ErrorHandler[F]): DomCollection[Z, F, C, D, B] =
+      new DomCollection[Z, F, C, D, B](
         desc,
         rawResults.map(a => addLayer(Layer("collect", desc, a))),
         None,

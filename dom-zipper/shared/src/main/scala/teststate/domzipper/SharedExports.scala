@@ -13,6 +13,6 @@ trait SharedExports {
 
   final val DomZipper = teststate.domzipper.DomZipper
 
-  final type DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] =
-    teststate.domzipper.DomZipper[F, A, Self]
+  final type DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] =
+    teststate.domzipper.DomZipper[F, Dom, A, Self]
 }

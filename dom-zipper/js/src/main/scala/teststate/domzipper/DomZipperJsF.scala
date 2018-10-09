@@ -11,7 +11,7 @@ import JsDomExt._
 object DomZipperJsF {
   type Dom = dom.Element
 
-  type DomCollection[F[_], C[_]] = DomZipper.DomCollection[DomZipperJsF, F, C, Dom]
+  type DomCollection[F[_], C[_], A] = DomZipper.DomCollection[DomZipperJsF, F, C, Dom, A]
 
   type CssSelEngine = DomZipper.CssSelEngine[Dom, Dom]
 
@@ -43,18 +43,16 @@ object DomZipperJsF {
   }
 }
 
-import DomZipperJsF.{CssSelEngine, liftNode, rootDomFn, safeCastDom}
+import DomZipperJsF.{CssSelEngine, Dom, liftNode, rootDomFn, safeCastDom}
 
-final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Layer[DomZipperJsF.Dom]],
-                                  override protected val curLayer: Layer[DomZipperJsF.Dom],
-                                  override protected val peek: ((Vector[Layer[DomZipperJsF.Dom]], Layer[DomZipperJsF.Dom])) => A
+final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Layer[Dom]],
+                                  override protected val curLayer: Layer[Dom],
+                                  override protected val peek: ((Vector[Layer[Dom]], Layer[Dom])) => A
                                 )(implicit
                                   override protected val $: CssSelEngine,
                                   override protected[domzipper] val htmlScrub: HtmlScrub,
                                   override protected val F: ErrorHandler[F]
-                                ) extends DomZipperBase.WithStore[F, A, DomZipperJsF] {
-
-  override type Dom = DomZipperJsF.Dom
+                                ) extends DomZipperBase.WithStore[F, Dom, A, DomZipperJsF] {
 
   override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperJsF[F, B] =
     new DomZipperJsF(pos._1, pos._2, peek)
@@ -76,10 +74,10 @@ final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Laye
   override protected def _innerHTML: String =
     dynamicString(_.innerHTML)
 
-  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF, F, C, A] =
-    DomCollection[DomZipperJsF, F, C, Dom, A](desc, result, C)(addLayer)
+  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]) =
+    DomCollection[DomZipperJsF, F, C, Dom, Dom, A](desc, result, C)(addLayer)
 
-  protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF, F, C, A] =
+  protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]) =
     newDomCollection(sel, runCssQuery(sel), C)
 
   private def childIterator: Iterator[Dom] =
@@ -87,10 +85,10 @@ final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Laye
       case e: org.scalajs.dom.Element => e
     }
 
-  protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF, F, C, A] =
+  protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]) =
     newDomCollection(desc, childIterator.toVector, C)
 
-  protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperJsF, F, C, A] = {
+  protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]) = {
     val all = runCssQuery(sel).toSet
     newDomCollection(desc, childIterator.filter(all.contains).toVector, C)
   }
