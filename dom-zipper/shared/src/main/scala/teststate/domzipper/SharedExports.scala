@@ -11,4 +11,8 @@ trait SharedExports {
   implicit def htmlScrub: HtmlScrub =
     HtmlScrub.default
 
+  final val DomZipper = teststate.domzipper.DomZipper
+
+  final type DomZipper[F[_], A, Self[G[_], B] <: DomZipper[G, B, Self]] =
+    teststate.domzipper.DomZipper[F, A, Self]
 }
