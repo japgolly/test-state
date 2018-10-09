@@ -11,9 +11,6 @@ trait Exports extends SharedExports {
   final type DomZipperJsoup             = DomZipperJsoupF[Id, Dom]
   final val  DomZipperJsoup             = new DomZipperJsoupF.Constructors[Id]()(Throw)
 
-  final type DomCollectionF[F[_], C[_]] = DomZipperJsoupF.DomCollection[F, C]
-  final type DomCollection [C[_]]       = DomZipperJsoupF.DomCollection[Id, C]
-
 }
 
 object Exports extends Exports

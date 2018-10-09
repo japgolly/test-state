@@ -10,9 +10,6 @@ trait Exports extends SharedExports with DomCollectionJsExt.Exports with JsDomEx
   final type DomZipperJs = DomZipperJsF[Id, Dom]
   final val  DomZipperJs = new teststate.domzipper.DomZipperJsF.Constructors[Id]()(Throw)
 
-  final type DomCollectionF[F[_], C[_]] = DomZipperJsF.DomCollection[F, C]
-  final type DomCollection [C[_]]       = DomZipperJsF.DomCollection[Id, C]
-
   final type CssSelEngine = DomZipper.CssSelEngine[Dom, Dom]
   final def CssSelEngine(run: (String, Dom) => Vector[Dom]): CssSelEngine = DomZipper.CssSelEngine(run)
 }
