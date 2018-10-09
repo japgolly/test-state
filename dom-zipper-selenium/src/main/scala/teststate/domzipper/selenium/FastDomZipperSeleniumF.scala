@@ -4,13 +4,15 @@ import org.jsoup.Jsoup
 import org.openqa.selenium.WebDriver
 import teststate.domzipper.{DomZipperPair, ErrorHandler, HtmlScrub}
 import teststate.domzipper.jsoup.DomZipperJsoupF
+import DomZipperJsoupF.{Dom => JDom}
+import DomZipperSeleniumF.Dom
 
 object FastDomZipperSeleniumF {
 
-  type Type[F[_]] = DomZipperPair[F, () => F[DomZipperSeleniumF.Dom]]
+  type Type[F[_]] = DomZipperPair.Home[F, Dom]
 
-  def apply[F[_]: ErrorHandler](fast: DomZipperJsoupF[F, DomZipperJsoupF.Dom], slow: DomZipperSeleniumF[F, DomZipperSeleniumF.Dom]): Type[F] =
-    DomZipperPair[F, DomZipperJsoupF, DomZipperJsoupF.Dom, DomZipperSeleniumF, DomZipperSeleniumF.Dom](fast, slow)
+  def apply[F[_]: ErrorHandler](fast: DomZipperJsoupF[F, JDom], slow: DomZipperSeleniumF[F, Dom]): Type[F] =
+    DomZipperPair[F, DomZipperJsoupF, JDom, DomZipperSeleniumF, Dom](fast, slow)
 
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
     private val DomZipperSelenium = new DomZipperSeleniumF.Constructors[F]()

@@ -108,11 +108,14 @@ sealed trait DomZipperPair[F[_], Dom, A] extends DomZipperBase.Store[F, Dom, A, 
 // =====================================================================================================================
 
 object DomZipperPair {
+
+  type Home[F[_], A] = DomZipperPair[F, () => F[A], () => F[A]]
+
   def apply[F[_],
             Fast[f[_], a] <: DomZipper[f, _, a, Fast], FD,
             Slow[f[_], a] <: DomZipper[f, _, a, Slow], SD]
             (fast: Fast[F, FD], slow: Slow[F, SD])
-            (implicit F: ErrorHandler[F]): DomZipperPair[F, () => F[SD], () => F[SD]] =
+            (implicit F: ErrorHandler[F]): Home[F, SD] =
     FastAndSlow(fast, () => F.pass(slow)).toDomZipperPairRoot
 
   final case class FastAndSlow[F[_],
