@@ -6,12 +6,12 @@ import teststate.domzipper.DomZipperJsF.{Dom, DomCollection, safeCastDom}
 
 object DomCollectionJsExt {
   trait Exports {
-    final implicit def toDomCollectionJsExt[F[_], C[_]](a: DomCollection[F, C]): DomCollectionJsExt[F, C] =
+    final implicit def toDomCollectionJsExt[F[_], C[_], A](a: DomCollection[F, C, A]): DomCollectionJsExt[F, C, A] =
       new DomCollectionJsExt(a)
   }
 }
 
-final class DomCollectionJsExt[F[_], C[_]](private val self: DomCollection[F, C]) extends AnyVal {
+final class DomCollectionJsExt[F[_], C[_], A](private val self: DomCollection[F, C, A]) extends AnyVal {
   def domsAs[D <: Dom: ClassTag]: F[C[D]] = {
     implicit val F = self.F
     self.traverseDoms(safeCastDom[F, D])
