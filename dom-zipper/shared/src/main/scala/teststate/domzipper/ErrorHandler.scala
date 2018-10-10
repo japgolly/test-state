@@ -52,6 +52,11 @@ object ErrorHandler {
     override def fail[A](e: => String)          = sys error e
     override def map[A, B](r: A)(f: A => B)     = f(r)
     override def flatMap[A, B](r: A)(f: A => B) = f(r)
+
+    override def attempt[A](a: => A): A =
+      try pass(a) catch {
+        case NonFatal(t) => throw t
+      }
   }
 
   type ErrMsgOr[A] = Either[String, A]
