@@ -9,9 +9,9 @@ import ErrorHandler._
   *
   * @since 2.3.0
   */
-sealed trait DomZipperPair[F[_], Dom, A] extends DomZipperBase.Store[F, Dom, A, DomZipperPair[?[_], Dom, ?]] {
+sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, Dom, A, DomZippersFastAndSlow[?[_], Dom, ?]] {
   import DomZipper.DomCollection
-  import DomZipperPair.FastAndSlow
+  import DomZippersFastAndSlow.FastAndSlow
 
   override protected implicit def F: ErrorHandler[F] = pos.F
 
@@ -27,27 +27,27 @@ sealed trait DomZipperPair[F[_], Dom, A] extends DomZipperBase.Store[F, Dom, A, 
 
   // This is embarrassing. Scala won't let me specify SD alone in place of Dom in the class definition.
   protected implicit def ffs0(z: () => F[SD]): Dom
-  protected implicit def ffs1(z: DomZipperPair[F, () => F[SD], () => F[SD]]): DomZipperPair[F, Dom, Dom]
-  protected implicit def ffs2[B](z: DomZipperPair[F, () => F[SD], B]): DomZipperPair[F, Dom, B]
-  protected implicit def ffs3[B](z: Vector[DomZipperPair[F, () => F[SD], B]]): Vector[DomZipperPair[F, Dom, B]]
+  protected implicit def ffs1(z: DomZippersFastAndSlow[F, () => F[SD], () => F[SD]]): DomZippersFastAndSlow[F, Dom, Dom]
+  protected implicit def ffs2[B](z: DomZippersFastAndSlow[F, () => F[SD], B]): DomZippersFastAndSlow[F, Dom, B]
+  protected implicit def ffs3[B](z: Vector[DomZippersFastAndSlow[F, () => F[SD], B]]): Vector[DomZippersFastAndSlow[F, Dom, B]]
 
-  private def bimap(f: Fast => Fast, s: Slow => Slow): DomZipperPair[F, Dom, A] =
-    pos.bimap(f, s).toDomZipperPair(peek)
+  private def bimap(f: Fast => Fast, s: Slow => Slow): DomZippersFastAndSlow[F, Dom, A] =
+    pos.bimap(f, s).toDomZipper(peek)
 
-  private def bimapF(f: Fast => F[Fast], s: Slow => F[Slow]): F[DomZipperPair[F, Dom, A]] =
-    pos.bimapF(f, s).map(_.toDomZipperPair(peek))
+  private def bimapF(f: Fast => F[Fast], s: Slow => F[Slow]): F[DomZippersFastAndSlow[F, Dom, A]] =
+    pos.bimapF(f, s).map(_.toDomZipper(peek))
 
   private def cmap[C[_]](runF: Fast => DomCollection[FastF, F, C, _, FD],
-                         runS: Slow => DomCollection[SlowF, F, C, _, SD]): DomCollection[DomZipperPair[?[_], Dom, ?], F, C, Dom, A] = {
+                         runS: Slow => DomCollection[SlowF, F, C, _, SD]) = {
     val colF = runF(fast)
     lazy val colS = slow().map(runS)
     val C = colF.C
     val rawResults = Vector.tabulate(colF.size) { i =>
       val f = colF.rawResults(i)
       lazy val s = colS.flatMap(_.zippers).map(C.get(_, i))
-      FastAndSlow(f, () => s).toDomZipperPair(peek)
+      FastAndSlow(f, () => s).toDomZipper(peek)
     }
-    new DomCollection[DomZipperPair[?[_], Dom, ?], F, C, Dom, A](
+    new DomCollection[DomZippersFastAndSlow[?[_], Dom, ?], F, C, Dom, A](
       desc       = colF.desc,
       rawResults = rawResults,
       filterFn   = None,
@@ -55,12 +55,12 @@ sealed trait DomZipperPair[F[_], Dom, A] extends DomZipperBase.Store[F, Dom, A, 
     )
   }
 
-  override final protected def newStore[B](pos: FastAndSlow[F, FastF, FD, SlowF, SD], peek: Peek[B]): DomZipperPair[F, Dom, B] =
-    pos.toDomZipperPair(peek)
+  override final protected def newStore[B](pos: FastAndSlow[F, FastF, FD, SlowF, SD], peek: Peek[B]) =
+    pos.toDomZipper(peek)
 
   override final def dom = pos.rootRomFn(pos)
 
-  override final def unmap = pos.toDomZipperPairRoot
+  override final def unmap = pos.toDomZipperRoot
 
   override def describe = fast.describe
 
@@ -83,13 +83,13 @@ sealed trait DomZipperPair[F[_], Dom, A] extends DomZipperBase.Store[F, Dom, A, 
   override def classes   = fast.classes
   override def value     = fast.value
 
-  override def parent: F[DomZipperPair[F, Dom, A]] =
+  override def parent: F[DomZippersFastAndSlow[F, Dom, A]] =
     bimapF(_.parent, _.parent)
 
-  override def apply(name: String, sel: String, which: MofN): F[DomZipperPair[F, Dom, A]] =
+  override def apply(name: String, sel: String, which: MofN): F[DomZippersFastAndSlow[F, Dom, A]] =
     bimapF(_(name, sel, which), _(name, sel, which))
 
-  override def child(name: String, sel: String, which: MofN): F[DomZipperPair[F, Dom, A]] =
+  override def child(name: String, sel: String, which: MofN): F[DomZippersFastAndSlow[F, Dom, A]] =
     bimapF(_.child(name, sel, which), _.child(name, sel, which))
 
   override def collect01(sel: String) = cmap(_.collect01(sel), _.collect01(sel))
@@ -107,18 +107,18 @@ sealed trait DomZipperPair[F[_], Dom, A] extends DomZipperBase.Store[F, Dom, A, 
 
 // =====================================================================================================================
 
-object DomZipperPair {
+object DomZippersFastAndSlow {
 
-  type Home[F[_], A] = DomZipperPair[F, () => F[A], () => F[A]]
+  type AtHome[F[_], A] = DomZippersFastAndSlow[F, () => F[A], () => F[A]]
 
-  type DomCollection[F[_], C[_], Dom, A] = DomZipper.DomCollection[DomZipperPair[?[_], () => F[Dom], ?], F, C, () => F[Dom], A]
+  type DomCollection[F[_], C[_], Dom, A] = DomZipper.DomCollection[DomZippersFastAndSlow[?[_], () => F[Dom], ?], F, C, () => F[Dom], A]
 
   def apply[F[_],
             Fast[f[_], a] <: DomZipper[f, _, a, Fast], FD,
             Slow[f[_], a] <: DomZipper[f, _, a, Slow], SD]
             (fast: Fast[F, FD], slow: Slow[F, SD])
-            (implicit F: ErrorHandler[F]): Home[F, SD] =
-    FastAndSlow(fast, () => F.pass(slow)).toDomZipperPairRoot
+            (implicit F: ErrorHandler[F]): AtHome[F, SD] =
+    FastAndSlow(fast, () => F.pass(slow)).toDomZipperRoot
 
   final case class FastAndSlow[F[_],
                                FastF[f[_], a] <: DomZipper[f, _, a, FastF], FD,
@@ -143,12 +143,12 @@ object DomZipperPair {
     val rootRomFn: FastAndSlow[F, FastF, FD, SlowF, SD] => Dom =
       f => () => f.slow().map(_.extract)
 
-    def toDomZipperPair[A](f: FastAndSlow[F, FastF, FD, SlowF, SD] => A): DomZipperPair[F, Dom, A] = {
+    def toDomZipper[A](f: FastAndSlow[F, FastF, FD, SlowF, SD] => A): DomZippersFastAndSlow[F, Dom, A] = {
       type _FastF[f[_], a] = FastF[f, a]
       type _SlowF[f[_], a] = SlowF[f, a]
       type _FD = FD
       type _SD = SD
-      new DomZipperPair[F, Dom, A] {
+      new DomZippersFastAndSlow[F, Dom, A] {
         override protected type FastF[f[_], a] = _FastF[f, a]
         override protected type SlowF[f[_], a] = _SlowF[f, a]
         override protected type FD = _FD
@@ -156,13 +156,13 @@ object DomZipperPair {
         override protected val pos = FastAndSlow.this
         override protected val peek = f
         override protected implicit def ffs0(z: () => F[SD]) = z
-        override protected implicit def ffs1(z: DomZipperPair[F, () => F[SD], () => F[SD]]) = z
-        override protected implicit def ffs2[B](z: DomZipperPair[F, () => F[SD], B]) = z
-        override protected implicit def ffs3[B](z: Vector[DomZipperPair[F, () => F[SD], B]]) = z
+        override protected implicit def ffs1(z: DomZippersFastAndSlow[F, () => F[SD], () => F[SD]]) = z
+        override protected implicit def ffs2[B](z: DomZippersFastAndSlow[F, () => F[SD], B]) = z
+        override protected implicit def ffs3[B](z: Vector[DomZippersFastAndSlow[F, () => F[SD], B]]) = z
       }
     }
 
-    def toDomZipperPairRoot = toDomZipperPair(rootRomFn)
+    def toDomZipperRoot = toDomZipper(rootRomFn)
   }
 
 }

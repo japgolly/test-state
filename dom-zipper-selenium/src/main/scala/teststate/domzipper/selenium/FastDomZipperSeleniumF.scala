@@ -2,17 +2,17 @@ package teststate.domzipper.selenium
 
 import org.jsoup.Jsoup
 import org.openqa.selenium.WebDriver
-import teststate.domzipper.{DomZipperPair, ErrorHandler, HtmlScrub}
+import teststate.domzipper.{DomZippersFastAndSlow, ErrorHandler, HtmlScrub}
 import teststate.domzipper.jsoup.DomZipperJsoupF
 import DomZipperJsoupF.{Dom => JDom}
 import DomZipperSeleniumF.Dom
 
 object FastDomZipperSeleniumF {
 
-  type FastDomZipperSeleniumF[F[_]] = DomZipperPair.Home[F, Dom]
+  type FastDomZipperSeleniumF[F[_]] = DomZippersFastAndSlow.AtHome[F, Dom]
 
   def apply[F[_]: ErrorHandler](fast: DomZipperJsoupF[F, JDom], slow: DomZipperSeleniumF[F, Dom]): FastDomZipperSeleniumF[F] =
-    DomZipperPair[F, DomZipperJsoupF, JDom, DomZipperSeleniumF, Dom](fast, slow)
+    DomZippersFastAndSlow[F, DomZipperJsoupF, JDom, DomZipperSeleniumF, Dom](fast, slow)
 
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
     private val DomZipperSelenium = new DomZipperSeleniumF.Constructors[F]()
@@ -30,7 +30,7 @@ object FastDomZipperSeleniumF {
       FastDomZipperSeleniumF(f, s)
     }
 
-    type DomCollection[C[_], A]        = DomZipperPair.DomCollection[F, C, Dom, A]
-    type DomCollectionF[G[_], C[_], A] = DomZipperPair.DomCollection[G, C, Dom, A]
+    type DomCollection[C[_], A]        = DomZippersFastAndSlow.DomCollection[F, C, Dom, A]
+    type DomCollectionF[G[_], C[_], A] = DomZippersFastAndSlow.DomCollection[G, C, Dom, A]
   }
 }
