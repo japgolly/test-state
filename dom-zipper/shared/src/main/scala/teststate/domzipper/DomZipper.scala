@@ -89,6 +89,9 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
 
   def unmap:  Self[F, Dom]
 
+  final def prepare[B](f: Self[F, A] => B): () => B =
+    () => f(self)
+
   // ====================
   // DOM & DOM inspection
   // ====================
@@ -250,6 +253,12 @@ object DomZipper {
       val f2: Z[F, A] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
       new DomCollection(desc, rawResults, Some(f2), C)
     }
+
+    def headOption: Option[Z[F, A]] =
+      result.headOption
+
+    def lastOption: Option[Z[F, A]] =
+      result.lastOption
 
     def outerHTMLs: F[C[String]] = map(_.outerHTML)
     def innerHTMLs: F[C[String]] = map(_.innerHTML)

@@ -61,6 +61,9 @@ object StdlibUtil {
         case Some(a) => Right(a)
         case None => Left(errMsg)
       }
+
+    def getFn[B](implicit ev: A <:< Function0[B]): () => B =
+      () => ev(get)()
   }
 
   implicit def NamedOptionToOption[A](n: NamedOption[A]): Option[A] = n.underlying
