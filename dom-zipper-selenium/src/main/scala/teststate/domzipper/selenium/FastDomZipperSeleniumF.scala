@@ -25,8 +25,8 @@ object FastDomZipperSeleniumF {
     }
 
     def body(driver: WebDriver)(implicit scrub: HtmlScrub): Type[F] = {
-      val s = DomZipperSelenium.html(driver)
-      val f = DomZipperJsoup.body(Jsoup.parse(s.outerHTML))
+      val s = DomZipperSelenium.body(driver)
+      val f = DomZipperJsoup.body(Jsoup.parseBodyFragment(s.outerHTML))
       FastDomZipperSeleniumF(f, s)
     }
   }
