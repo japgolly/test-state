@@ -23,7 +23,7 @@ object TestState {
     final val Jsoup           = "1.11.3"
     final val KindProjector   = "0.9.8"
     final val MacroParadise   = "2.1.1"
-    final val Microlibs       = "1.17"
+    final val Microlibs       = "1.18"
     final val MTest           = "0.6.6"
     final val Nyaya           = "0.8.1"
     final val Scala211        = "2.11.12"
