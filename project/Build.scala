@@ -177,7 +177,7 @@ object TestState {
   lazy val domZipperSelenium = project
     .in(file("dom-zipper-selenium"))
     .configure(commonSettings.jvm, publicationSettings.jvm, testSettingsCI.jvm)
-    .dependsOn(domZipperJVM, utilSelenium)
+    .dependsOn(domZipperJVM, utilSelenium, domZipperJsoup)
     .settings(
       moduleName := "dom-zipper-selenium",
       libraryDependencies ++= Seq(

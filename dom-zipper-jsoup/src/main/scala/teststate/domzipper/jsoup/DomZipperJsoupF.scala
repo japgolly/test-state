@@ -28,8 +28,8 @@ object DomZipperJsoupF {
     def apply(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
       apply("root", doc)
 
-    def body(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
-      apply("body", doc.body())
+    def body(body: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
+      apply("body", body)
   }
 }
 

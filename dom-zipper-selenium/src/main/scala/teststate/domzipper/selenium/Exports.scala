@@ -11,6 +11,10 @@ trait Exports extends SharedExports with teststate.selenium.util.SeleniumExt {
   final type DomZipperSelenium           = DomZipperSeleniumF[Id, Dom]
   final val  DomZipperSelenium           = new DomZipperSeleniumF.Constructors[Id]()(Throw)
 
+  final type FastDomZipperSeleniumF[F[_]] = FastDomZipperSeleniumF.FastDomZipperSeleniumF[F]
+  final type FastDomZipperSelenium        = FastDomZipperSeleniumF[Id]
+  final val  FastDomZipperSelenium        = new FastDomZipperSeleniumF.Constructors[Id]()(Throw)
+
 }
 
 object Exports extends Exports
