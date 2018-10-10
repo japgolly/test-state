@@ -111,6 +111,8 @@ object DomZipperPair {
 
   type Home[F[_], A] = DomZipperPair[F, () => F[A], () => F[A]]
 
+  type DomCollection[F[_], C[_], Dom, A] = DomZipper.DomCollection[DomZipperPair[?[_], () => F[Dom], ?], F, C, () => F[Dom], A]
+
   def apply[F[_],
             Fast[f[_], a] <: DomZipper[f, _, a, Fast], FD,
             Slow[f[_], a] <: DomZipper[f, _, a, Slow], SD]

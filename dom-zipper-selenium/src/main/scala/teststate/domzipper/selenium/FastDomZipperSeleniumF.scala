@@ -29,5 +29,8 @@ object FastDomZipperSeleniumF {
       val f = DomZipperJsoup.body(Jsoup.parseBodyFragment(s.outerHTML))
       FastDomZipperSeleniumF(f, s)
     }
+
+    type DomCollection[C[_], A]        = DomZipperPair.DomCollection[F, C, Dom, A]
+    type DomCollectionF[G[_], C[_], A] = DomZipperPair.DomCollection[G, C, Dom, A]
   }
 }
