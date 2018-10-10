@@ -283,7 +283,7 @@ object DomZipper {
         es.length match {
           case 0 => F pass None
           case 1 => F pass Some(es.head)
-          case n => F fail s"$n matches found for: $desc"
+          case n => F fail s"Expected 0-1 but found $n matches for: $desc"
         }
       override def map[A, B](c: Option[A])(f: A => B) =
         c map f
