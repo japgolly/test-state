@@ -2,6 +2,7 @@ package teststate.dsl
 
 import acyclic.file
 import teststate.data.Or
+import teststate.typeclass.{Distributive, Functor}
 import StdlibUtil._
 
 trait StdlibUtil {
@@ -65,11 +66,21 @@ object StdlibUtil {
     def map[B](f: A => B): NamedOption[B] =
       new NamedOption[B](name, underlying map f)
 
-    def getFn[B](implicit ev: A <:< Function0[B]): () => B =
-      () => ev(get)()
+    def dist[F[_], B](implicit ev: NamedOption[A] <:< NamedOption[F[B]], F: Distributive[F]): F[NamedOption[B]] =
+      F.cosequence(this)
+
+    def distGet[F[_], B](implicit ev: NamedOption[A] <:< NamedOption[F[B]], F: Distributive[F]): F[B] =
+      F.cotraverse(ev(this))(_.get)
   }
 
-  implicit def NamedOptionToOption[A](n: NamedOption[A]): Option[A] = n.underlying
+  object NamedOption {
+    implicit def toOption[A](n: NamedOption[A]): Option[A] = n.underlying
+
+    implicit lazy val functor: Functor[NamedOption] =
+      new Functor[NamedOption] {
+        override def map[A, B](fa: NamedOption[A])(f: A => B) = fa map f
+      }
+  }
 
   final class TestStateOptionExt[A](private val self: Option[A]) extends AnyVal {
     def named(name: String): NamedOption[A] =
@@ -105,9 +116,22 @@ object StdlibUtil {
 
     def getAtIndex(i: Int): A =
       attemptAtIndex(i).getOrThrow()
+
+    def dist[F[_], B](implicit ev: NamedVector[A] <:< NamedVector[F[B]], F: Distributive[F]): F[NamedVector[B]] =
+      F.cosequence(this)
+
+    def distGetOne[F[_], B](implicit ev: NamedVector[A] <:< NamedVector[F[B]], F: Distributive[F]): F[B] =
+      F.cotraverse(ev(this))(_.getOne)
   }
 
-  implicit def NamedVectorToVector[A](n: NamedVector[A]): Vector[A] = n.underlying
+  object NamedVector {
+    implicit def toVector[A](n: NamedVector[A]): Vector[A] = n.underlying
+
+    implicit lazy val functor: Functor[NamedVector] =
+      new Functor[NamedVector] {
+        override def map[A, B](fa: NamedVector[A])(f: A => B) = fa map f
+      }
+  }
 
   final class TestStateTraversableExt[A](private val self: Traversable[A]) extends AnyVal {
     def named(namePlural: String): NamedVector[A] =
