@@ -67,6 +67,8 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
     } yield b
   }
 
+  def isCapable(c: DomZipper.Capability): Boolean
+
   // ==================
   // Self configuration
   // ==================
@@ -341,5 +343,13 @@ object DomZipper {
       go(0, Vector.empty)
     }
 
+  }
+
+  // ===================================================================================================================
+
+  sealed trait Capability
+  object Capability {
+    case object RadioButtonChecked extends Capability
+    val all: List[Capability] = RadioButtonChecked ::Nil
   }
 }

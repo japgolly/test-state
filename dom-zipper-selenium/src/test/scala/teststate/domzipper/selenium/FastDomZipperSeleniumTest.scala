@@ -92,7 +92,7 @@ object FastDomZipperSeleniumTest extends TestSuite {
       'children - {
         'nullary - assertEq(
           $("form").children1n.map(_.tagName.toLowerCase),
-          Vector("div", "select", "select", "div", "h3", "div"))
+          Vector("div", "select", "select", "div", "h3", "div" ,"section"))
 
         'sel - assertEq($("form").children1n("h3").innerTexts, Vector("HI"))
       }
@@ -104,6 +104,9 @@ object FastDomZipperSeleniumTest extends TestSuite {
         assertEq(c.parent.child().outerHTML, "<h3>EH?</h3>")
       }
     }
+
+    'radioT - assertEq($("input[type=radio]", 1 of 2).checked, true)
+    'radioF - assertEq($("input[type=radio]", 2 of 2).checked, false)
 
     'slow - {
       def outerHtml(z: FastDomZipperSelenium) = htmlScrub.run(z.dom().getAttribute("outerHTML"))
@@ -117,6 +120,8 @@ object FastDomZipperSeleniumTest extends TestSuite {
         assertEq(outerHtml(c.parent), "<div><h3>EH?</h3></div>")
         assertEq(outerHtml(c.parent.child()), "<h3>EH?</h3>")
       }
+      'radioT - assertEq($("input[type=radio]", 1 of 2).dom().isSelected, true)
+      'radioF - assertEq($("input[type=radio]", 2 of 2).dom().isSelected, false)
     }
   }
 }

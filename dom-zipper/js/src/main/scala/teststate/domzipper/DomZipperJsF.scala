@@ -57,6 +57,10 @@ final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Laye
   override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperJsF[F, B] =
     new DomZipperJsF(pos._1, pos._2, peek)
 
+  override def isCapable(c: DomZipper.Capability) = c match {
+    case DomZipper.Capability.RadioButtonChecked => true
+  }
+
   override def unmap =
     new DomZipperJsF(prevLayers, curLayer, rootDomFn)
 

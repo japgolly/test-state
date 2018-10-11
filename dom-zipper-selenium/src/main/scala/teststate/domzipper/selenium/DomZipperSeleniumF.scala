@@ -61,6 +61,10 @@ final class DomZipperSeleniumF[F[_], A](override protected val prevLayers: Vecto
   override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperSeleniumF[F, B] =
     new DomZipperSeleniumF(pos._1, pos._2, peek)
 
+  override def isCapable(c: DomZipper.Capability) = c match {
+    case DomZipper.Capability.RadioButtonChecked => true
+  }
+
   override def unmap =
     new DomZipperSeleniumF(prevLayers, curLayer, DomZipperSeleniumF.rootDomFn)
 

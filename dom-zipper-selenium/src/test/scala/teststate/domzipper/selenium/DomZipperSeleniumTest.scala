@@ -88,7 +88,7 @@ object DomZipperSeleniumTest extends TestSuite {
     'children - {
       'nullary - assertEq(
         $("form").children1n.map(_.tagName.toLowerCase),
-        Vector("div", "select", "select", "div", "h3", "div"))
+        Vector("div", "select", "select", "div", "h3", "div", "section"))
 
       'sel - assertEq($("form").children1n("h3").innerTexts, Vector("HI"))
     }

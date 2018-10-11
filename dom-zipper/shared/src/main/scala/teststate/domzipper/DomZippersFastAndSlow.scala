@@ -25,6 +25,9 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
 
   protected val peek: Peek[A]
 
+  protected val isCapableFn: DomZipper.Capability => Boolean
+  override final def isCapable(c: DomZipper.Capability) = isCapableFn(c)
+
   // This is embarrassing. Scala won't let me specify SD alone in place of Dom in the class definition.
   protected implicit def ffs0(z: () => F[SD]): Dom
   protected implicit def ffs1(z: DomZippersFastAndSlow[F, () => F[SD], () => F[SD]]): DomZippersFastAndSlow[F, Dom, Dom]
@@ -45,7 +48,7 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
     val rawResults = Vector.tabulate(colF.size) { i =>
       val f = colF.rawResults(i)
       lazy val s = colS.flatMap(_.zippers).map(C.get(_, i))
-      FastAndSlow(f, () => s).toDomZipper(peek)
+      FastAndSlow(f, () => s, isCapableFn).toDomZipper(peek)
     }
     new DomCollection[DomZippersFastAndSlow[?[_], Dom, ?], F, C, Dom, A](
       desc       = colF.desc,
@@ -79,9 +82,17 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
 
   override def tagName   = fast.tagName
   override def innerText = fast.innerText
-  override def checked   = fast.checked
   override def classes   = fast.classes
   override def value     = fast.value
+
+  override def checked =
+    if (fast.isCapable(DomZipper.Capability.RadioButtonChecked))
+      fast.checked
+    else
+      F.flatMap(fast.matches("input[type=radio]")) {
+        case true => F.flatMap(slow())(_.checked)
+        case false => fast.checked
+      }
 
   override def parent: F[DomZippersFastAndSlow[F, Dom, A]] =
     bimapF(_.parent, _.parent)
@@ -117,13 +128,17 @@ object DomZippersFastAndSlow {
             Fast[f[_], a] <: DomZipper[f, _, a, Fast], FD,
             Slow[f[_], a] <: DomZipper[f, _, a, Slow], SD]
             (fast: Fast[F, FD], slow: Slow[F, SD])
-            (implicit F: ErrorHandler[F]): AtHome[F, SD] =
-    FastAndSlow(fast, () => F.pass(slow)).toDomZipperRoot
+            (implicit F: ErrorHandler[F]): AtHome[F, SD] = {
+    val capabilities = DomZipper.Capability.all.filter(c => fast.isCapable(c) || slow.isCapable(c))
+    FastAndSlow(fast, () => F.pass(slow), capabilities.contains).toDomZipperRoot
+  }
 
   final case class FastAndSlow[F[_],
                                FastF[f[_], a] <: DomZipper[f, _, a, FastF], FD,
                                SlowF[f[_], a] <: DomZipper[f, _, a, SlowF], SD
-                             ](fast: FastF[F, FD], slow: () => F[SlowF[F, SD]])
+                             ](fast: FastF[F, FD],
+                               slow: () => F[SlowF[F, SD]],
+                               isCapableFn: DomZipper.Capability => Boolean)
                               (implicit val F: ErrorHandler[F]) {
 
     type Fast = FastF[F, FD]
@@ -132,12 +147,12 @@ object DomZippersFastAndSlow {
 
     def bimap(f: Fast => Fast, s: Slow => Slow): FastAndSlow[F, FastF, FD, SlowF, SD] = {
       lazy val ss = slow().map(s)
-      FastAndSlow[F, FastF, FD, SlowF, SD](f(fast), () => ss)
+      FastAndSlow[F, FastF, FD, SlowF, SD](f(fast), () => ss, isCapableFn)
     }
 
     def bimapF(f: Fast => F[Fast], s: Slow => F[Slow]): F[FastAndSlow[F, FastF, FD, SlowF, SD]] = {
       lazy val ss = slow().flatMap(s)
-      f(fast).map(FastAndSlow[F, FastF, FD, SlowF, SD](_, () => ss))
+      f(fast).map(FastAndSlow[F, FastF, FD, SlowF, SD](_, () => ss, isCapableFn))
     }
 
     val rootRomFn: FastAndSlow[F, FastF, FD, SlowF, SD] => Dom =
@@ -155,6 +170,7 @@ object DomZippersFastAndSlow {
         override protected type SD = _SD
         override protected val pos = FastAndSlow.this
         override protected val peek = f
+        override protected val isCapableFn = FastAndSlow.this.isCapableFn
         override protected implicit def ffs0(z: () => F[SD]) = z
         override protected implicit def ffs1(z: DomZippersFastAndSlow[F, () => F[SD], () => F[SD]]) = z
         override protected implicit def ffs2[B](z: DomZippersFastAndSlow[F, () => F[SD], B]) = z
