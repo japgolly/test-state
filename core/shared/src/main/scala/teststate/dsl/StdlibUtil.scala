@@ -62,6 +62,9 @@ object StdlibUtil {
         case None => Left(errMsg)
       }
 
+    def map[B](f: A => B): NamedOption[B] =
+      new NamedOption[B](name, underlying map f)
+
     def getFn[B](implicit ev: A <:< Function0[B]): () => B =
       () => ev(get)()
   }
@@ -92,6 +95,9 @@ object StdlibUtil {
         Right(underlying(i))
       else
         Left(s"$namePlural[$i] not found; ${underlying.length} available.")
+
+    def map[B](f: A => B): NamedVector[B] =
+      new NamedVector[B](namePlural, underlying map f)
 
     /** Expect exactly one element */
     def getOne: A =
