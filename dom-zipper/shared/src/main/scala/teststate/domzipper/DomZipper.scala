@@ -256,6 +256,12 @@ object DomZipper {
       new DomCollection(desc, rawResults, Some(f2), C)
     }
 
+    def singleton: F[Z[F, A]] =
+      if (size == 1)
+        F pass result.head
+      else
+        F fail s"Expected exactly 1 result but have $size."
+
     def headOption: Option[Z[F, A]] =
       result.headOption
 
@@ -265,6 +271,10 @@ object DomZipper {
     def outerHTMLs: F[C[String]] = map(_.outerHTML)
     def innerHTMLs: F[C[String]] = map(_.innerHTML)
     def innerTexts: F[C[String]] = map(_.innerText)
+
+    def collect01 = new DomCollection[Z, F, Option, Dom, A](desc, result, None, new DomCollection.Container01[F])
+    def collect0n = new DomCollection[Z, F, Vector, Dom, A](desc, result, None, new DomCollection.Container0N[F])
+    def collect1n = new DomCollection[Z, F, Vector, Dom, A](desc, result, None, new DomCollection.Container1N[F])
   }
 
   // ===================================================================================================================
