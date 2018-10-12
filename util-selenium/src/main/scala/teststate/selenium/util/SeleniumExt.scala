@@ -3,6 +3,7 @@ package teststate.selenium.util
 import org.openqa.selenium._
 import org.openqa.selenium.interactions.Actions
 import scala.collection.JavaConverters._
+import teststate.util.CssUtil
 
 object SeleniumExt extends SeleniumExt
 
@@ -36,6 +37,28 @@ object Internals {
     def unsetOnBeforeUnload(): Unit = {
       executeJsOrThrow("window.onbeforeunload = undefined")
       ()
+    }
+
+    def addStyleTag(content: String): Unit = {
+      val js =
+        """
+          |var style = document.createElement('style');
+          |style.type = 'text/css';
+          |style.innerHTML = arguments[0];
+          |document.getElementsByTagName('head')[0].appendChild(style);
+        """.stripMargin.trim
+      executeJsOrThrow(js, content)
+      ()
+    }
+
+    def disableCssAnimation(disableTransitions: Boolean = true,
+                            disableTransforms : Boolean = true,
+                            disableAnimation  : Boolean = true): Unit = {
+      val css = CssUtil.disableCssAnimation(
+        disableTransitions = disableTransitions,
+        disableTransforms  = disableTransforms,
+        disableAnimation   = disableAnimation)
+      addStyleTag(css)
     }
   }
 

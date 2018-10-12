@@ -121,7 +121,7 @@ object TestState {
         coreJVM, coreMacrosJVM,
         domZipperJVM, domZipperJsoup, domZipperSelenium,
         extScalazJVM, extCatsJVM, extNyayaJVM, extSelenium,
-        utilSelenium)
+        utilJVM, utilSelenium)
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
@@ -129,7 +129,8 @@ object TestState {
       .aggregate(
         coreJS, coreMacrosJS,
         domZipperJS, domZipperSizzle,
-        extScalazJS, extCatsJS, extNyayaJS, extScalaJsReact)
+        extScalazJS, extCatsJS, extNyayaJS, extScalaJsReact,
+        utilJS)
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -161,6 +162,7 @@ object TestState {
   lazy val domZipper = crossProject(JSPlatform, JVMPlatform)
     .in(file("dom-zipper"))
     .configureCross(commonSettings, publicationSettings, testSettings)
+    .dependsOn(util)
     .settings(moduleName := "dom-zipper")
     .jsSettings(
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
@@ -253,9 +255,15 @@ object TestState {
         "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium,
         "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium))
 
+  lazy val utilJVM = util.jvm
+  lazy val utilJS  = util.js
+  lazy val util = crossProject(JSPlatform, JVMPlatform)
+    .configureCross(commonSettings, publicationSettings, testSettingsCI)
+
   lazy val utilSelenium = project
     .in(file("util-selenium"))
     .configure(commonSettings.jvm, publicationSettings.jvm, testSettingsCI.jvm)
+    .dependsOn(utilJVM)
     .settings(
       moduleName := "util-selenium",
       libraryDependencies ++= Seq(
