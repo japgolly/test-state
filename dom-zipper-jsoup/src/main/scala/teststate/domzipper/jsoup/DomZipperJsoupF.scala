@@ -2,6 +2,7 @@ package teststate.domzipper.jsoup
 
 import teststate.domzipper._
 import org.jsoup.nodes.Document
+import org.jsoup.Jsoup
 import DomZipper.{CssSelResult, DomCollection, Layer}
 import ErrorHandler.{ErrorHandlerOptionOps, ErrorHandlerResultOps}
 
@@ -30,6 +31,15 @@ object DomZipperJsoupF {
 
     def body(body: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
       apply("body", body)
+
+    def parseHtml(html: String)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
+      apply(Jsoup.parse(html))
+
+    def parseBody(bodyHtml: String)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] = {
+      // Jsoup is weird
+      val j = Jsoup.parse(s"<html>$bodyHtml</html>").selectFirst("body")
+      apply("body", j)
+    }
   }
 }
 

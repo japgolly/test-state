@@ -1,6 +1,5 @@
 package teststate.domzipper.selenium
 
-import org.jsoup.Jsoup
 import org.openqa.selenium.WebDriver
 import teststate.domzipper.{DomZippersFastAndSlow, ErrorHandler, HtmlScrub}
 import teststate.domzipper.jsoup.DomZipperJsoupF
@@ -20,13 +19,13 @@ object FastDomZipperSeleniumF {
 
     def html(driver: WebDriver)(implicit scrub: HtmlScrub): FastDomZipperSeleniumF[F] = {
       val s = DomZipperSelenium.html(driver)
-      val f = DomZipperJsoup.body(Jsoup.parse(s.outerHTML))
+      val f = DomZipperJsoup.parseHtml(s.outerHTML)
       FastDomZipperSeleniumF(f, s)
     }
 
     def body(driver: WebDriver)(implicit scrub: HtmlScrub): FastDomZipperSeleniumF[F] = {
       val s = DomZipperSelenium.body(driver)
-      val f = DomZipperJsoup.body(Jsoup.parseBodyFragment(s.outerHTML))
+      val f = DomZipperJsoup.parseBody(s.outerHTML)
       FastDomZipperSeleniumF(f, s)
     }
 

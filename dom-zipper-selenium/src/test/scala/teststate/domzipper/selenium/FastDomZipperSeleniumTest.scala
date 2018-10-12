@@ -16,7 +16,7 @@ object FastDomZipperSeleniumTest extends TestSuite {
   implicit def htmlScrub: HtmlScrub =
     HtmlScrub.default >> HtmlScrub.joinLines
 
-  lazy val $ : FastDomZipperSelenium = {
+  lazy val (html, body) = {
     val testHtmlPath = SeleniumTestUtil.testResource("test.html").getAbsoluteFile
     val options = new ChromeOptions()
     options.setHeadless(true)
@@ -27,8 +27,10 @@ object FastDomZipperSeleniumTest extends TestSuite {
       override def run(): Unit = driver.quit()
     })
     driver.get("file://" + testHtmlPath)
-    FastDomZipperSelenium.html(driver)
+    (FastDomZipperSelenium.html(driver), FastDomZipperSelenium.body(driver))
   }
+
+  def $ = html
 
   def name = $("#name")
   def nameLabelHtml = """<label for="name">Name:</label>"""
@@ -104,6 +106,9 @@ object FastDomZipperSeleniumTest extends TestSuite {
         assertEq(c.parent.child().outerHTML, "<h3>EH?</h3>")
       }
     }
+
+    'htmlToBody - assertEq(html("body").classes, Set("haha"))
+    'bodyToBody - assertEq(body.classes, Set("haha"))
 
     'radioT - assertEq($("input[type=radio]", 1 of 2).checked, true)
     'radioF - assertEq($("input[type=radio]", 2 of 2).checked, false)
