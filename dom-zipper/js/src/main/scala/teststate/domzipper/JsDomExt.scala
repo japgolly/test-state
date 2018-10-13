@@ -27,6 +27,7 @@ object JsDomExt extends JsDomExt {
       style.`type` = "text/css"
       style.innerHTML = content
       self.getElementsByTagName("head")(0).appendChild(style)
+      ()
     }
 
     def disableCssAnimation(disableTransitions: Boolean = true,
