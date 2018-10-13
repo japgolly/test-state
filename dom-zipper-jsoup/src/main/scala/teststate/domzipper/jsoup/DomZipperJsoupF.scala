@@ -44,6 +44,9 @@ object DomZipperJsoupF {
     def failBy[G[_]: ErrorHandler]: Constructors[G]   = new Constructors
     def failToOption: Constructors[Option           ] = failBy(ErrorHandler.ReturnOption)
     def failToEither: Constructors[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
+
+    type DomCollection [      C[_], A] = DomZipperJsoupF.DomCollection[F, C, A]
+    type DomCollectionF[G[_], C[_], A] = DomZipperJsoupF.DomCollection[G, C, A]
   }
 }
 

@@ -33,7 +33,7 @@ object FastDomZipperSeleniumF {
     def failToOption: Constructors[Option           ] = failBy(ErrorHandler.ReturnOption)
     def failToEither: Constructors[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
 
-    type DomCollection[C[_], A]        = DomZippersFastAndSlow.DomCollection[F, C, Dom, A]
+    type DomCollection [      C[_], A] = DomZippersFastAndSlow.DomCollection[F, C, Dom, A]
     type DomCollectionF[G[_], C[_], A] = DomZippersFastAndSlow.DomCollection[G, C, Dom, A]
   }
 }
