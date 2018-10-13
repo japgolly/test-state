@@ -43,23 +43,25 @@ This is a library that:
 ### Uses
 
 * Unit-test a webapp with Scala.JS.
-* Test DB triggers, or a DB migration.
-* Integration-test.
-* Random-test (fuzz-test) like Android's `monkeyrunner` or ScalaCheck's `Command` API.
+* Integration testing.
 * UAT automation.
+* Random-test (fuzz-test) like Android's `monkeyrunner` or ScalaCheck's `Command` API.
+* Data migration.
 
 
 ### Features
 
 * Compiled for Scala & Scala.JS.
-* Can run synchronously, asynchronously (`Future`) or in your own context-type (eg `Task`). Is stack-safe.
+* Can run synchronously, asynchronously (`Future`) or in your own context-type (eg `IO`). Is stack-safe.
 * Everything is immutable and composable.
 * Everything can be transformed into (reused in) different contexts.
 * Combines property and imperative testing.
 * Actions and assertions can be non-deterministic and/or dependent on runtime state.
-* Tries to be as transparent and informative as possible about test execution.
-* Optionally configurable error type. Use a custom ADT to precisely maintain all forms of failure and error in your domain.
-* Includes a utility called `DomZipper` which greatly simplifies the task of HTML/SVG observation.
+* Transparent and informative about test execution.
+* Includes an abstract `DomZipper` which greatly simplifies the task of HTML/SVG observation.
+* Comes with various `DomZipper` implementations and backends.
+* Lots of platform-specific utilities for web testing.
+* Configurable error handling. Be impure and throw exceptions or be pure and use a custom ADT to precisely maintain all forms of failure and error in your domain; it's up to you.
 * Extension modules for various 3rd-party libraries. (Scalaz, Cats, more.)
 
 
