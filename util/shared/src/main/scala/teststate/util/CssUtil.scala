@@ -2,34 +2,38 @@ package teststate.util
 
 object CssUtil {
 
+  val DefaultPrefixes = "-moz-" :: "-ms-" :: "-o-" :: "-webkit-" :: Nil
+
   def disableCssAnimation(disableTransitions: Boolean = true,
-                          disableTransforms: Boolean = true,
-                          disableAnimation: Boolean = true): String = {
+                          disableTransforms : Boolean = true,
+                          disableAnimation  : Boolean = true): String = {
     val sb = new StringBuilder
+    def disable(prop: String): Unit = {
+      sb.append(prop)
+      sb.append(": none !important;\n")
+      ()
+    }
+
+    def disableWithPrefixes(prop: String): Unit = {
+      for (pre <- DefaultPrefixes) {
+        sb.append(pre)
+        disable(prop)
+      }
+      disable(prop)
+    }
+
     sb.append("* {\n")
     if (disableTransitions) {
       sb.append("/*CSS transitions*/\n")
-      sb.append(   "-moz-transition-property: none !important;\n")
-      sb.append(    "-ms-transition-property: none !important;\n")
-      sb.append(     "-o-transition-property: none !important;\n")
-      sb.append("-webkit-transition-property: none !important;\n")
-      sb.append(        "transition-property: none !important;\n")
+      disableWithPrefixes("transition-property")
     }
     if (disableTransforms) {
       sb.append("/*CSS transforms*/\n")
-      sb.append(   "-moz-transform: none !important;\n")
-      sb.append(    "-ms-transform: none !important;\n")
-      sb.append(     "-o-transform: none !important;\n")
-      sb.append("-webkit-transform: none !important;\n")
-      sb.append(        "transform: none !important;\n")
+      disableWithPrefixes("transform")
     }
     if (disableAnimation) {
       sb.append("/*CSS animations*/\n")
-      sb.append(   "-moz-animation: none !important;\n")
-      sb.append(    "-ms-animation: none !important;\n")
-      sb.append(     "-o-animation: none !important;\n")
-      sb.append("-webkit-animation: none !important;\n")
-      sb.append(        "animation: none !important;\n")
+      disableWithPrefixes("animation")
     }
     sb.append("}")
     sb.toString()
