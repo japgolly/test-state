@@ -163,9 +163,7 @@ object TestState {
     .in(file("dom-zipper"))
     .configureCross(commonSettings, publicationSettings, testSettings)
     .dependsOn(util)
-    .settings(
-      moduleName := "dom-zipper",
-      libraryDependencies += "com.github.japgolly.microlibs" %%% "nonempty" % Ver.Microlibs)
+    .settings(moduleName := "dom-zipper")
     .jsSettings(
       libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
       jsEnv               := new JSDOMNodeJSEnv)

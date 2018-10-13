@@ -24,8 +24,8 @@ object DomZipperJsF {
       case x              => F fail s"Not an element: $x"
     }
 
-  private val rootDomFn: DomZipperBase.Layers[Dom] => Dom =
-    _.latest.dom
+  private val rootDomFn: ((Vector[Layer[Dom]], Layer[Dom])) => Dom =
+    _._2.dom
 
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
 
@@ -39,14 +39,15 @@ object DomZipperJsF {
       apply("<provided>", dom)
 
     def apply(name: String, dom: Dom)(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJsF[F, Dom] =
-      new DomZipperJsF(DomZipperBase.Layers init Layer(name, "", dom), rootDomFn)
+      new DomZipperJsF(Vector.empty, Layer(name, "", dom), rootDomFn)
   }
 }
 
 import DomZipperJsF.{CssSelEngine, Dom, liftNode, rootDomFn, safeCastDom}
 
-final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.Layers[Dom],
-                                  override protected val peek: DomZipperBase.Layers[Dom] => A
+final class DomZipperJsF[F[_], A](override protected val prevLayers: Vector[Layer[Dom]],
+                                  override protected val curLayer: Layer[Dom],
+                                  override protected val peek: ((Vector[Layer[Dom]], Layer[Dom])) => A
                                 )(implicit
                                   override protected val $: CssSelEngine,
                                   override protected[domzipper] val htmlScrub: HtmlScrub,
@@ -54,19 +55,19 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
                                 ) extends DomZipperBase.WithStore[F, Dom, A, DomZipperJsF] {
 
   override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperJsF[F, B] =
-    new DomZipperJsF(pos, peek)
+    new DomZipperJsF(pos._1, pos._2, peek)
 
   override def isCapable(c: DomZipper.Capability) = c match {
     case DomZipper.Capability.RadioButtonChecked => true
   }
 
   override def unmap =
-    new DomZipperJsF(layers, rootDomFn)
+    new DomZipperJsF(prevLayers, curLayer, rootDomFn)
 
   override protected def self = this
 
   protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]): DomZipperJsF[G, A] =
-    new DomZipperJsF(layers, peek)($, h, g)
+    new DomZipperJsF(prevLayers, curLayer, peek)($, h, g)
 
   override protected def _parent: F[Dom] =
     liftNode(dom.parentNode)

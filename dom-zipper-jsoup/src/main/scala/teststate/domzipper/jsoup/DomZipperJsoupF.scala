@@ -5,7 +5,6 @@ import org.jsoup.nodes.Document
 import org.jsoup.Jsoup
 import DomZipper.{CssSelResult, DomCollection, Layer}
 import ErrorHandler.{ErrorHandlerOptionOps, ErrorHandlerResultOps}
-import japgolly.microlibs.nonempty.NonEmptyVector
 
 object DomZipperJsoupF {
 
@@ -18,14 +17,14 @@ object DomZipperJsoupF {
   private implicit val cssSelJsoup: CssSelEngine =
     DomZipper.CssSelEngine((css, parent) => parent.select(css))
 
-  private val rootDomFn: DomZipperBase.Layers[Dom] => Dom =
-    _.latest.dom
+  private val rootDomFn: ((Vector[Layer[Dom]], Layer[Dom])) => Dom =
+    _._2.dom
 
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
     import org.jsoup.nodes.Element
 
     def apply(name: String, e: Element)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
-      new DomZipperJsoupF(DomZipperBase.Layers init Layer(name, "", JsoupElement(e)), rootDomFn)
+      new DomZipperJsoupF(Vector.empty, Layer(name, "", JsoupElement(e)), rootDomFn)
 
     def apply(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
       apply("root", doc)
@@ -46,28 +45,29 @@ object DomZipperJsoupF {
 
 import DomZipperJsoupF.{CssSelEngine, Dom}
 
-final class DomZipperJsoupF[F[_], A](override protected val layers: DomZipperBase.Layers[Dom],
-                                     override protected val peek: DomZipperBase.Layers[Dom] => A
-                                   )(implicit
-                                     override protected val $: CssSelEngine,
-                                     override protected[domzipper] val htmlScrub: HtmlScrub,
-                                     override protected val F: ErrorHandler[F]
-                                   ) extends DomZipperBase.WithStore[F, Dom, A, DomZipperJsoupF] {
+final class DomZipperJsoupF[F[_], A](override protected val prevLayers: Vector[Layer[Dom]],
+                                     override protected val curLayer: Layer[Dom],
+                                     override protected val peek: ((Vector[Layer[Dom]], Layer[Dom])) => A
+                                    )(implicit
+                                      override protected val $: CssSelEngine,
+                                      override protected[domzipper] val htmlScrub: HtmlScrub,
+                                      override protected val F: ErrorHandler[F]
+                                    ) extends DomZipperBase.WithStore[F, Dom, A, DomZipperJsoupF] {
 
   override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperJsoupF[F, B] =
-    new DomZipperJsoupF(pos, peek)
+    new DomZipperJsoupF(pos._1, pos._2, peek)
 
   override def isCapable(c: DomZipper.Capability) = c match {
     case DomZipper.Capability.RadioButtonChecked => false
   }
 
   override def unmap =
-    new DomZipperJsoupF(layers, DomZipperJsoupF.rootDomFn)
+    new DomZipperJsoupF(prevLayers, curLayer, DomZipperJsoupF.rootDomFn)
 
   override protected def self = this
 
   override protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]) =
-    new DomZipperJsoupF(layers, peek)($, h, g)
+    new DomZipperJsoupF(prevLayers, curLayer, peek)($, h, g)
 
   private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]) =
     DomCollection[DomZipperJsoupF, F, C, Dom, Dom, A](desc, result, C)(addLayer)
