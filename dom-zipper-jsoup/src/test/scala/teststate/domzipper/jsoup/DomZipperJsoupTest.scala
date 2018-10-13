@@ -129,6 +129,30 @@ object DomZipperJsoupTest extends TestSuite {
       assertEq(c.parent.outerHTML, "<div><h3>EH?</h3></div>")
       assertEq(c.parent.child().outerHTML, "<h3>EH?</h3>")
     }
+
+    'collectErrMsgs - {
+      "1n" - {
+        val expect =
+          """
+            |Query failed: [pre]. Expected [1,n] results, not 0.
+            |DESC: root -> .name
+            |HTML: <div class="name"><label for="name">Name:</label><input type="text" id="name" name="user_name" value="Bob Loblaw" class=" a b  c "></div>
+          """.stripMargin.trim
+        val Left(actual) = $(".name").failToEither.collect1n("pre").zippers
+        assertMultiline(actual, expect)
+      }
+      "01" - {
+        val expect =
+          """
+            |Query failed: [option]. Expected [0,1] results, not 2.
+            |DESC: root -> form -> select
+            |HTML: <select> <option value="a">A</option> <option value="b">B</option> </select>
+          """.stripMargin.trim
+        val Left(actual) = $("form")("select", 2 of 2).failToEither.collect01("option").zippers
+        assertMultiline(actual, expect)
+      }
+    }
+
   }
 
 }

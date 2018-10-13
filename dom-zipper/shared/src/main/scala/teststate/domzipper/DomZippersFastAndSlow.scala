@@ -51,7 +51,7 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
       FastAndSlow(f, () => s, isCapableFn).toDomZipper(peek)
     }
     new DomCollection[DomZippersFastAndSlow[?[_], Dom, ?], F, C, Dom, A](
-      desc       = colF.desc,
+      enrichErr  = colF.enrichErr,
       rawResults = rawResults,
       filterFn   = None,
       C          = C

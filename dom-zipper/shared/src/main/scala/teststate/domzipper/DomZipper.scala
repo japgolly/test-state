@@ -202,7 +202,7 @@ object DomZipper {
   // ===================================================================================================================
 
   final class DomCollection[Z[f[_], a] <: DomZipper[f, Dom, a, Z], F[_], C[_], Dom, A](
-      private[domzipper] val desc      : String,
+      private[domzipper] val enrichErr : String => String,
       private[domzipper] val rawResults: Vector[Z[F, A]],
                              filterFn  : Option[Z[F, A] => Boolean],
       private[domzipper] val C         : DomCollection.Container[F, C])
@@ -242,18 +242,18 @@ object DomZipper {
       F.flatMap(extracts)(C.traverse(_)(f))
 
     def zippers: F[C[Z[F, A]]] =
-      C(desc, result)
+      C(enrichErr, result)
+
+    def map[B](f: Z[F, A] => B): F[C[B]] =
+      C(enrichErr, result.map(f))
 
     @deprecated("Use .map", "2.2.0")
     def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
       map(f)
 
-    def map[B](f: Z[F, A] => B): F[C[B]] =
-      C(desc, result.map(f))
-
     def filter(f: Z[F, A] => Boolean): DomCollection[Z, F, C, Dom, A] = {
       val f2: Z[F, A] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
-      new DomCollection(desc, rawResults, Some(f2), C)
+      new DomCollection(enrichErr, rawResults, Some(f2), C)
     }
 
     def singleton: F[Z[F, A]] =
@@ -272,39 +272,40 @@ object DomZipper {
     def innerHTMLs: F[C[String]] = map(_.innerHTML)
     def innerTexts: F[C[String]] = map(_.innerText)
 
-    def collect01 = new DomCollection[Z, F, Option, Dom, A](desc, result, None, new DomCollection.Container01[F])
-    def collect0n = new DomCollection[Z, F, Vector, Dom, A](desc, result, None, new DomCollection.Container0N[F])
-    def collect1n = new DomCollection[Z, F, Vector, Dom, A](desc, result, None, new DomCollection.Container1N[F])
+    def collect01 = new DomCollection[Z, F, Option, Dom, A](enrichErr, result, None, new DomCollection.Container01[F])
+    def collect0n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, new DomCollection.Container0N[F])
+    def collect1n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, new DomCollection.Container1N[F])
   }
 
   // ===================================================================================================================
 
   object DomCollection {
 
-    def apply[Z[f[_], a] <: DomZipper[f, D, a, Z], F[_], C[_], D, A, B](desc: String,
+    def apply[Z[f[_], a] <: DomZipper[f, D, a, Z], F[_], C[_], D, A, B](sel: String,
+                                                                        enrichErr : String => String,
                                                                         rawResults: Vector[A],
                                                                         C: Container[F, C])
                                                                        (addLayer: Layer[A] => Z[F, B])
                                                                        (implicit F: ErrorHandler[F]): DomCollection[Z, F, C, D, B] =
       new DomCollection[Z, F, C, D, B](
-        desc,
-        rawResults.map(a => addLayer(Layer("collect", desc, a))),
+        e => enrichErr(s"Query failed: [$sel]. $e"),
+        rawResults.map(a => addLayer(Layer("collect", sel, a))),
         None,
         C)
 
     trait Container[F[_], C[_]] {
-      def apply[A](desc: String, es: CssSelResult[A]): F[C[A]]
+      def apply[A](enrichErr: String => String, es: CssSelResult[A]): F[C[A]]
       def map[A, B](c: C[A])(f: A => B): C[B]
       def traverse[A, B](c: C[A])(f: A => F[B]): F[C[B]]
       def get[A](as: C[A], idx: Int): A
     }
 
     final class Container01[F[_]](implicit F: ErrorHandler[F]) extends Container[F, Option] {
-      override def apply[A](desc: String, es: CssSelResult[A]) =
+      override def apply[A](enrichErr: String => String, es: CssSelResult[A]) =
         es.length match {
           case 0 => F pass None
           case 1 => F pass Some(es.head)
-          case n => F fail s"Expected 0-1 but found $n matches for: $desc"
+          case n => F fail enrichErr(s"Expected [0,1] results, not $n.")
         }
       override def map[A, B](c: Option[A])(f: A => B) =
         c map f
@@ -318,7 +319,7 @@ object DomZipper {
     }
 
     final class Container0N[F[_]](implicit F: ErrorHandler[F]) extends Container[F, Vector] {
-      override def apply[A](desc: String, es: CssSelResult[A]) =
+      override def apply[A](enrichErr: String => String, es: CssSelResult[A]) =
         F pass es
       override def map[A, B](c: Vector[A])(f: A => B) =
         c map f
@@ -329,9 +330,9 @@ object DomZipper {
     }
 
     final class Container1N[F[_]](implicit F: ErrorHandler[F]) extends Container[F, Vector] {
-      override def apply[A](desc: String, es: CssSelResult[A]) =
+      override def apply[A](enrichErr: String => String, es: CssSelResult[A]) =
         if (es.isEmpty)
-          F fail s"No matches found for: $desc"
+          F fail enrichErr("Expected [1,n] results, not 0.")
         else
           F pass es
       override def map[A, B](c: Vector[A])(f: A => B) =

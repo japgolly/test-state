@@ -75,7 +75,7 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
     if (results.length != which.n)
       F fail {
         val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-        failMsg(s"${q}uery failed: [$sel]. Expected ${which.n} results, not ${results.length}.")
+        enrichErr(s"${q}uery failed: [$sel]. Expected ${which.n} results, not ${results.length}.")
       }
     else
       F pass {
@@ -87,18 +87,19 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
 
   final override def child(name: String, sel: String, which: MofN): F[Self[F, A]] = {
     val results = if (sel.isEmpty) children1n else children1n(sel)
+    val desc = if (sel.isEmpty) ">*" else cssPrepend_>(sel)
     F.flatMap(results.zippers) { zippers =>
       if (zippers.length != which.n)
         F fail {
           val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-          failMsg(s"${q}uery failed: [${results.desc}]. Expected ${which.n} results, not ${zippers.length}.")
+          enrichErr(s"${q}uery failed: [$desc]. Expected ${which.n} results, not ${zippers.length}.")
         }
       else
         F pass zippers(which.m - 1)
     }
   }
 
-  private final def failMsg(msg: String): String =
+  protected def enrichErr(msg: String): String =
     msg + "\n" + describe
 }
 

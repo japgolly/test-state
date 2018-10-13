@@ -82,7 +82,7 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     getAttribute("innerHTML").getOrElse("null")
 
   private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =
-    DomCollection[DomZipperSeleniumF, F, C, Dom, Dom, A](desc, result, C)(addLayer)
+    DomCollection[DomZipperSeleniumF, F, C, Dom, Dom, A](desc, enrichErr, result, C)(addLayer)
 
   override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =
     newDomCollection(sel, runCssQuery(sel), C)
