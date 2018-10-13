@@ -153,6 +153,12 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
   def withActionMod(f: Action.Single[F, R, O , S, E] => Action.Single[F, R, O , S, E]): Dsl[F, R, O, S, E] =
     new Dsl(f compose actionMod)
 
+  /** Execute some kind of arbitrary assertion just before action execution. */
+  def withPreActionAssertion(assert: ROS => F[Unit]): Dsl[F, R, O, S, E] =
+    withActionMod(_.mod(actionDef => ros =>
+      actionDef(ros).map(actionFn =>
+        () => EM.flatMap(assert(ros))(_ => actionFn()))))
+
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   def focus(focusName: => String) =
