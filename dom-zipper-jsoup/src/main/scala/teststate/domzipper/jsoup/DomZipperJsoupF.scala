@@ -40,6 +40,10 @@ object DomZipperJsoupF {
       val j = Jsoup.parse(s"<html>$bodyHtml</html>").selectFirst("body")
       apply("body", j)
     }
+
+    def failBy[G[_]: ErrorHandler]: Constructors[G]   = new Constructors
+    def failToOption: Constructors[Option           ] = failBy(ErrorHandler.ReturnOption)
+    def failToEither: Constructors[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
   }
 }
 

@@ -40,6 +40,10 @@ object DomZipperJsF {
 
     def apply(name: String, dom: Dom)(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJsF[F, Dom] =
       new DomZipperJsF(DomZipperBase.Layers init Layer(name, "", dom), rootDomFn)
+
+    def failBy[G[_]: ErrorHandler]: Constructors[G]   = new Constructors
+    def failToOption: Constructors[Option           ] = failBy(ErrorHandler.ReturnOption)
+    def failToEither: Constructors[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
   }
 }
 

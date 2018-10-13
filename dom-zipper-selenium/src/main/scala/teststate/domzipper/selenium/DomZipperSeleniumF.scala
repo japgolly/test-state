@@ -43,6 +43,11 @@ object DomZipperSeleniumF {
 
     def body(driver: WebDriver)(implicit scrub: HtmlScrub): DomZipperSeleniumF[F, Dom] =
       tag("body", driver)
+
+    def failBy[G[_]: ErrorHandler]: Constructors[G]   = new Constructors
+    def failToOption: Constructors[Option           ] = failBy(ErrorHandler.ReturnOption)
+    def failToEither: Constructors[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
+
   }
 }
 
