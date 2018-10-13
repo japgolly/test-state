@@ -1,5 +1,6 @@
 package teststate.domzipper
 
+import japgolly.microlibs.nonempty.NonEmptyVector
 import DomZipper._
 import DomZipperBase._
 import ErrorHandler.Id
@@ -7,11 +8,8 @@ import ErrorHandler.Id
 trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self]] extends DomZipper[F, Dom, A, Self] {
   import DomCollection.Container
 
-  private final def allLayers =
-    prevLayers :+ curLayer
-
   final override def describe: String =
-    s"DESC: ${allLayers.iterator.map(_.display) mkString " -> "}\nHTML: $outerHTML"
+    s"DESC: ${layers.nev.iterator.map(_.display) mkString " -> "}\nHTML: $outerHTML"
 
   // ==================
   // Self configuration
@@ -21,8 +19,9 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
 
   protected implicit val $: CssSelEngine[Dom, Dom]
 
-  protected val prevLayers: Vector[Layer[Dom]]
-  protected val curLayer: Layer[Dom]
+  /** oldest to newest; furthest to closest. */
+  protected val layers: DomZipperBase.Layers[Dom]
+
   protected[domzipper] def addLayer(nextLayer: Layer[Dom]): Self[F, A]
 
   final override def scrubHtml(f: HtmlScrub): Self[F, A] =
@@ -46,7 +45,7 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
   protected def collectChildren[C[_]](desc: String, C: Container[F, C])             : DomCollection[Self, F, C, Dom, A]
   protected def collectChildren[C[_]](desc: String, sel: String, C: Container[F, C]): DomCollection[Self, F, C, Dom, A]
 
-  final override def dom: Dom = curLayer.dom
+  final override def dom: Dom = layers.latest.dom
 
   final override def collect01(sel: String): DomCollection[Self, F, Option, Dom, A] = collect(sel, F.C01)
   final override def collect0n(sel: String): DomCollection[Self, F, Vector, Dom, A] = collect(sel, F.C0N)
@@ -70,7 +69,7 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
     F.map(_parent)(dom => addLayer(Layer("parent", ":parent", dom)))
 
   final protected def runCssQuery(sel: String): CssSelResult[Dom] =
-    $.run(sel, curLayer.dom)
+    $.run(sel, dom)
 
   final override def apply(name: String, sel: String, which: MofN): F[Self[F, A]] = {
     val results = runCssQuery(sel)
@@ -134,8 +133,16 @@ object DomZipperBase {
 
   trait WithStore[F[_], Dom, A, Self[G[_], B] <: WithStore[G, Dom, B, Self]] extends DomZipperBase[F, Dom, A, Self]
       with Store[F, Dom, A, Self] {
-    override final protected type Pos = (Vector[Layer[Dom]], Layer[Dom])
-    override final protected def pos = (prevLayers, curLayer)
-    override final protected[domzipper] def addLayer(n: Layer[Dom]) = newStore((prevLayers :+ curLayer, n), peek)
+    override final protected type Pos = Layers[Dom]
+    override final protected def pos = layers
+    override final protected[domzipper] def addLayer(n: Layer[Dom]) = newStore(layers add n, peek)
+  }
+
+  final case class Layers[Dom](nev: NonEmptyVector[Layer[Dom]]) extends AnyVal {
+    def latest = nev.last
+    def add(l: Layer[Dom]) = Layers(nev :+ l)
+  }
+  object Layers {
+    def init[Dom](l: Layer[Dom]) = Layers(NonEmptyVector one l)
   }
 }

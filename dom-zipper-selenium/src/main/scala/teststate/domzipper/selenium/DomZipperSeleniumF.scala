@@ -18,13 +18,13 @@ object DomZipperSeleniumF {
   private implicit val cssSelSelenium: CssSelEngine =
     DomZipper.CssSelEngine((css, parent) => parent.findElements(By.cssSelector(css)).asScala.toVector)
 
-  private val rootDomFn: ((Vector[Layer[Dom]], Layer[Dom])) => Dom =
-    _._2.dom
+  private val rootDomFn: DomZipperBase.Layers[Dom] => Dom =
+    _.latest.dom
 
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
 
     def apply(name: String, webElement: WebElement)(implicit scrub: HtmlScrub, driver: WebDriver): DomZipperSeleniumF[F, Dom] =
-      new DomZipperSeleniumF(Vector.empty, Layer(name, "", webElement), rootDomFn)
+      new DomZipperSeleniumF(DomZipperBase.Layers init Layer(name, "", webElement), rootDomFn)
 
     def apply(webElement: WebElement)(implicit scrub: HtmlScrub, driver: WebDriver): DomZipperSeleniumF[F, Dom] =
       apply("<provided>", webElement)
@@ -48,30 +48,29 @@ object DomZipperSeleniumF {
 
 import DomZipperSeleniumF.Dom
 
-final class DomZipperSeleniumF[F[_], A](override protected val prevLayers: Vector[Layer[Dom]],
-                                        override protected val curLayer: Layer[Dom],
-                                        override protected val peek: ((Vector[Layer[Dom]], Layer[Dom])) => A
-                                       )(implicit
-                                         override protected val $: DomZipperSeleniumF.CssSelEngine,
-                                         override protected[domzipper] val htmlScrub: HtmlScrub,
-                                         override protected val F: ErrorHandler[F],
-                                         driver: WebDriver
-                                       ) extends DomZipperBase.WithStore[F, Dom, A, DomZipperSeleniumF] {
+final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipperBase.Layers[Dom],
+                                        override protected val peek: DomZipperBase.Layers[Dom] => A
+                                      )(implicit
+                                        override protected val $: DomZipperSeleniumF.CssSelEngine,
+                                        override protected[domzipper] val htmlScrub: HtmlScrub,
+                                        override protected val F: ErrorHandler[F],
+                                        driver: WebDriver
+                                      ) extends DomZipperBase.WithStore[F, Dom, A, DomZipperSeleniumF] {
 
   override protected def newStore[B](pos: Pos, peek: Peek[B]): DomZipperSeleniumF[F, B] =
-    new DomZipperSeleniumF(pos._1, pos._2, peek)
+    new DomZipperSeleniumF(pos, peek)
 
   override def isCapable(c: DomZipper.Capability) = c match {
     case DomZipper.Capability.RadioButtonChecked => true
   }
 
   override def unmap =
-    new DomZipperSeleniumF(prevLayers, curLayer, DomZipperSeleniumF.rootDomFn)
+    new DomZipperSeleniumF(layers, DomZipperSeleniumF.rootDomFn)
 
   override protected def self = this
 
   override protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]) =
-    new DomZipperSeleniumF(prevLayers, curLayer, peek)($, h, g, driver)
+    new DomZipperSeleniumF(layers, peek)($, h, g, driver)
 
   override protected def _parent: F[Dom] =
     F.attempt(dom.parent()(driver))
