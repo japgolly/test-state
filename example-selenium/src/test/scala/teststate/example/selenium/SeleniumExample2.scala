@@ -37,7 +37,7 @@ object SeleniumExample2 extends TestSuite {
     debug(s"Observing $name...")
 
     private val searchField =
-      $.collect1n("[name=q]").zippers.head.dom
+      $.collect1n("[name=q]").head.dom
 
     def typeIntoSearch(keys: String): Unit =
       searchField.sendKeys(keys)

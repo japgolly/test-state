@@ -271,6 +271,18 @@ object DomZipper {
     def lastOption: Option[Z[F, A]] =
       result.lastOption
 
+    def head: F[Z[F, A]] =
+      if (result.isEmpty)
+        F fail "You called .head but collection is empty."
+      else
+        F pass result.head
+
+    def last: F[Z[F, A]] =
+      if (result.isEmpty)
+        F fail "You called .last but collection is empty."
+      else
+        F pass result.last
+
     def outerHTMLs: F[C[String]] = map(_.outerHTML)
     def innerHTMLs: F[C[String]] = map(_.innerHTML)
     def innerTexts: F[C[String]] = map(_.innerText)
