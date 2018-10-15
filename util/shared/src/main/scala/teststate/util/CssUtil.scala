@@ -4,9 +4,9 @@ object CssUtil {
 
   val DefaultPrefixes = "-moz-" :: "-ms-" :: "-o-" :: "-webkit-" :: Nil
 
-  def disableCssAnimation(disableTransitions: Boolean = true,
-                          disableTransforms : Boolean = true,
-                          disableAnimation  : Boolean = true): String = {
+  def disableCssAnimation(disableAnimation  : Boolean = true,
+                          disableTransitions: Boolean = true,
+                          disableTransforms : Boolean = true): String = {
     val sb = new StringBuilder
     def set(prop: String, value: String): Unit = {
       sb.append(prop)

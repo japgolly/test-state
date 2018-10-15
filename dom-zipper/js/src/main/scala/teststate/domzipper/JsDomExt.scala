@@ -30,13 +30,13 @@ object JsDomExt extends JsDomExt {
       ()
     }
 
-    def disableCssAnimation(disableTransitions: Boolean = true,
-                            disableTransforms : Boolean = true,
-                            disableAnimation  : Boolean = true): Unit = {
+    def disableCssAnimation(disableAnimation  : Boolean = true,
+                            disableTransitions: Boolean = true,
+                            disableTransforms : Boolean = true): Unit = {
       val css = CssUtil.disableCssAnimation(
+        disableAnimation   = disableAnimation,
         disableTransitions = disableTransitions,
-        disableTransforms  = disableTransforms,
-        disableAnimation   = disableAnimation)
+        disableTransforms  = disableTransforms)
       addStyleTag(css)
     }
   }

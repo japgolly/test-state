@@ -51,9 +51,9 @@ object Internals {
       ()
     }
 
-    def disableCssAnimation(disableTransitions: Boolean = true,
-                            disableTransforms : Boolean = true,
-                            disableAnimation  : Boolean = true): Unit = {
+    def disableCssAnimation(disableAnimation  : Boolean = true,
+                            disableTransitions: Boolean = true,
+                            disableTransforms : Boolean = true): Unit = {
       val css = CssUtil.disableCssAnimation(
         disableTransitions = disableTransitions,
         disableTransforms  = disableTransforms,
