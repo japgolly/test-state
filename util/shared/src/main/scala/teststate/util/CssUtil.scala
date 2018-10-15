@@ -8,32 +8,38 @@ object CssUtil {
                           disableTransforms : Boolean = true,
                           disableAnimation  : Boolean = true): String = {
     val sb = new StringBuilder
-    def disable(prop: String): Unit = {
+    def set(prop: String, value: String): Unit = {
       sb.append(prop)
-      sb.append(": none !important;\n")
+      sb.append(':')
+      sb.append(value)
+      sb.append("!important;\n")
       ()
     }
 
-    def disableWithPrefixes(prop: String): Unit = {
+    def setWithPrefixes(prop: String, value: String): Unit = {
       for (pre <- DefaultPrefixes) {
         sb.append(pre)
-        disable(prop)
+        set(prop, value)
       }
-      disable(prop)
+      set(prop, value)
     }
 
     sb.append("* {\n")
     if (disableTransitions) {
       sb.append("/*CSS transitions*/\n")
-      disableWithPrefixes("transition-property")
+      setWithPrefixes("transition-property", "none")
+      setWithPrefixes("transition-delay", "0s")
+      setWithPrefixes("transition-duration", "0s")
     }
     if (disableTransforms) {
       sb.append("/*CSS transforms*/\n")
-      disableWithPrefixes("transform")
+      setWithPrefixes("transform", "none")
     }
     if (disableAnimation) {
       sb.append("/*CSS animations*/\n")
-      disableWithPrefixes("animation")
+      setWithPrefixes("animation", "none")
+      setWithPrefixes("animation-delay", "0s")
+      setWithPrefixes("animation-duration", "0s")
     }
     sb.append("}")
     sb.toString()
