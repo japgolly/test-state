@@ -2,7 +2,7 @@ package teststate.example.selenium
 
 import java.time.Instant
 import java.util.concurrent.Executors
-import org.openqa.selenium.{Keys, WebDriver, WebElement}
+import org.openqa.selenium.{Keys, WebDriver}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import teststate.example.selenium.MyTestState._
@@ -36,8 +36,11 @@ object SeleniumExample2 extends TestSuite {
 
     debug(s"Observing $name...")
 
-    val searchField: WebElement =
-      $.collect0n("[name=q]").doms.named("search fields").head
+    private val searchField =
+      $.collect1n("[name=q]").zippers.head.dom
+
+    def typeIntoSearch(keys: String): Unit =
+      searchField.sendKeys(keys)
 
     val resultStats: Option[String] =
       $.collect01("#resultStats").map(_.innerText)
@@ -55,7 +58,7 @@ object SeleniumExample2 extends TestSuite {
   val * = Dsl[Ref, Obs, Unit].withSeleniumTab(_.tab)
 
   def searchFor(term: String) =
-    *.action(s"Search for '$term'")(_.obs.searchField.sendKeys(term + Keys.ENTER))
+    *.action(s"Search for '$term'")(_.obs.typeIntoSearch(term + Keys.ENTER))
 
   val resultCount = *.focus("Search result count").option(_.obs.resultCount)
 

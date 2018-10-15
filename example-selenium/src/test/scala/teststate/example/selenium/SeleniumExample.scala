@@ -1,6 +1,6 @@
 package teststate.example.selenium
 
-import org.openqa.selenium.{WebDriver, WebElement}
+import org.openqa.selenium.WebDriver
 import scala.concurrent.duration._
 import teststate.example.selenium.MyTestState._
 import utest._
@@ -17,8 +17,8 @@ object SeleniumExample extends TestSuite {
 
   class Obs($: DomZipperSelenium) {
 
-    val button: WebElement =
-      $("button", 1 of 3).dom
+    val clickButton: () => Unit =
+      $("button", 1 of 3).prepare(_.dom.click())
 
     val responseText: Option[String] =
       $.collect01("table").map(_("td", 2 of 2).innerText)
@@ -30,7 +30,7 @@ object SeleniumExample extends TestSuite {
 
   val * = Dsl[Ref, Obs, Unit]
 
-  val clickGet = *.action("Click GET")(_.obs.button.click())
+  val clickGet = *.action("Click GET")(_.obs.clickButton())
 
   val responseText = *.focus("Response text").option(_.obs.responseText)
 
