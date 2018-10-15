@@ -223,6 +223,19 @@ object DomZipper {
     def size: Int =
       result.length
 
+    def zippers: F[C[Z[F, A]]] =
+      C(enrichErr, result)
+
+    def map[B](f: Z[F, A] => B): F[C[B]] =
+      C(enrichErr, result.map(f))
+
+    @deprecated("Use .map", "2.2.0")
+    def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
+      map(f)
+
+    def traverse[B](f: Z[F, A] => F[B]): F[C[B]] =
+      F.flatMap(zippers)(C.traverse(_)(f))
+
     def doms: F[C[Dom]] =
       map(_.dom)
 
@@ -240,16 +253,6 @@ object DomZipper {
 
     def traverseExtracts[B](f: A => F[B]): F[C[B]] =
       F.flatMap(extracts)(C.traverse(_)(f))
-
-    def zippers: F[C[Z[F, A]]] =
-      C(enrichErr, result)
-
-    def map[B](f: Z[F, A] => B): F[C[B]] =
-      C(enrichErr, result.map(f))
-
-    @deprecated("Use .map", "2.2.0")
-    def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
-      map(f)
 
     def filter(f: Z[F, A] => Boolean): DomCollection[Z, F, C, Dom, A] = {
       val f2: Z[F, A] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
