@@ -214,6 +214,9 @@ object DomZipper {
         case Some(f) => rawResults.filter(f)
       }
 
+    private def fail[B](errMsg: String): F[B] =
+      F fail enrichErr(errMsg)
+
     def isEmpty: Boolean =
       result.isEmpty
 
@@ -263,7 +266,7 @@ object DomZipper {
       if (size == 1)
         F pass result.head
       else
-        F fail s"Expected exactly 1 result but have $size."
+        fail(s"Expected exactly 1 result but have $size.")
 
     def headOption: Option[Z[F, A]] =
       result.headOption
@@ -273,13 +276,13 @@ object DomZipper {
 
     def head: F[Z[F, A]] =
       if (result.isEmpty)
-        F fail "You called .head but collection is empty."
+        fail("You called .head but collection is empty.")
       else
         F pass result.head
 
     def last: F[Z[F, A]] =
       if (result.isEmpty)
-        F fail "You called .last but collection is empty."
+        fail("You called .last but collection is empty.")
       else
         F pass result.last
 
