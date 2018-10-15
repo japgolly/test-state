@@ -49,6 +49,11 @@ object CssUtilTest extends TestSuite {
           |-o-animation-duration:0s!important;
           |-webkit-animation-duration:0s!important;
           |animation-duration:0s!important;
+          |-moz-animation-iteration-count:0!important;
+          |-ms-animation-iteration-count:0!important;
+          |-o-animation-iteration-count:0!important;
+          |-webkit-animation-iteration-count:0!important;
+          |animation-iteration-count:0!important;
           |}
         """.stripMargin.trim
       assertMultiline(actual, expect)

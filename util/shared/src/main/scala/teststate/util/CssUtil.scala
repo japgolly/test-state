@@ -40,6 +40,7 @@ object CssUtil {
       setWithPrefixes("animation", "none")
       setWithPrefixes("animation-delay", "0s")
       setWithPrefixes("animation-duration", "0s")
+      setWithPrefixes("animation-iteration-count", "0")
     }
     sb.append("}")
     sb.toString()
