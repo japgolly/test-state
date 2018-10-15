@@ -229,28 +229,34 @@ object DomZipper {
     def map[B](f: Z[F, A] => B): F[C[B]] =
       C(enrichErr, result.map(f))
 
+    def traverse[B](f: Z[F, A] => F[B]): F[C[B]] =
+      F.flatMap(zippers)(C.traverse(_)(f))
+
     @deprecated("Use .map", "2.2.0")
     def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
       map(f)
 
-    def traverse[B](f: Z[F, A] => F[B]): F[C[B]] =
-      F.flatMap(zippers)(C.traverse(_)(f))
-
+    @deprecated("Use .map(_.dom)", "2.3.0")
     def doms: F[C[Dom]] =
       map(_.dom)
 
+    @deprecated("Use .map(...)", "2.3.0")
     def mapDoms[B](f: Dom => B): F[C[B]] =
       F.map(doms)(C.map(_)(f))
 
+    @deprecated("Use .traverse(...)", "2.3.0")
     def traverseDoms[B](f: Dom => F[B]): F[C[B]] =
       F.flatMap(doms)(C.traverse(_)(f))
 
+    @deprecated("Use .map(_.extract)", "2.3.0")
     def extracts: F[C[A]] =
       map(_.extract)
 
+    @deprecated("Use .map(...)", "2.3.0")
     def mapExtracts[B](f: A => B): F[C[B]] =
       F.map(extracts)(C.map(_)(f))
 
+    @deprecated("Use .traverse(...)", "2.3.0")
     def traverseExtracts[B](f: A => F[B]): F[C[B]] =
       F.flatMap(extracts)(C.traverse(_)(f))
 
