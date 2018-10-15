@@ -9,13 +9,20 @@ import Conditional.Implicits._
 object Action {
   sealed abstract class Inner[F[_], R, O, S, E]
 
-  type Prepared[F[_], O, S, E] = Option[() => F[E Or (O => E Or S)]]
+  type ActionResult[F[_], O, S, E] = F[E Or (O => E Or S)]
+  type Prepared[F[_], O, S, E] = Option[() => ActionResult[F, O, S, E]]
 
   final case class Single[F[_], R, O, S, E](run: ROS[R, O, S] => Prepared[F, O, S, E]) extends Inner[F, R, O, S, E] {
     def modPoly[F2[_], R2, O2, S2, E2](f: (ROS[R, O, S] => Prepared[F, O, S, E]) => ROS[R2, O2, S2] => Prepared[F2, O2, S2, E2]): Single[F2, R2, O2, S2, E2] =
       Single(f(run))
+
     @inline def mod(f: (ROS[R, O, S] => Prepared[F, O, S, E]) => ROS[R, O, S] => Prepared[F, O, S, E]): Single[F, R, O, S, E] =
       modPoly(f)
+
+    def modAction(f: (ROS[R, O, S], () => ActionResult[F, O, S, E]) => ActionResult[F, O, S, E]): Single[F, R, O, S, E] =
+      mod(run =>
+        ros =>
+          run(ros).map(actionFn => () => f(ros, actionFn)))
   }
   object Single {
     def empty[F[_], R, O, S, E](implicit F: ExecutionModel[F]): Single[F, R, O, S, E] =
