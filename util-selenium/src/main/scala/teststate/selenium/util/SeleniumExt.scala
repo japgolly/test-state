@@ -26,6 +26,12 @@ object Internals {
   private implicit def WebDriverExt(d: WebDriver): WebDriverExt = new WebDriverExt(d)
 
   class WebDriverExt(private val self: WebDriver) extends AnyVal {
+
+    def onShutdownQuit(): Unit =
+      Runtime.getRuntime().addShutdownHook(new Thread() {
+        override def run(): Unit = self.quit()
+      })
+
     def executeJsOrThrow(cmd: String, args: AnyRef*): AnyRef =
       self match {
         case j: JavascriptExecutor =>
