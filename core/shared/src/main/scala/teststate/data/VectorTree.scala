@@ -20,6 +20,9 @@ final case class VectorTree[+A](elements: Vector[Node[A]]) {
 
   override def toString: String =
     prettyPrintedLines().mkString("\n")
+
+  def deepSize: Int =
+    elements.foldLeft(0)(_ + _.deepSize)
 }
 
 object VectorTree {
@@ -31,6 +34,9 @@ object VectorTree {
 
     def iteratorWithLevel(currentLevel: Int = 0): Iterator[(Int, A)] =
       Iterator.single(currentLevel -> value) ++ children.iteratorWithLevel(currentLevel + 1)
+
+    def deepSize: Int =
+      1 + children.deepSize
   }
 
   def flat[A](as: Vector[A]): VectorTree[A] =
