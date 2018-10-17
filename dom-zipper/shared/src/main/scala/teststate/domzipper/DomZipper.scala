@@ -16,7 +16,7 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
     *   class Obs($: DomZipper) {
     *
     *     // Before making any observations...
-    *     private val checkConsistency = startConsistencyCheck()
+    *     private val checkConsistency = $.startConsistencyCheck()
     *
     *     // ... obs here ...
     *
