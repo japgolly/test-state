@@ -93,18 +93,18 @@ When retries are enabled, then test execution is
 
 # Modules
 
-| Module                | Description | Platforms |
-|-----------------------|-------------|-----------|
-| `core`                | The core module. | JVM + JS |
-| `dom-zipper`          | Standalone utility for observing web DOM with precision with conciseness.<br>This is the base API; concrete implementations below. | JVM + JS |
-| `dom-zipper-jsoup`    | DOM zipper built on [Jsoup](https://jsoup.org). | JVM |
-| `dom-zipper-selenium` | DOM zipper built on [Selenium](https://www.seleniumhq.org).<br>Also comes with a fast version with uses Jsoup for nearly all operations which is 5-50x faster.<br>See [doc/SELENIUM.md](doc/SELENIUM.md). | JVM |
-| `dom-zipper-sizzle`   | DOM zipper built on [Sizzle](https://sizzlejs.com/). | JS |
-| `ext-cats`            | Extensions for [Cats](https://github.com/typelevel/cats). | JVM + JS |
-| `ext-nyaya`           | Extensions for [Nyaya](https://github.com/japgolly/nyaya). | JVM + JS |
-| `ext-scalajs-react`   | Extensions for [scalajs-react](https://github.com/japgolly/scalajs-react). | JS |
-| `ext-scalaz`          | Extensions for [Scalaz](https://github.com/scalaz/scalaz). | JVM + JS |
-| `ext-selenium`        | Extensions for [Selenium](https://www.seleniumhq.org). | JVM |
+| Module                | Description | JVM | JS |
+|-----------------------|-------------|-----|-----|
+| `core`                | The core module. | JVM | JS |
+| `dom-zipper`          | Standalone utility for observing web DOM with precision with conciseness.<br>This is the base API; concrete implementations below. | JVM | JS |
+| `dom-zipper-jsoup`    | DOM zipper built on [Jsoup](https://jsoup.org). | JVM | |
+| `dom-zipper-selenium` | DOM zipper built on [Selenium](https://www.seleniumhq.org).<br>Also comes with a fast version with uses Jsoup for nearly all operations which is 5-50x faster.<br>See [doc/SELENIUM.md](doc/SELENIUM.md). | JVM | |
+| `dom-zipper-sizzle`   | DOM zipper built on [Sizzle](https://sizzlejs.com/). | | JS |
+| `ext-cats`            | Extensions for [Cats](https://github.com/typelevel/cats). | JVM | JS |
+| `ext-nyaya`           | Extensions for [Nyaya](https://github.com/japgolly/nyaya). | JVM | JS |
+| `ext-scalajs-react`   | Extensions for [scalajs-react](https://github.com/japgolly/scalajs-react). | | JS |
+| `ext-scalaz`          | Extensions for [Scalaz](https://github.com/scalaz/scalaz). | JVM | JS |
+| `ext-selenium`        | Extensions for [Selenium](https://www.seleniumhq.org). | JVM | |
 
 
 # Examples
