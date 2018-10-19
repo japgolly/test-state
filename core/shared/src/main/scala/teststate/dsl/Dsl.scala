@@ -150,6 +150,8 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       println(f(i))
     })
 
+  /** Multiple calls to this result in the earlier-specified functions running inside the later-specified ones.
+    */
   def withActionMod(f: Action.Single[F, R, O , S, E] => Action.Single[F, R, O , S, E]): Dsl[F, R, O, S, E] =
     new Dsl(f compose actionMod)
 

@@ -33,6 +33,19 @@ trait MultiBrowser[+D <: WebDriver] extends MultiTab[D] {
   def onNewDriver(f: D => Unit): this.type
   def onNewDriverWithTempTab(f: Tab[D] => Unit): this.type
   def onNewTab(f: Tab[D] => Unit): this.type
+
+  private def onShutdown(f: => Unit): Unit =
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      override def run(): Unit = f
+    })
+
+  /** On JVM shutdown, calls [[close()]]. */
+  def onShutdownClose(quit: Boolean = true): Unit =
+    onShutdown(close(quit))
+
+  /** On JVM shutdown, calls [[closeRoot()]]. */
+  def onShutdownCloseRoot(): Unit =
+    onShutdown(closeRoot())
 }
 
 object MultiBrowser {

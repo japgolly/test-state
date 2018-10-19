@@ -23,9 +23,7 @@ object FastDomZipperSeleniumTest extends TestSuite {
     options.addArguments("--no-sandbox") // Travis workaround: https://github.com/SeleniumHQ/selenium/issues/4961
     val driver = new ChromeDriver(options)
     driver.manage().timeouts().implicitlyWait(1, TimeUnit.NANOSECONDS)
-    Runtime.getRuntime.addShutdownHook(new Thread() {
-      override def run(): Unit = driver.quit()
-    })
+    driver.onShutdownQuit()
     driver.get("file://" + testHtmlPath)
     (FastDomZipperSelenium.html(driver), FastDomZipperSelenium.body(driver))
   }

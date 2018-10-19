@@ -11,6 +11,7 @@ object TestStateExt {
 
   final class DslIdExt[R, O, S, E](private val dsl: Dsl[Id, R, O, S, E]) extends AnyVal {
 
+    /** Make sure this comes after any other .withActionMod calls. */
     def withSeleniumTab(tab: R => Tab[WebDriver]): Dsl[Id, R, O, S, E] =
       dsl.withActionMod(_.mod(actionDef => ros =>
         actionDef(ros).map(actionFn =>
@@ -19,6 +20,7 @@ object TestStateExt {
 
   final class DslExt[F[_], R, O, S, E](private val dsl: Dsl[F, R, O, S, E]) extends AnyVal {
 
+    /** Make sure this comes after any other .withActionMod calls. */
     def withSeleniumTab(tab: R => Tab[WebDriver],
                         lockWait: Duration,
                         lockRetry: Duration)
