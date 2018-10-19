@@ -138,7 +138,7 @@ object DomZippersFastAndSlow {
   }
 
   /** Uses the same underlying zipper in both the fast and slow slots. */
-  def fake[F[_], Z[f[_], a] <: DomZipper[f, _, a, Z], D](slow: Z[F, D])(implicit F: ErrorHandler[F]): AtHome[F, D] =
+  def slowOnly[F[_], Z[f[_], a] <: DomZipper[f, _, a, Z], D](slow: Z[F, D])(implicit F: ErrorHandler[F]): AtHome[F, D] =
     apply(slow, slow)
 
   final case class FastAndSlow[F[_],
