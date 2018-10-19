@@ -45,7 +45,7 @@ object DomZipperSeleniumTest extends TestSuite {
 
     'collect - {
       assertEq(checkboxes.size, 2)
-      assertEq(checkboxes.mapDoms(_.isSelected), Vector(true, false))
+      assertEq(checkboxes.map(_.dom().isSelected), Vector(true, false))
       assertEq(checkboxes.map(_.checked), Vector(true, false))
     }
 

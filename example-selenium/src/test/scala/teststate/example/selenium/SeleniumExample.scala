@@ -18,7 +18,7 @@ object SeleniumExample extends TestSuite {
   class Obs($: DomZipperSelenium) {
 
     val clickButton: () => Unit =
-      $("button", 1 of 3).prepare(_.dom.click())
+      $("button", 1 of 3).prepare(_.dom().click())
 
     val responseText: Option[String] =
       $.collect01("table").map(_("td", 2 of 2).innerText)

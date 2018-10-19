@@ -9,14 +9,16 @@ import ErrorHandler.{ErrorHandlerOptionOps, ErrorHandlerResultOps}
 
 object DomZipperSeleniumF {
 
-  type Dom = WebElement
+  // The Function0 part here means that DomZipperSelenium has the same types as FastDomZipperSelenium.
+  // This means one can switch their types from one to the other without having to change usage.
+  type Dom = () => WebElement
 
   type DomCollection[F[_], C[_], A] = DomZipper.DomCollection[DomZipperSeleniumF, F, C, Dom, A]
 
   type CssSelEngine = DomZipper.CssSelEngine[Dom, Dom]
 
   private implicit val cssSelSelenium: CssSelEngine =
-    DomZipper.CssSelEngine((css, parent) => parent.findElements(By.cssSelector(css)).asScala.toVector)
+    DomZipper.CssSelEngine((css, parent) => parent().findElements(By.cssSelector(css)).asScala.map(() => _)(collection.breakOut))
 
   private val rootDomFn: DomZipperBase.Layers[Dom] => Dom =
     _.latest.dom
@@ -24,7 +26,7 @@ object DomZipperSeleniumF {
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
 
     def apply(name: String, webElement: WebElement)(implicit scrub: HtmlScrub, driver: WebDriver): DomZipperSeleniumF[F, Dom] =
-      new DomZipperSeleniumF(DomZipperBase.Layers init Layer(name, "", webElement), rootDomFn)
+      new DomZipperSeleniumF(DomZipperBase.Layers init Layer(name, "", () => webElement), rootDomFn)
 
     def apply(webElement: WebElement)(implicit scrub: HtmlScrub, driver: WebDriver): DomZipperSeleniumF[F, Dom] =
       apply("<provided>", webElement)
@@ -80,7 +82,7 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     new DomZipperSeleniumF(layers, peek)($, h, g, driver)
 
   override protected def _parent: F[Dom] =
-    F.attempt(dom.parent()(driver))
+    F.attempt(() => dom().parent()(driver))
 
   override protected def _outerHTML: String =
     getAttribute("outerHTML").getOrElse("null")
@@ -95,47 +97,47 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     newDomCollection(sel, runCssQuery(sel), C)
 
   override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =
-    newDomCollection(desc, dom.children(), C)
+    newDomCollection(desc, dom().children().map(() => _), C)
 
   override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] = {
     // WebElement implements hashCode and equals sensibly
-    val all: Set[WebElement] = runCssQuery(sel).toSet
-    val children = dom.children().filter(all.contains)
+    val all: Set[WebElement] = runCssQuery(sel).map(_())(collection.breakOut)
+    val children = dom().children().iterator.filter(all.contains).map(() => _).toVector
     newDomCollection(desc, children, C)
   }
 
   override def matches(css: String): F[Boolean] = {
     val all = driver.findElements(By.cssSelector(css)).asScala
-    val dom = this.dom
+    val dom = this.dom()
     F pass all.contains(dom) // WebElement implements hashCode and equals sensibly
   }
 
   override def getAttribute(name: String): Option[String] =
-    Option(dom.getAttribute(name))
+    Option(dom().getAttribute(name))
 
   override def tagName: String =
-    dom.getTagName()
+    dom().getTagName()
 
   override def innerText: String =
-    dom.getText()
+    dom().getText()
 
   override def checked: F[Boolean] =
-    F pass dom.isSelected()
+    F pass dom().isSelected()
 
   override def classes: Set[String] =
-    dom.classes()
+    dom().classes()
 
   override def value: F[String] =
-    getAttribute("value") orFail s".value failed on <${dom.getTagName}>."
+    getAttribute("value") orFail s".value failed on <${dom().getTagName}>."
 
   /** The currently selected option in a &lt;select&gt; dropdown. */
   def selectedOption: F[DomCollection[DomZipperSeleniumF, F, Option, Dom, A]] =
-    dom.getTagName.toUpperCase match {
+    dom().getTagName.toUpperCase match {
       case "SELECT" => F pass collect01("option[selected]")
       case x        => F fail s"<$x> is not a <SELECT>"
     }
 
   /** The text value of the currently selected option in a &lt;select&gt; dropdown. */
   def selectedOptionText: F[Option[String]] =
-    selectedOption.flatMap(_.mapDoms(_.getText))
+    selectedOption.flatMap(_.mapDoms(_().getText))
 }
