@@ -15,7 +15,7 @@ object SeleniumExample extends TestSuite {
     driver
   }
 
-  class Obs($: DomZipperSelenium) {
+  class Obs($: FastDomZipperSelenium) {
 
     val clickButton: () => Unit =
       $("button", 1 of 3).prepare(_.dom().click())
@@ -26,7 +26,7 @@ object SeleniumExample extends TestSuite {
     // println(s"responseText = ${responseText.toString.replace("\n", " ").take(60)}")
   }
 
-  val observer: Observer[Ref, Obs, String] = Observer(ref => new Obs(DomZipperSelenium.html(ref)))
+  val observer: Observer[Ref, Obs, String] = Observer(ref => new Obs(FastDomZipperSelenium.html(ref)))
 
   val * = Dsl[Ref, Obs, Unit]
 
