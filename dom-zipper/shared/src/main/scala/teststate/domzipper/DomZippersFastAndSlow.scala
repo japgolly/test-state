@@ -58,6 +58,10 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
     )
   }
 
+  /** Drops the fast DomZipper and uses the slow one exclusively. */
+  def slowOnly(): F[DomZippersFastAndSlow[F, Dom, Dom]] =
+    pos.slowOnly().map(_.toDomZipperRoot)
+
   override final protected def newStore[B](pos: FastAndSlow[F, FastF, FD, SlowF, SD], peek: Peek[B]) =
     pos.toDomZipper(peek)
 
@@ -183,6 +187,9 @@ object DomZippersFastAndSlow {
     }
 
     def toDomZipperRoot = toDomZipper(rootRomFn)
+
+    def slowOnly(): F[FastAndSlow[F, SlowF, SD, SlowF, SD]] =
+      slow().map(s => FastAndSlow(s, () => F.pass(s), s.isCapable))
   }
 
 }
