@@ -126,5 +126,11 @@ object FastDomZipperSeleniumTest extends TestSuite {
       'radioT - assertEq($("input[type=radio]", 1 of 2).dom().isSelected, true)
       'radioF - assertEq($("input[type=radio]", 2 of 2).dom().isSelected, false)
     }
+
+    'slowOnlySameShape - {
+      val s = $.slowOnly()
+      val _: FastDomZipperSelenium = s
+      ()
+    }
   }
 }
