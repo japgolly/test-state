@@ -1,15 +1,16 @@
 package teststate
 
 import acyclic.file
+import teststate.data.Or
 
 trait Exports
   extends core.CoreExports
      with core.CoreExports2
      with core.CoreExports3
-     with dsl.StdlibUtil
      with typeclass.Empty.Ops
      with typeclass.Equal.Implicits
-     with run.RunImplicits {
+     with run.RunImplicits
+     with util.Exports {
 
   type Display[E] = teststate.typeclass.Display[E]
   val Display = teststate.typeclass.Display
@@ -60,6 +61,9 @@ trait Exports
 
   type TestWithInitialState[F[_], R, O, S, E] = teststate.run.TestWithInitialState[F, R, O, S, E]
   val TestWithInitialState = teststate.run.TestWithInitialState
+
+  implicit def testStateOrFromScalaEither[A, B](e: A Either B): A Or B =
+    Or fromScalaEither e
 
   implicit def testStateAssertionSettings: Report.AssertionSettings =
     Report.AssertionSettings.default

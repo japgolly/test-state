@@ -1,6 +1,6 @@
 package teststate.domzipper
 
-trait SharedExports {
+trait SharedExports extends teststate.util.Exports {
 
   final implicit def toMofNOps(i: Int): MofN.IntExt =
     new MofN.IntExt(i)

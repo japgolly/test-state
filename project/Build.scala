@@ -146,7 +146,7 @@ object TestState {
   lazy val coreJS  = core.js
   lazy val core = crossProject(JSPlatform, JVMPlatform)
     .configureCross(commonSettings, publicationSettings)
-    .dependsOn(coreMacros)
+    .dependsOn(coreMacros, util)
     .configureCross(testSettings)
     .settings(
       libraryDependencies ++= Seq(

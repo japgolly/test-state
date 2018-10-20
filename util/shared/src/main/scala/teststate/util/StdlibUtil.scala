@@ -1,17 +1,12 @@
-package teststate.dsl
+package teststate.util
 
 import acyclic.file
-import teststate.data.Or
-import teststate.typeclass.{Distributive, Functor}
 import StdlibUtil._
 
 trait StdlibUtil {
 
   implicit def toStateTestEitherStringExt[A](e: Either[String, A]): StateTestEitherStringExt[A] =
     new StateTestEitherStringExt(e)
-
-  implicit def testStateOrFromScalaEither[A, B](e: A Either B): A Or B =
-    Or fromScalaEither e
 
   implicit def TestStateOptionExt[A](a: Option[A]): TestStateOptionExt[A] =
     new TestStateOptionExt(a)
