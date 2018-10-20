@@ -1,17 +1,18 @@
 package teststate.domzipper.selenium
 
-import org.openqa.selenium.WebDriver
+import org.openqa.selenium.{WebDriver, WebElement}
 import teststate.domzipper.{DomZippersFastAndSlow, ErrorHandler, HtmlScrub}
 import teststate.domzipper.jsoup.DomZipperJsoupF
 import DomZipperJsoupF.{Dom => JDom}
-import DomZipperSeleniumF.Dom
 
 object FastDomZipperSeleniumF {
 
+  type Dom = WebElement
+
   type FastDomZipperSeleniumF[F[_]] = DomZippersFastAndSlow.AtHome[F, Dom]
 
-  def apply[F[_]: ErrorHandler](fast: DomZipperJsoupF[F, JDom], slow: DomZipperSeleniumF[F, Dom]): FastDomZipperSeleniumF[F] =
-    DomZippersFastAndSlow[F, DomZipperJsoupF, JDom, DomZipperSeleniumF, Dom](fast, slow)
+  def apply[F[_]: ErrorHandler](fast: DomZipperJsoupF[F, JDom], slow: DomZipperSeleniumF[F, () => Dom]): FastDomZipperSeleniumF[F] =
+    DomZippersFastAndSlow[F, DomZipperJsoupF, JDom, DomZipperSeleniumF, Dom](fast, slow.map(_()))
 
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
     private val DomZipperSelenium = new DomZipperSeleniumF.Constructors[F]()

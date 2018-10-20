@@ -13,10 +13,10 @@ object SeleniumExample2 extends TestSuite {
 
   case class Ref(name: String, tab: Tab[WebDriver]) {
     def observe(): Obs = {
-      tab.use(webDriver =>                // Ensure we're on our allocated tab
-        DomZipperSelenium.html(webDriver) // Create a DomZipper starting at the <html> tag
-          .ensureConsistency($ =>         // Ensure page doesn't change mid-observation
-            new Obs($, name)))            // Observe the page
+      tab.use(webDriver =>                    // Ensure we're on our allocated tab
+        FastDomZipperSelenium.html(webDriver) // Create a DomZipper starting at the <html> tag
+          .ensureConsistency($ =>             // Ensure page doesn't change mid-observation
+            new Obs($, name)))                // Observe the page
     }
   }
 
@@ -32,12 +32,12 @@ object SeleniumExample2 extends TestSuite {
         System.out.flush()
       }
 
-  class Obs($: DomZipperSelenium, name: String) {
+  class Obs($: FastDomZipperSelenium, name: String) {
 
     debug(s"Observing $name...")
 
     private val searchField =
-      $.collect1n("[name=q]").head.dom
+      $.collect1n("[name=q]").head.dom()
 
     def typeIntoSearch(keys: String): Unit =
       searchField.sendKeys(keys)
