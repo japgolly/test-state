@@ -94,6 +94,8 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
   final def prepare[B](f: Self[F, A] => B): () => B =
     () => f(self)
 
+  def enrichErr(msg: String): String
+
   // ====================
   // DOM & DOM inspection
   // ====================
@@ -169,6 +171,17 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
   final def child(which: MofN = MofN.Sole)  : F[Self[F, A]] = child("", which)
   final def child(sel: String, which: MofN) : F[Self[F, A]] = child("", sel, which)
   final def child(name: String, sel: String): F[Self[F, A]] = child(name, sel, MofN.Sole)
+
+  /** The currently selected option in a &lt;select&gt; dropdown. */
+  def selectedOption: F[DomCollection[Self, F, Option, Dom, A]] =
+    tagName.toUpperCase match {
+      case "SELECT" => F pass collect01("option[selected]")
+      case x        => F fail enrichErr(s"<$x> is not a <SELECT>")
+    }
+
+  /** The text value of the currently selected option in a &lt;select&gt; dropdown. */
+  def selectedOptionText: F[Option[String]] =
+    selectedOption.flatMap(_.map(_.innerText))
 }
 
 // =====================================================================================================================

@@ -99,7 +99,7 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
     }
   }
 
-  protected def enrichErr(msg: String): String =
+  override def enrichErr(msg: String): String =
     msg + "\n" + describe
 }
 

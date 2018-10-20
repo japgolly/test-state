@@ -146,17 +146,4 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
 
   def forceDomAs[D <: Dom]: D =
     dom.asInstanceOf[D]
-
-  /** The currently selected option in a &lt;select&gt; dropdown. */
-  def selectedOption: F[Option[html.Option]] =
-    domAs[html.Select].map(s =>
-      if (s.selectedIndex >= 0)
-        Some(s.options(s.selectedIndex))
-      else
-        None
-    )
-
-  /** The text value of the currently selected option in a &lt;select&gt; dropdown. */
-  def selectedOptionText: F[Option[String]] =
-    selectedOption.map(_.map(_.text))
 }

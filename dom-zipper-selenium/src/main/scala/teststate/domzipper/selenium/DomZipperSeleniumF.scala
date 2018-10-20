@@ -129,15 +129,4 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
 
   override def value: F[String] =
     getAttribute("value") orFail s".value failed on <${dom().getTagName}>."
-
-  /** The currently selected option in a &lt;select&gt; dropdown. */
-  def selectedOption: F[DomCollection[DomZipperSeleniumF, F, Option, Dom, A]] =
-    dom().getTagName.toUpperCase match {
-      case "SELECT" => F pass collect01("option[selected]")
-      case x        => F fail s"<$x> is not a <SELECT>"
-    }
-
-  /** The text value of the currently selected option in a &lt;select&gt; dropdown. */
-  def selectedOptionText: F[Option[String]] =
-    selectedOption.flatMap(_.mapDoms(_().getText))
 }
