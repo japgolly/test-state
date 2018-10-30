@@ -70,7 +70,7 @@ These instructions will help you get the most of test-state and Selenium.
   ```scala
   case class Ref(tab: Tab[WebDriver])
 
-  val action = Dsl.disableCssAnimation("Disable CSS animations")(_.ref.tab.use(_.disableCssAnimation()))
+  val action = Dsl.action("Disable CSS animations")(_.ref.tab.use(_.disableCssAnimation()))
   ```
 
 * Use consistency checks.
