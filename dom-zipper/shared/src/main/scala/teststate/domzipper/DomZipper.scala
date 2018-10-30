@@ -5,10 +5,33 @@ import ErrorHandler.ErrorHandlerResultOps
 
 trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
 
+  // ====================
+  // Self & configuration
+  // ====================
+
+  protected def self: Self[F, A]
+
+  protected implicit def F: ErrorHandler[F]
+
+  protected[domzipper] def htmlScrub: HtmlScrub
+
+  def scrubHtml(f: HtmlScrub): Self[F, A]
+
+  final def scrubHtml(f: String => String): Self[F, A] =
+    scrubHtml(HtmlScrub(f))
+
+  def isCapable(c: DomZipper.Capability): Boolean
+
   def describe: String
 
   @deprecated("Use .describe", "2.3.0")
   final def describeLoc: String = describe
+
+  def enrichErr(msg: String): String
+
+  // =========
+  // Utilities
+  // =========
 
   /** To ensure that DOM doesn't change in the middle of an observation, use this pattern:
     *
@@ -67,21 +90,14 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
     } yield b
   }
 
-  def isCapable(c: DomZipper.Capability): Boolean
+  final def prepare[B](f: Self[F, A] => B): () => B =
+    () => f(self)
 
-  // ==================
-  // Self configuration
-  // ==================
+  // =================
+  // Comonad and focus
+  // =================
 
-  protected def self: Self[F, A]
-
-  protected implicit def F: ErrorHandler[F]
-  protected[domzipper] def htmlScrub: HtmlScrub
-
-  def scrubHtml(f: HtmlScrub): Self[F, A]
-
-  final def scrubHtml(f: String => String): Self[F, A] =
-    scrubHtml(HtmlScrub(f))
+  def extract: A
 
   def map[B](f: A => B): Self[F, B]
 
@@ -91,18 +107,29 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
 
   def unmap:  Self[F, Dom]
 
-  final def prepare[B](f: Self[F, A] => B): () => B =
-    () => f(self)
+  // =======
+  // Descent
+  // =======
 
-  def enrichErr(msg: String): String
+  def apply(name: String, sel: String, which: MofN): F[Self[F, A]]
+  def child(name: String, sel: String, which: MofN): F[Self[F, A]]
+
+  final def apply(sel: String)              : F[Self[F, A]] = apply("", sel)
+  final def apply(sel: String, which: MofN) : F[Self[F, A]] = apply("", sel, which)
+  final def apply(name: String, sel: String): F[Self[F, A]] = apply(name, sel, MofN.Sole)
+
+  final def child(sel: String)              : F[Self[F, A]] = child("", sel)
+  final def child(which: MofN = MofN.Sole)  : F[Self[F, A]] = child("", which)
+  final def child(sel: String, which: MofN) : F[Self[F, A]] = child("", sel, which)
+  final def child(name: String, sel: String): F[Self[F, A]] = child(name, sel, MofN.Sole)
 
   // ====================
   // DOM & DOM inspection
   // ====================
 
-  def dom: Dom
+  def parent: F[Self[F, A]]
 
-  def extract: A
+  def dom: Dom
 
   protected def _outerHTML: String
   protected def _innerHTML: String
@@ -154,23 +181,6 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
       case None    => collect01(s"*[$attr]").zippers
       case Some(_) => F pass Some(self)
     }
-
-  // =======
-  // Descent
-  // =======
-
-  def parent: F[Self[F, A]]
-  def apply(name: String, sel: String, which: MofN): F[Self[F, A]]
-  def child(name: String, sel: String, which: MofN): F[Self[F, A]]
-
-  final def apply(sel: String)              : F[Self[F, A]] = apply("", sel)
-  final def apply(sel: String, which: MofN) : F[Self[F, A]] = apply("", sel, which)
-  final def apply(name: String, sel: String): F[Self[F, A]] = apply(name, sel, MofN.Sole)
-
-  final def child(sel: String)              : F[Self[F, A]] = child("", sel)
-  final def child(which: MofN = MofN.Sole)  : F[Self[F, A]] = child("", which)
-  final def child(sel: String, which: MofN) : F[Self[F, A]] = child("", sel, which)
-  final def child(name: String, sel: String): F[Self[F, A]] = child(name, sel, MofN.Sole)
 
   /** The currently selected option in a &lt;select&gt; dropdown. */
   def selectedOption: F[DomCollection[Self, F, Option, Dom, A]] =
