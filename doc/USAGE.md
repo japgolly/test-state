@@ -10,7 +10,7 @@
 1. Choose dependencies and add to SBT.
     <br>Module descriptions are [here](../README.md#modules). Take what you need and delete the rest.
     ```scala
-    val TestStateVer = "2.1.0"
+    val TestStateVer = "2.3.0"
 
     libraryDependencies ++= Seq(
       "com.github.japgolly.test-state" %%% "core"              % TestStateVer % "test",
@@ -30,9 +30,10 @@
     package my.app.test
 
     object MyTestState
-      extends teststate.Exports                  // Core. Most important piece.
-         with teststate.domzipper.Exports
-         with teststate.domzipper.sizzle.Exports // This already extends above.
+      extends teststate.Exports                    // Core. Most important piece.
+         with teststate.domzipper.jsoup.Exports    // This already extends Core
+         with teststate.domzipper.selenium.Exports // This already extends Core
+         with teststate.domzipper.sizzle.Exports   // This already extends Core
          with teststate.ExtCats
          with teststate.ExtNyaya
          with teststate.ExtScalaJsReact
