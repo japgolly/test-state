@@ -31,7 +31,7 @@ object TestState {
     final val ScalaJsDom      = "0.9.6"
     final val ScalaJsReact    = "1.3.1"
     final val ScalaJsJavaTime = "0.2.5"
-    final val Scalaz          = "7.2.26"
+    final val Scalaz          = "7.2.27"
     final val Selenium        = "3.14.0"
     final val Sizzle          = "2.3.0"
     final val UnivEq          = "1.0.4"
