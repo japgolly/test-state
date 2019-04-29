@@ -19,22 +19,22 @@ object TestState {
 
   object Ver {
     final val Acyclic         = "0.1.8"
-    final val Cats            = "1.4.0"
+    final val Cats            = "1.6.0"
     final val Jsoup           = "1.11.3"
-    final val KindProjector   = "0.9.8"
+    final val KindProjector   = "0.9.10"
     final val MacroParadise   = "2.1.1"
     final val Microlibs       = "1.18"
     final val MTest           = "0.6.6"
     final val Nyaya           = "0.8.1"
     final val Scala211        = "2.11.12"
     final val Scala212        = "2.12.7"
-    final val ScalaJsDom      = "0.9.6"
+    final val ScalaJsDom      = "0.9.7"
     final val ScalaJsReact    = "1.3.1"
     final val ScalaJsJavaTime = "0.2.5"
-    final val Scalaz          = "7.2.26"
+    final val Scalaz          = "7.2.27"
     final val Selenium        = "3.14.0"
     final val Sizzle          = "2.3.0"
-    final val UnivEq          = "1.0.4"
+    final val UnivEq          = "1.0.6"
 
     // Used in examples only
     final val Monocle       = "1.5.0"
