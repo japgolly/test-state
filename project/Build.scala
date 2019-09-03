@@ -18,50 +18,53 @@ object TestState {
     Lib.publicationSettings(ghProject)
 
   object Ver {
-    final val Acyclic         = "0.1.9"
-    final val Cats            = "1.6.1"
-    final val Jsoup           = "1.12.1"
-    final val KindProjector   = "0.10.3"
-    final val MacroParadise   = "2.1.1"
-    final val Microlibs       = "1.22"
-    final val MTest           = "0.7.1"
-    final val Nyaya           = "0.8.1"
-    final val Scala211        = "2.11.12"
-    final val Scala212        = "2.12.8"
-    final val ScalaJsDom      = "0.9.7"
-    final val ScalaJsReact    = "1.4.2"
-    final val ScalaJsJavaTime = "0.2.5"
-    final val Scalaz          = "7.2.28"
-    final val Selenium        = "3.141.59"
-    final val Sizzle          = "2.3.0"
-    final val UnivEq          = "1.0.6"
+    val Acyclic         = "0.2.0"
+    val Cats            = "2.0.0-RC1"
+    val Jsoup           = "1.12.1"
+    val KindProjector   = "0.10.3"
+    val Microlibs       = "2.0-RC1"
+    val MTest           = "0.7.1"
+    val Nyaya           = "0.9.0-RC1"
+    val Scala212        = "2.12.8"
+    val Scala213        = "2.13.0"
+    val ScalaCollCompat = "2.1.2"
+    val ScalaJsDom      = "0.9.7"
+    val ScalaJsReact    = "1.5.0-RC1"
+    val ScalaJsJavaTime = "0.2.5"
+    val Scalaz          = "7.2.28"
+    val Selenium        = "3.141.59"
+    val Sizzle          = "2.3.0"
+    val UnivEq          = "1.1.0-RC3"
 
     // Used in examples only
-    final val Monocle       = "1.5.0"
-    final val ReactJs       = "16.5.1"
+    val MacroParadise   = "2.1.1"
+    val Monocle         = "2.0.0-RC1"
+    val ReactJs         = "16.7.0"
   }
 
   def scalacFlags = Seq(
     "-deprecation",
     "-unchecked",
-    "-Ywarn-dead-code",
-    // "-Ywarn-unused",
-    "-Ywarn-value-discard",
     "-feature",
     "-language:postfixOps",
     "-language:implicitConversions",
     "-language:higherKinds",
-    "-language:existentials")
+    "-language:existentials",
+    "-opt:l:inline",
+    "-opt-inline-from:japgolly.univeq.**",
+    "-opt-inline-from:teststate.**",
+    "-Ywarn-dead-code",
+    // "-Ywarn-unused",
+    "-Ywarn-value-discard")
 
   val commonSettings = ConfigureBoth(
     _.settings(
       organization                  := "com.github.japgolly.test-state",
       homepage                      := Some(url("https://github.com/japgolly/" + ghProject)),
       licenses                      += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
-      scalaVersion                  := Ver.Scala212,
-      crossScalaVersions            := Seq(Ver.Scala211, Ver.Scala212),
+      scalaVersion                  := Ver.Scala213,
+      crossScalaVersions            := Seq(Ver.Scala212, Ver.Scala213),
       scalacOptions                ++= scalacFlags,
-      scalacOptions in Compile     ++= byScalaVersion { case (2, 12) => Seq("-opt:l:method") }.value,
       scalacOptions in Test        --= Seq("-Ywarn-dead-code"),
       shellPrompt in ThisBuild      := ((s: State) => Project.extract(s).currentRef.project + "> "),
       triggeredMessage              := Watched.clearWhenTriggered,
@@ -90,8 +93,17 @@ object TestState {
         // "org.scala-lang" % "scala-library" % scalaVersion.value,
         "org.scala-lang" % "scala-compiler" % scalaVersion.value % Provided))
 
-  def macroParadisePlugin =
-    compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.full)
+  def addMacroParadisePlugin = Def.settings(
+    Seq(
+      libraryDependencies ++= byScalaVersion {
+        case (2, 12) => Seq(compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.patch))
+        case (2, 13) => Nil
+      }.value,
+      scalacOptions ++= byScalaVersion {
+        case (2, 12) => Nil
+        case (2, 13) => Seq("-Ymacro-annotations")
+      }.value
+    ))
 
   def testSettings = ConfigureBoth(
     _.settings(
@@ -150,10 +162,11 @@ object TestState {
     .configureCross(testSettings)
     .settings(
       libraryDependencies ++= Seq(
-        "com.github.japgolly.univeq" %%% "univeq"     % Ver.UnivEq,
-        "com.github.japgolly.nyaya"  %%% "nyaya-gen"  % Ver.Nyaya % "test",
-        "com.github.japgolly.nyaya"  %%% "nyaya-prop" % Ver.Nyaya % "test",
-        "com.github.japgolly.nyaya"  %%% "nyaya-test" % Ver.Nyaya % "test"))
+        "org.scala-lang.modules"     %%% "scala-collection-compat" % Ver.ScalaCollCompat,
+        "com.github.japgolly.univeq" %%% "univeq"                  % Ver.UnivEq,
+        "com.github.japgolly.nyaya"  %%% "nyaya-gen"               % Ver.Nyaya % Test,
+        "com.github.japgolly.nyaya"  %%% "nyaya-prop"              % Ver.Nyaya % Test,
+        "com.github.japgolly.nyaya"  %%% "nyaya-test"              % Ver.Nyaya % Test))
     .jsSettings(
       libraryDependencies += "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime)
 
@@ -291,10 +304,10 @@ object TestState {
     .settings(
       moduleName := "example-react",
       libraryDependencies ++= Seq(
-        "com.github.japgolly.scalajs-react" %%% "ext-monocle"   % Ver.ScalaJsReact,
-        "com.github.julien-truffaut"        %%% "monocle-core"  % Ver.Monocle,
-        "com.github.julien-truffaut"        %%% "monocle-macro" % Ver.Monocle),
-      addCompilerPlugin(macroParadisePlugin), // For Monocle macros
+        "com.github.japgolly.scalajs-react" %%% "ext-monocle-cats" % Ver.ScalaJsReact,
+        "com.github.julien-truffaut"        %%% "monocle-core"     % Ver.Monocle,
+        "com.github.julien-truffaut"        %%% "monocle-macro"    % Ver.Monocle),
+      addMacroParadisePlugin, // For Monocle macros
       jsDependencies ++= Seq(
         "org.webjars.npm" % "react" % Ver.ReactJs
           /        "umd/react.development.js"

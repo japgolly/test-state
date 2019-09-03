@@ -1,6 +1,7 @@
 package teststate.typeclass
 
 import acyclic.file
+import scala.collection.compat._
 import teststate.data.{Name, NameFn}
 
 final class Display[A](private val display: A => String) extends AnyVal {
@@ -19,10 +20,10 @@ final class Display[A](private val display: A => String) extends AnyVal {
   def indent(i: String): Display[A] =
     map(i + _.replace("\n", "\n" + i))
 
-  def mkString[C[X] <: TraversableOnce[X]](start: String, mid: String, end: String): Display[C[A]] =
+  def mkString[C[X] <: IterableOnce[X]](start: String, mid: String, end: String): Display[C[A]] =
     Display(_.toIterator.map(display).mkString(start, mid, end))
 
-  def coll[C[X] <: TraversableOnce[X]]: Display[C[A]] =
+  def coll[C[X] <: IterableOnce[X]]: Display[C[A]] =
     mkString("[", ", ", "]")
 }
 
@@ -115,7 +116,7 @@ object Display {
         case Some(a) => s"Some(${display(a)})"
       }
 
-    implicit def testStateDisplayTraversable[C[X] <: Traversable[X], A](implicit display: Display[A]): Display[C[A]] =
+    implicit def testStateDisplayTraversable[C[X] <: Iterable[X], A](implicit display: Display[A]): Display[C[A]] =
       Display(_.toIterator.map(display(_)).mkString(", "))
   }
 
