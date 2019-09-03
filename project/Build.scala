@@ -21,7 +21,7 @@ object TestState {
     final val Acyclic         = "0.1.9"
     final val Cats            = "1.6.1"
     final val Jsoup           = "1.12.1"
-    final val KindProjector   = "0.9.10"
+    final val KindProjector   = "0.10.3"
     final val MacroParadise   = "2.1.1"
     final val Microlibs       = "1.18"
     final val MTest           = "0.6.6"
@@ -70,7 +70,7 @@ object TestState {
       releasePublishArtifactsAction := PgpKeys.publishSigned.value,
       releaseTagComment             := s"v${(version in ThisBuild).value}",
       releaseVcsSign                := true,
-      addCompilerPlugin("org.spire-math" %% "kind-projector" % Ver.KindProjector))
+      addCompilerPlugin("org.typelevel" %% "kind-projector" % Ver.KindProjector))
     .configure(acyclicSettings))
 
   def byScalaVersion[A](f: PartialFunction[(Long, Long), Seq[A]]): Def.Initialize[Seq[A]] =
