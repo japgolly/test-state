@@ -1,6 +1,7 @@
 package teststate
 
 import Exports._
+import sourcecode.Line
 
 object TestUtil extends TestUtil
 
@@ -24,14 +25,14 @@ trait TestUtil
   val inspectionAS =
     Report.AssertionSettings.uniform(inspectionFormat)
 
-  def assertDefined[A](o: Option[A], expectDefined: Boolean): Unit =
+  def assertDefined[A](o: Option[A], expectDefined: Boolean)(implicit l: Line): Unit =
     assertDefined(null, o, expectDefined)
 
-  def assertDefined[A](name: => String, o: Option[A], expectDefined: Boolean): Unit =
+  def assertDefined[A](name: => String, o: Option[A], expectDefined: Boolean)(implicit l: Line): Unit =
     if (expectDefined)
       assertEq(name, o.isDefined, true)
     else
-      assertEq(name, o, None)(scalaz.Equal.equalA)
+      assertEq(name, o, None)(scalaz.Equal.equalA, l)
 
   val trim = (_: String).trim
   val stringIdFn = (s: String) => s
@@ -40,7 +41,8 @@ trait TestUtil
                    expect      : String,
                    showChildren: Boolean          = true,
                    normalise   : String => String = stringIdFn)
-                  (implicit s  : DisplayError[E]): Unit = {
+                  (implicit s  : DisplayError[E],
+                            l  : Line): Unit = {
     val n = normalise compose trim
     val f = if (showChildren) inspectionFormat else inspectionFormatOnlyFailedChildren
     val actual = r.format(f)(s)
