@@ -11,7 +11,7 @@ object SeleniumExample extends TestSuite {
 
   def openBrowser(): WebDriver = {
     val driver = newChrome()
-    driver.get("https://japgolly.github.io/scalajs-react/#examples/ajax")
+    driver.get("https://japgolly.github.io/scalajs-react/#examples/ajax-1")
     driver
   }
 
