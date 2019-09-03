@@ -5,23 +5,27 @@ scala:
   - 2.11.12
   - 2.12.8
 jdk:
-  - oraclejdk8
+  - openjdk8
+env:
+  global:
+    - CHROMEDRIVER_VER=76.0.3809.126
+    - GECKODRIVER_VER=0.24.0
 
 addons:
   firefox: latest
   chrome: stable
 before_install:
-  - wget http://chromedriver.storage.googleapis.com/2.41/chromedriver_linux64.zip && unzip chromedriver_linux64.zip -d bin
-  - wget https://github.com/mozilla/geckodriver/releases/download/v0.22.0/geckodriver-v0.22.0-linux64.tar.gz && tar xf geckodriver-v0.22.0-linux64.tar.gz -C bin
+  - wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VER}/chromedriver_linux64.zip && unzip chromedriver_linux64.zip -d bin
+  - wget https://github.com/mozilla/geckodriver/releases/download/v${GECKODRIVER_VER}/geckodriver-v${GECKODRIVER_VER}-linux64.tar.gz && tar xf geckodriver-v${GECKODRIVER_VER}-linux64.tar.gz -C bin
   - export PATH=$PWD/bin:$PATH
 
 install:
   - . $HOME/.nvm/nvm.sh
-  - nvm install 10
-  - nvm use 10
+  - nvm install 12
+  - nvm use 12
   - export NODE_PATH="$(npm config get prefix)"/lib/node_modules
   - npm install
-  - npm install jsdom@12 source-map-support
+  - npm install jsdom source-map-support
 
 script:
   #- sbt -DCI=travis ++$TRAVIS_SCALA_VERSION test:compile JS/test:fastOptJS JS/test:fullOptJS
@@ -29,11 +33,12 @@ script:
   # TODO Investigate
   #- sbt -DCI=travis ++$TRAVIS_SCALA_VERSION 'set scalaJSStage in Global := FullOptStage' JS/test
 
+before_cache:
+  - rm -f $HOME/.ivy2/.sbt.ivy.lock
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
+  - find $HOME/.sbt -name "*.lock" -type f -delete
 cache:
   directories:
+    - $HOME/.coursier
     - $HOME/.ivy2/cache
     - $HOME/.sbt
-    - $HOME/.coursier/cache
-before_cache:
-  - find $HOME/.sbt -name "*.lock" -type f -delete
-  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -type f -delete
