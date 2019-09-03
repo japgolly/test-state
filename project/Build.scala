@@ -24,7 +24,7 @@ object TestState {
     final val KindProjector   = "0.10.3"
     final val MacroParadise   = "2.1.1"
     final val Microlibs       = "1.22"
-    final val MTest           = "0.6.6"
+    final val MTest           = "0.7.1"
     final val Nyaya           = "0.8.1"
     final val Scala211        = "2.11.12"
     final val Scala212        = "2.12.8"

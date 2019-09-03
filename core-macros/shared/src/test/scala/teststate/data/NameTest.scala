@@ -9,8 +9,8 @@ object NameTest extends TestSuite {
 
   override def tests = Tests {
 
-    'nonStrict {
-      'name {
+    "nonStrict" - {
+      "name" - {
         var i = 0
         val n: Name = s"i = ${ i += 1; i.toString }"
         assert(i == 0)
@@ -20,7 +20,7 @@ object NameTest extends TestSuite {
         assert(i == 1)
       }
 
-      'nameFn {
+      "nameFn" - {
         var i = 0
         val f: NameFn[Unit] = s"i = ${ i += 1; i.toString }"
         assert(i == 0)
@@ -33,12 +33,12 @@ object NameTest extends TestSuite {
       }
     }
 
-    'pure {
-      'name {
+    "pure" - {
+      "name" - {
         val n: Name = "good"
         assertMatch(n) { case _: Name.Now => () }
       }
-      'nameFn {
+      "nameFn" - {
         val fn: NameFn[Unit] = "good"
         val a = fn(None)
         val b = fn(Some(()))

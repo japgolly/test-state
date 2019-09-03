@@ -238,15 +238,15 @@ object ImplicitsTest2 extends TestSuite {
     // Use toString by default and if someone wants to see something different, add their own instance.
     // There is no cost to incorrectness here.
     // This really just that I've laid things out in such a way that implicits resolve as expected.
-    'display {
+    "display" - {
       def test[A](a: A)(expect: String)(implicit s: Display[A]): Unit = {
         val actual = s(a)
         assert(actual == expect)
       }
-      'undef     - test(X1(9))("X1(9)")
-      'defDirect - test(X2(9))("X2=9")
-      'defInCO   - test(X3(9))("X3=9")
-      'default   - test("a \n \u0001 \\ \" ok")("\"a \\n \\u0001 \\\\ \\\" ok\"")
+      "undef"     - test(X1(9))("X1(9)")
+      "defDirect" - test(X2(9))("X2=9")
+      "defInCO"   - test(X3(9))("X3=9")
+      "default"   - test("a \n \u0001 \\ \" ok")("\"a \\n \\u0001 \\\\ \\\" ok\"")
     }
 
   }

@@ -45,7 +45,7 @@ object MultiBrowserTest extends TestSuite {
 
   override def tests = Tests {
 
-    'onNewDriverWithTempTab - {
+    "onNewDriverWithTempTab" - {
       var tabCountAtTempTab = -1
       var tempTabInvocations = 0
       mb.onNewDriverWithTempTab { t =>
@@ -65,9 +65,9 @@ object MultiBrowserTest extends TestSuite {
       assertEq("invocations (S)", tempTabInvocations, 1)
     }
 
-    'openAndClose1 - testOpenAndClose()
-    'openAndClose2 - testOpenAndClose()
+    "openAndClose1" - testOpenAndClose()
+    "openAndClose2" - testOpenAndClose()
 
-    'close - mb.close()
+    "close" - mb.close()
   }
 }

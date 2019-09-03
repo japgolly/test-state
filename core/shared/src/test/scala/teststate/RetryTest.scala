@@ -197,7 +197,7 @@ object RetryTest extends TestSuite {
 
   override def tests = Tests {
 
-    'stackSafe {
+    "stackSafe" - {
       val * = Dsl[Unit, Unit, Unit]
       val fail = Some("fail")
       val result: Report[String] =
@@ -210,8 +210,8 @@ object RetryTest extends TestSuite {
       assert(result.failed)
     }
 
-    'policy {
-      'timeout {
+    "policy" - {
+      "timeout" - {
         val interval = 1 second
         val timeout = 6 seconds
         val policy = Retry.Policy.fixedIntervalWithTimeout(interval, timeout)
@@ -226,53 +226,53 @@ object RetryTest extends TestSuite {
         //   +--- 1s --+ (interval)
         //   |    .    |
         // -200ms | +800ms
-        'interval1 - test(200.millis)(Some(now + 800.millis))
+        "interval1" - test(200.millis)(Some(now + 800.millis))
 
         // 4s + interval is in the past! result should be now
         // -4s  |  +0ms
-        'limitToNow - test(4.seconds)(Some(now))
+        "limitToNow" - test(4.seconds)(Some(now))
 
         //   +-------------- 6s --------------+
         //   +-- 5.3s --+-- 0.5s --|-- 0.2s --+
         //   |          |          .          |
         // -5.8s      -0.5s        |        +0.2s
-        'limitToTimeout - test(5.8.seconds,0.5.seconds)(Some(now + 200.millis))
+        "limitToTimeout" - test(5.8.seconds,0.5.seconds)(Some(now + 200.millis))
 
         //  +-- 4s --+-- 1s --+ (interval)
         //  |        |    .   |
         // -4.3s   -0.3s  | +0.7s
-        'interval2 - test(4.3.seconds, 0.3.seconds)(Some(now + 0.7.seconds))
+        "interval2" - test(4.3.seconds, 0.3.seconds)(Some(now + 0.7.seconds))
 
         //  +-- 9s --+-- 0s --+ (scheduler caused huge delay, try once after deadline)
         //  |        |        |
         // -9s       |       +0s
-        'overOnce - test(9.seconds)(Some(now))
+        "overOnce" - test(9.seconds)(Some(now))
 
         //   +--- 6s ---+---- 1s ----+ (stop, already tried once past deadline)
         //   |          |        |   |
         // -6.8s    deadline   -0.2s |
-        'overTwice - test(6.8.seconds, 0.2.seconds)(None)
+        "overTwice" - test(6.8.seconds, 0.2.seconds)(None)
       }
     }
 
-    'initial {
-      'ref {
+    "initial" - {
+      "ref" - {
         val refMod = explodingRef()
         val test = *.emptyPlan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
         val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
         assert(!result.failed)
       }
-      'obs {
+      "obs" - {
         val plan = Plan.action(*.emptyAction <+ valueCalls.assert(4))
         assertRetryWorks(plan, _.failOnValue.simFail(3))
       }
-      'invariant {
+      "invariant" - {
         assertRetryWorks(*.emptyPlan, _.invalidateInvariant())
       }
     }
 
-    'action {
-       'ref {
+    "action" - {
+       "ref" - {
          val ref = new Ref
          var refFn = (_: Ref) => ()
          val plan = Plan.action(*.action("hack")(_ => refFn = explodingRef()) >> *.emptyAction)
@@ -280,37 +280,37 @@ object RetryTest extends TestSuite {
          val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
          result.assert()
        }
-      'obs {
+      "obs" - {
         val plan = Plan.action(failOnValue >> *.emptyAction +> valueCalls.assert(5))
         assertRetryWorks(plan)
       }
-      'actionSingle {
+      "actionSingle" - {
         val plan = Plan.action(incNormal >> failOnInc >> incFailOnInc >> incNormal)
         assertRetryWorks(plan)
       }
-      'actionSubtest {
+      "actionSubtest" - {
         val subtest = Plan.action(failOnInc >> incFailOnInc).asAction("subtest")
         val plan = Plan.action(incNormal >> subtest >> incNormal)
         assertRetryWorks(plan)
       }
-      'actionGroup {
+      "actionGroup" - {
         val group = (failOnInc >> incFailOnInc >> incNormal).times(4)
         val plan = Plan.action(incNormal >> group >> incNormal)
         assertRetryWorks(plan)
       }
-      'actionDueToBadObs {
+      "actionDueToBadObs" - {
         val plan = Plan.action(queueUpdate >> *.action("Throw unless obs.value = 123")(x => assert(x.obs.value == 123)))
         assertRetryWorks(plan)
       }
-      'preCondFail {
+      "preCondFail" - {
         val plan = Plan.action(queueUpdate >> (*.emptyAction <+ value.assert(123)))
         assertRetryWorks(plan)
       }
-      'postCondFail {
+      "postCondFail" - {
         val plan = Plan.action(queueUpdate +> value.assert(123))
         assertRetryWorks(plan)
       }
-      'postEmptyFail {
+      "postEmptyFail" - {
         val plan = Plan.action(queueUpdate >> *.emptyAction +> value.assert(123))
         assertRetryWorks(plan)
       }
@@ -323,12 +323,12 @@ object RetryTest extends TestSuite {
       //   val plan = Plan.action(failOnValue2 >> (*.emptyAction +> value2.assert(100)))
       //   assertRetryWorks(plan)
       // }
-      'invariant {
+      "invariant" - {
         val plan = Plan.action(*.action("invalidate invariant")(_.ref.invalidateInvariant()))
         assertRetryWorks(plan)
       }
 
-      'reportObsErrorAfterActionError {
+      "reportObsErrorAfterActionError" - {
         val plan = Plan.action(*.action("I love my little one, Nim") { x =>
           x.ref.failOnValue.simFail(3)
           ???
@@ -345,7 +345,7 @@ object RetryTest extends TestSuite {
           """.stripMargin)
       }
 
-      'state {
+      "state" - {
         val plan = Plan.action(
           (failOnInc >> incFailOnInc >> incNormal).updateState(_ + 1) >>
           *.action("blah")(_ => ()) +> *.focus("state").value(_.state).assert(1)

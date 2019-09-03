@@ -75,7 +75,7 @@ object CollectionAssertionsTest extends TestSuite {
   val charPred = (_: Char) <= 'b'
 
   override def tests = Tests {
-    'logic {
+    "logic" - {
 
       def test1(name: String, f: (Boolean, D) => Option[Any], expectPass: D => Boolean) =
         for (d <- data) {
@@ -109,31 +109,31 @@ object CollectionAssertionsTest extends TestSuite {
           assertDefined("¬" + n, f(false, a, b, c, d), e)
         }
 
-      'containsAll  - test2("containsAll" , ContainsAll (_)(_, _), (d, s) => s.forall(d contains _))
-      'containsAny  - test2("containsAny" , ContainsAny (_)(_, _), (d, s) => s.exists(d contains _))
-      'containsAny2 - test2("containsAny2", ContainsAny (_)(_, _), (d, s) => d.exists(s.contains))
-      'containsOnly - test2("containsOnly", ContainsOnly(_)(_, _), (d, s) => d.forall(s.contains))
+      "containsAll"  - test2("containsAll" , ContainsAll (_)(_, _), (d, s) => s.forall(d contains _))
+      "containsAny"  - test2("containsAny" , ContainsAny (_)(_, _), (d, s) => s.exists(d contains _))
+      "containsAny2" - test2("containsAny2", ContainsAny (_)(_, _), (d, s) => d.exists(s.contains))
+      "containsOnly" - test2("containsOnly", ContainsOnly(_)(_, _), (d, s) => d.forall(s.contains))
 
-      'distinct - test1("distinct", Distinct(_)(_), d => d.sorted.distinct.length == d.length)
+      "distinct" - test1("distinct", Distinct(_)(_), d => d.sorted.distinct.length == d.length)
 
-      'equalIgnoringOrder - test2d("equalIgnoringOrder", EqualIgnoringOrder(_)(_, _), (a, b) => a.sorted == b.sorted)
+      "equalIgnoringOrder" - test2d("equalIgnoringOrder", EqualIgnoringOrder(_)(_, _), (a, b) => a.sorted == b.sorted)
 
-      'equalIncludingOrder - test2d("equalIncludingOrder", EqualIncludingOrder(_)(_, _), (a, b) => a == b)
+      "equalIncludingOrder" - test2d("equalIncludingOrder", EqualIncludingOrder(_)(_, _), (a, b) => a == b)
 
-      'elemChanges - test4("elemChanges", (p, a, b, c, d) => ElemChanges(p)(ElemChanges.Args(a, b, c, d)),
+      "elemChanges" - test4("elemChanges", (p, a, b, c, d) => ElemChanges(p)(ElemChanges.Args(a, b, c, d)),
         (b, a, ed, ea) => {
           val c = ea & ed
           (ea -- c) == (a -- b) &&
           (ed -- c) == (b -- a)
         })
 
-      'forall - test1("forall", (b, d) => Forall(b)(d.toList)(charPred), _ forall charPred)
+      "forall" - test1("forall", (b, d) => Forall(b)(d.toList)(charPred), _ forall charPred)
 
-      'exists - test1("exists", (b, d) => Exists(b)(d.toList)(charPred), _ exists charPred)
+      "exists" - test1("exists", (b, d) => Exists(b)(d.toList)(charPred), _ exists charPred)
     }
 
 
-    'text {
+    "text" - {
       def testNoName[F](f: F)(test: F => Option[HasErrorString], expectedError: String): Unit =
         assertEq(test(f).map(_.errorString), Some(expectedError))
 
@@ -142,112 +142,112 @@ object CollectionAssertionsTest extends TestSuite {
         testNoName(f)(test, expectedError)
       }
 
-      'containsAllP - test(ContainsAll(true))(
+      "containsAllP" - test(ContainsAll(true))(
         _.name("A", "B"), "A should contain all B.")(
         _ ("abc", "cde".toSet), "Missing: 'd', 'e'")
 
-      'containsAllF - test(ContainsAll(false))(
+      "containsAllF" - test(ContainsAll(false))(
         _.name("A", "B"), "A shouldn't contain all B.")(
         _ ("abcde", "cd".toSet), "All members found.")
 
-      'containsAnyP - test(ContainsAny(true))(
+      "containsAnyP" - test(ContainsAny(true))(
         _.name("A", "B"), "A should contain some B.")(
         _ ("abc", "xy".toSet), "None found.")
 
-      'containsAnyF - test(ContainsAny(false))(
+      "containsAnyF" - test(ContainsAny(false))(
         _.name("A", "B"), "A shouldn't contain any B.")(
         _ ("abcde", "cdx".toSet), "Found: 'c', 'd'")
 
-      'containsOnlyP - test(ContainsOnly(true))(
+      "containsOnlyP" - test(ContainsOnly(true))(
         _.name("A", "B"), "A should only contain B.")(
         _ ("abcde", "bcd".toSet), "Found: 'a', 'e'")
 
-      'containsOnlyF - test(ContainsOnly(false))(
+      "containsOnlyF" - test(ContainsOnly(false))(
         _.name("A", "B"), "A should contain other than B.")(
         _ ("bcdbcd", "bcd".toSet), "None found.")
 
-      'distinctP - test(Distinct(true))(
+      "distinctP" - test(Distinct(true))(
         _.name("A"), "A should be distinct.")(
         _ ("beabcdbfe"), "Dups: 'b' → 3, 'e' → 2")
 
-      'distinctF - test(Distinct(false))(
+      "distinctF" - test(Distinct(false))(
         _.name("A"), "A should contain duplicates.")(
         _ ("abcde"), "No duplicates found.")
 
-      'equalIgnoringOrderP - testNoName(EqualIgnoringOrder(true))(
+      "equalIgnoringOrderP" - testNoName(EqualIgnoringOrder(true))(
         _ ("abcdefa", "cdfex"), "Missing: 'x'. Excess: 'b', 'a', 'a'.")
 
-      'equalIgnoringOrderF - testNoName(EqualIgnoringOrder(false))(
+      "equalIgnoringOrderF" - testNoName(EqualIgnoringOrder(false))(
         _ ("qwe", "qwe"), "Set members match.")
 
-      'equalIncludingOrderP - testNoName(EqualIncludingOrder(true))(
+      "equalIncludingOrderP" - testNoName(EqualIncludingOrder(true))(
         _ ("abc", "acb"), "Actual: 'a', 'b', 'c'\nExpect: 'a', 'c', 'b'")
 
-      'equalIncludingOrderF - testNoName(EqualIncludingOrder(false))(
+      "equalIncludingOrderF" - testNoName(EqualIncludingOrder(false))(
         _ ("qwe", "qwe"), "Set members match.")
 
-      'elemChanges {
-        'neg - testNoName(ElemChanges(false))(
+      "elemChanges" - {
+        "neg" - testNoName(ElemChanges(false))(
           _ (ElemChanges.Args[Int](Nil, Nil, Nil, Nil)), "Expected changes occurred.")
 
-        'ea - testNoName(ElemChanges(true))(
+        "ea" - testNoName(ElemChanges(true))(
           _ (ElemChanges.Args(Nil, Nil, Nil, 'a' :: Nil)), "'a' moved by 0, expected 1.")
 
-        'ed - testNoName(ElemChanges(true))(
+        "ed" - testNoName(ElemChanges(true))(
           _ (ElemChanges.Args(Nil, Nil, 'd' :: Nil, Nil)), "'d' moved by 0, expected -1.")
 
-        'aa - testNoName(ElemChanges(true))(
+        "aa" - testNoName(ElemChanges(true))(
           _ (ElemChanges.Args(Nil, 'a' :: Nil, Nil, Nil)), "'a' moved by 1, expected 0.")
 
-        'ad - testNoName(ElemChanges(true))(
+        "ad" - testNoName(ElemChanges(true))(
           _ (ElemChanges.Args('d' :: Nil, Nil, Nil, Nil)), "'d' moved by -1, expected 0.")
       }
 
-      'contains {
+      "contains" - {
         val nameFn = Contains.nameFn(identity[Boolean], "Bag", "Malazan")
-        'nameA - assertEq(nameFn(None)       .value, "Bag: possible existence of Malazan.")
-        'nameT - assertEq(nameFn(Some(true)) .value, "Bag should contain Malazan.")
-        'nameF - assertEq(nameFn(Some(false)).value, "Bag shouldn't contain Malazan.")
+        "nameA" - assertEq(nameFn(None)       .value, "Bag: possible existence of Malazan.")
+        "nameT" - assertEq(nameFn(Some(true)) .value, "Bag should contain Malazan.")
+        "nameF" - assertEq(nameFn(Some(false)).value, "Bag shouldn't contain Malazan.")
       }
 
-      'existenceOfAll {
+      "existenceOfAll" - {
         val nameFn = ExistenceOfAll.nameFn(identity[Boolean], "Bag", "books")
-        'nameA - assertEq(nameFn(None)       .value, "Bag: possible existence of books.")
-        'nameT - assertEq(nameFn(Some(true)) .value, "Bag should contain all books.")
-        'nameF - assertEq(nameFn(Some(false)).value, "Bag shouldn't contain any books.")
+        "nameA" - assertEq(nameFn(None)       .value, "Bag: possible existence of books.")
+        "nameT" - assertEq(nameFn(Some(true)) .value, "Bag should contain all books.")
+        "nameF" - assertEq(nameFn(Some(false)).value, "Bag shouldn't contain any books.")
       }
 
       /*
-      'forallP - test(Forall(true))(
+      "forallP" - test(Forall(true))(
         _.name("Ints", "large"), "∀ Ints. large")(
         _ (List(1,9,2))(_ > 5), "2 of 3 elements failed: 1, 2.")
 
-      'forallF - test(Forall(false))(
+      "forallF" - test(Forall(false))(
         _.name("Ints", "small"), "¬ ∀ Ints. small")(
         _ (List(1,2,3))(_ < 5), "3 elements found; all passed.")
 
-      'existsP - test(Exists(true))(
+      "existsP" - test(Exists(true))(
         _.name("Ints", "large"), "∃ Ints. large")(
         _ (List(1,2,3))(_ > 5), "3 elements found; none passed.")
 
-      'existsF - test(Exists(false))(
+      "existsF" - test(Exists(false))(
         _.name("Ints", "large"), "¬ ∃ Ints. large")(
         _ (List(1,9,3))(_ > 5), "1 of 3 elements exist: 9.")
        */
 
-      'forallP - test(Forall(true))(
+      "forallP" - test(Forall(true))(
         _.name("ints", "be large"), "All ints should be large.")(
         _ (List(1,9,2))(_ > 5), "2 of 3 elements failed: 1, 2")
 
-      'forallF - test(Forall(false))(
+      "forallF" - test(Forall(false))(
         _.name("ints", "be large"), "Not all ints should be large.")(
         _ (List(7,8,9))(_ > 5), "All 3 elements satisfied criteria.")
 
-      'existsP - test(Exists(true))(
+      "existsP" - test(Exists(true))(
         _.name("ints", "be large"), "Of all ints, at least one should be large.")(
         _ (List(1,2,3))(_ > 5), "None of the 3 elements satisfied criteria.")
 
-      'existsF - test(Exists(false))(
+      "existsF" - test(Exists(false))(
         _.name("ints", "be large"), "Of all ints, none should be large.")(
         _ (List(1,9,3))(_ > 5), "1 of 3 elements satisfied criteria: 9")
 

@@ -54,10 +54,10 @@ object OutputTest extends TestSuite {
 
   override def tests = Tests {
 
-    'empty {
-      'empty - test(emptyAction, emptyInvariant)("- Nothing to do.")
+    "empty" - {
+      "empty" - test(emptyAction, emptyInvariant)("- Nothing to do.")
 
-      'before - test(emptyAction addCheck checkPoint.before, emptyInvariant)(
+      "before" - test(emptyAction addCheck checkPoint.before, emptyInvariant)(
         """
           |✓ 0 actions.
           |  ✓ Pre-conditions
@@ -66,7 +66,7 @@ object OutputTest extends TestSuite {
           |Performed 0 actions, 1 check.
         """.stripMargin)
 
-      'after - test(emptyAction addCheck checkPoint.after, emptyInvariant)(
+      "after" - test(emptyAction addCheck checkPoint.after, emptyInvariant)(
         """
           |✓ 0 actions.
           |  ✓ Post-conditions
@@ -75,7 +75,7 @@ object OutputTest extends TestSuite {
           |Performed 0 actions, 1 check.
         """.stripMargin)
 
-      'around - test(emptyAction addCheck checkAround, emptyInvariant)(
+      "around" - test(emptyAction addCheck checkAround, emptyInvariant)(
         """
           |✓ 0 actions.
           |  ✓ Post-conditions
@@ -84,7 +84,7 @@ object OutputTest extends TestSuite {
           |Performed 0 actions, 1 check.
         """.stripMargin)
 
-      'beforeAfter - test(emptyAction addCheck checkPoint.after addCheck checkPoint2.before, emptyInvariant)(
+      "beforeAfter" - test(emptyAction addCheck checkPoint.after addCheck checkPoint2.before, emptyInvariant)(
         """
           |✓ 0 actions.
           |  ✓ Pre-conditions
@@ -95,7 +95,7 @@ object OutputTest extends TestSuite {
           |Performed 0 actions, 2 checks.
         """.stripMargin)
 
-      'state - {
+      "state" - {
         val * = Dsl[Unit, Unit, Int]
         val s = *.focus("state").value(_.state)
 
@@ -120,7 +120,7 @@ object OutputTest extends TestSuite {
           """.stripMargin)
       }
 
-      'chooseBefore {
+      "chooseBefore" - {
         val chooseEmpty = *.chooseAction("nada")(_ => emptyAction)
         test(chooseEmpty >> action, emptyInvariant)(
           """
@@ -132,10 +132,10 @@ object OutputTest extends TestSuite {
       }
     }
 
-    'invariants {
+    "invariants" - {
       def t(i: *.Invariants)(expect: String) = test(emptyAction, i)(expect)
-      'pass {
-        'simplest - t(checkPoint)(
+      "pass" - {
+        "simplest" - t(checkPoint)(
           """
             |✓ Initial state.
             |  ✓ Check stuff.
@@ -143,7 +143,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 1 check.
           """.stripMargin)
 
-        'multiple - t(checkPoint & checkPoint2)(
+        "multiple" - t(checkPoint & checkPoint2)(
           """
             |✓ Initial state.
             |  ✓ Check stuff.
@@ -152,7 +152,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 2 checks.
           """.stripMargin)
 
-        'coproduct - t(*.chooseInvariant("Who knows?!")(_ => checkPoint))(
+        "coproduct" - t(*.chooseInvariant("Who knows?!")(_ => checkPoint))(
           """
             |✓ Initial state.
             |  ✓ Check stuff.
@@ -160,15 +160,15 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 1 check.
           """.stripMargin)
       }
-      'fail {
-        'single - t(checkPointF)(
+      "fail" - {
+        "single" - t(checkPointF)(
           """
             |✘ Initial state.
             |  ✘ Check failure. -- Shit broke!
             |Performed 0 actions, 1 check.
           """.stripMargin)
 
-        'first - t(checkPointF & checkPoint2)(
+        "first" - t(checkPointF & checkPoint2)(
           """
             |✘ Initial state.
             |  ✘ Check failure. -- Shit broke!
@@ -176,7 +176,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 2 checks.
           """.stripMargin)
 
-        'second - t(checkPoint & checkPointF)(
+        "second" - t(checkPoint & checkPointF)(
           """
             |✘ Initial state.
             |  ✓ Check stuff.
@@ -184,7 +184,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 2 checks.
           """.stripMargin)
 
-        'coproduct - t(*.chooseInvariantAttempt("Who knows?!")(_ => Left("Computer says no.")))(
+        "coproduct" - t(*.chooseInvariantAttempt("Who knows?!")(_ => Left("Computer says no.")))(
           """
             |✘ Initial state.
             |  ✘ Who knows?! -- Computer says no.
@@ -193,17 +193,17 @@ object OutputTest extends TestSuite {
       }
     }
 
-    'action {
+    "action" - {
       def t(a: *.Actions)(expect: String) = test(a, emptyInvariant)(expect)
-      'pass {
-        'simplest - t(action)(
+      "pass" - {
+        "simplest" - t(action)(
           """
             |✓ Press button.
             |✓ All pass.
             |Performed 1 action, 0 checks.
           """.stripMargin)
 
-        'before - t(action addCheck checkPoint.before)(
+        "before" - t(action addCheck checkPoint.before)(
           """
             |✓ Press button.
             |  ✓ Pre-conditions
@@ -213,7 +213,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
 
-        'after - t(action addCheck checkPoint.after)(
+        "after" - t(action addCheck checkPoint.after)(
           """
             |✓ Press button.
             |  ✓ Action
@@ -223,7 +223,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
 
-        'around - t(action addCheck checkAround)(
+        "around" - t(action addCheck checkAround)(
           """
             |✓ Press button.
             |  ✓ Action
@@ -233,7 +233,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
 
-        'beforeAfter - t(action addCheck checkPoint.after addCheck checkPoint2.before)(
+        "beforeAfter" - t(action addCheck checkPoint.after addCheck checkPoint2.before)(
           """
             |✓ Press button.
             |  ✓ Pre-conditions
@@ -245,14 +245,14 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 2 checks.
           """.stripMargin)
       }
-      'fail {
-        'simplest - t(actionF)(
+      "fail" - {
+        "simplest" - t(actionF)(
           """
             |✘ Press button! -- BUTTON'S BROKEN
             |Performed 1 action, 0 checks.
           """.stripMargin)
 
-        'multiline - t(actionFN)(
+        "multiline" - t(actionFN)(
           """
             |✘ Press button!
             |    This has
@@ -261,7 +261,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 0 checks.
           """.stripMargin)
 
-        'beforeA - t(actionF addCheck checkPoint.before)(
+        "beforeA" - t(actionF addCheck checkPoint.before)(
           """
             |✘ Press button!
             |  ✓ Pre-conditions
@@ -270,7 +270,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
 
-        'multilineBeforeA - t(actionFN addCheck checkPoint.before)(
+        "multilineBeforeA" - t(actionFN addCheck checkPoint.before)(
           """
             |✘ Press button!
             |  ✓ Pre-conditions
@@ -282,7 +282,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
 
-        'beforeC - t(action addCheck checkPointF.before)(
+        "beforeC" - t(action addCheck checkPointF.before)(
           """
             |✘ Press button.
             |  ✘ Pre-conditions
@@ -290,13 +290,13 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 1 check.
           """.stripMargin)
 
-        'afterA - t(actionF addCheck checkPoint.after)(
+        "afterA" - t(actionF addCheck checkPoint.after)(
           """
             |✘ Press button! -- BUTTON'S BROKEN
             |Performed 1 action, 0 checks.
           """.stripMargin)
 
-        'afterC - t(action addCheck checkPointF.after)(
+        "afterC" - t(action addCheck checkPointF.after)(
           """
             |✘ Press button.
             |  ✓ Action
@@ -305,7 +305,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
 
-        'around - t(action addCheck checkAroundF)(
+        "around" - t(action addCheck checkAroundF)(
           """
             |✘ Press button.
             |  ✓ Action
@@ -314,7 +314,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
 
-        'beforeAfter1 - t(action addCheck checkPoint.after addCheck checkPointF.before)(
+        "beforeAfter1" - t(action addCheck checkPoint.after addCheck checkPointF.before)(
           """
             |✘ Press button.
             |  ✘ Pre-conditions
@@ -322,7 +322,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 1 check.
           """.stripMargin)
 
-        'beforeAfter2 - t(actionF addCheck checkPoint.after addCheck checkPoint2.before)(
+        "beforeAfter2" - t(actionF addCheck checkPoint.after addCheck checkPoint2.before)(
           """
             |✘ Press button!
             |  ✓ Pre-conditions
@@ -331,7 +331,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
 
-        'beforeAfter3 - t(action addCheck checkPointF.after addCheck checkPoint2.before)(
+        "beforeAfter3" - t(action addCheck checkPointF.after addCheck checkPoint2.before)(
           """
             |✘ Press button.
             |  ✓ Pre-conditions
@@ -344,9 +344,9 @@ object OutputTest extends TestSuite {
       }
     }
 
-    'product {
+    "product" - {
       val a2 = action >> action2
-      'before - test(a2 addCheck checkPoint.before, emptyInvariant)(
+      "before" - test(a2 addCheck checkPoint.before, emptyInvariant)(
         """
           |✓ 2 actions.
           |  ✓ Pre-conditions
@@ -357,7 +357,7 @@ object OutputTest extends TestSuite {
           |Performed 2 actions, 1 check.
         """.stripMargin)
 
-      'after - test(a2 addCheck checkPoint.after, emptyInvariant)(
+      "after" - test(a2 addCheck checkPoint.after, emptyInvariant)(
         """
           |✓ 2 actions.
           |  ✓ Press button.
@@ -368,7 +368,7 @@ object OutputTest extends TestSuite {
           |Performed 2 actions, 1 check.
         """.stripMargin)
 
-      'around - test(a2 addCheck checkAround, emptyInvariant)(
+      "around" - test(a2 addCheck checkAround, emptyInvariant)(
         """
           |✓ 2 actions.
           |  ✓ Press button.
@@ -379,7 +379,7 @@ object OutputTest extends TestSuite {
           |Performed 2 actions, 1 check.
         """.stripMargin)
 
-      'beforeAfter - test(a2 addCheck checkPoint.after addCheck checkPoint2.before, emptyInvariant)(
+      "beforeAfter" - test(a2 addCheck checkPoint.after addCheck checkPoint2.before, emptyInvariant)(
         """
           |✓ 2 actions.
           |  ✓ Pre-conditions
@@ -393,10 +393,10 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
-    'actionG {
+    "actionG" - {
       def t(a: *.Actions)(expect: String) = test(a, emptyInvariant)(expect)
-      'pass {
-        'simple - t(actionG)(
+      "pass" - {
+        "simple" - t(actionG)(
           """
             |✓ Groupiness.
             |  ✓ Press button.
@@ -405,7 +405,7 @@ object OutputTest extends TestSuite {
             |Performed 2 actions, 0 checks.
           """.stripMargin)
 
-        'before - t(actionG addCheck checkPoint.before)(
+        "before" - t(actionG addCheck checkPoint.before)(
           """
             |✓ Groupiness.
             |  ✓ Pre-conditions
@@ -416,7 +416,7 @@ object OutputTest extends TestSuite {
             |Performed 2 actions, 1 check.
           """.stripMargin)
 
-        'after - t(actionG addCheck checkPoint.after)(
+        "after" - t(actionG addCheck checkPoint.after)(
           """
             |✓ Groupiness.
             |  ✓ Press button.
@@ -427,7 +427,7 @@ object OutputTest extends TestSuite {
             |Performed 2 actions, 1 check.
           """.stripMargin)
 
-        'around - t(actionG addCheck checkAround)(
+        "around" - t(actionG addCheck checkAround)(
           """
             |✓ Groupiness.
             |  ✓ Press button.
@@ -438,7 +438,7 @@ object OutputTest extends TestSuite {
             |Performed 2 actions, 1 check.
           """.stripMargin)
 
-        'beforeAfter - t(actionG addCheck checkPoint.before addCheck checkPoint2.after)(
+        "beforeAfter" - t(actionG addCheck checkPoint.before addCheck checkPoint2.after)(
           """
             |✓ Groupiness.
             |  ✓ Pre-conditions
@@ -451,9 +451,9 @@ object OutputTest extends TestSuite {
             |Performed 2 actions, 2 checks.
           """.stripMargin)
       }
-      'failA1 {
+      "failA1" - {
         def a = actionGF1
-        'simple - t(a)(
+        "simple" - t(a)(
           """
             |✘ Groupiness.
             |  ✘ Press button! -- BUTTON'S BROKEN
@@ -461,7 +461,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 0 checks.
           """.stripMargin)
 
-        'before - t(a addCheck checkPoint.before)(
+        "before" - t(a addCheck checkPoint.before)(
           """
             |✘ Groupiness.
             |  ✓ Pre-conditions
@@ -471,7 +471,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
 
-        'after - t(a addCheck checkPoint.after)(
+        "after" - t(a addCheck checkPoint.after)(
           """
             |✘ Groupiness.
             |  ✘ Press button! -- BUTTON'S BROKEN
@@ -479,7 +479,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 0 checks.
           """.stripMargin)
 
-        'after - t(a addCheck checkAround)(
+        "after" - t(a addCheck checkAround)(
           """
             |✘ Groupiness.
             |  ✘ Press button! -- BUTTON'S BROKEN
@@ -487,7 +487,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 0 checks.
           """.stripMargin)
 
-        'beforeAfter - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
+        "beforeAfter" - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
           """
             |✘ Groupiness.
             |  ✓ Pre-conditions
@@ -497,9 +497,9 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 1 check.
           """.stripMargin)
       }
-      'fail2 {
+      "fail2" - {
         def a = actionGF2
-        'simple - t(a)(
+        "simple" - t(a)(
           """
             |✘ Groupiness.
             |  ✓ Press button.
@@ -507,7 +507,7 @@ object OutputTest extends TestSuite {
             |Performed 2 actions, 0 checks.
           """.stripMargin)
 
-        'before - t(a addCheck checkPoint.before)(
+        "before" - t(a addCheck checkPoint.before)(
           """
             |✘ Groupiness.
             |  ✓ Pre-conditions
@@ -517,7 +517,7 @@ object OutputTest extends TestSuite {
             |Performed 2 actions, 1 check.
           """.stripMargin)
 
-        'after - t(a addCheck checkPoint.after)(
+        "after" - t(a addCheck checkPoint.after)(
           """
             |✘ Groupiness.
             |  ✓ Press button.
@@ -525,7 +525,7 @@ object OutputTest extends TestSuite {
             |Performed 2 actions, 0 checks.
           """.stripMargin)
 
-        'around - t(a addCheck checkAround)(
+        "around" - t(a addCheck checkAround)(
           """
             |✘ Groupiness.
             |  ✓ Press button.
@@ -533,7 +533,7 @@ object OutputTest extends TestSuite {
             |Performed 2 actions, 0 checks.
           """.stripMargin)
 
-        'beforeAfter - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
+        "beforeAfter" - t(a addCheck checkPoint.before addCheck checkPoint2.after)(
           """
             |✘ Groupiness.
             |  ✓ Pre-conditions
@@ -545,8 +545,8 @@ object OutputTest extends TestSuite {
       }
     }
 
-    'skip {
-      'invariant - test(action, checkPoint.skip)(
+    "skip" - {
+      "invariant" - test(action, checkPoint.skip)(
         """
           |- Initial state.
           |  - Check stuff.
@@ -558,7 +558,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 0 checks.
         """.stripMargin)
 
-      'invariant12 - test(action, checkPoint.skip & checkPoint2)(
+      "invariant12" - test(action, checkPoint.skip & checkPoint2)(
         """
           |✓ Initial state.
           |  - Check stuff.
@@ -572,7 +572,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 2 checks.
         """.stripMargin)
 
-      'invariant21 - test(action, checkPoint & checkPoint2.skip)(
+      "invariant21" - test(action, checkPoint & checkPoint2.skip)(
         """
           |✓ Initial state.
           |  ✓ Check stuff.
@@ -586,13 +586,13 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 2 checks.
         """.stripMargin)
 
-      'action - test(actionS, emptyInvariant)(
+      "action" - test(actionS, emptyInvariant)(
         """
           |- Press button.
           |- All skipped.
         """.stripMargin)
 
-      'actionBefore - test(action addCheck checkPoint.before.skip, emptyInvariant)(
+      "actionBefore" - test(action addCheck checkPoint.before.skip, emptyInvariant)(
         """
           |✓ Press button.
           |  - Pre-conditions
@@ -602,7 +602,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 0 checks.
         """.stripMargin)
 
-      'actionAround - test(action addCheck checkAround.skip, emptyInvariant)(
+      "actionAround" - test(action addCheck checkAround.skip, emptyInvariant)(
         """
           |✓ Press button.
           |  ✓ Action
@@ -612,7 +612,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 0 checks.
         """.stripMargin)
 
-      'actionAfter - test(action addCheck checkPoint.after.skip, emptyInvariant)(
+      "actionAfter" - test(action addCheck checkPoint.after.skip, emptyInvariant)(
         """
           |✓ Press button.
           |  ✓ Action
@@ -622,13 +622,13 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 0 checks.
         """.stripMargin)
 
-      'group - test(actionGS, emptyInvariant)(
+      "group" - test(actionGS, emptyInvariant)(
         """
           |- Groupiness.
           |- All skipped.
         """.stripMargin)
 
-      'group1 - test((actionS >> action2).group("Groupiness."), emptyInvariant)(
+      "group1" - test((actionS >> action2).group("Groupiness."), emptyInvariant)(
         """
           |✓ Groupiness.
           |  - Press button.
@@ -637,7 +637,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 0 checks.
         """.stripMargin)
 
-      'group2 - test((action >> action2S).group("Groupiness."), emptyInvariant)(
+      "group2" - test((action >> action2S).group("Groupiness."), emptyInvariant)(
         """
           |✓ Groupiness.
           |  ✓ Press button.
@@ -646,7 +646,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 0 checks.
         """.stripMargin)
 
-      'group12 - test((actionS >> action2S).group("Groupiness."), emptyInvariant)(
+      "group12" - test((actionS >> action2S).group("Groupiness."), emptyInvariant)(
         """
           |- Groupiness.
           |  - Press button.
@@ -655,8 +655,8 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
-    'subtest {
-      'simple - test(sub1, emptyInvariant)(
+    "subtest" - {
+      "simple" - test(sub1, emptyInvariant)(
         """
           |✓ SubTest!
           |  ✓ Initial state.
@@ -673,7 +673,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 5 checks.
         """.stripMargin)
 
-      'withInvariants - test(sub1, i12)(
+      "withInvariants" - test(sub1, i12)(
         """
           |✓ Initial state.
           |  ✓ Invariant 1
@@ -695,7 +695,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 9 checks.
         """.stripMargin)
 
-      'withChecks - test(sub2, emptyInvariant)(
+      "withChecks" - test(sub2, emptyInvariant)(
         """
           |✓ SubTest!
           |  ✓ Pre-conditions
@@ -717,7 +717,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 8 checks.
         """.stripMargin)
 
-      'chain - {
+      "chain" - {
         def sub(n: Int, hasAction: Boolean) =
           Plan(
             if (hasAction) mockAction(s"SubAction $n") else *.emptyAction,
@@ -756,7 +756,7 @@ object OutputTest extends TestSuite {
           """.stripMargin)
       }
 
-      'nested - {
+      "nested" - {
         def sub(n: String, a: *.Actions) =
           Plan(a, mockPoint("Invariant: " + n)).asAction("Subtest: " + n)
 
@@ -951,7 +951,7 @@ object OutputTest extends TestSuite {
           """.stripMargin)
       }
 
-      'singleActionName {
+      "singleActionName" - {
         val t = Plan.action(action addCheck checkPoint2.before).asAction("SubTest!")
         test(t, checkPoint)(
           """
@@ -970,7 +970,7 @@ object OutputTest extends TestSuite {
       }
     }
 
-    'bulk {
+    "bulk" - {
       def set(n: String) =
         mockAction(n)
           .addCheck(mockPoint ("Pre "    + n + 1).before)
@@ -1086,8 +1086,8 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
-    'duplicates {
-      'invariants {
+    "duplicates" - {
+      "invariants" - {
         test(action, checkPoint & checkPoint)(
           """
             |✓ Initial state.
@@ -1100,7 +1100,7 @@ object OutputTest extends TestSuite {
             |Performed 1 action, 2 checks.
           """.stripMargin)
       }
-      'delta {
+      "delta" - {
         test(action.addCheck(checkAround).addCheck(checkAround), emptyInvariant)(
           """
             |✓ Press button.
@@ -1113,8 +1113,8 @@ object OutputTest extends TestSuite {
       }
     }
 
-    'obsAndState {
-      'pass - test(action addCheck checkOS.after, emptyInvariant)(
+    "obsAndState" - {
+      "pass" - test(action addCheck checkOS.after, emptyInvariant)(
         """
           |✓ Press button.
           |  ✓ Action
@@ -1124,7 +1124,7 @@ object OutputTest extends TestSuite {
           |Performed 1 action, 1 check.
         """.stripMargin)
 
-      'fail - {
+      "fail" - {
         // These CCs ensure correctness via .observe and .run
         case class State(s: Int)
         case class Obs(o: Int)
@@ -1145,7 +1145,7 @@ object OutputTest extends TestSuite {
       }
     }
 
-    'existenceOfAround {
+    "existenceOfAround" - {
       var is = List(1, 2, 3)
       val * = Dsl[Unit, List[Int], Boolean]
       val a = *.action("Remove 2")(_ => is = List(1, 3)).updateState(_ => false)
@@ -1164,8 +1164,8 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
-    'named {
-      'pass - {
+    "named" - {
+      "pass" - {
         val r = Plan(*.emptyAction, checkPoint).named("Beauty").stateless.testU.runU
         assertRun(r,
           """
@@ -1176,7 +1176,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 1 check.
           """.stripMargin)
       }
-      'fail - {
+      "fail" - {
         val r = Plan(*.emptyAction, checkPointF).named("Sorrow").stateless.testU.runU
         assertRun(r,
           """
@@ -1190,7 +1190,7 @@ object OutputTest extends TestSuite {
 
     // After a failure, the ROS shouldn't be used to try to evaluate future action names.
     // It will usually be wrong data, thus providing misleading names; sometimes it even crashes.
-    'namesAfterFailure - {
+    "namesAfterFailure" - {
       val x = *.action(NameFn[Any]("X:" + _))(_ => ???)
       val y = *.chooseAction(NameFn[Any]("Y:" + _))(_ => ???)
       test(actionF >> x >> y, *.emptyInvariant)(
@@ -1202,7 +1202,7 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
-    'contextualiseChooseActionOnEmpty - {
+    "contextualiseChooseActionOnEmpty" - {
       val a = *.chooseAction(NameFn {
         case None    => "A"
         case Some(_) => "B"

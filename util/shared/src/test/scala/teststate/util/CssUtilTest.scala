@@ -6,7 +6,7 @@ import utest._
 object CssUtilTest extends TestSuite {
 
   override def tests = Tests {
-    'disableCssAnimation {
+    "disableCssAnimation" - {
       val actual = CssUtil.disableCssAnimation()
       val expect =
         """

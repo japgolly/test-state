@@ -74,11 +74,11 @@ object TabSupportTest extends TestSuite {
 
   override def tests = Tests {
 
-    'chrome {
+    "chrome" - {
       test(newChrome(), i => s"file://nope-$i.html/")
     }
 
-    'firefox {
+    "firefox" - {
       test(newFirefox(), "https://www.google.com/?tab=" + _)
     }
   }

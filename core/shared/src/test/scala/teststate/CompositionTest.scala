@@ -29,7 +29,7 @@ object CompositionTest extends TestSuite {
   }
 
   override def tests = Tests {
-    'coproduct {
+    "coproduct" - {
       import CoproductExample._
       import Top._
       val top = new Top(7, "e")
