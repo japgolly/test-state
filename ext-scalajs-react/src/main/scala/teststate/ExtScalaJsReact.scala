@@ -2,9 +2,9 @@ package teststate
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.test._
-import ExtScalaJsReact._
 
 trait ExtScalaJsReact extends domzipper.Exports {
+  import ExtScalaJsReact._
 
   final implicit def toReactExtHtmlScrubObject(a: HtmlScrub.type): ReactExtHtmlScrubObject =
     new ReactExtHtmlScrubObject(a)

@@ -21,11 +21,11 @@ object TestState {
     val Acyclic         = "0.2.0"
     val Cats            = "2.0.0"
     val Jsoup           = "1.12.1"
-    val KindProjector   = "0.10.3"
+    val KindProjector   = "0.11.0"
     val Microlibs       = "2.0-RC1"
     val MTest           = "0.7.1"
     val Nyaya           = "0.9.0-RC1"
-    val Scala212        = "2.12.8"
+    val Scala212        = "2.12.10"
     val Scala213        = "2.13.1"
     val ScalaCollCompat = "2.1.2"
     val ScalaJsDom      = "0.9.7"
@@ -73,7 +73,7 @@ object TestState {
       releasePublishArtifactsAction := PgpKeys.publishSigned.value,
       releaseTagComment             := s"v${(version in ThisBuild).value}",
       releaseVcsSign                := true,
-      addCompilerPlugin("org.typelevel" %% "kind-projector" % Ver.KindProjector))
+      addCompilerPlugin("org.typelevel" %% "kind-projector" % Ver.KindProjector cross CrossVersion.full))
     .configure(acyclicSettings))
 
   def byScalaVersion[A](f: PartialFunction[(Long, Long), Seq[A]]): Def.Initialize[Seq[A]] =
@@ -187,7 +187,9 @@ object TestState {
     .dependsOn(domZipperJVM)
     .settings(
       moduleName := "dom-zipper-jsoup",
-      libraryDependencies += "org.jsoup" % "jsoup" % Ver.Jsoup)
+      libraryDependencies ++= Seq(
+        "org.scala-lang.modules" %% "scala-collection-compat" % Ver.ScalaCollCompat,
+        "org.jsoup" % "jsoup" % Ver.Jsoup))
 
   lazy val domZipperSelenium = project
     .in(file("dom-zipper-selenium"))
@@ -280,6 +282,7 @@ object TestState {
     .settings(
       moduleName := "util-selenium",
       libraryDependencies ++= Seq(
+        "org.scala-lang.modules" %% "scala-collection-compat" % Ver.ScalaCollCompat,
         "org.seleniumhq.selenium" % "selenium-api" % Ver.Selenium,
         "org.seleniumhq.selenium" % "selenium-remote-driver" % Ver.Selenium))
 
