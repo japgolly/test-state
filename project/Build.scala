@@ -30,7 +30,7 @@ object TestState {
     final val Scala212        = "2.12.8"
     final val ScalaJsDom      = "0.9.7"
     final val ScalaJsReact    = "1.4.2"
-    final val ScalaJsJavaTime = "2.0.0-RC3"
+    final val ScalaJsJavaTime = "0.2.5"
     final val Scalaz          = "7.2.28"
     final val Selenium        = "3.141.59"
     final val Sizzle          = "2.3.0"
@@ -155,7 +155,7 @@ object TestState {
         "com.github.japgolly.nyaya"  %%% "nyaya-prop" % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya"  %%% "nyaya-test" % Ver.Nyaya % "test"))
     .jsSettings(
-      libraryDependencies += "io.github.cquiroz" %%% "scala-java-time" % Ver.ScalaJsJavaTime)
+      libraryDependencies += "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime % Provided)
 
   lazy val domZipperJVM = domZipper.jvm
   lazy val domZipperJS  = domZipper.js
