@@ -18,27 +18,27 @@ object TestState {
     Lib.publicationSettings(ghProject)
 
   object Ver {
-    final val Acyclic         = "0.1.9"
-    final val Cats            = "2.0.0"
-    final val Jsoup           = "1.12.1"
-    final val KindProjector   = "0.11.0"
-    final val MacroParadise   = "2.1.1"
-    final val Microlibs       = "2.0"
-    final val MTest           = "0.6.6"
-    final val Nyaya           = "0.9.0"
-    final val Scala211        = "2.11.12"
-    final val Scala212        = "2.12.10"
-    final val ScalaJsDom      = "0.9.8"
-    final val ScalaJsReact    = "1.5.0"
-    final val ScalaJsJavaTime = "0.2.6"
-    final val Scalaz          = "7.2.30"
-    final val Selenium        = "3.141.59"
-    final val Sizzle          = "2.3.0"
-    final val UnivEq          = "1.1.0"
+    val Acyclic         = "0.1.9"
+    val Cats            = "2.0.0"
+    val Jsoup           = "1.12.1"
+    val KindProjector   = "0.11.0"
+    val MacroParadise   = "2.1.1"
+    val Microlibs       = "2.0"
+    val MTest           = "0.6.6"
+    val Nyaya           = "0.9.0"
+    val Scala211        = "2.11.12"
+    val Scala212        = "2.12.10"
+    val ScalaJsDom      = "0.9.8"
+    val ScalaJsReact    = "1.5.0"
+    val ScalaJsJavaTime = "0.2.6"
+    val Scalaz          = "7.2.30"
+    val Selenium        = "3.141.59"
+    val Sizzle          = "2.3.0"
+    val UnivEq          = "1.1.0"
 
     // Used in examples only
-    final val Monocle       = "1.5.0"
-    final val ReactJs       = "16.5.1"
+    val Monocle       = "1.5.0"
+    val ReactJs       = "16.5.1"
   }
 
   def scalacFlags = Seq(
