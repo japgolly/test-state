@@ -241,7 +241,8 @@ object TestState {
       moduleName := "ext-scalajs-react",
       libraryDependencies ++= Seq(
         "com.github.japgolly.scalajs-react" %%% "core" % Ver.ScalaJsReact,
-        "com.github.japgolly.scalajs-react" %%% "test" % Ver.ScalaJsReact),
+        "com.github.japgolly.scalajs-react" %%% "test" % Ver.ScalaJsReact,
+        "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime % Test),
       jsEnv := new JSDOMNodeJSEnv)
 
   lazy val extSelenium = project
