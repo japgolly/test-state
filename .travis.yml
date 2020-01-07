@@ -3,13 +3,13 @@ sudo: false
 
 scala:
   - 2.13.1
-  - 2.12.8
+  - 2.12.10
 jdk:
   - openjdk8
 env:
   global:
-    - CHROMEDRIVER_VER=76.0.3809.126
-    - GECKODRIVER_VER=0.24.0
+    - CHROMEDRIVER_VER=79.0.3945.36
+    - GECKODRIVER_VER=0.26.0
 
 addons:
   firefox: latest

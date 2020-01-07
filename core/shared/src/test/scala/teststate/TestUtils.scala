@@ -42,7 +42,7 @@ trait TestUtil
                    showChildren: Boolean          = true,
                    normalise   : String => String = stringIdFn)
                   (implicit s  : DisplayError[E],
-                            l  : Line): Unit = {
+                   l           : Line): Unit = {
     val n = normalise compose trim
     val f = if (showChildren) inspectionFormat else inspectionFormatOnlyFailedChildren
     val actual = r.format(f)(s)

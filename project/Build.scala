@@ -22,22 +22,22 @@ object TestState {
     val Cats            = "2.0.0"
     val Jsoup           = "1.12.1"
     val KindProjector   = "0.11.0"
-    val Microlibs       = "2.0-RC1"
+    val MacroParadise   = "2.1.1"
+    val Microlibs       = "2.0"
     val MTest           = "0.7.1"
-    val Nyaya           = "0.9.0-RC1"
+    val Nyaya           = "0.9.0"
     val Scala212        = "2.12.10"
     val Scala213        = "2.13.1"
     val ScalaCollCompat = "2.1.2"
-    val ScalaJsDom      = "0.9.7"
-    val ScalaJsReact    = "1.5.0-RC2"
-    val ScalaJsJavaTime = "0.2.5"
-    val Scalaz          = "7.2.28"
+    val ScalaJsDom      = "0.9.8"
+    val ScalaJsReact    = "1.5.0"
+    val ScalaJsJavaTime = "0.2.6"
+    val Scalaz          = "7.2.30"
     val Selenium        = "3.141.59"
     val Sizzle          = "2.3.0"
-    val UnivEq          = "1.1.0-RC3"
+    val UnivEq          = "1.1.0"
 
     // Used in examples only
-    val MacroParadise   = "2.1.1"
     val Monocle         = "2.0.0"
     val ReactJs         = "16.7.0"
   }
@@ -67,7 +67,6 @@ object TestState {
       scalacOptions                ++= scalacFlags,
       scalacOptions in Test        --= Seq("-Ywarn-dead-code"),
       shellPrompt in ThisBuild      := ((s: State) => Project.extract(s).currentRef.project + "> "),
-      triggeredMessage              := Watched.clearWhenTriggered,
       incOptions                    := incOptions.value.withLogRecompileOnMacro(false),
       updateOptions                 := updateOptions.value.withCachedResolution(true),
       releasePublishArtifactsAction := PgpKeys.publishSigned.value,
@@ -168,7 +167,7 @@ object TestState {
         "com.github.japgolly.nyaya"  %%% "nyaya-prop"              % Ver.Nyaya % Test,
         "com.github.japgolly.nyaya"  %%% "nyaya-test"              % Ver.Nyaya % Test))
     .jsSettings(
-      libraryDependencies += "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime)
+      libraryDependencies += "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime % Provided)
 
   lazy val domZipperJVM = domZipper.jvm
   lazy val domZipperJS  = domZipper.js
@@ -252,12 +251,13 @@ object TestState {
     .in(file("ext-scalajs-react"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings.js, testSettings.js)
-    .dependsOn(domZipperJS)
+    .dependsOn(coreJS, domZipperJS)
     .settings(
       moduleName := "ext-scalajs-react",
       libraryDependencies ++= Seq(
         "com.github.japgolly.scalajs-react" %%% "core" % Ver.ScalaJsReact,
-        "com.github.japgolly.scalajs-react" %%% "test" % Ver.ScalaJsReact),
+        "com.github.japgolly.scalajs-react" %%% "test" % Ver.ScalaJsReact,
+        "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime % Test),
       jsEnv := new JSDOMNodeJSEnv)
 
   lazy val extSelenium = project
@@ -309,7 +309,8 @@ object TestState {
       libraryDependencies ++= Seq(
         "com.github.japgolly.scalajs-react" %%% "ext-monocle-cats" % Ver.ScalaJsReact,
         "com.github.julien-truffaut"        %%% "monocle-core"     % Ver.Monocle,
-        "com.github.julien-truffaut"        %%% "monocle-macro"    % Ver.Monocle),
+        "com.github.julien-truffaut"        %%% "monocle-macro" % Ver.Monocle,
+        "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime),
       addMacroParadisePlugin, // For Monocle macros
       jsDependencies ++= Seq(
         "org.webjars.npm" % "react" % Ver.ReactJs
