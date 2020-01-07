@@ -293,7 +293,8 @@ object TestState {
       libraryDependencies ++= Seq(
         "com.github.japgolly.scalajs-react" %%% "ext-monocle"   % Ver.ScalaJsReact,
         "com.github.julien-truffaut"        %%% "monocle-core"  % Ver.Monocle,
-        "com.github.julien-truffaut"        %%% "monocle-macro" % Ver.Monocle),
+        "com.github.julien-truffaut"        %%% "monocle-macro" % Ver.Monocle,
+        "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime),
       addCompilerPlugin(macroParadisePlugin), // For Monocle macros
       jsDependencies ++= Seq(
         "org.webjars.npm" % "react" % Ver.ReactJs
