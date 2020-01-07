@@ -59,44 +59,44 @@ object DomZipperJsTest extends TestSuite {
 
   override def tests = Tests {
 
-    'outerHTML - assertEq(name.outerHTML, nameInputHtml)
+    "outerHTML" - assertEq(name.outerHTML, nameInputHtml)
 
-    'innerHTML - assertEq($("div.name").innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
+    "innerHTML" - assertEq($("div.name").innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
 
-    'innerText - assertEq($("div.name").innerText, "Name:")
+    "innerText" - assertEq($("div.name").innerText, "Name:")
 
-    'value - assertEq(name.value, "Bob Loblaw")
+    "value" - assertEq(name.value, "Bob Loblaw")
 
-    'checkedT - assertEq($("input[type=checkbox]", 1 of 2).checked, true)
-    'checkedF - assertEq($("input[type=checkbox]", 2 of 2).checked, false)
+    "checkedT" - assertEq($("input[type=checkbox]", 1 of 2).checked, true)
+    "checkedF" - assertEq($("input[type=checkbox]", 2 of 2).checked, false)
 
-    'collect - {
+    "collect" - {
       assertEq(checkboxes.size, 2)
       assertEq(checkboxes.map(_.checked), Vector(true, false))
     }
 
-    'classes {
-      'none - assertEq($("form").classes, Set.empty[String])
-      'some - assertEq(name.classes, Set("a", "b", "c"))
+    "classes" - {
+      "none" - assertEq($("form").classes, Set.empty[String])
+      "some" - assertEq(name.classes, Set("a", "b", "c"))
     }
 
-    'selectedOption {
-      'nonSelect - assertEq($.failToOption.selectedOption.map(_ => ()), None)
-      'some - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
+    "selectedOption" - {
+      "nonSelect" - assertEq($.failToOption.selectedOption.map(_ => ()), None)
+      "some" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
 
       // Disabled because it seems this is undefined behaviour
       // 'none - assertEq($("select", 2 of 2).selectedOptionText, None)
     }
 
-    'findSelfOrChildWithAttribute - {
+    "findSelfOrChildWithAttribute" - {
       def attr = "data-coding"
       def html = """<label for="coding" data-coding="1">Coding</label>"""
       def child = $.findSelfOrChildWithAttribute(attr)
-      'child - assertEq(child.map(_.outerHTML), Some(html))
-      'self - assertEq(child.flatMap(_.findSelfOrChildWithAttribute(attr).map(_.outerHTML)), Some(html))
+      "child" - assertEq(child.map(_.outerHTML), Some(html))
+      "self" - assertEq(child.flatMap(_.findSelfOrChildWithAttribute(attr).map(_.outerHTML)), Some(html))
     }
 
-    'matches - {
+    "matches" - {
       val x = $("input[type=checkbox]", 1 of 2)
       assert(x.matches("input"))
       assert(!x.matches("a"))
@@ -106,20 +106,20 @@ object DomZipperJsTest extends TestSuite {
       assert(!x.matches("body a input"))
     }
 
-    'child - {
-      'sole - assertEq($("form").child("h3").innerText, "HI")
-      'nOfM - assertEq($("form").child("div", 2 of 3)("h3").innerText, "EH??")
+    "child" - {
+      "sole" - assertEq($("form").child("h3").innerText, "HI")
+      "nOfM" - assertEq($("form").child("div", 2 of 3)("h3").innerText, "EH??")
     }
 
-    'children - {
-      'nullary - assertEq(
+    "children" - {
+      "nullary" - assertEq(
         $("form").children1n.map(_.tagName.toLowerCase),
         Vector("div", "select", "select", "div", "h3", "div"))
 
-      'sel - assertEq($("form").children1n("h3").innerTexts, Vector("HI"))
+      "sel" - assertEq($("form").children1n("h3").innerTexts, Vector("HI"))
     }
 
-    'parentAndChild - {
+    "parentAndChild" - {
       val c = $("form").child("div", 3 of 3)("h3")
       assertEq(c.outerHTML, "<h3>EH?</h3>")
       assertEq(c.parent.outerHTML, "<div><h3>EH?</h3></div>")

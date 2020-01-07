@@ -37,27 +37,27 @@ object FastDomZipperSeleniumTest extends TestSuite {
 
   override def tests = Tests {
 
-    'fast {
-      'outerHTML - assertEq(name.outerHTML, nameInputHtml)
+    "fast" - {
+      "outerHTML" - assertEq(name.outerHTML, nameInputHtml)
 
-      'innerHTML - assertEq($("div.name").innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
+      "innerHTML" - assertEq($("div.name").innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
 
-      'innerText - assertEq($("div.name").innerText, "Name:")
+      "innerText" - assertEq($("div.name").innerText, "Name:")
 
-      'value - assertEq(name.value, "Bob Loblaw")
+      "value" - assertEq(name.value, "Bob Loblaw")
 
-      'checkedT - assertEq($("input[type=checkbox]", 1 of 2).checked, true)
-      'checkedF - assertEq($("input[type=checkbox]", 2 of 2).checked, false)
+      "checkedT" - assertEq($("input[type=checkbox]", 1 of 2).checked, true)
+      "checkedF" - assertEq($("input[type=checkbox]", 2 of 2).checked, false)
 
-      'collect - {
+      "collect" - {
         assertEq(checkboxes.size, 2)
   //      assertEq(checkboxes.mapDoms(_.isSelected), Vector(true, false))
         assertEq(checkboxes.map(_.checked), Vector(true, false))
       }
 
-      'classes {
-        'none - assertEq($("form").classes, Set.empty[String])
-        'some - assertEq(name.classes, Set("a", "b", "c"))
+      "classes" - {
+        "none" - assertEq($("form").classes, Set.empty[String])
+        "some" - assertEq(name.classes, Set("a", "b", "c"))
       }
 
   //    'selectedOption {
@@ -66,15 +66,15 @@ object FastDomZipperSeleniumTest extends TestSuite {
   //      'none - assertEq($("select", 2 of 2).selectedOptionText, None)
   //    }
 
-      'findSelfOrChildWithAttribute - {
+      "findSelfOrChildWithAttribute" - {
         def attr = "data-coding"
         def html = """<label for="coding" data-coding="1">Coding</label>"""
         def child = $.findSelfOrChildWithAttribute(attr)
-        'child - assertEq(child.map(_.outerHTML), Some(html))
-        'self - assertEq(child.flatMap(_.findSelfOrChildWithAttribute(attr).map(_.outerHTML)), Some(html))
+        "child" - assertEq(child.map(_.outerHTML), Some(html))
+        "self" - assertEq(child.flatMap(_.findSelfOrChildWithAttribute(attr).map(_.outerHTML)), Some(html))
       }
 
-      'matches - {
+      "matches" - {
         val x = $("input[type=checkbox]", 1 of 2)
         assert(x.matches("input"))
         assert(!x.matches("a"))
@@ -84,20 +84,20 @@ object FastDomZipperSeleniumTest extends TestSuite {
         assert(!x.matches("body a input"))
       }
 
-      'child - {
-        'sole - assertEq($("form").child("h3").innerText, "HI")
-        'nOfM - assertEq($("form").child("div", 2 of 3)("h3").innerText, "EH??")
+      "child" - {
+        "sole" - assertEq($("form").child("h3").innerText, "HI")
+        "nOfM" - assertEq($("form").child("div", 2 of 3)("h3").innerText, "EH??")
       }
 
-      'children - {
-        'nullary - assertEq(
+      "children" - {
+        "nullary" - assertEq(
           $("form").children1n.map(_.tagName.toLowerCase),
           Vector("div", "select", "select", "div", "h3", "div" ,"section"))
 
-        'sel - assertEq($("form").children1n("h3").innerTexts, Vector("HI"))
+        "sel" - assertEq($("form").children1n("h3").innerTexts, Vector("HI"))
       }
 
-      'parentAndChild - {
+      "parentAndChild" - {
         val c = $("form").child("div", 3 of 3)("h3")
         assertEq(c.outerHTML, "<h3>EH?</h3>")
         assertEq(c.parent.outerHTML, "<div><h3>EH?</h3></div>")
@@ -105,29 +105,29 @@ object FastDomZipperSeleniumTest extends TestSuite {
       }
     }
 
-    'htmlToBody - assertEq(html("body").classes, Set("haha"))
-    'bodyToBody - assertEq(body.classes, Set("haha"))
+    "htmlToBody" - assertEq(html("body").classes, Set("haha"))
+    "bodyToBody" - assertEq(body.classes, Set("haha"))
 
-    'radioT - assertEq($("input[type=radio]", 1 of 2).checked, true)
-    'radioF - assertEq($("input[type=radio]", 2 of 2).checked, false)
+    "radioT" - assertEq($("input[type=radio]", 1 of 2).checked, true)
+    "radioF" - assertEq($("input[type=radio]", 2 of 2).checked, false)
 
-    'slow - {
+    "slow" - {
       def outerHtml(z: FastDomZipperSelenium) = htmlScrub.run(z.dom().getAttribute("outerHTML"))
-      'outerHTML - assertEq(outerHtml(name), nameInputHtml)
-      'innerText - assertEq($("div.name").dom().getText, "Name:")
-      'checkedT - assertEq($("input[type=checkbox]", 1 of 2).dom().isSelected, true)
-      'checkedF - assertEq($("input[type=checkbox]", 2 of 2).dom().isSelected, false)
-      'parentAndChild - {
+      "outerHTML" - assertEq(outerHtml(name), nameInputHtml)
+      "innerText" - assertEq($("div.name").dom().getText, "Name:")
+      "checkedT" - assertEq($("input[type=checkbox]", 1 of 2).dom().isSelected, true)
+      "checkedF" - assertEq($("input[type=checkbox]", 2 of 2).dom().isSelected, false)
+      "parentAndChild" - {
         val c = $("form").child("div", 3 of 3)("h3")
         assertEq(outerHtml(c), "<h3>EH?</h3>")
         assertEq(outerHtml(c.parent), "<div><h3>EH?</h3></div>")
         assertEq(outerHtml(c.parent.child()), "<h3>EH?</h3>")
       }
-      'radioT - assertEq($("input[type=radio]", 1 of 2).dom().isSelected, true)
-      'radioF - assertEq($("input[type=radio]", 2 of 2).dom().isSelected, false)
+      "radioT" - assertEq($("input[type=radio]", 1 of 2).dom().isSelected, true)
+      "radioF" - assertEq($("input[type=radio]", 2 of 2).dom().isSelected, false)
     }
 
-    'slowOnlySameShape - {
+    "slowOnlySameShape" - {
       val s = $.slowOnly()
       val _: FastDomZipperSelenium = s
       ()

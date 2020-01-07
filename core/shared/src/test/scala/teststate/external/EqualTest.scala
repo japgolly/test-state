@@ -28,24 +28,24 @@ object EqualTest extends TestSuite {
 
   override def tests = Tests {
 
-    'builtin {
-      'unit    - assertId(())
-      'long    - assertPass[Long   ](4L, 5L)
-      'int     - assertPass[Int    ](3, 5)
-      'short   - assertPass[Short  ](2, 7)
-      'byte    - assertPass[Byte   ](1, 3)
-      'char    - assertPass('a', 'H')
-      'boolean - assertPass(true, false)
-      'string  - assertPass("x", "")
+    "builtin" - {
+      "unit"    - assertId(())
+      "long"    - assertPass[Long   ](4L, 5L)
+      "int"     - assertPass[Int    ](3, 5)
+      "short"   - assertPass[Short  ](2, 7)
+      "byte"    - assertPass[Byte   ](1, 3)
+      "char"    - assertPass('a', 'H')
+      "boolean" - assertPass(true, false)
+      "string"  - assertPass("x", "")
     }
 
-    'byUnivEq - assertPass(I(1), I(2))
-    'byUnivEqK - assertPass(Some(I(1)), None, Some(I(2)))
+    "byUnivEq" - assertPass(I(1), I(2))
+    "byUnivEqK" - assertPass(Some(I(1)), None, Some(I(2)))
 
-    'byEqual  - assertPass(L(1), L(2))
-    'byEqualK - assertPass(Some(L(1)), None, Some(L(2)))
+    "byEqual"  - assertPass(L(1), L(2))
+    "byEqualK" - assertPass(Some(L(1)), None, Some(L(2)))
 
-    'nope {
+    "nope" - {
       compileError("implicitly[Equal[Nope]]")
       compileError("implicitly[Equal[Option[Nope]]]")
       ()

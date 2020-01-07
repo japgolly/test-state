@@ -39,7 +39,7 @@ object GrowthStrategyTest extends TestSuite {
 
   override def tests = Tests {
 
-    'singleBrowser - {
+    "singleBrowser" - {
       new Tester(GrowthStrategy.singleBrowser)
         .testAndApply(1)
         .testAndApply(2)
@@ -52,7 +52,7 @@ object GrowthStrategyTest extends TestSuite {
         .testAndApply(2)
     }
 
-    'maxBrowsers - {
+    "maxBrowsers" - {
       new Tester(GrowthStrategy.maxBrowsers(3))
         .testAndApply(1)
         .testAndApply(1, 1)
@@ -78,7 +78,7 @@ object GrowthStrategyTest extends TestSuite {
         .testAndApply(2, 2, 2)
     }
 
-    'maxTabs - {
+    "maxTabs" - {
       new Tester(GrowthStrategy.maxTabs(3))
         .testAndApply(1)
         .testAndApply(2)
