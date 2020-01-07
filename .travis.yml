@@ -3,7 +3,7 @@ sudo: false
 
 scala:
   - 2.11.12
-  - 2.12.8
+  - 2.12.10
 jdk:
   - openjdk8
 env:

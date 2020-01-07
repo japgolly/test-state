@@ -19,22 +19,22 @@ object TestState {
 
   object Ver {
     final val Acyclic         = "0.1.9"
-    final val Cats            = "1.6.1"
+    final val Cats            = "2.0.0"
     final val Jsoup           = "1.12.1"
-    final val KindProjector   = "0.10.3"
+    final val KindProjector   = "0.11.0"
     final val MacroParadise   = "2.1.1"
-    final val Microlibs       = "1.18"
+    final val Microlibs       = "2.0"
     final val MTest           = "0.6.6"
-    final val Nyaya           = "0.8.1"
+    final val Nyaya           = "0.9.0"
     final val Scala211        = "2.11.12"
-    final val Scala212        = "2.12.8"
+    final val Scala212        = "2.12.10"
     final val ScalaJsDom      = "0.9.8"
-    final val ScalaJsReact    = "1.4.2"
+    final val ScalaJsReact    = "1.5.0"
     final val ScalaJsJavaTime = "0.2.6"
     final val Scalaz          = "7.2.30"
     final val Selenium        = "3.141.59"
     final val Sizzle          = "2.3.0"
-    final val UnivEq          = "1.0.6"
+    final val UnivEq          = "1.1.0"
 
     // Used in examples only
     final val Monocle       = "1.5.0"
@@ -64,13 +64,12 @@ object TestState {
       scalacOptions in Compile     ++= byScalaVersion { case (2, 12) => Seq("-opt:l:method") }.value,
       scalacOptions in Test        --= Seq("-Ywarn-dead-code"),
       shellPrompt in ThisBuild      := ((s: State) => Project.extract(s).currentRef.project + "> "),
-      triggeredMessage              := Watched.clearWhenTriggered,
       incOptions                    := incOptions.value.withLogRecompileOnMacro(false),
       updateOptions                 := updateOptions.value.withCachedResolution(true),
       releasePublishArtifactsAction := PgpKeys.publishSigned.value,
       releaseTagComment             := s"v${(version in ThisBuild).value}",
       releaseVcsSign                := true,
-      addCompilerPlugin("org.typelevel" %% "kind-projector" % Ver.KindProjector))
+      addCompilerPlugin("org.typelevel" %% "kind-projector" % Ver.KindProjector cross CrossVersion.full))
     .configure(acyclicSettings))
 
   def byScalaVersion[A](f: PartialFunction[(Long, Long), Seq[A]]): Def.Initialize[Seq[A]] =
