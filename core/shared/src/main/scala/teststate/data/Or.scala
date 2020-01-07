@@ -78,6 +78,9 @@ sealed abstract class Or[+A, +B] extends Product with Serializable {
 
   final def toTriFlatMap[C >: A, D](f: B => Tri[C, D]): Tri[C, D] =
     fold(Failed(_), f)
+
+  final def toEither: Either[A, B] =
+    fold(scala.Left(_), scala.Right(_))
 }
 
 final case class Left[+A](left: A) extends Or[A, Nothing] {

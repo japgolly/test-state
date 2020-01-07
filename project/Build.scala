@@ -236,7 +236,7 @@ object TestState {
     .in(file("ext-scalajs-react"))
     .enablePlugins(ScalaJSPlugin)
     .configure(commonSettings.js, publicationSettings.js, testSettings.js)
-    .dependsOn(domZipperJS)
+    .dependsOn(coreJS, domZipperJS)
     .settings(
       moduleName := "ext-scalajs-react",
       libraryDependencies ++= Seq(
