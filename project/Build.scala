@@ -155,7 +155,7 @@ object TestState {
         "com.github.japgolly.nyaya"  %%% "nyaya-prop" % Ver.Nyaya % "test",
         "com.github.japgolly.nyaya"  %%% "nyaya-test" % Ver.Nyaya % "test"))
     .jsSettings(
-      libraryDependencies += "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime)
+      libraryDependencies += "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime % Provided)
 
   lazy val domZipperJVM = domZipper.jvm
   lazy val domZipperJS  = domZipper.js
