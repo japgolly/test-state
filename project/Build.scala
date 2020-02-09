@@ -20,7 +20,7 @@ object TestState {
   object Ver {
     val Acyclic         = "0.1.9"
     val Cats            = "2.0.0"
-    val Jsoup           = "1.12.1"
+    val Jsoup           = "1.12.2"
     val KindProjector   = "0.11.0"
     val MacroParadise   = "2.1.1"
     val Microlibs       = "2.0"
