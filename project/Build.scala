@@ -19,7 +19,7 @@ object TestState {
 
   object Ver {
     val Acyclic         = "0.2.0"
-    val Cats            = "2.0.0"
+    val Cats            = "2.1.1"
     val Jsoup           = "1.12.1"
     val KindProjector   = "0.11.0"
     val MacroParadise   = "2.1.1"
@@ -28,17 +28,17 @@ object TestState {
     val Nyaya           = "0.9.0"
     val Scala212        = "2.12.11"
     val Scala213        = "2.13.1"
-    val ScalaCollCompat = "2.1.3"
+    val ScalaCollCompat = "2.1.4"
     val ScalaJsDom      = "0.9.8"
-    val ScalaJsReact    = "1.5.0"
+    val ScalaJsReact    = "1.6.0"
     val ScalaJsJavaTime = "0.2.6"
     val Scalaz          = "7.2.30"
     val Selenium        = "3.141.59"
     val Sizzle          = "2.3.0"
-    val UnivEq          = "1.1.0"
+    val UnivEq          = "1.2.0"
 
     // Used in examples only
-    val Monocle         = "2.0.0"
+    val Monocle         = "2.0.4"
     val ReactJs         = "16.7.0"
   }
 
