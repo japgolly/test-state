@@ -108,11 +108,11 @@ object History {
       this += Step(ne.name, Fail(ne.error))
 
     def addEach[A, B](as: IterableOnce[A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit attempt: ErrorHandler[E]): Unit =
-      for (a <- as)
+      for (a <- as.iterator)
         add1(a)(nameFn)(nameInput, test)(attempt)
 
     def addEachNE[A, B](as: IterableOnce[NamedError[FE] Or A])(nameFn: A => NameFn[B])(nameInput: Some[B], test: A => Tri[FE, Any])(implicit attempt: ErrorHandler[E]): Unit =
-      as foreach {
+      as.iterator.foreach {
         case Right(a) => add1(a)(nameFn)(nameInput, test)(attempt)
         case Left(ne) => addNE(ne)
       }

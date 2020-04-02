@@ -68,13 +68,13 @@ object TodoComponent {
     }
 
     private def renderList(items: IterableOnce[TodoItem]): TagMod =
-      if (items.isEmpty)
+      if (items.iterator.isEmpty)
         EmptyVdom
       else
         <.div(
           "Todo List",
           <.ul(
-            items.toIterator.zipWithIndex.map { case (item, idx) =>
+            items.iterator.zipWithIndex.map { case (item, idx) =>
               <.li(
                 ^.key := idx,
                 renderItem(item, idx))

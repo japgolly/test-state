@@ -56,7 +56,7 @@ object PolyComposable {
 
   final class MonoComposableTraversableOnceOps[C[x] <: IterableOnce[x], Op, A](as: C[A], c: Mono[Op, A]) {
     def combine(implicit empty: Empty[A]): A =
-      as.foldLeft(empty.instance)(c.compose)
+      as.iterator.foldLeft(empty.instance)(c.compose)
   }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

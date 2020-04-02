@@ -34,7 +34,7 @@ object NameUtils {
     case Some(BeforeAfter(i, _)) =>
       val del = expectDel(i)
       val add = expectAdd(i)
-      val as = del.toIterator.map("-" + sa(_)) ++ add.toIterator.map("+" + sa(_))
+      val as = del.iterator.map("-" + sa(_)) ++ add.iterator.map("+" + sa(_))
       if (as.isEmpty)
         s"$focusName ${should(!pos)} $verb."
       else

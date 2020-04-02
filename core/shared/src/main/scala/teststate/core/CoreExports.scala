@@ -2,7 +2,7 @@ package teststate.core
 
 import acyclic.file
 import teststate.data.Name
-import teststate.typeclass.{PolyComposable, Conditional, Display}
+import teststate.typeclass.{Conditional, Display, PolyComposable}
 
 trait CoreExports
   extends Name.Implicits

@@ -21,7 +21,7 @@ final class Display[A](private val display: A => String) extends AnyVal {
     map(i + _.replace("\n", "\n" + i))
 
   def mkString[C[X] <: IterableOnce[X]](start: String, mid: String, end: String): Display[C[A]] =
-    Display(_.toIterator.map(display).mkString(start, mid, end))
+    Display(_.iterator.map(display).mkString(start, mid, end))
 
   def coll[C[X] <: IterableOnce[X]]: Display[C[A]] =
     mkString("[", ", ", "]")
@@ -117,7 +117,7 @@ object Display {
       }
 
     implicit def testStateDisplayTraversable[C[X] <: Iterable[X], A](implicit display: Display[A]): Display[C[A]] =
-      Display(_.toIterator.map(display(_)).mkString(", "))
+      Display(_.iterator.map(display(_)).mkString(", "))
   }
 
   trait ToOps {

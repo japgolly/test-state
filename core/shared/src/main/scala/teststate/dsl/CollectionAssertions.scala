@@ -12,12 +12,12 @@ import teststate.typeclass._
 object CollectionAssertions {
 
   private def formatSet(s: IterableOnce[_]): String =
-    s.mkString(", ")
+    s.iterator.mkString(", ")
 
   protected final def tallyElements[A](neg: IterableOnce[A], pos: IterableOnce[A]): mutable.HashMap[A, Int] = {
     val m = mutable.HashMap.empty[A, Int]
     def go(as: IterableOnce[A], n: Int): Unit =
-      for (a <- as)
+      for (a <- as.iterator)
         m.update(a, m.get(a).fold(n)(_ + n))
     go(neg, -1)
     go(pos, 1)
@@ -35,7 +35,7 @@ object CollectionAssertions {
 
     protected final def prep[A](as: IterableOnce[A]) = {
       val m = mutable.HashMap.empty[A, Int]
-      for (a <- as) {
+      for (a <- as.iterator) {
         val v = m.getOrElse(a, 0) + 1
         m.update(a, v)
       }
@@ -99,7 +99,7 @@ object CollectionAssertions {
     def name(subject: => String, queryName: => String): Name
     def apply[A, B](source: IterableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B], sb: Display[B]): Option[Contains.Failure[B]]
     protected final def found[A, B](source: IterableOnce[A], query: B)(implicit ev: A <:< B, eb: Equal[B]) =
-      source.exists(a => eb.equal(query, a))
+      source.iterator.exists(a => eb.equal(query, a))
   }
 
   object Contains {
@@ -214,7 +214,7 @@ object CollectionAssertions {
       s"$subject should contain some $queryNames."
 
     def apply[A, B](source: IterableOnce[A], query: Set[B])(implicit ev: A <:< B, sb: Display[B]): Option[ContainsAny.FoundNone.type] =
-      if (source.exists(query contains _))
+      if (source.iterator.exists(query contains _))
         None
       else
         Some(ContainsAny.FoundNone)
@@ -227,7 +227,7 @@ object CollectionAssertions {
 
     def apply[A, B](source: IterableOnce[A], blacklist: Set[B])(implicit ev: A <:< B, sb: Display[B]): Option[ContainsAny.FoundSome[B]] = {
       var bad = Vector.empty[B]
-      for (a <- source)
+      for (a <- source.iterator)
         if (blacklist contains a)
           bad :+= a.asInstanceOf[B]
       if (bad.isEmpty)
@@ -275,7 +275,7 @@ object CollectionAssertions {
 
       override def apply[A: UnivEq, B](source: IterableOnce[A], whitelist: Set[B])(implicit ev: A <:< B, sa: Display[A]) = {
         var bad = Vector.empty[A]
-        for (a <- source)
+        for (a <- source.iterator)
           if (!whitelist.contains(a))
             bad :+= a
         if (bad.isEmpty)
@@ -291,7 +291,7 @@ object CollectionAssertions {
         s"$subject should contain other than $whitelistNames."
 
       override def apply[A: UnivEq, B](source: IterableOnce[A], whitelist: Set[B])(implicit ev: A <:< B, sa: Display[A]) =
-        if (source.exists(!whitelist.contains(_)))
+        if (source.iterator.exists(!whitelist.contains(_)))
           None
         else
           Some(NothingOffWhitelist)
@@ -412,8 +412,8 @@ object CollectionAssertions {
 
     object Pos extends EqualIncludingOrder {
       override def apply[A](source: IterableOnce[A], expect: IterableOnce[A])(implicit eq: Equal[A], s: Display[A]) = {
-        val a = source.toVector
-        val e = expect.toSeq
+        val a = source.iterator.toVector
+        val e = expect.iterator.toSeq
         if (a.corresponds(e)(eq.equal))
           None
         else
@@ -423,7 +423,7 @@ object CollectionAssertions {
 
     object Neg extends EqualIncludingOrder {
       override def apply[A](source: IterableOnce[A], expect: IterableOnce[A])(implicit eq: Equal[A], s: Display[A]) =
-        if (source.toSeq.corresponds(expect.toSeq)(eq.equal))
+        if (source.iterator.toSeq.corresponds(expect.iterator.toSeq)(eq.equal))
           Some(Matched)
         else
           None
@@ -527,7 +527,7 @@ object CollectionAssertions {
       override def apply[C[x] <: IterableOnce[x], A](as: C[A])(f: A => Boolean)(implicit d: Display[A]): Option[Failed[A]] = {
         var ok = 0
         var ko = Vector.empty[A]
-        for (a <- as)
+        for (a <- as.iterator)
           if (f(a))
             ok += 1
           else
@@ -574,7 +574,7 @@ object CollectionAssertions {
         s"Of all $coll, at least one should $criteria."
 
       override def apply[C[x] <: IterableOnce[x], A](as: C[A])(f: A => Boolean)(implicit d: Display[A]): Option[DoesntExist[A]] = {
-        val i = as.toIterator
+        val i = as.iterator
         val b = Vector.newBuilder[A]
 
         @tailrec def loop(): Option[DoesntExist[A]] =
