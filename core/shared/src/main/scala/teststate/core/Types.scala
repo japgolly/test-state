@@ -2,6 +2,7 @@ package teststate.core
 
 import acyclic.file
 import teststate.data._
+import teststate.typeclass.Profunctor
 
 object Types {
 
@@ -17,4 +18,10 @@ object Types {
   type Invariants[-O, -S, E] = CheckShape[Invariant, O, S, E]
 
   // OS →ˢ (NamedError E | OS →ᶜ E)
+
+  implicit def checkShapeProfunctorOps[C[-_, _], O, S, E](a: CheckShape[C, O, S, E]) =
+    new Profunctor.Ops[Sack, OS[O, S], NamedError[Failure[E]] Or C[OS[O, S], E]](a)
+
+  implicit def checkShapeAProfunctorOps[C[-_, _], A, E](a: CheckShapeA[C, A, E]) =
+    new Profunctor.Ops[Sack, A, NamedError[Failure[E]] Or C[A, E]](a)
 }

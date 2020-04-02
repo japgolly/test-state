@@ -3,7 +3,6 @@ package teststate.core
 import acyclic.file
 import teststate.data._
 import teststate.typeclass._
-import Profunctor.ToOps._
 import Types._
 
 trait CheckOps[C[_, _, _]] {
@@ -54,14 +53,14 @@ object CheckOps {
       _.emapO(f).toTriFlatMap(fn)
   }
 
-  abstract class SingleCheck[D[-_, _] : Profunctor] extends CheckOps[CheckShape1[D]#T] {
+  abstract class SingleCheck[D[-_, _]](implicit D: Profunctor[D]) extends CheckOps[CheckShape1[D]#T] {
     final type C[O, S, E] = CheckShape1[D]#T[O, S, E]
 
     override def mapE[O, S, E, F](c: C[O, S, E])(f: E => F): C[O, S, F] =
-      c rmap f
+      D.rmap(c)(f)
 
     override def map_OS[O, S, E, X, Y](c: C[O, S, E])(f: OS[X, Y] => OS[O, S]): C[X, Y, E] =
-      c lmap f
+      D.lmap(c)(f)
   }
 
   trait Implicits {
@@ -103,7 +102,7 @@ object CheckOps {
       }
 
     private def checkOpsInstanceForChecks[C[-_, _]](implicit sub: CheckOps[CheckShape1[C]#T]): CheckOps[CheckShape[C, ?, ?, ?]] =
-      new CheckOps[CheckShape[C, ?, ?, ?]] {
+      new CheckOps[CheckShape[C, *, *, *]] {
         import Sack._
 
         override def mapE[O, S, E, F](c: CheckShape[C, O, S, E])(f: E => F): CheckShape[C, O, S, F] =
