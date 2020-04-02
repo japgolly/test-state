@@ -24,6 +24,15 @@ object NameUtils {
     case Some(i) => equal(focusName, pos, expect(i))
   }
 
+  def equalOptionFn[I, A](focusName: String, pos: Boolean, expect: I => Option[A])(implicit sa: Display[A]): Option[I] => Name = {
+    case None    => subjectShouldVerb(focusName, pos, "be <?>")
+    case Some(i) =>
+      expect(i) match {
+        case Some(a) => equal(focusName, pos, a)
+        case None    => subjectShouldVerb(focusName, pos, "be <?>")
+      }
+  }
+
   def collChangeFn[I, A](focusName: String,
                          pos      : Boolean,
                          verb     : String,
