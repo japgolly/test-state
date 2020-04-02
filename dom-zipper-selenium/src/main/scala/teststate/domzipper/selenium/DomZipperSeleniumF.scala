@@ -1,7 +1,7 @@
 package teststate.domzipper.selenium
 
 import org.openqa.selenium.{By, WebDriver, WebElement}
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import teststate.domzipper._
 import teststate.selenium.util.SeleniumExt._
 import DomZipper.{CssSelResult, DomCollection, Layer}
@@ -18,7 +18,7 @@ object DomZipperSeleniumF {
   type CssSelEngine = DomZipper.CssSelEngine[Dom, Dom]
 
   private implicit val cssSelSelenium: CssSelEngine =
-    DomZipper.CssSelEngine((css, parent) => parent().findElements(By.cssSelector(css)).asScala.map(() => _)(collection.breakOut))
+    DomZipper.CssSelEngine((css, parent) => parent().findElements(By.cssSelector(css)).asScala.iterator.map(() => _).toVector)
 
   private val rootDomFn: DomZipperBase.Layers[Dom] => Dom =
     _.latest.dom
@@ -101,7 +101,7 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
 
   override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] = {
     // WebElement implements hashCode and equals sensibly
-    val all: Set[WebElement] = runCssQuery(sel).map(_())(collection.breakOut)
+    val all: Set[WebElement] = runCssQuery(sel).iterator.map(_()).toSet
     val children = dom().children().iterator.filter(all.contains).map(() => _).toVector
     newDomCollection(desc, children, C)
   }

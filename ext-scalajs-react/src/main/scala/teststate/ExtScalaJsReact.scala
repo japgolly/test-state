@@ -5,9 +5,9 @@ import japgolly.scalajs.react.test._
 import java.time.Instant
 import teststate.data.{Failure, Or}
 import teststate.typeclass.{ErrorHandler, ExecutionModel}
-import ExtScalaJsReact._
 
 trait ExtScalaJsReact extends domzipper.Exports {
+  import ExtScalaJsReact._
 
   final implicit def toReactExtHtmlScrubObject(a: HtmlScrub.type): ReactExtHtmlScrubObject =
     new ReactExtHtmlScrubObject(a)

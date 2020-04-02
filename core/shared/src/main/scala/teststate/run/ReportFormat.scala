@@ -149,9 +149,9 @@ object ReportFormat {
         val secfmt = "%." + secPrec + "f sec"
         d =>
           if (d.toMicros == 0)
-            d.toNanos + " μs"
+            d.toNanos.toString + " μs"
           else if (d.toSeconds == 0)
-            d.toMillis + " ms"
+            d.toMillis.toString + " ms"
           else
             secfmt.format(d.toMicros.toDouble / 1000000)
       }

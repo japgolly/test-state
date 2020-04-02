@@ -122,7 +122,7 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     dom match {
       case h: html.Element =>
         val c = h.classList
-        (0 until c.length).map(c.apply)(collection.breakOut)
+        (0 until c.length).iterator.map(c.apply).toSet
       case _ =>
         Set.empty
     }
@@ -131,8 +131,8 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     dynamicMethod[String](_.value.toString) orFail s".value failed on $dom."
 
   /** Cast DOM to [[js.Dynamic]] and invoke a method expected to return `A` if successful. */
-  def dynamicMethod[A](f: js.Dynamic => Any): Option[A] =
-    f(dom.asInstanceOf[js.Dynamic]).asInstanceOf[js.UndefOr[A]].toOption
+  def dynamicMethod[B](f: js.Dynamic => Any): Option[B] =
+    f(dom.asInstanceOf[js.Dynamic]).asInstanceOf[js.UndefOr[B]].toOption
 
   /** Cast DOM to [[js.Dynamic]], invoke a method, return the result as a `String`. */
   def dynamicString(f: js.Dynamic => Any): String =
