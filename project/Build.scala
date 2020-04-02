@@ -26,7 +26,7 @@ object TestState {
     val Microlibs       = "2.0"
     val MTest           = "0.7.1"
     val Nyaya           = "0.9.0"
-    val Scala212        = "2.12.10"
+    val Scala212        = "2.12.11"
     val Scala213        = "2.13.1"
     val ScalaCollCompat = "2.1.3"
     val ScalaJsDom      = "0.9.8"
