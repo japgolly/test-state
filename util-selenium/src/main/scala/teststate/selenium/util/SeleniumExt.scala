@@ -2,7 +2,7 @@ package teststate.selenium.util
 
 import org.openqa.selenium._
 import org.openqa.selenium.interactions.Actions
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import teststate.util.CssUtil
 
 object SeleniumExt extends SeleniumExt

@@ -2,8 +2,7 @@ package teststate.core
 
 import acyclic.file
 import teststate.typeclass._
-import Profunctor.ToOps._
-import Types.CheckShapeA
+import Types.{CheckShapeA, checkShapeAProfunctorOps}
 
 trait ToInvariants[F[_[-_, _], _, _], C[-_, _]] {
   def toInvariants[A, B](c: F[C, A, B]): F[Invariant, A, B]

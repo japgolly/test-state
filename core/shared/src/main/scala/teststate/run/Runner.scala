@@ -2,6 +2,7 @@ package teststate.run
 
 // import acyclic.file
 import scala.annotation.tailrec
+import scala.collection.compat._
 import scala.collection.mutable
 import teststate.data._
 import teststate.typeclass._
@@ -378,7 +379,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
 
     } else {
 
-      def runHalfChecks(deltas: Traversable[Around.DeltaA[OS[O, S], E]],
+      def runHalfChecks(deltas: Iterable[Around.DeltaA[OS[O, S], E]],
                         prepend: Vector[HalfCheck[O, S, E]] = Vector.empty): Vector[HalfCheck[O, S, E]] = {
         var b = prepend
         for (d0 <- deltas) {

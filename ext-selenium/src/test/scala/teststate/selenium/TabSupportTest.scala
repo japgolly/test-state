@@ -3,7 +3,7 @@ package teststate.selenium
 import utest._
 import TestUtil._
 import org.openqa.selenium.WebDriver
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import scala.util.Try
 import scalaz.Equal
 import scalaz.std.anyVal._

@@ -13,7 +13,7 @@ trait StdlibUtil {
 
   type NamedOption[+A] = StdlibUtil.NamedOption[A]
 
-  implicit def toTestStateTraversableExt[A](as: Traversable[A]): TestStateTraversableExt[A] =
+  implicit def toTestStateTraversableExt[A](as: Iterable[A]): TestStateTraversableExt[A] =
     new TestStateTraversableExt(as)
 
   type NamedVector[+A] = StdlibUtil.NamedVector[A]
@@ -128,7 +128,7 @@ object StdlibUtil {
       }
   }
 
-  final class TestStateTraversableExt[A](private val self: Traversable[A]) extends AnyVal {
+  final class TestStateTraversableExt[A](private val self: Iterable[A]) extends AnyVal {
     def named(namePlural: String): NamedVector[A] =
       new NamedVector(namePlural, self.toVector)
   }
