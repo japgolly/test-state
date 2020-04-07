@@ -1,6 +1,7 @@
 package teststate.dsl
 
 import acyclic.file
+import scala.collection.compat._
 import teststate.data.Name.Implicits._
 import teststate.data.{BeforeAfter, Name}
 import teststate.typeclass._
@@ -23,12 +24,26 @@ object NameUtils {
     case Some(i) => equal(focusName, pos, expect(i))
   }
 
-  def collChangeFn[I, A](focusName: String, pos: Boolean, verb: String, expectDel: I => TraversableOnce[A], expectAdd: I => TraversableOnce[A])(implicit sa: Display[A]): Option[BeforeAfter[I]] => Name = {
+  def equalOptionFn[I, A](focusName: String, pos: Boolean, expect: I => Option[A])(implicit sa: Display[A]): Option[I] => Name = {
+    case None    => subjectShouldVerb(focusName, pos, "be <?>")
+    case Some(i) =>
+      expect(i) match {
+        case Some(a) => equal(focusName, pos, a)
+        case None    => subjectShouldVerb(focusName, pos, "be <?>")
+      }
+  }
+
+  def collChangeFn[I, A](focusName: String,
+                         pos      : Boolean,
+                         verb     : String,
+                         expectDel: I => IterableOnce[A],
+                         expectAdd: I => IterableOnce[A])
+                        (implicit sa: Display[A]): Option[BeforeAfter[I]] => Name = {
     case None    => s"$focusName ${should(pos)} $verb: <?>."
     case Some(BeforeAfter(i, _)) =>
       val del = expectDel(i)
       val add = expectAdd(i)
-      val as = del.toIterator.map("-" + sa(_)) ++ add.toIterator.map("+" + sa(_))
+      val as = del.iterator.map("-" + sa(_)) ++ add.iterator.map("+" + sa(_))
       if (as.isEmpty)
         s"$focusName ${should(!pos)} $verb."
       else

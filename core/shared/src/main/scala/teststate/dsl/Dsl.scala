@@ -2,6 +2,7 @@ package teststate.dsl
 
 import acyclic.file
 import japgolly.univeq.UnivEq
+import scala.collection.compat._
 import teststate.core._
 import teststate.core.Types.SackE
 import teststate.data._
@@ -171,7 +172,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
     def option[A](f: OS => Option[A]) =
       new FocusOption(focusName, f)
 
-    def collection[T[x] <: TraversableOnce[x], A](f: OS => T[A]) =
+    def collection[T[x] <: IterableOnce[x], A](f: OS => T[A]) =
       new FocusColl(focusName, f)
 
     def obsAndState[A: Display](fo: O => A, fs: S => A) =
@@ -241,11 +242,19 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
         point(NameFn(NameUtils.equalFn(focusName, positive, expect)))(
           i => f.expectMaybeEqual(positive, ex = expect(i), actual = focusFn(i)))
 
-      def equalOption(expect: Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
+      def equalWhenDefined(expect: Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
         expect match {
           case Some(a) => equal(a)
           case None    => point(NameUtils.equal(focusName, positive, expect))(_ => None).skip
         }
+
+      def equalByWhenDefined(expect: OS => Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
+        point(NameFn(NameUtils.equalOptionFn(focusName, positive, expect)))(os =>
+          expect(os) match {
+            case Some(a) => f.expectMaybeEqual(positive, ex = a, actual = focusFn(os))
+            case None    => None
+          }
+        )
 
       def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         equal(before).before & equal(after).after
@@ -369,18 +378,18 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  final class FocusColl[C[X] <: TraversableOnce[X], A](focusName: => String, focusFn: OS => C[A]) {
+  final class FocusColl[C[X] <: IterableOnce[X], A](focusName: => String, focusFn: OS => C[A]) {
 
     def rename(n: => String) = new FocusColl[C, A](n, focusFn)
     def run = focusFn
 
     def map[B](f: A => B): FocusColl[Iterator, B] =
-      mapColl(_.toIterator map f)
+      mapColl(_.iterator map f)
 
     def filter(f: A => Boolean): FocusColl[Iterator, A] =
-      mapColl(_.toIterator filter f)
+      mapColl(_.iterator filter f)
 
-    def mapColl[D[X] <: TraversableOnce[X], B](f: C[A] => D[B]): FocusColl[D, B] =
+    def mapColl[D[X] <: IterableOnce[X], B](f: C[A] => D[B]): FocusColl[D, B] =
       new FocusColl(focusName, f compose focusFn)
 
     def value(implicit s: Display[C[A]]) =
@@ -389,7 +398,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
     def valueBy[B](f: C[A] => B)(implicit s: Display[B]) =
       new FocusValue[B](focusName, f compose focusFn)
 
-    def size = valueBy(_.size).rename(focusName + " size")
+    def size = valueBy(_.iterator.size).rename(focusName + " size")
 
     def assertB(positive: Boolean): AssertOps =
       new AssertOps(positive)
@@ -468,9 +477,9 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       def equal(expect: A*)(implicit eq: Equal[A], sa: Display[A], ev: EqualIncludingOrder.Failure[A] => E): Points =
         equalBy(Function const expect)(eq, sa, ev)
 
-      def equalBy(expect: OS => TraversableOnce[A])(implicit eq: Equal[A], sa: Display[A], ev: EqualIncludingOrder.Failure[A] => E): Points = {
+      def equalBy(expect: OS => IterableOnce[A])(implicit eq: Equal[A], sa: Display[A], ev: EqualIncludingOrder.Failure[A] => E): Points = {
         val d = EqualIncludingOrder(positive)
-        point(NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])))(
+        point(NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[IterableOnce])))(
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
 
@@ -478,10 +487,10 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       def equalIgnoringOrder(expect: A*)(implicit sa: Display[A], ev: EqualIgnoringOrder.Failure[A] => E): Points =
         equalIgnoringOrderBy(Function const expect)(sa, ev)
 
-      def equalIgnoringOrderBy(expect: OS => TraversableOnce[A])(implicit sa: Display[A], ev: EqualIgnoringOrder.Failure[A] => E): Points = {
+      def equalIgnoringOrderBy(expect: OS => IterableOnce[A])(implicit sa: Display[A], ev: EqualIgnoringOrder.Failure[A] => E): Points = {
         val d = EqualIgnoringOrder(positive)
         point(
-          NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[TraversableOnce])
+          NameFn(NameUtils.equalFn(focusName, positive, expect)(sa.coll[IterableOnce])
             .andThen(_.map(_ + " (ignoring order)"))))(
           os => d(source = focusFn(os), expect = expect(os)).map(ev))
       }
@@ -490,7 +499,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       def elemChanges(del: A*)(add: A*)(implicit sa: Display[A], ev: ElemChanges.Failure[A] => E): Arounds =
         elemChangesBy(Function const del, Function const add)(sa, ev)
 
-      def elemChangesBy(del: OS => TraversableOnce[A], add: OS => TraversableOnce[A])(implicit sa: Display[A], ev: ElemChanges.Failure[A] => E): Arounds = {
+      def elemChangesBy(del: OS => IterableOnce[A], add: OS => IterableOnce[A])(implicit sa: Display[A], ev: ElemChanges.Failure[A] => E): Arounds = {
         val d = ElemChanges(positive)
         around(
           NameFn(NameUtils.collChangeFn(focusName, positive, "change", del, add)))(

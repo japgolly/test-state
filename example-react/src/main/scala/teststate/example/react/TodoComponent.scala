@@ -1,8 +1,10 @@
 package teststate.example.react
 
+import scala.collection.compat._
 import monocle.macros.Lenses
 import monocle.Lens
-import japgolly.scalajs.react._, vdom.html_<^._
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.html_<^._
 
 object TodoComponent {
 
@@ -65,14 +67,14 @@ object TodoComponent {
           "Add"))
     }
 
-    private def renderList(items: TraversableOnce[TodoItem]): TagMod =
-      if (items.isEmpty)
+    private def renderList(items: IterableOnce[TodoItem]): TagMod =
+      if (items.iterator.isEmpty)
         EmptyVdom
       else
         <.div(
           "Todo List",
           <.ul(
-            items.toIterator.zipWithIndex.map { case (item, idx) =>
+            items.iterator.zipWithIndex.map { case (item, idx) =>
               <.li(
                 ^.key := idx,
                 renderItem(item, idx))

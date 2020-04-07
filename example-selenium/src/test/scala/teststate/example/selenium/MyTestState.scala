@@ -1,6 +1,7 @@
 package teststate.example.selenium
 
 import java.util.concurrent.TimeUnit
+import org.openqa.selenium.PageLoadStrategy
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 
 /**
@@ -19,6 +20,7 @@ object MyTestState
   def newChrome() = {
     val options = new ChromeOptions()
     options.setHeadless(true)
+    options.setPageLoadStrategy(PageLoadStrategy.NONE)
 
     // Travis CI needs this
     if (CI.contains("travis"))

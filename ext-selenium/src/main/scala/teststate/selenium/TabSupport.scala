@@ -3,7 +3,7 @@ package teststate.selenium
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.firefox.FirefoxDriver
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /** A means of managing tabs in a browser.
   *

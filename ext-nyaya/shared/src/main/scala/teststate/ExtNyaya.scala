@@ -25,7 +25,7 @@ object ExtNyaya extends ExtNyaya {
   def genActions[F[_], R, O, S, E](g: Gen[Actions[F, R, O, S, E]])(name: NameFn[ROS[R, O, S]])(implicit s: Settings): Actions[F, R, O, S, E] =
     g.samples(s.genSize)
       .take(s.sampleSize.value)
-      .map(_.groupIfMultipleByLen(_ + " generated actions."))
+      .map(_.groupIfMultipleByLen(_.toString + " generated actions."))
       .zipWithIndex
       .map(x => x._1.nameMod(n => s"[${x._2 + 1}/${s.sampleSize.value}] ${n.value}"))
       .combine

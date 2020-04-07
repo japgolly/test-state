@@ -64,8 +64,8 @@ object ErrorHandler {
   object ReturnEither extends ErrorHandler[ErrMsgOr] {
     override def pass[A](a: A)                                      = Right(a)
     override def fail[A](e: => String)                              = Left(e)
-    override def map[A, B](r: ErrMsgOr[A])(f: A => B)               = r.right map f
-    override def flatMap[A, B](r: ErrMsgOr[A])(f: A => ErrMsgOr[B]) = r.right flatMap f
+    override def map[A, B](r: ErrMsgOr[A])(f: A => B)               = r map f
+    override def flatMap[A, B](r: ErrMsgOr[A])(f: A => ErrMsgOr[B]) = r flatMap f
     override def apply[A](e: ErrMsgOr[A])                           = e
   }
 

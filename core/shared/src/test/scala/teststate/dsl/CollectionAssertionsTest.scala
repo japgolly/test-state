@@ -114,9 +114,9 @@ object CollectionAssertionsTest extends TestSuite {
       "containsAny2" - test2("containsAny2", ContainsAny (_)(_, _), (d, s) => d.exists(s.contains))
       "containsOnly" - test2("containsOnly", ContainsOnly(_)(_, _), (d, s) => d.forall(s.contains))
 
-      "distinct" - test1("distinct", Distinct(_)(_), d => d.sorted.distinct.length == d.length)
+      "distinct" - test1("distinct", Distinct(_)(_), d => d.toArray.sorted.distinct.length == d.length)
 
-      "equalIgnoringOrder" - test2d("equalIgnoringOrder", EqualIgnoringOrder(_)(_, _), (a, b) => a.sorted == b.sorted)
+      "equalIgnoringOrder" - test2d("equalIgnoringOrder", EqualIgnoringOrder(_)(_, _), (a, b) => a.toList.sorted == b.toList.sorted)
 
       "equalIncludingOrder" - test2d("equalIncludingOrder", EqualIncludingOrder(_)(_, _), (a, b) => a == b)
 

@@ -203,30 +203,21 @@ object RunnerTest extends TestSuite {
 
       "obsAround" - {
         class Yar {
-          lazy val b: Boolean = ().asInstanceOf[Boolean]
+          lazy val b: Boolean = throw new RuntimeException("aaaahhhh!")
         }
         val * = Dsl[Unit, Yar, Unit]
         val a = *.action("NOP")(_ => ())
           .addCheck(*.focus("Blah").value(_.obs.b).assert.change)
         val test = Plan.action(a).test(Observer watch new Yar).stateless
-        val error = "<EXPECTED>"
-        def fixExpectedException(s: String): String =
-          List(
-            "java.lang.ClassCastException: scala.runtime.BoxedUnit cannot be cast to java.lang.Boolean",
-            "java.lang.ClassCastException",
-            "scala.runtime.BoxedUnit cannot be cast to java.lang.Boolean",
-            "scala.scalajs.runtime.UndefinedBehaviorError: An undefined behavior was detected: undefined is not an instance of java.lang.Boolean"
-          ).foldLeft(s)(_.replace(_, error))
 
         assertRun(test.runU,
           """
             |✘ NOP
             |  ✓ Action
             |  ✘ Post-conditions
-            |    ✘ Blah should change. -- java.lang.ClassCastException
+            |    ✘ Blah should change. -- java.lang.RuntimeException: aaaahhhh!
             |Performed 1 action, 1 check.
-          """.stripMargin,
-          normalise = fixExpectedException)
+          """.stripMargin)
       }
 
       "nextState" - {

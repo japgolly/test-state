@@ -2,7 +2,7 @@ package teststate.selenium
 
 import org.openqa.selenium.WebDriver
 import scala.concurrent.duration.Duration
-import teststate.data.Id
+import teststate.data.{Id, Or}
 import teststate.dsl.Dsl
 import teststate.typeclass.ExecutionModel
 import TestStateExt._
@@ -24,10 +24,15 @@ object TestStateExt {
     def withSeleniumTab(tab: R => Tab[WebDriver],
                         lockWait: Duration,
                         lockRetry: Duration)
-                       (implicit EM: ExecutionModel[F]): Dsl[F, R, O, S, E] =
+                       (implicit EM: ExecutionModel[F]): Dsl[F, R, O, S, E] = {
+
+      // Scala needs this since partial unification
+      type Omfg = E Or (O => E Or S)
+
       dsl.withActionMod(_.mod(actionDef => ros =>
         actionDef(ros).map(actionFn =>
-          () => tab(ros.ref).useM(_ => actionFn(), lockWait, lockRetry))))
+          () => tab(ros.ref).useM[F, Omfg](_ => actionFn(), lockWait, lockRetry))))
+    }
   }
 
 }
