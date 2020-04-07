@@ -38,7 +38,7 @@ FocusValue   -> FocusValue   [label=".map\l.rename\l"]
 FocusValue   -> FocusValueAO [label=".assert\l"]
 FocusValueAO -> FocusValueAO [label=".not\l"]
 FocusValue   -> Point        [label=".assert(…)\l.test\l"]
-FocusValueAO -> Point        [label=".equal{,By,Option}\l"]
+FocusValueAO -> Point        [label=".equal{,By}{,WhenDefined}\l"]
 FocusValue   -> Around       [label=".testAround\l"]
 FocusValueAO -> Around       [label=".beforeAndAfter(By)\l.change(To)\l.noChange\l.{de,inc}rease(By)\l.{de,inc}rement\l"]
 

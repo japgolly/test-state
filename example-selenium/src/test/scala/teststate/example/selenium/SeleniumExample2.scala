@@ -43,7 +43,7 @@ object SeleniumExample2 extends TestSuite {
       searchField.sendKeys(keys)
 
     val resultStats: Option[String] =
-      $.collect01("#resultStats").map(_.innerText)
+      $.collect01("#result-stats").map(_.innerText)
 
     val resultCount: Option[Long] =
       resultStats.map {

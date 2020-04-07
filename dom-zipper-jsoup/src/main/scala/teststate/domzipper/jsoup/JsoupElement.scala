@@ -1,7 +1,7 @@
 package teststate.domzipper.jsoup
 
 import org.jsoup.nodes.Element
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 final case class JsoupElement(underlying: Element) {
   override def toString = underlying.toString

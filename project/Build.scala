@@ -18,50 +18,53 @@ object TestState {
     Lib.publicationSettings(ghProject)
 
   object Ver {
-    val Acyclic         = "0.1.9"
-    val Cats            = "2.0.0"
-    val Jsoup           = "1.12.1"
+    val Acyclic         = "0.2.0"
+    val Cats            = "2.1.1"
+    val Jsoup           = "1.13.1"
     val KindProjector   = "0.11.0"
     val MacroParadise   = "2.1.1"
     val Microlibs       = "2.0"
-    val MTest           = "0.6.6"
+    val MTest           = "0.7.1"
     val Nyaya           = "0.9.0"
-    val Scala211        = "2.11.12"
-    val Scala212        = "2.12.10"
+    val Scala212        = "2.12.11"
+    val Scala213        = "2.13.1"
+    val ScalaCollCompat = "2.1.4"
     val ScalaJsDom      = "0.9.8"
-    val ScalaJsReact    = "1.5.0"
-    val ScalaJsJavaTime = "1.0.0"
+    val ScalaJsReact    = "1.6.0"
+    val ScalaJsJavaTime = "0.2.6"
     val Scalaz          = "7.2.30"
     val Selenium        = "3.141.59"
     val Sizzle          = "2.3.0"
-    val UnivEq          = "1.1.0"
+    val UnivEq          = "1.2.0"
 
     // Used in examples only
-    val Monocle       = "1.5.0"
-    val ReactJs       = "16.5.1"
+    val Monocle         = "2.0.4"
+    val ReactJs         = "16.7.0"
   }
 
   def scalacFlags = Seq(
     "-deprecation",
     "-unchecked",
-    "-Ywarn-dead-code",
-    // "-Ywarn-unused",
-    "-Ywarn-value-discard",
     "-feature",
     "-language:postfixOps",
     "-language:implicitConversions",
     "-language:higherKinds",
-    "-language:existentials")
+    "-language:existentials",
+    "-opt:l:inline",
+    "-opt-inline-from:japgolly.univeq.**",
+    "-opt-inline-from:teststate.**",
+    "-Ywarn-dead-code",
+    // "-Ywarn-unused",
+    "-Ywarn-value-discard")
 
   val commonSettings = ConfigureBoth(
     _.settings(
       organization                  := "com.github.japgolly.test-state",
       homepage                      := Some(url("https://github.com/japgolly/" + ghProject)),
       licenses                      += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
-      scalaVersion                  := Ver.Scala212,
-      crossScalaVersions            := Seq(Ver.Scala211, Ver.Scala212),
+      scalaVersion                  := Ver.Scala213,
+      crossScalaVersions            := Seq(Ver.Scala212, Ver.Scala213),
       scalacOptions                ++= scalacFlags,
-      scalacOptions in Compile     ++= byScalaVersion { case (2, 12) => Seq("-opt:l:method") }.value,
       scalacOptions in Test        --= Seq("-Ywarn-dead-code"),
       shellPrompt in ThisBuild      := ((s: State) => Project.extract(s).currentRef.project + "> "),
       incOptions                    := incOptions.value.withLogRecompileOnMacro(false),
@@ -89,8 +92,17 @@ object TestState {
         // "org.scala-lang" % "scala-library" % scalaVersion.value,
         "org.scala-lang" % "scala-compiler" % scalaVersion.value % Provided))
 
-  def macroParadisePlugin =
-    compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.full)
+  def addMacroParadisePlugin = Def.settings(
+    Seq(
+      libraryDependencies ++= byScalaVersion {
+        case (2, 12) => Seq(compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.patch))
+        case (2, 13) => Nil
+      }.value,
+      scalacOptions ++= byScalaVersion {
+        case (2, 12) => Nil
+        case (2, 13) => Seq("-Ymacro-annotations")
+      }.value
+    ))
 
   def testSettings = ConfigureBoth(
     _.settings(
@@ -149,10 +161,11 @@ object TestState {
     .configureCross(testSettings)
     .settings(
       libraryDependencies ++= Seq(
-        "com.github.japgolly.univeq" %%% "univeq"     % Ver.UnivEq,
-        "com.github.japgolly.nyaya"  %%% "nyaya-gen"  % Ver.Nyaya % "test",
-        "com.github.japgolly.nyaya"  %%% "nyaya-prop" % Ver.Nyaya % "test",
-        "com.github.japgolly.nyaya"  %%% "nyaya-test" % Ver.Nyaya % "test"))
+        "org.scala-lang.modules"     %%% "scala-collection-compat" % Ver.ScalaCollCompat,
+        "com.github.japgolly.univeq" %%% "univeq"                  % Ver.UnivEq,
+        "com.github.japgolly.nyaya"  %%% "nyaya-gen"               % Ver.Nyaya % Test,
+        "com.github.japgolly.nyaya"  %%% "nyaya-prop"              % Ver.Nyaya % Test,
+        "com.github.japgolly.nyaya"  %%% "nyaya-test"              % Ver.Nyaya % Test))
     .jsSettings(
       libraryDependencies += "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime % Provided)
 
@@ -173,7 +186,9 @@ object TestState {
     .dependsOn(domZipperJVM)
     .settings(
       moduleName := "dom-zipper-jsoup",
-      libraryDependencies += "org.jsoup" % "jsoup" % Ver.Jsoup)
+      libraryDependencies ++= Seq(
+        "org.scala-lang.modules" %% "scala-collection-compat" % Ver.ScalaCollCompat,
+        "org.jsoup" % "jsoup" % Ver.Jsoup))
 
   lazy val domZipperSelenium = project
     .in(file("dom-zipper-selenium"))
@@ -267,6 +282,7 @@ object TestState {
     .settings(
       moduleName := "util-selenium",
       libraryDependencies ++= Seq(
+        "org.scala-lang.modules" %% "scala-collection-compat" % Ver.ScalaCollCompat,
         "org.seleniumhq.selenium" % "selenium-api" % Ver.Selenium,
         "org.seleniumhq.selenium" % "selenium-remote-driver" % Ver.Selenium))
 
@@ -291,11 +307,11 @@ object TestState {
     .settings(
       moduleName := "example-react",
       libraryDependencies ++= Seq(
-        "com.github.japgolly.scalajs-react" %%% "ext-monocle"   % Ver.ScalaJsReact,
-        "com.github.julien-truffaut"        %%% "monocle-core"  % Ver.Monocle,
+        "com.github.japgolly.scalajs-react" %%% "ext-monocle-cats" % Ver.ScalaJsReact,
+        "com.github.julien-truffaut"        %%% "monocle-core"     % Ver.Monocle,
         "com.github.julien-truffaut"        %%% "monocle-macro" % Ver.Monocle,
         "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime),
-      addCompilerPlugin(macroParadisePlugin), // For Monocle macros
+      addMacroParadisePlugin, // For Monocle macros
       jsDependencies ++= Seq(
         "org.webjars.npm" % "react" % Ver.ReactJs
           /        "umd/react.development.js"
