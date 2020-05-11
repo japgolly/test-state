@@ -48,6 +48,9 @@ trait Exports
   type ErrorHandler[+E] = teststate.typeclass.ErrorHandler[E]
   val ErrorHandler = teststate.typeclass.ErrorHandler
 
+  type DisplayFailure[-A, +E] = teststate.dsl.DisplayFailure[A, E]
+  val DisplayFailure = teststate.dsl.DisplayFailure
+
   type Report[+E] = teststate.run.Report[E]
   val Report = teststate.run.Report
 
