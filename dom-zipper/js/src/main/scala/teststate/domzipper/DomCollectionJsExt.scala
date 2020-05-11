@@ -19,4 +19,13 @@ final class DomCollectionJsExt[F[_], C[_], A](private val self: DomCollection[F,
 
   def domsAsHtml: F[C[html.Element]] =
     domsAs[html.Element]
+
+  def domsAsButton: F[C[html.Button]] =
+    domsAs[html.Button]
+
+  def domsAsInput: F[C[html.Input]] =
+    domsAs[html.Input]
+
+  def domsAsTextArea: F[C[html.TextArea]] =
+    domsAs[html.TextArea]
 }

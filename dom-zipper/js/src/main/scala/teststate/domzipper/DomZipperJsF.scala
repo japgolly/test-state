@@ -144,6 +144,15 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
   def domAsHtml: F[html.Element] =
     domAs[html.Element]
 
+  def domAsButton: F[html.Button] =
+    domAs[html.Button]
+
+  def domAsInput: F[html.Input] =
+    domAs[html.Input]
+
+  def domAsTextArea: F[html.TextArea] =
+    domAs[html.TextArea]
+
   def forceDomAs[D <: Dom]: D =
     dom.asInstanceOf[D]
 }
