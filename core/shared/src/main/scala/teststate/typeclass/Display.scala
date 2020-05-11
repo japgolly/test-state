@@ -90,9 +90,13 @@ object Display {
 
     implicit val testStateDisplayString: Display[String] =
       build { (sb, s) =>
-        sb append '"'
-        s.foreach(escapeChar(sb, '"'))
-        sb append '"'
+        if (s.contains('\n')) {
+          sb.append(s)
+        } else {
+          sb append '"'
+          s.foreach(escapeChar(sb, '"'))
+          sb append '"'
+        }
         ()
       }
 

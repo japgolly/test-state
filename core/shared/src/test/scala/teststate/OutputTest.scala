@@ -1139,7 +1139,36 @@ object OutputTest extends TestSuite {
             |✘ Press button.
             |  ✓ Action
             |  ✘ Post-conditions
-            |    ✘ Evil should be 666. -- Got 777, expected 666.
+            |    ✘ Evil should be 666. -- Got 777.
+            |Performed 1 action, 1 check.
+          """.stripMargin)
+      }
+
+      "failLong" - {
+        case class State(s: String)
+        case class Obs(o: String)
+        val * = Dsl[Unit, Obs, State]
+        val checkOSFail = *.focus("Evil").obsAndState(_.o, _.s).assert.equal
+        val action = *.action("Press button.")(_ => ())
+        val r = Plan.action(action addCheck checkOSFail.after)
+          .test(Observer watch Obs("wow\nthis\nisn't\nvery\nlong..."))
+          .runU(State("wow\nthis\nis\nlong!"))
+        assertRun(r,
+          """
+            |✘ Press button.
+            |  ✓ Action
+            |  ✘ Post-conditions
+            |    ✘ Evil should be:
+            |        wow
+            |        this
+            |        is
+            |        long!
+            |      Got:
+            |        wow
+            |        this
+            |        isn't
+            |        very
+            |        long...
             |Performed 1 action, 1 check.
           """.stripMargin)
       }

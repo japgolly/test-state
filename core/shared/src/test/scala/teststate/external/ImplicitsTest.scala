@@ -246,7 +246,6 @@ object ImplicitsTest2 extends TestSuite {
       "undef"     - test(X1(9))("X1(9)")
       "defDirect" - test(X2(9))("X2=9")
       "defInCO"   - test(X3(9))("X3=9")
-      "default"   - test("a \n \u0001 \\ \" ok")("\"a \\n \\u0001 \\\\ \\\" ok\"")
     }
 
   }

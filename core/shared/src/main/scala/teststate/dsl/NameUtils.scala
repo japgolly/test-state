@@ -16,8 +16,16 @@ object NameUtils {
   def subjectShouldVerb(focusName: String, pos: Boolean, verb: String): Name =
     s"$focusName ${should(pos)} $verb."
 
-  def equal[A](focusName: String, pos: Boolean, expect: A)(implicit sa: Display[A]): Name =
-    subjectShouldVerb(focusName, pos, s"be ${sa(expect)}")
+  def equal[A](focusName: String, pos: Boolean, expect: A)(implicit sa: Display[A]): Name = {
+    lazy val _expectedText = sa(expect)
+    Name {
+      val expectedText = _expectedText
+      if (expectedText.contains('\n'))
+        subjectShouldVerb(focusName, pos, "be:\n  " + expectedText.replace("\n", "\n  ")).value.stripSuffix(".")
+      else
+        subjectShouldVerb(focusName, pos, "be " + expectedText).value
+    }
+  }
 
   def equalFn[I, A](focusName: String, pos: Boolean, expect: I => A)(implicit sa: Display[A]): Option[I] => Name = {
     case None    => subjectShouldVerb(focusName, pos, "be <?>")

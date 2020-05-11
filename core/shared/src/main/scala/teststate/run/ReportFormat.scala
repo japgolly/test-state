@@ -65,7 +65,10 @@ object ReportFormat {
         appendIndent(indent)
         appendResultFlag(step.result)
         sb append ' '
-        sb append step.name.value
+        val stepDesc1 = step.name.value
+        val stepDesc2 = stepDesc1.replace("\n", "\n      ")
+        val multilineStepDesc = stepDesc2.length != stepDesc1.length
+        sb append stepDesc2
         for (failure <- optionFailure) {
           val errorMsg = de.display(failure.failure)
           if (errorMsg.nonEmpty) {
@@ -77,7 +80,7 @@ object ReportFormat {
               sb append errorMsg
             } else {
               // Multi-line error msg
-              val indent2 = indent + 2
+              val indent2 = indent + (if (multilineStepDesc) 1 else 2)
               @tailrec
               def go(line: String, remainderWithLine: String): Unit = {
                 val remainder = remainderWithLine.drop(line.length + 1)
