@@ -54,7 +54,7 @@ trait ExtScalaJsReact extends domzipper.Exports {
   lazy val executionModalAsyncCallback: ExecutionModel[AsyncCallback] =
     new ExecutionModel[AsyncCallback] {
       override def point[A](a: => A): F[A] =
-        AsyncCallback.point(a)
+        AsyncCallback.delay(a)
 
       override def pure[A](a: A): F[A] =
         AsyncCallback.pure(a)
@@ -75,12 +75,12 @@ trait ExtScalaJsReact extends domzipper.Exports {
         f.map(o => attempt.recover(o, teststate.data.Left(_)))
 
       override val now: F[Instant] =
-        AsyncCallback.point(Instant.now())
+        AsyncCallback.delay(Instant.now())
 
       override def schedule[A](task: => F[A], startAt: Instant): F[A] =
         now.flatMap { n =>
           val d = startAt.toEpochMilli - n.toEpochMilli
-          task.delayMs(d)
+          task.delayMs(d.toDouble)
         }
 
       override def doFinally[A, B](main: => F[A], last: => F[B]): F[A] =

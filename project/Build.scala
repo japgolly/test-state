@@ -2,10 +2,12 @@ import sbt._
 import sbt.Keys._
 import com.typesafe.sbt.pgp.PgpKeys
 import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
+import org.scalajs.jsdependencies.sbtplugin.JSDependenciesPlugin
+import org.scalajs.jsdependencies.sbtplugin.JSDependenciesPlugin.autoImport._
 import org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv
 import org.scalajs.sbtplugin.ScalaJSPlugin
-import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport.{crossProject => _, CrossType => _, _}
-import sbtcrossproject.CrossPlugin.autoImport._
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
+import sbtcrossproject.CrossPlugin.autoImport.{crossProject, _}
 import sbtrelease.ReleasePlugin.autoImport._
 import scalajscrossproject.ScalaJSCrossPlugin.autoImport._
 import Lib._
@@ -204,6 +206,7 @@ object TestState {
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))
     .enablePlugins(ScalaJSPlugin)
+    .enablePlugins(JSDependenciesPlugin)
     .configure(commonSettings.js, publicationSettings.js, testSettings.js)
     .dependsOn(domZipperJS)
     .settings(
@@ -302,6 +305,7 @@ object TestState {
   lazy val exampleReactJS = project
     .in(file("example-react"))
     .enablePlugins(ScalaJSPlugin)
+    .enablePlugins(JSDependenciesPlugin)
     .configure(commonSettings.js, preventPublication, testSettings.js)
     .dependsOn(coreJS, domZipperSizzle, extScalaJsReact)
     .settings(
