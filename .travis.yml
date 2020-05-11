@@ -8,7 +8,7 @@ jdk:
   - openjdk8
 env:
   global:
-    - CHROMEDRIVER_VER=79.0.3945.36
+    - CHROMEDRIVER_VER=81.0.4044.138
     - GECKODRIVER_VER=0.26.0
 
 addons:
