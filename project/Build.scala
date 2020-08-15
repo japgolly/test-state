@@ -25,7 +25,7 @@ object TestState {
     val Jsoup           = "1.13.1"
     val KindProjector   = "0.11.0"
     val MacroParadise   = "2.1.1"
-    val Microlibs       = "2.3"
+    val Microlibs       = "2.5"
     val MTest           = "0.7.4"
     val Nyaya           = "0.9.2"
     val Scala212        = "2.12.11"
