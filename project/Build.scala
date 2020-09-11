@@ -30,7 +30,7 @@ object TestState {
     val Nyaya           = "0.9.2"
     val Scala212        = "2.12.11"
     val Scala213        = "2.13.2"
-    val ScalaCollCompat = "2.1.6"
+    val ScalaCollCompat = "2.2.0"
     val ScalaJsDom      = "1.0.0"
     val ScalaJsReact    = "1.7.0"
     val ScalaJsJavaTime = "1.0.0"
