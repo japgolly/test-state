@@ -22,6 +22,21 @@
       "com.github.japgolly.test-state" %%% "ext-scalaz"        % TestStateVer % "test")
     ```
 
+    <br>Please note that if your sbt is setup to use [scalajs-bundler](https://scalacenter.github.io/scalajs-bundler/), *currently* you still need to enable the older JsDependenciesPlugin for the js dependencies from above to be included in your final js file. For example:
+    ```scala
+       lazy val client = (project in file("client"))
+          .enablePlugins(ScalaJSPlugin)
+          .enablePlugins(ScalaJSBundlerPlugin)
+          .enablePlugins(JSDependenciesPlugin)   ← This is needed even if you are managing your other js depndencies using scalajs-bundler
+   
+       npmDependencies in Compile ++= Seq( "react"     -> "16.13.1", "react-dom" -> "16.13.1") ← scalajs-bundler style external js dependencies 
+       ....
+    ```        
+    
+    
+    
+
+
 1. Create a configuration for your needs.
     <br>Each module has a `trait` containing all of its public API.
     Mix them into your own `object`. Later you can add additional configuration such as settings,
