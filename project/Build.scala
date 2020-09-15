@@ -40,7 +40,7 @@ object TestState {
     val UnivEq          = "1.2.1"
 
     // Used in examples only
-    val Monocle         = "2.0.5"
+    val Monocle         = "2.1.0"
     val ReactJs         = "16.13.1"
   }
 
