@@ -40,7 +40,7 @@ object TestState {
     val UnivEq          = "1.2.1"
 
     // Used in examples only
-    val Monocle         = "2.0.4"
+    val Monocle         = "2.0.5"
     val ReactJs         = "16.13.1"
   }
 
@@ -316,6 +316,8 @@ object TestState {
         "com.github.julien-truffaut"        %%% "monocle-macro" % Ver.Monocle,
         "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime),
       addMacroParadisePlugin, // For Monocle macros
+      dependencyOverrides += "org.webjars.npm" % "js-tokens" % "3.0.2", // https://github.com/webjars/webjars/issues/1789
+      dependencyOverrides += "org.webjars.npm" % "scheduler" % "0.12.0-alpha.3",
       jsDependencies ++= Seq(
         "org.webjars.npm" % "react" % Ver.ReactJs
           /        "umd/react.development.js"
