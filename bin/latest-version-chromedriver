@@ -1,7 +1,24 @@
 #!/bin/bash
+
+set -euo pipefail
+
+ver=$(
+  (
+    google-chrome-stable -version \
+      || google-chrome -version \
+      || chrome -version
+  ) | sed 's/^[^0-9]*//'
+)
+
+major_ver=${ver%%.*}
+
+echo "Installed Chrome version: $ver" >&2
+echo "  (major version: $major_ver)" >&2
+
 exec curl -s https://chromedriver.storage.googleapis.com \
   | sed 's/</\n</g; s!\n</!</!g;' \
   | grep -i '^<Key>.*_linux64.zip' \
+  | fgrep ">$major_ver." \
   | sort \
   | tail -1 \
   | sed 's/^[^0-9]*//; s!/.*!!'
