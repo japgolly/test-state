@@ -1,0 +1,4 @@
+#!/bin/bash
+
+exec curl -s https://github.com/mozilla/geckodriver/releases/latest \
+  | sed 's!^.*/releases/tag/v!!; s/".*/\n/'

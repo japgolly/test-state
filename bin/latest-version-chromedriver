@@ -1,0 +1,7 @@
+#!/bin/bash
+exec curl -s https://chromedriver.storage.googleapis.com \
+  | sed 's/</\n</g; s!\n</!</!g;' \
+  | grep -i '^<Key>.*_linux64.zip' \
+  | sort \
+  | tail -1 \
+  | sed 's/^[^0-9]*//; s!/.*!!'

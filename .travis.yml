@@ -24,16 +24,15 @@ jobs:
       jdk: openjdk11
       env: SCALAJS_VERSION=
 
-env:
-  global:
-    - CHROMEDRIVER_VER=81.0.4044.138
-    - GECKODRIVER_VER=0.26.0
-
 addons:
   firefox: latest
   chrome: stable
 
 before_install:
+  - export CHROMEDRIVER_VER=$(bin/latest-version-chromedriver)
+  - export GECKODRIVER_VER=$(bin/latest-version-geckodriver)
+  - echo "CHROMEDRIVER_VER = $CHROMEDRIVER_VER"
+  - echo "GECKODRIVER_VER  = $GECKODRIVER_VER"
   - wget https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VER}/chromedriver_linux64.zip && unzip chromedriver_linux64.zip -d bin
   - wget https://github.com/mozilla/geckodriver/releases/download/v${GECKODRIVER_VER}/geckodriver-v${GECKODRIVER_VER}-linux64.tar.gz && tar xf geckodriver-v${GECKODRIVER_VER}-linux64.tar.gz -C bin
   - export PATH=$PWD/bin:$PATH
