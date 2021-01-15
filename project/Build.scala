@@ -37,7 +37,7 @@ object TestState {
     val Scalaz          = "7.2.30"
     val Selenium        = "3.141.59"
     val Sizzle          = "2.3.0"
-    val UnivEq          = "1.2.1"
+    val UnivEq          = "1.3.0"
 
     // Used in examples only
     val Monocle         = "2.0.5"
