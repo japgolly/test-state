@@ -1,6 +1,6 @@
 libraryDependencies += "org.scala-js" %% "scalajs-env-jsdom-nodejs" % "1.1.0"
 
-addSbtPlugin("com.github.gseitz"  % "sbt-release"              % "1.0.13")
+addSbtPlugin("com.github.sbt"  % "sbt-release"              % "1.0.15")
 addSbtPlugin("com.jsuereth"       % "sbt-pgp"                  % "1.1.2-1")
 addSbtPlugin("com.timushev.sbt"   % "sbt-updates"              % "0.5.1")
 addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.0.0")
