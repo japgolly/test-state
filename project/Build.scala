@@ -29,7 +29,7 @@ object TestState {
     val MTest           = "0.7.5"
     val Nyaya           = "0.9.2"
     val Scala212        = "2.12.12"
-    val Scala213        = "2.13.3"
+    val Scala213        = "2.13.5"
     val ScalaCollCompat = "2.2.0"
     val ScalaJsDom      = "1.1.0"
     val ScalaJsReact    = "1.7.5"
