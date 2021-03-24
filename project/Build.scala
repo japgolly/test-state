@@ -20,7 +20,7 @@ object TestState {
     Lib.publicationSettings(ghProject)
 
   object Ver {
-    val Acyclic         = "0.2.0"
+    val Acyclic         = "0.2.1"
     val Cats            = "2.1.1"
     val Jsoup           = "1.13.1"
     val KindProjector   = "0.11.0"
