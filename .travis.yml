@@ -9,7 +9,7 @@ jobs:
       jdk: openjdk11
 
     - name: 'Scala 2.13 / Java 11'
-      scala: 2.13.3
+      scala: 2.13.6
       jdk: openjdk11
 
 addons:
