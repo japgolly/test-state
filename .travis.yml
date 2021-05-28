@@ -5,7 +5,7 @@ jobs:
   include:
 
     - name: 'Scala 2.12 / Java 11'
-      scala: 2.12.12
+      scala: 2.12.14
       jdk: openjdk11
 
     - name: 'Scala 2.13 / Java 11'
