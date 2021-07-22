@@ -1,7 +1,6 @@
 package teststate.dsl
 
 import japgolly.univeq.UnivEq
-import scala.collection.compat._
 import teststate.core.CoreExports._
 import teststate.core.Types.SackE
 import teststate.core._

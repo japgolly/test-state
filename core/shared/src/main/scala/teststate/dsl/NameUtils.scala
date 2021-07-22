@@ -1,6 +1,5 @@
 package teststate.dsl
 
-import scala.collection.compat._
 import teststate.data.Name.Implicits._
 import teststate.data.{BeforeAfter, Name}
 import teststate.typeclass._

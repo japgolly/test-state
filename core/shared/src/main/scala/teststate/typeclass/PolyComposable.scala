@@ -1,7 +1,6 @@
 package teststate.typeclass
 
 import scala.annotation.implicitNotFound
-import scala.collection.compat._
 
 @implicitNotFound("\n  Can't compose ${A}\n            and ${B}")
 case class PolyComposable[Op, A, B, C](compose: (A, B) => C) extends AnyVal

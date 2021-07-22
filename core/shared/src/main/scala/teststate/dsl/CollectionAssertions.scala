@@ -2,7 +2,6 @@ package teststate.dsl
 
 import japgolly.univeq.UnivEq
 import scala.annotation.tailrec
-import scala.collection.compat._
 import scala.collection.mutable
 import teststate.data.Name.Implicits._
 import teststate.data.{Name, NameFn}

@@ -1,6 +1,5 @@
 package teststate.typeclass
 
-import scala.collection.compat._
 import teststate.data.{Name, NameFn}
 
 final class Display[A](private val display: A => String) extends AnyVal {
