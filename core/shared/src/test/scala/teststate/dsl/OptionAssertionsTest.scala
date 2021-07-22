@@ -1,9 +1,8 @@
 package teststate.dsl
 
+import cats.instances.option._
+import cats.instances.string._
 import japgolly.microlibs.testutil.TestUtil._
-import scalaz.std.anyVal._
-import scalaz.std.option._
-import scalaz.std.string._
 import teststate.Exports._
 import teststate.dsl.OptionAssertions._
 import utest._

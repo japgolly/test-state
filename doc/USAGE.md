@@ -19,23 +19,20 @@
       "com.github.japgolly.test-state" %%% "ext-cats"          % TestStateVer % "test",
       "com.github.japgolly.test-state" %%% "ext-nyaya"         % TestStateVer % "test",
       "com.github.japgolly.test-state" %%% "ext-scalajs-react" % TestStateVer % "test",
-      "com.github.japgolly.test-state" %%% "ext-scalaz"        % TestStateVer % "test")
+    )
     ```
 
     <br>Please note that if your sbt is setup to use [scalajs-bundler](https://scalacenter.github.io/scalajs-bundler/), *currently* you still need to enable the older JsDependenciesPlugin for the js dependencies from above to be included in your final js file. For example:
+
     ```scala
        lazy val client = (project in file("client"))
           .enablePlugins(ScalaJSPlugin)
           .enablePlugins(ScalaJSBundlerPlugin)
           .enablePlugins(JSDependenciesPlugin)   ← This is needed even if you are managing your other js depndencies using scalajs-bundler
-   
-       npmDependencies in Compile ++= Seq( "react"     -> "16.13.1", "react-dom" -> "16.13.1") ← scalajs-bundler style external js dependencies 
-       ....
-    ```        
-    
-    
-    
 
+       npmDependencies in Compile ++= Seq( "react"     -> "16.13.1", "react-dom" -> "16.13.1") ← scalajs-bundler style external js dependencies
+       ....
+    ```
 
 1. Create a configuration for your needs.
     <br>Each module has a `trait` containing all of its public API.
@@ -52,7 +49,6 @@
          with teststate.ExtCats
          with teststate.ExtNyaya
          with teststate.ExtScalaJsReact
-         with teststate.ExtScalaz
     {
       // Additional config here if desired.
 
@@ -73,7 +69,7 @@
 
 1. On your `Test`, call `.run` to execute it.
     <br>*(Technically execution depends on the context as described in [TYPES.md](TYPES.md).
-    E.g. if the context is a `scalaz.effect.IO` then nothing will have been executed yet and you're free to call `.unsafePerformIO` yourself.)*
+    E.g. if the context is a `cats.effect.IO` then nothing will have been executed yet and you're free to call `.unsafePerformIO` yourself.)*
 
 1. The result will be a `Report[E]` where `E` (the error type) is by default a `String`.
    You're free to inspect the results if desired but...

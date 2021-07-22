@@ -1,5 +1,6 @@
 package teststate
 
+import cats.Eq
 import sourcecode.Line
 import teststate.Exports._
 
@@ -8,8 +9,8 @@ object TestUtil extends TestUtil
 trait TestUtil
   extends japgolly.microlibs.testutil.TestUtil {
 
-  implicit def testStateEqualityToScalaz[A](implicit e: Equal[A]): scalaz.Equal[A] =
-    scalaz.Equal.equal(e.equal)
+  implicit def testStateEqualityToCats[A](implicit e: Equal[A]): Eq[A] =
+    Eq.instance(e.equal)
 
   val inspectionBaseSettings =
     Report.Format.Default
@@ -32,7 +33,7 @@ trait TestUtil
     if (expectDefined)
       assertEq(name, o.isDefined, true)
     else
-      assertEq(name, o, None)(scalaz.Equal.equalA, l)
+      assertEq(name, o, None)(Eq.fromUniversalEquals, l)
 
   val trim = (_: String).trim
   val stringIdFn = (s: String) => s

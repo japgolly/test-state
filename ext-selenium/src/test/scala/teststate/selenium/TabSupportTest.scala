@@ -1,12 +1,11 @@
 package teststate.selenium
 
+import cats.Eq
+import cats.instances.string._
+import cats.instances.vector._
 import org.openqa.selenium.WebDriver
 import scala.jdk.CollectionConverters._
 import scala.util.Try
-import scalaz.Equal
-import scalaz.std.anyVal._
-import scalaz.std.string._
-import scalaz.std.vector._
 import teststate.selenium.TestUtil._
 import utest._
 
@@ -15,7 +14,7 @@ object TabSupportTest extends TestSuite {
   def test[D <: WebDriver](driver: D, url: Int => String)(implicit tabSupport: TabSupport[D]): Unit =
     try {
       import tabSupport.TabHandle
-      implicit val equalTH = Equal.equalA[TabHandle]
+      implicit val equalTH = Eq.fromUniversalEquals[TabHandle]
       implicit def d = driver
       val root = tabSupport.active()
       def tabs() = driver.getWindowHandles().asScala.toVector.sorted

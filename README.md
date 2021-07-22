@@ -62,7 +62,7 @@ This is a library that:
 * Comes with various `DomZipper` implementations and backends.
 * Lots of platform-specific utilities for web testing.
 * Configurable error handling. Be impure and throw exceptions or be pure and use a custom ADT to precisely maintain all forms of failure and error in your domain; it's up to you.
-* Extension modules for various 3rd-party libraries. (Scalaz, Cats, more.)
+* Extension modules for various 3rd-party libraries. (Cats, more.)
 
 
 # How does this work?
@@ -103,7 +103,6 @@ When retries are enabled, then test execution is
 | `ext-cats`            | Extensions for [Cats](https://github.com/typelevel/cats). | JVM | JS |
 | `ext-nyaya`           | Extensions for [Nyaya](https://github.com/japgolly/nyaya). | JVM | JS |
 | `ext-scalajs-react`   | Extensions for [scalajs-react](https://github.com/japgolly/scalajs-react). | | JS |
-| `ext-scalaz`          | Extensions for [Scalaz](https://github.com/scalaz/scalaz). | JVM | JS |
 | `ext-selenium`        | Extensions for [Selenium](https://www.seleniumhq.org). | JVM | |
 
 

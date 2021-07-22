@@ -1,8 +1,8 @@
 package teststate
 
+import cats.instances.string._
 import nyaya.prop._
 import nyaya.test.PropTest._
-import scalaz.std.string.stringInstance
 import teststate.Exports._
 import teststate.RandomData.*
 import teststate.TestUtil._

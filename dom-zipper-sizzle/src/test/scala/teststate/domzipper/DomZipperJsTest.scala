@@ -1,18 +1,15 @@
 package teststate.domzipper
 
+import cats.instances.option._
+import cats.instances.set._
+import cats.instances.string._
+import cats.instances.vector._
 import japgolly.microlibs.testutil.TestUtil.assertEq
 import org.scalajs.dom
-import scalaz.Equal
-import scalaz.std.anyVal._
-import scalaz.std.option._
-import scalaz.std.set._
-import scalaz.std.string._
-import scalaz.std.vector._
 import teststate.domzipper.sizzle.Exports._
 import utest._
 
 object DomZipperJsTest extends TestSuite {
-  Equal.equalA
 
   private def body =
     """

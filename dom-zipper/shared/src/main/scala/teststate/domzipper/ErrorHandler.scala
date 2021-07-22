@@ -75,12 +75,4 @@ object ErrorHandler {
     override def map[A, B](r: Option[A])(f: A => B)             = r map f
     override def flatMap[A, B](r: Option[A])(f: A => Option[B]) = r flatMap f
   }
-
-//  object ReturnDisjunction extends ErrorHandler {
-//    import scalaz._
-//    override type Result[A]                         = String \/ A
-//    override def pass[A](a: A)                      = \/-(a)
-//    override def fail[A](e: => String)              = -\/(e)
-//    override def map[A, B](r: Result[A])(f: A => B) = r map f
-//  }
 }

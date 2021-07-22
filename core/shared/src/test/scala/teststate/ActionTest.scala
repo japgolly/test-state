@@ -1,7 +1,7 @@
 package teststate
 
-import scalaz.std.string._
-import scalaz.std.vector._
+import cats.instances.string._
+import cats.instances.vector._
 import teststate.Exports._
 import teststate.TestUtil._
 import teststate.data.VectorTree

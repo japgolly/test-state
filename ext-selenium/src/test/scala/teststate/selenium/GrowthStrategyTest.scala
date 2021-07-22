@@ -1,7 +1,7 @@
 package teststate.selenium
 
+import cats.instances.string._
 import japgolly.microlibs.testutil.TestUtil._
-import scalaz.std.string._
 import utest._
 
 object GrowthStrategyTest extends TestSuite {

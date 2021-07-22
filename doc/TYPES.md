@@ -66,9 +66,9 @@ Plan(action, invariants)            // Plan                [Id, Ref, Obs, Int, S
 | Type | Desc |
 |------|------|
 | `Display[A]` | Typeclass used by `Dsl` assertions to turn expectation and actual values into `String`s for display. (For humans, unlike common `Show[A]`.) |
-| `Equal[A]` | Typeclass used by `Dsl` assertions for equality checking. Implicit conversions exist from: <ul><li>`japgolly.univeq.UnivEq[A]`.</li><li>`cats.Eq[A]` if using the Cats module.</li><li>`scalaz.Equal` if using the Scalaz module.</li></ul> |
+| `Equal[A]` | Typeclass used by `Dsl` assertions for equality checking. Implicit conversions exist from: <ul><li>`japgolly.univeq.UnivEq[A]`.</li><li>`cats.Eq[A]` if using the Cats module.</li></ul> |
 | `ExecutionModel[F[_]]` | Typeclass required to run tests in custom contexts. |
 | `Observer[-R, +O, +E]` | Creates observations. As indicate by type variance, ref comes in, observation or error come out. |
-| `Or[+A,+B]` | Disjunction. Internal replacement for stdlib's atrocious `Either`. Implicit conversions exist from: <ul><li>`scala.util.Either[A, B]`.</li><li>`cats.data.Xor[A,B]` if using the Cats module.</li><li>`scalaz.\/[A,B]` if using the Scalaz module.</li></ul> |
+| `Or[+A,+B]` | Disjunction. Internal replacement for stdlib's atrocious `Either`. Implicit conversions exist from: <ul><li>`scala.util.Either[A, B]`.</li><li>`cats.data.Xor[A,B]` if using the Cats module.</li></ul> |
 | `Attempt[+E]` | Turns a `Throwable` into an `E`. |
 | `Report.AssertionSettings` | Typeclass that specifies how to display pass/fail results on a `Report`. |

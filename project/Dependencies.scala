@@ -9,22 +9,21 @@ object Dependencies {
   object Ver {
 
     // Exported
-    val cats            = "2.1.1"
-    val jsoup           = "1.13.1"
-    val nyaya           = "0.9.2"
+    val cats            = "2.6.1"
+    val jsoup           = "1.14.1"
+    val nyaya           = "0.11.0"
     val scala2          = "2.13.6"
     val scalaJsDom      = "1.1.0"
-    val scalaJsReact    = "1.7.5"
-    val scalaz          = "7.2.30"
+    val scalaJsReact    = "2.0.0-RC2"
     val selenium        = "3.141.59"
     val sizzle          = "2.3.0"
-    val univEq          = "1.2.1"
+    val univEq          = "1.5.0"
 
     // Internal
     val kindProjector   = "0.13.0"
-    val microlibs       = "2.5"
-    val monocle         = "2.0.5"
-    val reactJs         = "16.13.1"
+    val microlibs       = "3.0"
+    val monocle         = "3.0.0"
+    val reactJs         = "17.0.2"
     val scalaJsJavaTime = "1.0.0"
     val utest           = "0.7.10"
   }
@@ -33,15 +32,15 @@ object Dependencies {
     val cats                 = Def.setting("org.typelevel"                     %%% "cats-core"               % Ver.cats)
     val jsoup                = Def.setting("org.jsoup"                           % "jsoup"                   % Ver.jsoup)
     val microlibsTestUtil    = Def.setting("com.github.japgolly.microlibs"     %%% "test-util"               % Ver.microlibs)
-    val monocleCore          = Def.setting("com.github.julien-truffaut"        %%% "monocle-core"            % Ver.monocle)
-    val monocleMacro         = Def.setting("com.github.julien-truffaut"        %%% "monocle-macro"           % Ver.monocle)
+    val monocleCore          = Def.setting("dev.optics"                        %%% "monocle-core"            % Ver.monocle)
+    val monocleMacro         = Def.setting("dev.optics"                        %%% "monocle-macro"           % Ver.monocle)
     val nyayaGen             = Def.setting("com.github.japgolly.nyaya"         %%% "nyaya-gen"               % Ver.nyaya)
     val nyayaProp            = Def.setting("com.github.japgolly.nyaya"         %%% "nyaya-prop"              % Ver.nyaya)
     val nyayaTest            = Def.setting("com.github.japgolly.nyaya"         %%% "nyaya-test"              % Ver.nyaya)
     val scalaJsDom           = Def.setting("org.scala-js"                      %%% "scalajs-dom"             % Ver.scalaJsDom)
     val scalaJsJavaTime      = Def.setting("org.scala-js"                      %%% "scalajs-java-time"       % Ver.scalaJsJavaTime                                                        cross CrossVersion.for3Use2_13)
     val scalaJsReactCore     = Def.setting("com.github.japgolly.scalajs-react" %%% "core"                    % Ver.scalaJsReact)
-    val scalaJsReactMonocle  = Def.setting("com.github.japgolly.scalajs-react" %%% "ext-monocle-cats"        % Ver.scalaJsReact)
+    val scalaJsReactMonocle  = Def.setting("com.github.japgolly.scalajs-react" %%% "extra-ext-monocle3"      % Ver.scalaJsReact)
     val scalaJsReactTest     = Def.setting("com.github.japgolly.scalajs-react" %%% "test"                    % Ver.scalaJsReact)
     val seleniumApi          = Def.setting("org.seleniumhq.selenium"             % "selenium-api"            % Ver.selenium)
     val seleniumChrome       = Def.setting("org.seleniumhq.selenium"             % "selenium-chrome-driver"  % Ver.selenium)
@@ -58,8 +57,6 @@ object Dependencies {
   def addReactJsDependencies(scope: Configuration): Project => Project =
     _.enablePlugins(JSDependenciesPlugin)
       .settings(
-        dependencyOverrides += "org.webjars.npm" % "js-tokens" % "3.0.2", // https://github.com/webjars/webjars/issues/1789
-        dependencyOverrides += "org.webjars.npm" % "scheduler" % "0.12.0-alpha.3",
         jsDependencies ++= Seq(
 
           "org.webjars.npm" % "react" % Ver.reactJs % scope

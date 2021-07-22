@@ -22,8 +22,6 @@ val extCatsJS         = TestState.extCatsJS
 val extNyayaJVM       = TestState.extNyayaJVM
 val extNyayaJS        = TestState.extNyayaJS
 val extScalaJsReact   = TestState.extScalaJsReact
-val extScalazJVM      = TestState.extScalazJVM
-val extScalazJS       = TestState.extScalazJS
 val extSelenium       = TestState.extSelenium
 
 val examples          = TestState.examples

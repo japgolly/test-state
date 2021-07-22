@@ -1,6 +1,6 @@
 import sbt._
 import sbt.Keys._
-import com.typesafe.sbt.pgp.PgpKeys
+import com.jsuereth.sbtpgp.PgpKeys
 import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
 import org.scalajs.jsdependencies.sbtplugin.JSDependenciesPlugin
 import org.scalajs.jsdependencies.sbtplugin.JSDependenciesPlugin.autoImport._
@@ -99,7 +99,7 @@ object TestState {
       .aggregate(
         coreJVM, coreMacrosJVM,
         domZipperJVM, domZipperJsoup, domZipperSelenium,
-        extScalazJVM, extCatsJVM, extNyayaJVM, extSelenium,
+        extCatsJVM, extNyayaJVM, extSelenium,
         utilJVM, utilSelenium)
 
   lazy val rootJS =
@@ -108,7 +108,7 @@ object TestState {
       .aggregate(
         coreJS, coreMacrosJS,
         domZipperJS, domZipperSizzle,
-        extScalazJS, extCatsJS, extNyayaJS, extScalaJsReact,
+        extCatsJS, extNyayaJS, extScalaJsReact,
         utilJS)
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -180,17 +180,6 @@ object TestState {
       jsDependencies += Dep.sizzle.value,
       jsEnv          := new JSDOMNodeJSEnv)
 
-  lazy val extScalazJVM = extScalaz.jvm
-  lazy val extScalazJS  = extScalaz.js
-  lazy val extScalaz = crossProject(JSPlatform, JVMPlatform)
-    .in(file("ext-scalaz"))
-    .configureCross(commonSettings, publicationSettings)
-    .dependsOn(core)
-    .configureCross(testSettings)
-    .settings(
-      moduleName          := "ext-scalaz",
-      libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.scalaz)
-
   lazy val extCatsJVM = extCats.jvm
   lazy val extCatsJS  = extCats.js
   lazy val extCats = crossProject(JSPlatform, JVMPlatform)
@@ -207,7 +196,7 @@ object TestState {
   lazy val extNyaya = crossProject(JSPlatform, JVMPlatform)
     .in(file("ext-nyaya"))
     .configureCross(commonSettings, publicationSettings)
-    .dependsOn(core, extScalaz)
+    .dependsOn(core, extCats)
     .configureCross(testSettings)
     .settings(
       moduleName := "ext-nyaya",
@@ -282,7 +271,8 @@ object TestState {
         Dep.scalaJsReactMonocle.value,
         Dep.monocleCore        .value,
         Dep.monocleMacro       .value,
-        Dep.scalaJsJavaTime    .value),
+        Dep.scalaJsJavaTime    .value,
+      ),
       addMacroParadisePlugin, // For Monocle macros
     )
 }

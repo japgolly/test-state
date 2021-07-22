@@ -1,12 +1,11 @@
 package teststate.domzipper.jsoup
 
+import cats.instances.option._
+import cats.instances.set._
+import cats.instances.string._
+import cats.instances.vector._
 import japgolly.microlibs.testutil.TestUtil._
 import org.jsoup.Jsoup
-import scalaz.std.anyVal._
-import scalaz.std.option._
-import scalaz.std.set._
-import scalaz.std.string._
-import scalaz.std.vector._
 import teststate.domzipper.jsoup.Exports._
 import utest._
 

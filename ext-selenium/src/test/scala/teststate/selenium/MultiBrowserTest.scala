@@ -1,7 +1,6 @@
 package teststate.selenium
 
-import scalaz.std.anyVal._
-import scalaz.std.string._
+import cats.instances.string._
 import teststate.selenium.TestUtil._
 import utest._
 
@@ -16,11 +15,10 @@ object MultiBrowserTest extends TestSuite {
     var afterFirst = 0
     var beforeEach = 0
     var afterEach = 0
-    def assertCB(
-                  expectBeforeFirst: Int,
-                  expectAfterFirst: Int,
-                  expectBeforeEach: Int,
-                  expectAfterEach: Int): Unit =
+    def assertCB(expectBeforeFirst: Int,
+                 expectAfterFirst: Int,
+                 expectBeforeEach: Int,
+                 expectAfterEach: Int): Unit =
       assertEq(
         s"$beforeFirst, $afterFirst, $beforeEach, $afterEach",
         s"$expectBeforeFirst, $expectAfterFirst, $expectBeforeEach, $expectAfterEach")

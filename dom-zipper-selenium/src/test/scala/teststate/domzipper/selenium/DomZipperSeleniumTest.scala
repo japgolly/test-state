@@ -1,13 +1,12 @@
 package teststate.domzipper.selenium
 
+import cats.instances.option._
+import cats.instances.set._
+import cats.instances.string._
+import cats.instances.vector._
 import japgolly.microlibs.testutil.TestUtil._
 import java.util.concurrent.TimeUnit
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
-import scalaz.std.anyVal._
-import scalaz.std.option._
-import scalaz.std.set._
-import scalaz.std.string._
-import scalaz.std.vector._
 import teststate.domzipper.selenium.Exports._
 import utest._
 
