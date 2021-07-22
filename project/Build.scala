@@ -67,12 +67,12 @@ object TestState {
       scalaVersion                  := Ver.Scala213,
       crossScalaVersions            := Seq(Ver.Scala212, Ver.Scala213),
       scalacOptions                ++= scalacFlags,
-      scalacOptions in Test        --= Seq("-Ywarn-dead-code"),
-      shellPrompt in ThisBuild      := ((s: State) => Project.extract(s).currentRef.project + "> "),
+      Test / scalacOptions         --= Seq("-Ywarn-dead-code"),
+      ThisBuild / shellPrompt       := ((s: State) => Project.extract(s).currentRef.project + "> "),
       incOptions                    := incOptions.value.withLogRecompileOnMacro(false),
       updateOptions                 := updateOptions.value.withCachedResolution(true),
       releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-      releaseTagComment             := s"v${(version in ThisBuild).value}",
+      releaseTagComment             := s"v${(ThisBuild / version).value}",
       releaseVcsSign                := true,
       addCompilerPlugin("org.typelevel" %% "kind-projector" % Ver.KindProjector cross CrossVersion.full))
     .configure(acyclicSettings))
@@ -113,12 +113,12 @@ object TestState {
         "com.github.japgolly.microlibs" %%% "test-util" % Ver.Microlibs % Test),
       testFrameworks += new TestFramework("utest.runner.Framework")))
     .jsConfigure(
-      _.settings(jsEnv in Test := new JSDOMNodeJSEnv))
+      _.settings(Test / jsEnv := new JSDOMNodeJSEnv))
 
   def testSettingsCI =
     testSettings.jvmConfigure(_.settings(
-      fork in Test := true,
-      javaOptions in Test += ("-DCI=" + System.getProperty("CI", ""))))
+      Test / fork := true,
+      Test / javaOptions += ("-DCI=" + System.getProperty("CI", ""))))
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -201,7 +201,7 @@ object TestState {
       libraryDependencies ++= Seq(
         "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium % Test,
         "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium % Test),
-      javaOptions in Test += ("-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath))
+      Test / javaOptions += ("-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath))
 
   lazy val domZipperSizzle = project
     .in(file("dom-zipper-sizzle"))

@@ -66,9 +66,8 @@ object Lib {
 
   def preventPublication: PE =
     _.settings(
-      skip in publish    := true,
+      publish / skip     := true,
       publishArtifact    := false,
       publishTo          := Some(Resolver.file("Unused transient repository", target.value / "fakepublish")),
       packagedArtifacts  := Map.empty)
-    // .disablePlugins(plugins.IvyPlugin)
 }
