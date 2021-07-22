@@ -1,6 +1,6 @@
 package teststate.typeclass
 
-import scala.annotation.implicitNotFound
+import scala.annotation.{implicitNotFound, nowarn}
 
 @implicitNotFound("\n  Can't compose ${A}\n            and ${B}")
 case class PolyComposable[Op, A, B, C](compose: (A, B) => C) extends AnyVal
@@ -63,9 +63,9 @@ object PolyComposable {
   @inline def Can[Op, A] = null.asInstanceOf[Can[Op, A]]
 
   trait ToOps {
-    implicit def toPolyComposableAndOps  [A](a: A)(implicit w: Can[AndOp  , A]): AndOps  [A] = new AndOps  (a)
-    implicit def toPolyComposableSeqOps  [A](a: A)(implicit w: Can[SeqOp  , A]): SeqOps  [A] = new SeqOps  (a)
-    implicit def toPolyComposableHPSeqOps[A](a: A)(implicit w: Can[HPSeqOp, A]): HPSeqOps[A] = new HPSeqOps(a)
+    @nowarn("cat=unused") implicit def toPolyComposableAndOps  [A](a: A)(implicit w: Can[AndOp  , A]): AndOps  [A] = new AndOps  (a)
+    @nowarn("cat=unused") implicit def toPolyComposableSeqOps  [A](a: A)(implicit w: Can[SeqOp  , A]): SeqOps  [A] = new SeqOps  (a)
+    @nowarn("cat=unused") implicit def toPolyComposableHPSeqOps[A](a: A)(implicit w: Can[HPSeqOp, A]): HPSeqOps[A] = new HPSeqOps(a)
 
     implicit def toMonoComposableTraversableOnceOpsA[C[x] <: IterableOnce[x], A](as: C[A])(implicit c: Mono[AndOp, A]): MonoComposableTraversableOnceOps[C, AndOp, A] =
       new MonoComposableTraversableOnceOps(as, c)

@@ -1,6 +1,7 @@
 package teststate.external
 
-import scala.annotation.implicitNotFound
+import japgolly.microlibs.testutil.TestUtil._
+import scala.annotation.{implicitNotFound, nowarn}
 import scala.language.reflectiveCalls
 import utest._
 
@@ -38,15 +39,9 @@ abstract class AbstractTest {
      implicit def tpEquals[A]: A Became A = singleton_Became.asInstanceOf[A Became A]
   }
 
-  def test[A] = new {
-    def apply[R](f: A => R) = new {
-      def expect[E] (implicit ev: R Became E) = ()
-      def expectSelf(implicit ev: R Became A) = ()
-    }
-  }
-
   def testAA[A] = test2[A, A]
 
+  @nowarn
   def test2[A, B] = new {
     def apply[R](f: (A, B) => R) = new {
       def expect[E](implicit ev: R Became E) = ()
@@ -54,8 +49,6 @@ abstract class AbstractTest {
       def expectB  (implicit ev: R Became B) = ()
     }
   }
-
-  def testExpr[A](a: A) = test[A](identity[A])
 
   val dsl: teststate.dsl.Dsl[F, R, O, S, E]
 }
@@ -70,14 +63,14 @@ abstract class ImplicitsTest1 extends AbstractTest {
   // ===================================================================================================================
 
   // mapO
-  test[Points    [O, S, E]](_ mapO o21).expect[Points    [O2, S, E]]
-  test[Arounds   [O, S, E]](_ mapO o21).expect[Arounds   [O2, S, E]]
-  test[Invariants[O, S, E]](_ mapO o21).expect[Invariants[O2, S, E]]
+  assertType[Points    [O, S, E]].map(_ mapO o21).is[Points    [O2, S, E]]
+  assertType[Arounds   [O, S, E]].map(_ mapO o21).is[Arounds   [O2, S, E]]
+  assertType[Invariants[O, S, E]].map(_ mapO o21).is[Invariants[O2, S, E]]
 
   // when
-  test[Points    [O, S, E]](_.when(_.obs.bool)).expect[Points    [O, S, E]]
-  test[Arounds   [O, S, E]](_.when(_.obs.bool)).expect[Arounds   [O, S, E]]
-  test[Invariants[O, S, E]](_.when(_.obs.bool)).expect[Invariants[O, S, E]]
+  assertType[Points    [O, S, E]].map(_.when(_.obs.bool)).is[Points    [O, S, E]]
+  assertType[Arounds   [O, S, E]].map(_.when(_.obs.bool)).is[Arounds   [O, S, E]]
+  assertType[Invariants[O, S, E]].map(_.when(_.obs.bool)).is[Invariants[O, S, E]]
 
   // compose (mono)
   testAA[Points    [O, S, E]](_ & _).expect[Points    [O, S, E]]
@@ -93,54 +86,54 @@ abstract class ImplicitsTest1 extends AbstractTest {
   test2[Arounds   [O, S, E], Invariants[O, S, E]](_ & _).expect[Invariants[O, S, E]]
 
   // combine
-  test[List[Points    [O, S, E]]](_.combine).expect[Points    [O, S, E]]
-  test[List[Arounds   [O, S, E]]](_.combine).expect[Arounds   [O, S, E]]
-  test[List[Invariants[O, S, E]]](_.combine).expect[Invariants[O, S, E]]
+  assertType[List[Points    [O, S, E]]].map(_.combine).is[Points    [O, S, E]]
+  assertType[List[Arounds   [O, S, E]]].map(_.combine).is[Arounds   [O, S, E]]
+  assertType[List[Invariants[O, S, E]]].map(_.combine).is[Invariants[O, S, E]]
 
   // fake subtyping
-  test[Points [O, S, E]](c => c: Invariants[O, S, E])
-  test[Arounds[O, S, E]](c => c: Invariants[O, S, E])
+  assertType[Points [O, S, E]].map(c => c: Invariants[O, S, E])
+  assertType[Arounds[O, S, E]].map(c => c: Invariants[O, S, E])
 
   // display
-  test[Points    [O, S, E]](_.display).expect[String]
-  test[Arounds   [O, S, E]](_.display).expect[String]
-  test[Invariants[O, S, E]](_.display).expect[String]
+  assertType[Points    [O, S, E]].map(_.display).is[String]
+  assertType[Arounds   [O, S, E]].map(_.display).is[String]
+  assertType[Invariants[O, S, E]].map(_.display).is[String]
 
   // NamedOps
-  test[Points    [O, S, E]](_ rename "").expectSelf
-  test[Arounds   [O, S, E]](_ rename "").expectSelf
-  test[Invariants[O, S, E]](_ rename "").expectSelf
+  assertType[Points    [O, S, E]].map(_ rename "").is[Points    [O, S, E]]
+  assertType[Arounds   [O, S, E]].map(_ rename "").is[Arounds   [O, S, E]]
+  assertType[Invariants[O, S, E]].map(_ rename "").is[Invariants[O, S, E]]
 
   // orEmpty
-  test[Option[Points    [O, S, E]]](_.orEmpty).expect[Points    [O, S, E]]
-  test[Option[Arounds   [O, S, E]]](_.orEmpty).expect[Arounds   [O, S, E]]
-  test[Option[Invariants[O, S, E]]](_.orEmpty).expect[Invariants[O, S, E]]
+  assertType[Option[Points    [O, S, E]]].map(_.orEmpty).is[Points    [O, S, E]]
+  assertType[Option[Arounds   [O, S, E]]].map(_.orEmpty).is[Arounds   [O, S, E]]
+  assertType[Option[Invariants[O, S, E]]].map(_.orEmpty).is[Invariants[O, S, E]]
 
   // ===================================================================================================================
   // Actions
   // ===================================================================================================================
 
   // Conditional
-  test[Actions[F, R, O, S, E]](_.when(_.obs.bool)).expectSelf
+  assertType[Actions[F, R, O, S, E]].map(_.when(_.obs.bool)).is[Actions[F, R, O, S, E]]
 
   // NamedOps
-  test[Actions[F, R, O, S, E]](_ rename "").expectSelf
+  assertType[Actions[F, R, O, S, E]].map(_ rename "").is[Actions[F, R, O, S, E]]
 
   // ActionOps1
-  test[Actions[F, R, O, S, E]](_ mapO o21).expect[Actions[F, R, O2, S, E]]
+  assertType[Actions[F, R, O, S, E]].map(_ mapO o21).is[Actions[F, R, O2, S, E]]
 
   // ActionOps2
-  test[Actions[F, R, O, S, E]](_ times 3).expectSelf
+  assertType[Actions[F, R, O, S, E]].map(_ times 3).is[Actions[F, R, O, S, E]]
 
   // ActionOps3
-  test[Actions[F, R, O, S, E]](_.group("yay")).expectSelf
+  assertType[Actions[F, R, O, S, E]].map(_.group("yay")).is[Actions[F, R, O, S, E]]
 
   // compose (mono)
   testAA[Actions[F, R, O, S, E]](_ >> _).expect[Actions[F, R, O, S, E]]
   compileError("testAA[Actions[F, R, O, S, E]](_ +> _)")
 
   // combine
-  test[List[Actions[F, R, O, S, E]]](_.combine).expect[Actions[F, R, O, S, E]]
+  assertType[List[Actions[F, R, O, S, E]]].map(_.combine).is[Actions[F, R, O, S, E]]
 
   // >>
   compileError("test2[Actions[F, R, O, S, E], Points       [O, S, E]](_ >> _)")
@@ -151,7 +144,7 @@ abstract class ImplicitsTest1 extends AbstractTest {
   compileError("test2[Invariants   [O, S, E], Actions[F, R, O, S, E]](_ >> _)")
 
   // orEmpty
-  test[Option[Actions[F, R, O, S, E]]](_.orEmpty).expect[Actions[F, R, O, S, E]]
+  assertType[Option[Actions[F, R, O, S, E]]].map(_.orEmpty).is[Actions[F, R, O, S, E]]
 
   // ===================================================================================================================
   // +>
@@ -191,10 +184,10 @@ abstract class ImplicitsTest1 extends AbstractTest {
   abstract class Transformers1 {
     implicit val transformer: teststate.core.Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]
 
-    test[Points          [O, S, E]](_.lift).expect[Points            [O2, S2, E2]]
-    test[Arounds         [O, S, E]](_.lift).expect[Arounds           [O2, S2, E2]]
-    test[Invariants      [O, S, E]](_.lift).expect[Invariants        [O2, S2, E2]]
-    test[Actions   [F, R, O, S, E]](_.lift).expect[Actions   [F2, R2, O2, S2, E2]]
+    assertType[Points          [O, S, E]].map(_.lift).is[Points            [O2, S2, E2]]
+    assertType[Arounds         [O, S, E]].map(_.lift).is[Arounds           [O2, S2, E2]]
+    assertType[Invariants      [O, S, E]].map(_.lift).is[Invariants        [O2, S2, E2]]
+    assertType[Actions   [F, R, O, S, E]].map(_.lift).is[Actions   [F2, R2, O2, S2, E2]]
 
 //    compileError("(x: Actions   [F, R, O, S, E]) => x: Actions   [F2, R2, O2, S2, E2]")
 //    compileError("(x: Points          [O, S, E]) => x: Points            [O2, S2, E2]")
@@ -219,7 +212,7 @@ abstract class ImplicitsTest1 extends AbstractTest {
       case _ => dsl.emptyInvariant
     })
 
-    testExpr(i).expect[Invariants[O, S, E]]
+    assertTypeOf(i).is[Invariants[O, S, E]]
   }
 
 }

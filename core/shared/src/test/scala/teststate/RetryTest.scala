@@ -1,6 +1,7 @@
 package teststate
 
 import java.time.Instant
+import scala.annotation.nowarn
 import scala.concurrent.duration._
 import teststate.Exports._
 import teststate.TestUtil._
@@ -8,6 +9,7 @@ import utest._
 
 object RetryTest extends TestSuite {
 
+  @nowarn("cat=unused")
   def debug(s: => String = ""): Unit =
     () // println(s)
 

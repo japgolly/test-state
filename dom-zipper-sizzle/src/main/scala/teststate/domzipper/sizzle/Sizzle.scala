@@ -1,11 +1,13 @@
 package teststate.domzipper.sizzle
 
 import org.scalajs.dom._
+import scala.annotation.nowarn
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobal
 
 @JSGlobal
 @js.native
+@nowarn("cat=unused")
 object Sizzle extends js.Object {
 
   /*

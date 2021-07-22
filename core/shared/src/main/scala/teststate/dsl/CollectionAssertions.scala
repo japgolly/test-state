@@ -553,7 +553,7 @@ object CollectionAssertions {
       override def errorString = s"$ko of $total elements failed: $failedElementsStr"
     }
 
-    final case class AllPass[+A](values: Vector[A])(implicit d: Display[A]) extends Failure[A] {
+    final case class AllPass[+A](values: Vector[A]) extends Failure[A] {
       override def errorString = s"All ${values.length} elements satisfied criteria."
     }
   }
@@ -601,7 +601,7 @@ object CollectionAssertions {
 
     sealed trait Failure[+A] extends HasErrorString with Product with Serializable
 
-    final case class DoesntExist[+A](values: Vector[A])(implicit d: Display[A]) extends Failure[A] {
+    final case class DoesntExist[+A](values: Vector[A]) extends Failure[A] {
       override def errorString = s"None of the ${values.length} elements satisfied criteria."
     }
 

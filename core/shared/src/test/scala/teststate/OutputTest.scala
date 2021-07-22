@@ -48,7 +48,7 @@ object OutputTest extends TestSuite {
       .addCheck(mockAround("Sub-delta"))
 
   def test(a: *.Actions, i: *.Invariants)(expect: String): Unit = {
-    val r = Plan(a, i).stateless.testU.runU
+    val r = Plan(a, i).stateless.testU.runU()
     assertRun(r, expect)
   }
 
@@ -1195,7 +1195,7 @@ object OutputTest extends TestSuite {
 
     "named" - {
       "pass" - {
-        val r = Plan(*.emptyAction, checkPoint).named("Beauty").stateless.testU.runU
+        val r = Plan(*.emptyAction, checkPoint).named("Beauty").stateless.testU.runU()
         assertRun(r,
           """
             |✓ Beauty
@@ -1206,7 +1206,7 @@ object OutputTest extends TestSuite {
           """.stripMargin)
       }
       "fail" - {
-        val r = Plan(*.emptyAction, checkPointF).named("Sorrow").stateless.testU.runU
+        val r = Plan(*.emptyAction, checkPointF).named("Sorrow").stateless.testU.runU()
         assertRun(r,
           """
             |✘ Sorrow
@@ -1235,7 +1235,7 @@ object OutputTest extends TestSuite {
       val a = *.chooseAction(NameFn {
         case None    => "A"
         case Some(_) => "B"
-      }) { ros =>
+      }) { _ =>
         *.emptyAction
       }
       test(a, *.emptyInvariant)(

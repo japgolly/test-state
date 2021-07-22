@@ -61,7 +61,7 @@ object TodoTest extends TestSuite {
         .withInitialState(State(0, 0))
         .test(Observer watch observe())
 
-      test.runU
+      test.runU()
     }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

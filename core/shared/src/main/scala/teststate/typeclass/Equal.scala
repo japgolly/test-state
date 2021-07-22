@@ -1,6 +1,7 @@
 package teststate.typeclass
 
 import japgolly.univeq.UnivEq
+import scala.annotation.nowarn
 
 class Equal[A](val equal: (A, A) => Boolean) extends AnyVal
 
@@ -13,6 +14,7 @@ object Equal {
     Equal(_ == _)
 
   trait ImplicitsLowPri {
+    @nowarn("cat=unused")
     implicit def testStateEqualByUnivEq[A: UnivEq]: Equal[A] =
       by_==
   }

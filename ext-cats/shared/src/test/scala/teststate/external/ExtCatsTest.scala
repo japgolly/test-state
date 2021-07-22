@@ -2,6 +2,7 @@ package teststate.external
 
 import cats.{Eq => Equal2}
 import japgolly.univeq.UnivEq
+import scala.annotation.nowarn
 
 object Blah1
   extends teststate.ExtCats
@@ -24,6 +25,7 @@ object ExtCatsTest {
 
   object test {
     import teststate.typeclass.Equal
+    @nowarn("cat=unused")
     def apply[A](implicit e : Equal [A], ek : Equal [List[A]],
                           e2: Equal2[A], ek2: Equal2[List[A]]) = ()
   }

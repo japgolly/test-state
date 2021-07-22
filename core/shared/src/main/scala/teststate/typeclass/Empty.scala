@@ -7,8 +7,8 @@ object Empty {
   def instance[A](implicit e: Empty[A]): A =
     e.instance
 
-  final class EmptyOptionOps[A](private val o: Option[A]) extends AnyVal {
-    def orEmpty(implicit e: Empty[A]): A =
+  final class EmptyOptionOps[A](o: Option[A])(implicit e: Empty[A]) {
+    def orEmpty: A =
       o getOrElse e.instance
   }
 

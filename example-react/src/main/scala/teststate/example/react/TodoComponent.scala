@@ -20,7 +20,7 @@ object TodoComponent {
 
   object State {
     def item(idx: Int): Lens[State, TodoItem] =
-      items ^|-> atVectorIndex(idx)
+      items andThen atVectorIndex(idx)
   }
 
   def atVectorIndex[A](idx: Int) =
@@ -97,7 +97,7 @@ object TodoComponent {
       <.label(
         <.input.checkbox(
           ^.checked := showCompleted,
-          ^.onChange --> $.modState(State.showCompleted set !showCompleted)),
+          ^.onChange --> $.modState(State.showCompleted replace !showCompleted)),
         "Show completed.")
 
     private def renderSummary(items: Vector[TodoItem]) = {
@@ -119,16 +119,16 @@ object TodoComponent {
 
     private def updateNewText(ev: ReactEventFromInput): Callback =
       ev.extract(_.target.value)(text =>
-        $.modState(State.newItemText set text))
+        $.modState(State.newItemText replace text))
 
     private def createNewItem(text: String): Callback =
       $.modState(
-        State.newItemText.set("") compose
+        State.newItemText.replace("") compose
         State.items.modify(_ :+ TodoItem(text, false)))
 
     private def completeItem(idx: Int): Callback =
       $.modState(
-        (State.item(idx) ^|-> TodoItem.completed) set true)
+        (State.item(idx) andThen TodoItem.completed) replace true)
   }
 
   val Component = ScalaComponent.builder[Unit]("Todo Example")
@@ -136,4 +136,3 @@ object TodoComponent {
     .renderBackend[Backend]
     .build
 }
-

@@ -210,7 +210,7 @@ object RunnerTest extends TestSuite {
           .addCheck(*.focus("Blah").value(_.obs.b).assert.change)
         val test = Plan.action(a).test(Observer watch new Yar).stateless
 
-        assertRun(test.runU,
+        assertRun(test.runU(),
           """
             |✘ NOP
             |  ✓ Action
@@ -343,7 +343,7 @@ object RunnerTest extends TestSuite {
           +> *.test("After")(_ => i == 1))
 
       val test = plan.stateless.testU
-      assertRun(test.runU,
+      assertRun(test.runU(),
         """
           |✓ Inc
           |  ✓ Pre-conditions
