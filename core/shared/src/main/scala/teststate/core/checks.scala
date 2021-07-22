@@ -1,12 +1,12 @@
 package teststate.core
 
+import teststate.core.NamedOps.ToOps._
 import teststate.data._
+import teststate.typeclass.Conditional.Implicits._
+import teststate.typeclass.Display.ToOps._
+import teststate.typeclass.Profunctor.ToOps._
 import teststate.typeclass._
 import teststate.{core => ^}
-import Conditional.Implicits._
-import NamedOps.ToOps._
-import Profunctor.ToOps._
-import Display.ToOps._
 
 final case class Point[-I, E](name: NameFn[I], test: I => Tri[E, Unit])
 

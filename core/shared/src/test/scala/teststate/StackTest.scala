@@ -1,10 +1,10 @@
 package teststate
 
-import utest._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import teststate.Exports._
 import teststate.data.Id
-import Exports._
+import utest._
 
 object StackTest extends TestSuite {
 

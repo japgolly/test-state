@@ -1,6 +1,6 @@
 package teststate.domzipper
 
-import Exports._
+import teststate.domzipper.Exports._
 
 final class DomZipperJsCompilationTest($: DomZipperJs) {
 

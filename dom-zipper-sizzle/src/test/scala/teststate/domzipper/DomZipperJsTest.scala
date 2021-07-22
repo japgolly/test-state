@@ -4,15 +4,15 @@ import japgolly.microlibs.testutil.TestUtil.assertEq
 import org.scalajs.dom
 import scalaz.Equal
 import scalaz.std.anyVal._
-import scalaz.std.string._
 import scalaz.std.option._
 import scalaz.std.set._
+import scalaz.std.string._
 import scalaz.std.vector._
 import teststate.domzipper.sizzle.Exports._
 import utest._
 
 object DomZipperJsTest extends TestSuite {
-  private implicit val htmlElementEquality: Equal[dom.html.Element] = Equal.equalA
+  Equal.equalA
 
   private def body =
     """

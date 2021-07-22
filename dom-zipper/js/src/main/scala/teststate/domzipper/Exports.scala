@@ -1,7 +1,7 @@
 package teststate.domzipper
 
-import DomZipperJsF.Dom
-import ErrorHandler.{Id, Throw}
+import teststate.domzipper.DomZipperJsF.Dom
+import teststate.domzipper.ErrorHandler.{Id, Throw}
 
 trait Exports extends SharedExports with DomCollectionJsExt.Exports with JsDomExt {
 

@@ -1,10 +1,10 @@
 package teststate.core
 
+import teststate.core.Action.{Actions => _, _}
+import teststate.core.CoreExports._
 import teststate.data._
+import teststate.typeclass.Profunctor.ToOps._
 import teststate.typeclass._
-import Action.{Actions => _, _}
-import Profunctor.ToOps._
-import CoreExports._
 
 // Applies to: Inner, Outer, Sack
 trait ActionOps[A[_[_], _, _, _, _]] {

@@ -1,7 +1,7 @@
 package teststate.external
 
-import japgolly.univeq.UnivEq
 import cats.{Eq => Equal2}
+import japgolly.univeq.UnivEq
 
 object Blah1
   extends teststate.ExtCats

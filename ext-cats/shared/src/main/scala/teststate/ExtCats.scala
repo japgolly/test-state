@@ -2,10 +2,8 @@ package teststate
 
 import cats._
 import cats.arrow.Profunctor
-import cats.data._
-import teststate.{data => D, typeclass => T}
-import D.Or
-import Exports._
+import teststate.Exports._
+import teststate.{typeclass => T}
 
 trait ExtCats extends T.Equal.ImplicitsLowPri {
 

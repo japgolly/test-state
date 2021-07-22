@@ -1,10 +1,10 @@
 package teststate.run
 
+import teststate.core.CoreExports._
+import teststate.core.CoreExports2._
+import teststate.core._
 import teststate.data._
 import teststate.typeclass._
-import teststate.core._
-import CoreExports._
-import CoreExports2._
 
 sealed abstract class PlanLike[F[_], R, O, S, E, This] { self: This =>
   type Self[FF[_], RR, OO, SS, EE]

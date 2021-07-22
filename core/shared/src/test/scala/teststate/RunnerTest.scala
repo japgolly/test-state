@@ -1,9 +1,9 @@
 package teststate
 
-import utest._
-import teststate.data.Failure
 import teststate.Exports.{testStateAssertionSettings => _, testStateEqualByUnivEq => _, _}
 import teststate.TestUtil._
+import teststate.data.Failure
+import utest._
 
 object RunnerTest extends TestSuite {
   implicit def equal[A]: Equal[A] = Equal.by_==

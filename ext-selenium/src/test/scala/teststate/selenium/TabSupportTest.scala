@@ -1,7 +1,5 @@
 package teststate.selenium
 
-import utest._
-import TestUtil._
 import org.openqa.selenium.WebDriver
 import scala.jdk.CollectionConverters._
 import scala.util.Try
@@ -9,6 +7,8 @@ import scalaz.Equal
 import scalaz.std.anyVal._
 import scalaz.std.string._
 import scalaz.std.vector._
+import teststate.selenium.TestUtil._
+import utest._
 
 object TabSupportTest extends TestSuite {
 

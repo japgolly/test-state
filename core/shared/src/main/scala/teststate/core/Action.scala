@@ -1,9 +1,9 @@
 package teststate.core
 
+import teststate.core.Types._
 import teststate.data._
+import teststate.typeclass.Conditional.Implicits._
 import teststate.typeclass._
-import Types._
-import Conditional.Implicits._
 
 object Action {
   sealed abstract class Inner[F[_], R, O, S, E]

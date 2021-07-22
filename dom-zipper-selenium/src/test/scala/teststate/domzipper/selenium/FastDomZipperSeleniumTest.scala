@@ -3,13 +3,13 @@ package teststate.domzipper.selenium
 import japgolly.microlibs.testutil.TestUtil._
 import java.util.concurrent.TimeUnit
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
-import utest._
 import scalaz.std.anyVal._
-import scalaz.std.string._
 import scalaz.std.option._
 import scalaz.std.set._
+import scalaz.std.string._
 import scalaz.std.vector._
-import Exports._
+import teststate.domzipper.selenium.Exports._
+import utest._
 
 object FastDomZipperSeleniumTest extends TestSuite {
 

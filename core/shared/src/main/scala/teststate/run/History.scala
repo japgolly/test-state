@@ -1,10 +1,10 @@
 package teststate.run
 
 import scala.collection.compat._
+import teststate.data.Result.{Fail, Skip}
 import teststate.data._
-import teststate.typeclass.{ErrorHandler, DisplayError}
-import History.{Step, Steps}
-import Result.{Fail, Skip, Pass}
+import teststate.run.History.{Step, Steps}
+import teststate.typeclass.ErrorHandler
 
 final class History[+E](val steps: Steps[E], val result: Result[E]) {
   override def toString = s"History($steps, $result)"

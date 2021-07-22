@@ -1,7 +1,7 @@
 package teststate.dsl
 
-import teststate.data.Name.Implicits._
 import teststate.data.Name
+import teststate.data.Name.Implicits._
 import teststate.typeclass._
 
 object OptionAssertions {

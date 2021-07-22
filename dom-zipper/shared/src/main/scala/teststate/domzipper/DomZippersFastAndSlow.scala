@@ -1,6 +1,6 @@
 package teststate.domzipper
 
-import ErrorHandler._
+import teststate.domzipper.ErrorHandler._
 
 /** Fusion of two DomZippers over identical content.
   *

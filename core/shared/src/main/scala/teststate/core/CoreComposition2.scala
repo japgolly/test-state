@@ -1,11 +1,11 @@
 package teststate.core
 
+import teststate.core.Action.Actions
+import teststate.core.CoreExports._
+import teststate.core.CoreExports2._
 import teststate.data.Sack
 import teststate.typeclass.PolyComposable
-import Action.Actions
-import CoreExports._
-import CoreExports2._
-import PolyComposable._
+import teststate.typeclass.PolyComposable._
 
 object CoreComposition2 {
   trait Implicits {

@@ -1,8 +1,8 @@
 package teststate.selenium
 
-import scalaz.std.string._
 import scalaz.std.anyVal._
-import TestUtil._
+import scalaz.std.string._
+import teststate.selenium.TestUtil._
 import utest._
 
 object MultiBrowserTest extends TestSuite {

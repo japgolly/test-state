@@ -1,9 +1,9 @@
 package teststate.core
 
+import teststate.core.Types.CheckShapeA
 import teststate.data.Sack
 import teststate.typeclass.PolyComposable
-import PolyComposable._
-import Types.CheckShapeA
+import teststate.typeclass.PolyComposable._
 
 /**
   * P = Point

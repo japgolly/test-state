@@ -1,10 +1,10 @@
 package teststate.example.react
 
-import scala.collection.compat._
-import monocle.macros.Lenses
-import monocle.Lens
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
+import monocle.Lens
+import monocle.macros.Lenses
+import scala.collection.compat._
 
 object TodoComponent {
 

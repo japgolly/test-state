@@ -1,14 +1,13 @@
 package teststate.run
 
 import scala.annotation.tailrec
-import scala.collection.compat._
 import scala.collection.mutable
+import teststate.core.CoreExports._
+import teststate.core.Types.SackE
+import teststate.core._
+import teststate.data.Result.{Fail, Pass, Skip}
 import teststate.data._
 import teststate.typeclass._
-import teststate.core._
-import CoreExports._
-import Types.SackE
-import Result.{Fail, Pass, Skip}
 
 object Runner {
 

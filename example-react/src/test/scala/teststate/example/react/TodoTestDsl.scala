@@ -1,9 +1,9 @@
 package teststate.example.react
 
-import monocle.macros.Lenses
 import japgolly.scalajs.react.test._
+import monocle.macros.Lenses
 import org.scalajs.dom.html
-import MyTestState._
+import teststate.example.react.MyTestState._
 
 /**
  * Observation capturing everything we want to know about the Todo component.

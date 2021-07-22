@@ -4,8 +4,8 @@ import org.openqa.selenium.WebDriver
 import scala.concurrent.duration.Duration
 import teststate.data.{Id, Or}
 import teststate.dsl.Dsl
+import teststate.selenium.TestStateExt._
 import teststate.typeclass.ExecutionModel
-import TestStateExt._
 
 object TestStateExt {
 

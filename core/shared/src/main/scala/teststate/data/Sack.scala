@@ -1,8 +1,7 @@
 package teststate.data
 
+import teststate.typeclass.Profunctor.ToOps.toProfunctorOps
 import teststate.typeclass._
-import Profunctor.ToOps.toProfunctorOps
-import Sack._
 
 sealed abstract class Sack[-I, +A] {
 

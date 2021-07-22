@@ -1,8 +1,8 @@
 package teststate.core
 
+import teststate.core.Types._
 import teststate.data._
 import teststate.typeclass._
-import Types._
 
 trait CheckOps[C[_, _, _]] {
 

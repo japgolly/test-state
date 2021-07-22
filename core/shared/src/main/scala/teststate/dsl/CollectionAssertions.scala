@@ -489,7 +489,7 @@ object CollectionAssertions {
     object Neg extends ElemChanges {
       override def apply[A](args: Args[A])(implicit s: Display[A]) =
         prep(args) match {
-          case Some(errors) => None
+          case Some(_) => None
           case None         => Some(Matched())
         }
     }

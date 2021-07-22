@@ -32,7 +32,7 @@ object TestState {
     "-opt-inline-from:japgolly.univeq.**",
     "-opt-inline-from:teststate.**",
     "-Ywarn-dead-code",
-    // "-Ywarn-unused",
+    "-Ywarn-unused",
     "-Ywarn-value-discard")
 
   val commonSettings = ConfigureBoth(

@@ -1,8 +1,8 @@
 package teststate.domzipper
 
-import DomZipper._
-import DomZipperBase._
-import ErrorHandler.Id
+import teststate.domzipper.DomZipper._
+import teststate.domzipper.DomZipperBase._
+import teststate.domzipper.ErrorHandler.Id
 
 trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self]] extends DomZipper[F, Dom, A, Self] {
   import DomCollection.Container

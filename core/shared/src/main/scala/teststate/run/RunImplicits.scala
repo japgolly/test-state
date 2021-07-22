@@ -1,10 +1,10 @@
 package teststate.run
 
-import teststate.data.Name
 import teststate.core.CoreExports._
 import teststate.core.CoreExports3._
+import teststate.data.Name
 import teststate.typeclass.PolyComposable
-import PolyComposable._
+import teststate.typeclass.PolyComposable._
 
 trait RunImplicits {
 

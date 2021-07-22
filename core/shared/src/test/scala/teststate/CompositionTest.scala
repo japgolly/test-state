@@ -3,12 +3,12 @@ package teststate
 import nyaya.prop._
 import nyaya.test.PropTest._
 import scalaz.std.string.stringInstance
-import utest._
-import teststate.typeclass.PolyComposable
 import teststate.Exports._
+import teststate.RandomData.*
 import teststate.TestUtil._
-import PolyComposable.{Can, SeqOp}
-import RandomData.*
+import teststate.typeclass.PolyComposable
+import teststate.typeclass.PolyComposable.{Can, SeqOp}
+import utest._
 
 object CompositionTest extends TestSuite {
 

@@ -2,10 +2,10 @@ package teststate.domzipper.selenium
 
 import org.openqa.selenium.{By, WebDriver, WebElement}
 import scala.jdk.CollectionConverters._
+import teststate.domzipper.DomZipper.{CssSelResult, DomCollection, Layer}
+import teststate.domzipper.ErrorHandler.ErrorHandlerOptionOps
 import teststate.domzipper._
 import teststate.selenium.util.SeleniumExt._
-import DomZipper.{CssSelResult, DomCollection, Layer}
-import ErrorHandler.{ErrorHandlerOptionOps, ErrorHandlerResultOps}
 
 object DomZipperSeleniumF {
 

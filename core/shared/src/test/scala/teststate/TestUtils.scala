@@ -1,7 +1,7 @@
 package teststate
 
-import Exports._
 import sourcecode.Line
+import teststate.Exports._
 
 object TestUtil extends TestUtil
 

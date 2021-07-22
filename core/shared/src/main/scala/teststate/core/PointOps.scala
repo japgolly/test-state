@@ -1,10 +1,8 @@
 package teststate.core
 
+import teststate.core.Around.{After, Before, When}
+import teststate.core.Types._
 import teststate.data.Sack
-import teststate.typeclass._
-import Around.{When, Before, After}
-import Profunctor.ToOps._
-import Types._
 
 object PointOps {
 

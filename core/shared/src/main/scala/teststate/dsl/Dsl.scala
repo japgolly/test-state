@@ -2,12 +2,12 @@ package teststate.dsl
 
 import japgolly.univeq.UnivEq
 import scala.collection.compat._
-import teststate.core._
+import teststate.core.CoreExports._
 import teststate.core.Types.SackE
+import teststate.core._
 import teststate.data._
 import teststate.run.Observer
 import teststate.typeclass._
-import CoreExports._
 
 object Dsl {
   def full[F[_]: ExecutionModel, R, O, S, E] =

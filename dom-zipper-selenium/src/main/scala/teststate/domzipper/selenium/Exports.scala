@@ -1,8 +1,8 @@
 package teststate.domzipper.selenium
 
+import teststate.domzipper.ErrorHandler.{Id, Throw}
 import teststate.domzipper._
-import DomZipperSeleniumF.Dom
-import ErrorHandler.{Id, Throw}
+import teststate.domzipper.selenium.DomZipperSeleniumF.Dom
 
 trait Exports extends SharedExports with teststate.selenium.util.SeleniumExt {
 

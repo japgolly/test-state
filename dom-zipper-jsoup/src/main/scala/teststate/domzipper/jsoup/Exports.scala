@@ -1,8 +1,8 @@
 package teststate.domzipper.jsoup
 
+import teststate.domzipper.ErrorHandler.{Id, Throw}
 import teststate.domzipper._
-import DomZipperJsoupF.Dom
-import ErrorHandler.{Id, Throw}
+import teststate.domzipper.jsoup.DomZipperJsoupF.Dom
 
 trait Exports extends SharedExports {
 

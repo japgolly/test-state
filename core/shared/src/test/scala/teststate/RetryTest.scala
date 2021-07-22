@@ -3,8 +3,8 @@ package teststate
 import java.time.Instant
 import scala.concurrent.duration._
 import teststate.Exports._
+import teststate.TestUtil._
 import utest._
-import TestUtil._
 
 object RetryTest extends TestSuite {
 

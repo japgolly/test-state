@@ -1,10 +1,10 @@
 package teststate.domzipper.jsoup
 
-import teststate.domzipper._
-import org.jsoup.nodes.Document
 import org.jsoup.Jsoup
-import DomZipper.{CssSelResult, DomCollection, Layer}
-import ErrorHandler.{ErrorHandlerOptionOps, ErrorHandlerResultOps}
+import org.jsoup.nodes.Document
+import teststate.domzipper.DomZipper.{CssSelResult, DomCollection, Layer}
+import teststate.domzipper.ErrorHandler.ErrorHandlerOptionOps
+import teststate.domzipper._
 
 object DomZipperJsoupF {
 

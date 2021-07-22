@@ -3,8 +3,8 @@ package teststate.selenium
 import org.openqa.selenium.WebDriver
 import scala.concurrent.duration.Duration
 import teststate.data.Id
+import teststate.selenium.Internal._
 import teststate.typeclass.ExecutionModel
-import Internal._
 
 /** Access to a specific tab in a browser.
   *

@@ -4,7 +4,7 @@ import java.util.concurrent.Executors
 import org.openqa.selenium.WebDriver
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
-import Internal._
+import teststate.selenium.Internal._
 
 /** Creates tabs across multiple browsers.
   *

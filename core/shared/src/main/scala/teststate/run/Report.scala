@@ -3,8 +3,8 @@ package teststate.run
 import scala.annotation.elidable
 import scala.util.control.NonFatal
 import teststate.data.{Failure, Name}
+import teststate.run.Report._
 import teststate.typeclass.DisplayError
-import Report._
 
 case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: Stats) {
 

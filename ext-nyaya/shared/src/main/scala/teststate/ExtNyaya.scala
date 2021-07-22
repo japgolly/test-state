@@ -2,9 +2,9 @@ package teststate
 
 import nyaya.gen._
 import nyaya.test.Settings
+import teststate.Exports._
+import teststate.ExtNyaya._
 import teststate.data.ROS
-import Exports._
-import ExtNyaya._
 
 trait ExtNyaya {
   implicit def toDslNyayaOps[F[_], R, O, S, E](dsl: Dsl[F, R, O, S, E]): DslNyayaOps[F, R, O, S, E] =

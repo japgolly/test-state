@@ -1,12 +1,12 @@
 package teststate.run
 
 import scala.Console._
-import scala.concurrent.duration.FiniteDuration
-import teststate.data.{Failure, Result}
-import teststate.typeclass.DisplayError
-import History.{Step, Steps}
-import Result.{Fail, Pass, Skip}
 import scala.annotation.tailrec
+import scala.concurrent.duration.FiniteDuration
+import teststate.data.Result.{Fail, Pass, Skip}
+import teststate.data.{Failure, Result}
+import teststate.run.History.{Step, Steps}
+import teststate.typeclass.DisplayError
 
 trait ReportFormat {
   def format[E](report: Report[E])(implicit de: DisplayError[E]): Option[String]

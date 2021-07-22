@@ -1,10 +1,10 @@
 package teststate
 
-import utest._
-import teststate.core.Around
-import teststate.data._
 import teststate.Exports.{testStateAssertionSettings => _, _}
 import teststate.TestUtil._
+import teststate.core.Around
+import teststate.data._
+import utest._
 
 object DslTest extends TestSuite {
 

@@ -1,11 +1,11 @@
 package teststate
 
-import teststate.Exports._
-import utest._
-import TestUtil._
 import scalaz.std.string._
 import scalaz.std.vector._
+import teststate.Exports._
+import teststate.TestUtil._
 import teststate.data.VectorTree
+import utest._
 
 object ActionTest extends TestSuite {
 

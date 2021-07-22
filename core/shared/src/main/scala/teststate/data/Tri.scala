@@ -1,6 +1,6 @@
 package teststate.data
 
-import Result.{Fail, Skip, Pass}
+import teststate.data.Result.{Fail, Pass, Skip}
 
 sealed abstract class Tri[+E, +A] extends Product with Serializable {
   def mapE[X](f: E => X): Tri[X, A]

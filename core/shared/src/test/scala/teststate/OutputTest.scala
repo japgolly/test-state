@@ -1,8 +1,8 @@
 package teststate
 
-import utest._
 import teststate.Exports.{testStateAssertionSettings => _, _}
 import teststate.TestUtil._
+import utest._
 
 object OutputTest extends TestSuite {
 

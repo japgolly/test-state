@@ -1,7 +1,7 @@
 package teststate.domzipper
 
-import DomZipper._
-import ErrorHandler.ErrorHandlerResultOps
+import teststate.domzipper.DomZipper._
+import teststate.domzipper.ErrorHandler.ErrorHandlerResultOps
 
 trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
 

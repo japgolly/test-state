@@ -1,12 +1,12 @@
 package teststate.dsl
 
-import utest._
-import OptionAssertions._
 import japgolly.microlibs.testutil.TestUtil._
-import teststate.Exports._
 import scalaz.std.anyVal._
 import scalaz.std.option._
 import scalaz.std.string._
+import teststate.Exports._
+import teststate.dsl.OptionAssertions._
+import utest._
 
 object OptionAssertionsTest extends TestSuite {
 

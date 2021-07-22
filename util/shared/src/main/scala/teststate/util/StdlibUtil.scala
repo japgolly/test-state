@@ -1,6 +1,6 @@
 package teststate.util
 
-import StdlibUtil._
+import teststate.util.StdlibUtil._
 
 trait StdlibUtil {
 

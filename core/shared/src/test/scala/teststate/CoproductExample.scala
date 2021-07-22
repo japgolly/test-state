@@ -1,7 +1,7 @@
 package teststate
 
+import teststate.Exports._
 import teststate.data.Id
-import Exports._
 
 object CoproductExample {
 

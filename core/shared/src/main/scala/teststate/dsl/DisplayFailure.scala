@@ -1,6 +1,6 @@
 package teststate.dsl
 
-import teststate.typeclass.{Equal, Display}
+import teststate.typeclass.{Display, Equal}
 
 trait DisplayFailure[-AA, +E] {
   def expectedEqual      [A <: AA](expected: A, actual: A)         (implicit s: Display[A]): E

@@ -1,9 +1,9 @@
 package teststate
 
+import nyaya.gen._
+import teststate.Exports._
 import teststate.core.Action
 import teststate.data.Sack
-import Exports._
-import nyaya.gen._
 
 object RandomData {
 

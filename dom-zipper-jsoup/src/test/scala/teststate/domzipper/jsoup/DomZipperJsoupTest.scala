@@ -3,12 +3,12 @@ package teststate.domzipper.jsoup
 import japgolly.microlibs.testutil.TestUtil._
 import org.jsoup.Jsoup
 import scalaz.std.anyVal._
-import scalaz.std.string._
 import scalaz.std.option._
 import scalaz.std.set._
+import scalaz.std.string._
 import scalaz.std.vector._
+import teststate.domzipper.jsoup.Exports._
 import utest._
-import Exports._
 
 object DomZipperJsoupTest extends TestSuite {
 

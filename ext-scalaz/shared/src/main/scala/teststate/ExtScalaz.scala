@@ -1,10 +1,10 @@
 package teststate
 
+import scalaz.Isomorphism._
 import scalaz._
+import teststate.Exports.{Equal => _, _}
+import teststate.data.Or
 import teststate.{data => D, typeclass => T}
-import D.Or
-import Exports.{Equal => _, _}
-import Isomorphism._
 
 trait ExtScalaz extends T.Equal.ImplicitsLowPri {
 

@@ -1,7 +1,6 @@
 package teststate.core
 
-import teststate.typeclass._
-import Types.{CheckShapeA, checkShapeAProfunctorOps}
+import teststate.core.Types.{CheckShapeA, checkShapeAProfunctorOps}
 
 trait ToInvariants[F[_[-_, _], _, _], C[-_, _]] {
   def toInvariants[A, B](c: F[C, A, B]): F[Invariant, A, B]

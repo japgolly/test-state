@@ -1,6 +1,6 @@
 package teststate.data
 
-import VectorTree.Node
+import teststate.data.VectorTree.Node
 
 final case class VectorTree[+A](elements: Vector[Node[A]]) {
   def map[B](f: A => B): VectorTree[B] =

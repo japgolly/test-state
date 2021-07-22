@@ -4,9 +4,9 @@ import org.scalajs.dom
 import org.scalajs.dom.html
 import scala.reflect.ClassTag
 import scala.scalajs.js
-import DomZipper.{CssSelResult, DomCollection, Layer}
-import ErrorHandler.{ErrorHandlerOptionOps, ErrorHandlerResultOps}
-import JsDomExt._
+import teststate.domzipper.DomZipper.{CssSelResult, DomCollection, Layer}
+import teststate.domzipper.ErrorHandler.ErrorHandlerOptionOps
+import teststate.domzipper.JsDomExt._
 
 object DomZipperJsF {
   type Dom = dom.Element

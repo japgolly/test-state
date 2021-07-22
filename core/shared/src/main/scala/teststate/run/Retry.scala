@@ -1,7 +1,6 @@
 package teststate.run
 
-import java.time.Instant
-import java.time.{Duration => JavaDuration}
+import java.time.{Duration => JavaDuration, Instant}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{Duration => ScalaDuration}
 import teststate.data._

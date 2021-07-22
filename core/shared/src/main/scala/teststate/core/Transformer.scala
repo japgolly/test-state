@@ -1,10 +1,9 @@
 package teststate.core
 
-import CoreExports._
-import CoreExports2._
+import teststate.core.CoreExports._
+import teststate.core.CoreExports2._
 import teststate.data.Or
-import teststate.typeclass.{~~>, ExecutionModel}
-import Transformer._
+import teststate.typeclass.{ExecutionModel, ~~>}
 
 case class Transformer
   [F [_], R , O , S , E ,

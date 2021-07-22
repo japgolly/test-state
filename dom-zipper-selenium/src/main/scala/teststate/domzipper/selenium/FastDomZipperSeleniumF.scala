@@ -1,9 +1,9 @@
 package teststate.domzipper.selenium
 
 import org.openqa.selenium.{WebDriver, WebElement}
-import teststate.domzipper.{DomZippersFastAndSlow, ErrorHandler, HtmlScrub}
 import teststate.domzipper.jsoup.DomZipperJsoupF
-import DomZipperJsoupF.{Dom => JDom}
+import teststate.domzipper.jsoup.DomZipperJsoupF.{Dom => JDom}
+import teststate.domzipper.{DomZippersFastAndSlow, ErrorHandler, HtmlScrub}
 
 object FastDomZipperSeleniumF {
 

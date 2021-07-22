@@ -1,7 +1,7 @@
 package teststate.core
 
+import teststate.data.Name.Implicits._
 import teststate.data._
-import Name.Implicits._
 
 case class NamedOps[A, I](renameBy: (A, NameFn[I] => NameFn[I]) => A) extends AnyVal
 
