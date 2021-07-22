@@ -30,7 +30,7 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
     copySelf(htmlScrub, g)
 
   final def failToOption: Self[Option           , A] = failBy(ErrorHandler.ReturnOption)
-  final def failToEither: Self[Either[String, ?], A] = failBy(ErrorHandler.ReturnEither)
+  final def failToEither: Self[Either[String, *], A] = failBy(ErrorHandler.ReturnEither)
   final def throwErrors : Self[Id               , A] = failBy(ErrorHandler.Throw)
 
   override def enrichErr(msg: String): String =

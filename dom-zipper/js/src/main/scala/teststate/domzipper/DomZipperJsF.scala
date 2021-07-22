@@ -43,7 +43,7 @@ object DomZipperJsF {
 
     def failBy[G[_]: ErrorHandler]: Constructors[G]   = new Constructors
     def failToOption: Constructors[Option           ] = failBy(ErrorHandler.ReturnOption)
-    def failToEither: Constructors[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
+    def failToEither: Constructors[Either[String, *]] = failBy(ErrorHandler.ReturnEither)
 
     type DomCollection [      C[_], A] = DomZipperJsF.DomCollection[F, C, A]
     type DomCollectionF[G[_], C[_], A] = DomZipperJsF.DomCollection[G, C, A]

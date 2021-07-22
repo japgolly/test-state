@@ -48,7 +48,7 @@ object DomZipperSeleniumF {
 
     def failBy[G[_]: ErrorHandler]: Constructors[G]   = new Constructors
     def failToOption: Constructors[Option           ] = failBy(ErrorHandler.ReturnOption)
-    def failToEither: Constructors[Either[String, ?]] = failBy(ErrorHandler.ReturnEither)
+    def failToEither: Constructors[Either[String, *]] = failBy(ErrorHandler.ReturnEither)
 
     type DomCollection [      C[_], A] = DomZipperSeleniumF.DomCollection[F, C, A]
     type DomCollectionF[G[_], C[_], A] = DomZipperSeleniumF.DomCollection[G, C, A]

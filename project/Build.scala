@@ -40,8 +40,8 @@ object TestState {
       organization                  := "com.github.japgolly.test-state",
       homepage                      := Some(url("https://github.com/japgolly/" + ghProject)),
       licenses                      += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
-      scalaVersion                  := Ver.scala213,
-      crossScalaVersions            := Seq(Ver.scala212, Ver.scala213),
+      scalaVersion                  := Ver.scala2,
+      crossScalaVersions            := Seq(Ver.scala2),
       scalacOptions                ++= scalacFlags,
       Test / scalacOptions         --= Seq("-Ywarn-dead-code"),
       ThisBuild / shellPrompt       := ((s: State) => Project.extract(s).currentRef.project + "> "),
@@ -66,12 +66,7 @@ object TestState {
 
   def addMacroParadisePlugin = Def.settings(
     Seq(
-      libraryDependencies ++= byScalaVersion {
-        case (2, 12) => Seq(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
-        case (2, 13) => Nil
-      }.value,
       scalacOptions ++= byScalaVersion {
-        case (2, 12) => Nil
         case (2, 13) => Seq("-Ymacro-annotations")
       }.value
     ))
@@ -134,11 +129,10 @@ object TestState {
     .configureCross(testSettings)
     .settings(
       libraryDependencies ++= Seq(
-        Dep.scalaCollCompat.value,
-        Dep.univEq         .value,
-        Dep.nyayaGen       .value % Test,
-        Dep.nyayaProp      .value % Test,
-        Dep.nyayaTest      .value % Test,
+        Dep.univEq   .value,
+        Dep.nyayaGen .value % Test,
+        Dep.nyayaProp.value % Test,
+        Dep.nyayaTest.value % Test,
     ))
     .jsSettings(
       libraryDependencies += Dep.scalaJsJavaTime.value % Provided)
@@ -160,10 +154,7 @@ object TestState {
     .dependsOn(domZipperJVM)
     .settings(
       moduleName := "dom-zipper-jsoup",
-      libraryDependencies ++= Seq(
-        Dep.scalaCollCompat.value,
-        Dep.jsoup.value,
-    ))
+      libraryDependencies += Dep.jsoup.value)
 
   lazy val domZipperSelenium = project
     .in(file("dom-zipper-selenium"))
@@ -262,7 +253,6 @@ object TestState {
     .settings(
       moduleName := "util-selenium",
       libraryDependencies ++= Seq(
-        Dep.scalaCollCompat     .value,
         Dep.seleniumApi         .value,
         Dep.seleniumRemoteDriver.value,
     ))

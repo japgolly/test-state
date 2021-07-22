@@ -12,9 +12,7 @@ object Dependencies {
     val cats            = "2.1.1"
     val jsoup           = "1.13.1"
     val nyaya           = "0.9.2"
-    val scala212        = "2.12.12"
-    val scala213        = "2.13.3"
-    val scalaCollCompat = "2.2.0"
+    val scala2          = "2.13.6"
     val scalaJsDom      = "1.1.0"
     val scalaJsReact    = "1.7.5"
     val scalaz          = "7.2.30"
@@ -23,12 +21,12 @@ object Dependencies {
     val univEq          = "1.2.1"
 
     // Internal
-    val kindProjector   = "0.11.0"
+    val kindProjector   = "0.13.0"
     val microlibs       = "2.5"
     val monocle         = "2.0.5"
     val reactJs         = "16.13.1"
     val scalaJsJavaTime = "1.0.0"
-    val utest           = "0.7.5"
+    val utest           = "0.7.10"
   }
 
   object Dep {
@@ -40,7 +38,6 @@ object Dependencies {
     val nyayaGen             = Def.setting("com.github.japgolly.nyaya"         %%% "nyaya-gen"               % Ver.nyaya)
     val nyayaProp            = Def.setting("com.github.japgolly.nyaya"         %%% "nyaya-prop"              % Ver.nyaya)
     val nyayaTest            = Def.setting("com.github.japgolly.nyaya"         %%% "nyaya-test"              % Ver.nyaya)
-    val scalaCollCompat      = Def.setting("org.scala-lang.modules"            %%% "scala-collection-compat" % Ver.scalaCollCompat)
     val scalaJsDom           = Def.setting("org.scala-js"                      %%% "scalajs-dom"             % Ver.scalaJsDom)
     val scalaJsJavaTime      = Def.setting("org.scala-js"                      %%% "scalajs-java-time"       % Ver.scalaJsJavaTime                                                        cross CrossVersion.for3Use2_13)
     val scalaJsReactCore     = Def.setting("com.github.japgolly.scalajs-react" %%% "core"                    % Ver.scalaJsReact)

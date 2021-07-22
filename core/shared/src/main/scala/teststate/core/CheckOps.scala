@@ -100,7 +100,7 @@ object CheckOps {
           }
       }
 
-    private def checkOpsInstanceForChecks[C[-_, _]](implicit sub: CheckOps[CheckShape1[C]#T]): CheckOps[CheckShape[C, ?, ?, ?]] =
+    private def checkOpsInstanceForChecks[C[-_, _]](implicit sub: CheckOps[CheckShape1[C]#T]): CheckOps[CheckShape[C, *, *, *]] =
       new CheckOps[CheckShape[C, *, *, *]] {
         import Sack._
 

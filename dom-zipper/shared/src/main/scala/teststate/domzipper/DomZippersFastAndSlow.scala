@@ -9,7 +9,7 @@ import ErrorHandler._
   *
   * @since 2.3.0
   */
-sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, Dom, A, DomZippersFastAndSlow[?[_], Dom, ?]] {
+sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, Dom, A, DomZippersFastAndSlow[*[_], Dom, *]] {
   import DomZipper.DomCollection
   import DomZippersFastAndSlow.FastAndSlow
 
@@ -50,7 +50,7 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
       lazy val s = colS.flatMap(_.zippers).map(C.get(_, i))
       FastAndSlow(f, () => s, isCapableFn).toDomZipper(peek)
     }
-    new DomCollection[DomZippersFastAndSlow[?[_], Dom, ?], F, C, Dom, A](
+    new DomCollection[DomZippersFastAndSlow[*[_], Dom, *], F, C, Dom, A](
       enrichErr  = colF.enrichErr,
       rawResults = rawResults,
       filterFn   = None,
@@ -128,7 +128,7 @@ object DomZippersFastAndSlow {
 
   type AtHome[F[_], A] = DomZippersFastAndSlow[F, () => F[A], () => F[A]]
 
-  type DomCollection[F[_], C[_], Dom, A] = DomZipper.DomCollection[DomZippersFastAndSlow[?[_], () => F[Dom], ?], F, C, () => F[Dom], A]
+  type DomCollection[F[_], C[_], Dom, A] = DomZipper.DomCollection[DomZippersFastAndSlow[*[_], () => F[Dom], *], F, C, () => F[Dom], A]
 
   def apply[F[_],
             Fast[f[_], a] <: DomZipper[f, _, a, Fast], FD,
