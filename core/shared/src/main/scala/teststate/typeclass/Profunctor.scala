@@ -1,6 +1,5 @@
 package teststate.typeclass
 
-import acyclic.file
 
 trait Profunctor[M[_, _]] {
 

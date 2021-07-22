@@ -1,6 +1,5 @@
 package teststate.dsl
 
-import acyclic.file
 import japgolly.univeq.UnivEq
 import scala.annotation.tailrec
 import scala.collection.compat._

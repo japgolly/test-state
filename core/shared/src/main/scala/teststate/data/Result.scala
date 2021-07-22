@@ -1,6 +1,5 @@
 package teststate.data
 
-import acyclic.file
 
 sealed abstract class Result[+Err] extends Product with Serializable {
   def failure: Option[Err]

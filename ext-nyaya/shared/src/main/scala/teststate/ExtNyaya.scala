@@ -1,6 +1,5 @@
 package teststate
 
-import acyclic.file
 import nyaya.gen._
 import nyaya.test.Settings
 import teststate.data.ROS

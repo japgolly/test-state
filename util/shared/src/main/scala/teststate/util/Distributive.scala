@@ -1,6 +1,5 @@
 package teststate.util
 
-import acyclic.file
 
 trait Distributive[F[_]] extends Functor[F] {
   def distribute[G[_]: Functor, A, B](ga: G[A])(f: A => F[B]): F[G[B]]

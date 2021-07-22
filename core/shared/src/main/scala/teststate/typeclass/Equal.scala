@@ -1,6 +1,5 @@
 package teststate.typeclass
 
-import acyclic.file
 import japgolly.univeq.UnivEq
 
 class Equal[A](val equal: (A, A) => Boolean) extends AnyVal

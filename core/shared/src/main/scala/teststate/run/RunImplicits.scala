@@ -1,6 +1,5 @@
 package teststate.run
 
-import acyclic.file
 import teststate.data.Name
 import teststate.core.CoreExports._
 import teststate.core.CoreExports3._

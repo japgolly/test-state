@@ -1,6 +1,5 @@
 package teststate
 
-import acyclic.file
 import cats._
 import cats.arrow.Profunctor
 import cats.data._

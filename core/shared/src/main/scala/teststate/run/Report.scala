@@ -1,6 +1,5 @@
 package teststate.run
 
-// import acyclic.file
 import scala.annotation.elidable
 import scala.util.control.NonFatal
 import teststate.data.{Failure, Name}

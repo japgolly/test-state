@@ -1,6 +1,5 @@
 package teststate.run
 
-import acyclic.file
 import scala.collection.compat._
 import teststate.data._
 import teststate.typeclass.{ErrorHandler, DisplayError}

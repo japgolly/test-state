@@ -1,6 +1,5 @@
 package teststate.run
 
-// import acyclic.file
 import teststate.data._
 import teststate.typeclass._
 import teststate.core._

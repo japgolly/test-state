@@ -1,6 +1,5 @@
 package teststate.data
 
-import acyclic.file
 import teststate.typeclass._
 import Profunctor.ToOps.toProfunctorOps
 import Sack._

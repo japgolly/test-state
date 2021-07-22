@@ -1,6 +1,5 @@
 package teststate
 
-import acyclic.file
 import scalaz._
 import teststate.{data => D, typeclass => T}
 import D.Or

@@ -1,6 +1,5 @@
 package teststate.typeclass
 
-import acyclic.file
 import java.io.{PrintStream, PrintWriter, StringWriter}
 import java.util.regex.Pattern
 import teststate.data._

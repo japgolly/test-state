@@ -1,6 +1,5 @@
 package teststate
 
-import acyclic.file
 import teststate.data.Or
 
 trait Exports

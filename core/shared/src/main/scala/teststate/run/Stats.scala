@@ -1,6 +1,5 @@
 package teststate.run
 
-import acyclic.file
 import scala.concurrent.duration._
 import teststate.typeclass.Empty
 

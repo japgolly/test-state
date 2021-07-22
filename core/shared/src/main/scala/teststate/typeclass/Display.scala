@@ -1,6 +1,5 @@
 package teststate.typeclass
 
-import acyclic.file
 import scala.collection.compat._
 import teststate.data.{Name, NameFn}
 

@@ -1,6 +1,5 @@
 package teststate.dsl
 
-import acyclic.file
 import teststate.typeclass.{Equal, Display}
 
 trait DisplayFailure[-AA, +E] {

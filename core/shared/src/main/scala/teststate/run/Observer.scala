@@ -1,6 +1,5 @@
 package teststate.run
 
-import acyclic.file
 import teststate.data.{Or, Right}
 
 final class Observer[-R, +O, +E](val observe: R => E Or O) extends AnyVal {

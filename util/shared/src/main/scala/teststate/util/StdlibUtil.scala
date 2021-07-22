@@ -1,6 +1,5 @@
 package teststate.util
 
-import acyclic.file
 import StdlibUtil._
 
 trait StdlibUtil {

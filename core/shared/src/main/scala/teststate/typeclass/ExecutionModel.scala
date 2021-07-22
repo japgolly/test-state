@@ -1,6 +1,5 @@
 package teststate.typeclass
 
-import acyclic.file
 import java.time.Instant
 import java.util.{Date, Timer, TimerTask}
 import scala.annotation.tailrec

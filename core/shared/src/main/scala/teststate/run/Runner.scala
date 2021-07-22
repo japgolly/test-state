@@ -1,6 +1,5 @@
 package teststate.run
 
-// import acyclic.file
 import scala.annotation.tailrec
 import scala.collection.compat._
 import scala.collection.mutable

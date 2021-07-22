@@ -1,6 +1,5 @@
 package teststate.dsl
 
-import acyclic.file
 import scala.collection.compat._
 import teststate.data.Name.Implicits._
 import teststate.data.{BeforeAfter, Name}

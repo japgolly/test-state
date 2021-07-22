@@ -1,6 +1,5 @@
 package teststate
 
-import acyclic.file
 
 package object dsl {
 

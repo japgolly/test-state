@@ -1,6 +1,5 @@
 package teststate.core
 
-import acyclic.file
 import CoreExports._
 import CoreExports2._
 import teststate.data.Or

@@ -1,6 +1,5 @@
 package teststate.typeclass
 
-import acyclic.file
 
 case class Empty[+A](instance: A) extends AnyVal
 

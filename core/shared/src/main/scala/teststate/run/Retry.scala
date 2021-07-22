@@ -1,6 +1,5 @@
 package teststate.run
 
-import acyclic.file
 import java.time.Instant
 import java.time.{Duration => JavaDuration}
 import java.util.concurrent.TimeUnit

@@ -1,6 +1,5 @@
 package teststate.data
 
-import acyclic.file
 import scala.reflect.macros.blackbox
 
 abstract class Name {

@@ -1,6 +1,5 @@
 package teststate.data
 
-import acyclic.file
 
 sealed abstract class Or[+A, +B] extends Product with Serializable {
   def fold[C](l: A => C, r: B => C): C

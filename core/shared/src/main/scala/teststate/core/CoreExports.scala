@@ -1,6 +1,5 @@
 package teststate.core
 
-import acyclic.file
 import teststate.data.Name
 import teststate.typeclass.{Conditional, Display, PolyComposable}
 

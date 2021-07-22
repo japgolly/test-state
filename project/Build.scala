@@ -10,6 +10,7 @@ import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import sbtcrossproject.CrossPlugin.autoImport.{crossProject, _}
 import sbtrelease.ReleasePlugin.autoImport._
 import scalajscrossproject.ScalaJSCrossPlugin.autoImport._
+import Dependencies._
 import Lib._
 
 object TestState {
@@ -18,31 +19,6 @@ object TestState {
 
   private val publicationSettings =
     Lib.publicationSettings(ghProject)
-
-  object Ver {
-    val Acyclic         = "0.2.0"
-    val Cats            = "2.1.1"
-    val Jsoup           = "1.13.1"
-    val KindProjector   = "0.11.0"
-    val MacroParadise   = "2.1.1"
-    val Microlibs       = "2.5"
-    val MTest           = "0.7.5"
-    val Nyaya           = "0.9.2"
-    val Scala212        = "2.12.12"
-    val Scala213        = "2.13.3"
-    val ScalaCollCompat = "2.2.0"
-    val ScalaJsDom      = "1.1.0"
-    val ScalaJsReact    = "1.7.5"
-    val ScalaJsJavaTime = "1.0.0"
-    val Scalaz          = "7.2.30"
-    val Selenium        = "3.141.59"
-    val Sizzle          = "2.3.0"
-    val UnivEq          = "1.2.1"
-
-    // Used in examples only
-    val Monocle         = "2.0.5"
-    val ReactJs         = "16.13.1"
-  }
 
   def scalacFlags = Seq(
     "-deprecation",
@@ -64,8 +40,8 @@ object TestState {
       organization                  := "com.github.japgolly.test-state",
       homepage                      := Some(url("https://github.com/japgolly/" + ghProject)),
       licenses                      += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
-      scalaVersion                  := Ver.Scala213,
-      crossScalaVersions            := Seq(Ver.Scala212, Ver.Scala213),
+      scalaVersion                  := Ver.scala213,
+      crossScalaVersions            := Seq(Ver.scala212, Ver.scala213),
       scalacOptions                ++= scalacFlags,
       Test / scalacOptions         --= Seq("-Ywarn-dead-code"),
       ThisBuild / shellPrompt       := ((s: State) => Project.extract(s).currentRef.project + "> "),
@@ -74,17 +50,11 @@ object TestState {
       releasePublishArtifactsAction := PgpKeys.publishSigned.value,
       releaseTagComment             := s"v${(ThisBuild / version).value}",
       releaseVcsSign                := true,
-      addCompilerPlugin("org.typelevel" %% "kind-projector" % Ver.KindProjector cross CrossVersion.full))
-    .configure(acyclicSettings))
+      libraryDependencies          ++= Seq(Dep.kindProjector).filterNot(_ => scalaVersion.value.startsWith("3")),
+  ))
 
   def byScalaVersion[A](f: PartialFunction[(Long, Long), Seq[A]]): Def.Initialize[Seq[A]] =
     Def.setting(CrossVersion.partialVersion(scalaVersion.value).flatMap(f.lift).getOrElse(Nil))
-
-  def acyclicSettings: PE = _
-    .settings(
-      libraryDependencies += "com.lihaoyi" %% "acyclic" % Ver.Acyclic % Provided,
-      addCompilerPlugin("com.lihaoyi" %% "acyclic" % Ver.Acyclic),
-      autoCompilerPlugins := true)
 
   def definesMacros: Project => Project =
     _.settings(
@@ -97,7 +67,7 @@ object TestState {
   def addMacroParadisePlugin = Def.settings(
     Seq(
       libraryDependencies ++= byScalaVersion {
-        case (2, 12) => Seq(compilerPlugin("org.scalamacros" % "paradise" % Ver.MacroParadise cross CrossVersion.patch))
+        case (2, 12) => Seq(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
         case (2, 13) => Nil
       }.value,
       scalacOptions ++= byScalaVersion {
@@ -109,8 +79,9 @@ object TestState {
   def testSettings = ConfigureBoth(
     _.settings(
       libraryDependencies ++= Seq(
-        "com.lihaoyi"                   %%% "utest"     % Ver.MTest     % Test,
-        "com.github.japgolly.microlibs" %%% "test-util" % Ver.Microlibs % Test),
+        Dep.utest            .value % Test,
+        Dep.microlibsTestUtil.value % Test,
+      ),
       testFrameworks += new TestFramework("utest.runner.Framework")))
     .jsConfigure(
       _.settings(Test / jsEnv := new JSDOMNodeJSEnv))
@@ -163,13 +134,14 @@ object TestState {
     .configureCross(testSettings)
     .settings(
       libraryDependencies ++= Seq(
-        "org.scala-lang.modules"     %%% "scala-collection-compat" % Ver.ScalaCollCompat,
-        "com.github.japgolly.univeq" %%% "univeq"                  % Ver.UnivEq,
-        "com.github.japgolly.nyaya"  %%% "nyaya-gen"               % Ver.Nyaya % Test,
-        "com.github.japgolly.nyaya"  %%% "nyaya-prop"              % Ver.Nyaya % Test,
-        "com.github.japgolly.nyaya"  %%% "nyaya-test"              % Ver.Nyaya % Test))
+        Dep.scalaCollCompat.value,
+        Dep.univEq         .value,
+        Dep.nyayaGen       .value % Test,
+        Dep.nyayaProp      .value % Test,
+        Dep.nyayaTest      .value % Test,
+    ))
     .jsSettings(
-      libraryDependencies += "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime % Provided)
+      libraryDependencies += Dep.scalaJsJavaTime.value % Provided)
 
   lazy val domZipperJVM = domZipper.jvm
   lazy val domZipperJS  = domZipper.js
@@ -179,7 +151,7 @@ object TestState {
     .dependsOn(util)
     .settings(moduleName := "dom-zipper")
     .jsSettings(
-      libraryDependencies += "org.scala-js" %%% "scalajs-dom" % Ver.ScalaJsDom,
+      libraryDependencies += Dep.scalaJsDom.value,
       jsEnv               := new JSDOMNodeJSEnv)
 
   lazy val domZipperJsoup = project
@@ -189,8 +161,9 @@ object TestState {
     .settings(
       moduleName := "dom-zipper-jsoup",
       libraryDependencies ++= Seq(
-        "org.scala-lang.modules" %% "scala-collection-compat" % Ver.ScalaCollCompat,
-        "org.jsoup" % "jsoup" % Ver.Jsoup))
+        Dep.scalaCollCompat.value,
+        Dep.jsoup.value,
+    ))
 
   lazy val domZipperSelenium = project
     .in(file("dom-zipper-selenium"))
@@ -199,8 +172,9 @@ object TestState {
     .settings(
       moduleName := "dom-zipper-selenium",
       libraryDependencies ++= Seq(
-        "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium % Test,
-        "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium % Test),
+        Dep.seleniumChrome .value % Test,
+        Dep.seleniumFirefox.value % Test,
+      ),
       Test / javaOptions += ("-Dsbt.baseDirectory=" + baseDirectory.value.getAbsolutePath))
 
   lazy val domZipperSizzle = project
@@ -212,7 +186,7 @@ object TestState {
     .settings(
       moduleName     := "dom-zipper-sizzle",
       scalacOptions  -= "-Ywarn-dead-code",
-      jsDependencies += "org.webjars.bower" % "sizzle" % Ver.Sizzle / "sizzle.min.js" commonJSName "Sizzle",
+      jsDependencies += Dep.sizzle.value,
       jsEnv          := new JSDOMNodeJSEnv)
 
   lazy val extScalazJVM = extScalaz.jvm
@@ -224,7 +198,7 @@ object TestState {
     .configureCross(testSettings)
     .settings(
       moduleName          := "ext-scalaz",
-      libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.Scalaz)
+      libraryDependencies += "org.scalaz" %%% "scalaz-core" % Ver.scalaz)
 
   lazy val extCatsJVM = extCats.jvm
   lazy val extCatsJS  = extCats.js
@@ -235,7 +209,7 @@ object TestState {
     .configureCross(testSettings)
     .settings(
       moduleName          := "ext-cats",
-      libraryDependencies += "org.typelevel" %%% "cats-core" % Ver.Cats)
+      libraryDependencies += Dep.cats.value)
 
   lazy val extNyayaJVM = extNyaya.jvm
   lazy val extNyayaJS  = extNyaya.js
@@ -247,8 +221,9 @@ object TestState {
     .settings(
       moduleName := "ext-nyaya",
       libraryDependencies ++= Seq(
-        "com.github.japgolly.nyaya" %%% "nyaya-gen" % Ver.Nyaya,
-        "com.github.japgolly.nyaya" %%% "nyaya-test" % Ver.Nyaya))
+        Dep.nyayaGen.value,
+        Dep.nyayaTest.value,
+    ))
 
   lazy val extScalaJsReact = project
     .in(file("ext-scalajs-react"))
@@ -258,9 +233,10 @@ object TestState {
     .settings(
       moduleName := "ext-scalajs-react",
       libraryDependencies ++= Seq(
-        "com.github.japgolly.scalajs-react" %%% "core" % Ver.ScalaJsReact,
-        "com.github.japgolly.scalajs-react" %%% "test" % Ver.ScalaJsReact,
-        "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime % Test),
+        Dep.scalaJsReactCore.value,
+        Dep.scalaJsReactTest.value,
+        Dep.scalaJsJavaTime.value % Test,
+      ),
       jsEnv := new JSDOMNodeJSEnv)
 
   lazy val extSelenium = project
@@ -270,8 +246,9 @@ object TestState {
     .settings(
       moduleName := "ext-selenium",
       libraryDependencies ++= Seq(
-        "org.seleniumhq.selenium" % "selenium-chrome-driver"  % Ver.Selenium,
-        "org.seleniumhq.selenium" % "selenium-firefox-driver" % Ver.Selenium))
+        Dep.seleniumChrome.value,
+        Dep.seleniumFirefox.value,
+    ))
 
   lazy val utilJVM = util.jvm
   lazy val utilJS  = util.js
@@ -285,9 +262,10 @@ object TestState {
     .settings(
       moduleName := "util-selenium",
       libraryDependencies ++= Seq(
-        "org.scala-lang.modules" %% "scala-collection-compat" % Ver.ScalaCollCompat,
-        "org.seleniumhq.selenium" % "selenium-api" % Ver.Selenium,
-        "org.seleniumhq.selenium" % "selenium-remote-driver" % Ver.Selenium))
+        Dep.scalaCollCompat     .value,
+        Dep.seleniumApi         .value,
+        Dep.seleniumRemoteDriver.value,
+    ))
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -306,36 +284,15 @@ object TestState {
     .in(file("example-react"))
     .enablePlugins(ScalaJSPlugin)
     .enablePlugins(JSDependenciesPlugin)
-    .configure(commonSettings.js, preventPublication, testSettings.js)
+    .configure(commonSettings.js, preventPublication, testSettings.js, addReactJsDependencies(Compile))
     .dependsOn(coreJS, domZipperSizzle, extScalaJsReact)
     .settings(
       moduleName := "example-react",
       libraryDependencies ++= Seq(
-        "com.github.japgolly.scalajs-react" %%% "ext-monocle-cats" % Ver.ScalaJsReact,
-        "com.github.julien-truffaut"        %%% "monocle-core"     % Ver.Monocle,
-        "com.github.julien-truffaut"        %%% "monocle-macro" % Ver.Monocle,
-        "org.scala-js" %%% "scalajs-java-time" % Ver.ScalaJsJavaTime),
+        Dep.scalaJsReactMonocle.value,
+        Dep.monocleCore        .value,
+        Dep.monocleMacro       .value,
+        Dep.scalaJsJavaTime    .value),
       addMacroParadisePlugin, // For Monocle macros
-      dependencyOverrides += "org.webjars.npm" % "js-tokens" % "3.0.2", // https://github.com/webjars/webjars/issues/1789
-      dependencyOverrides += "org.webjars.npm" % "scheduler" % "0.12.0-alpha.3",
-      jsDependencies ++= Seq(
-        "org.webjars.npm" % "react" % Ver.ReactJs
-          /        "umd/react.development.js"
-          minified "umd/react.production.min.js"
-          commonJSName "React",
-        "org.webjars.npm" % "react-dom" % Ver.ReactJs
-          /         "umd/react-dom.development.js"
-          minified  "umd/react-dom.production.min.js"
-          dependsOn "umd/react.development.js"
-          commonJSName "ReactDOM",
-        "org.webjars.npm" % "react-dom" % Ver.ReactJs
-          /         "umd/react-dom-server.browser.development.js"
-          minified  "umd/react-dom-server.browser.production.min.js"
-          dependsOn "umd/react-dom.development.js"
-          commonJSName "ReactDOMServer",
-        "org.webjars.npm" % "react-dom" % Ver.ReactJs % Test
-          /         "umd/react-dom-test-utils.development.js"
-          minified  "umd/react-dom-test-utils.production.min.js"
-          dependsOn "umd/react-dom.development.js"
-          commonJSName "ReactTestUtils"))
+    )
 }

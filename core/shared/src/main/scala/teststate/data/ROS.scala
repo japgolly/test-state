@@ -1,6 +1,5 @@
 package teststate.data
 
-import acyclic.file
 
 sealed class OS[+O, +S](val obs: O, val state: S) {
   override def hashCode(): Int =

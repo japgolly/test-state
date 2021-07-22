@@ -1,6 +1,5 @@
 package teststate.typeclass
 
-import acyclic.file
 import teststate.data.{Or, Skipped, Tri}
 
 case class Conditional[M, I](when: (M, I => Boolean) => M) extends AnyVal

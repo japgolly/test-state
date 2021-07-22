@@ -1,6 +1,5 @@
 package teststate.core
 
-import acyclic.file
 import teststate.data.Sack
 import teststate.typeclass.PolyComposable
 import PolyComposable._

@@ -1,6 +1,5 @@
 package teststate.data
 
-import acyclic.file
 import Result.{Fail, Skip, Pass}
 
 sealed abstract class Tri[+E, +A] extends Product with Serializable {

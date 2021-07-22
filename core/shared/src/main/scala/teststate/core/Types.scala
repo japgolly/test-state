@@ -1,6 +1,5 @@
 package teststate.core
 
-import acyclic.file
 import teststate.data._
 import teststate.typeclass.Profunctor
 

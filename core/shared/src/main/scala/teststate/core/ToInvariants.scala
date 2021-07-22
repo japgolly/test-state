@@ -1,6 +1,5 @@
 package teststate.core
 
-import acyclic.file
 import teststate.typeclass._
 import Types.{CheckShapeA, checkShapeAProfunctorOps}
 

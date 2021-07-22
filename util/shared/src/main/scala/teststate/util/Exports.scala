@@ -1,6 +1,5 @@
 package teststate.util
 
-import acyclic.file
 
 trait Exports extends StdlibUtil
 

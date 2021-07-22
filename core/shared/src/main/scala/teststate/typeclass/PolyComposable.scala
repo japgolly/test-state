@@ -1,6 +1,5 @@
 package teststate.typeclass
 
-import acyclic.file
 import scala.annotation.implicitNotFound
 import scala.collection.compat._
 
