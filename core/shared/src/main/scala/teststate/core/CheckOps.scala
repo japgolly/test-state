@@ -1,5 +1,6 @@
 package teststate.core
 
+import japgolly.microlibs.name_fn._
 import teststate.core.Types._
 import teststate.data._
 import teststate.typeclass._

@@ -1,5 +1,6 @@
 package teststate.run
 
+import japgolly.microlibs.name_fn._
 import teststate.data.Result.{Fail, Skip}
 import teststate.data._
 import teststate.run.History.{Step, Steps}

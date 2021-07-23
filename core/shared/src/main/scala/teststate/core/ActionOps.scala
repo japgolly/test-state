@@ -1,5 +1,6 @@
 package teststate.core
 
+import japgolly.microlibs.name_fn._
 import teststate.core.Action.{Actions => _, _}
 import teststate.core.CoreExports._
 import teststate.data._

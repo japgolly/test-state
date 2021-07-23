@@ -1,6 +1,7 @@
 package teststate
 
-import teststate.data.{BeforeAfter, NameFn}
+import japgolly.microlibs.name_fn._
+import teststate.data.BeforeAfter
 
 package object core {
 

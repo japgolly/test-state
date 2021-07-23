@@ -1,8 +1,9 @@
 package teststate.run
 
+import japgolly.microlibs.name_fn._
 import scala.annotation.elidable
 import scala.util.control.NonFatal
-import teststate.data.{Failure, Name}
+import teststate.data.Failure
 import teststate.run.Report._
 import teststate.typeclass.DisplayError
 

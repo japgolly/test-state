@@ -1,5 +1,6 @@
 package teststate.dsl
 
+import japgolly.microlibs.name_fn._
 import japgolly.univeq.UnivEq
 import teststate.core.CoreExports._
 import teststate.core.Types.SackE
@@ -22,9 +23,9 @@ object Dsl {
   trait Types[F[_], R, O, S, E] extends Any {
     final type OS                   = teststate.data.OS[O, S]
     final type ROS                  = teststate.data.ROS[R, O, S]
-    final type ActionName           = teststate.data.NameFn[ROS]
-    final type AssertionName        = teststate.data.NameFn[OS]
-    final type AroundName           = teststate.data.NameFn[BeforeAfter[OS]]
+    final type ActionName           = NameFn[ROS]
+    final type AssertionName        = NameFn[OS]
+    final type AroundName           = NameFn[BeforeAfter[OS]]
     final type Points               = CoreExports.Points[O, S, E]
     final type Arounds              = CoreExports.Arounds[O, S, E]
     final type Invariants           = CoreExports.Invariants[O, S, E]

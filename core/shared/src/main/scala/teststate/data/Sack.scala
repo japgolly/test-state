@@ -1,5 +1,6 @@
 package teststate.data
 
+import japgolly.microlibs.name_fn._
 import teststate.typeclass.Profunctor.ToOps.toProfunctorOps
 import teststate.typeclass._
 

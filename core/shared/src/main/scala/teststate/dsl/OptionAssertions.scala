@@ -1,7 +1,7 @@
 package teststate.dsl
 
-import teststate.data.Name
-import teststate.data.Name.Implicits._
+import japgolly.microlibs.name_fn.Name.Implicits._
+import japgolly.microlibs.name_fn._
 import teststate.typeclass._
 
 object OptionAssertions {

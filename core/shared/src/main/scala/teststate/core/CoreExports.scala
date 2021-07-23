@@ -1,10 +1,10 @@
 package teststate.core
 
-import teststate.data.Name
+import japgolly.microlibs.name_fn._
 import teststate.typeclass.{Conditional, Display, PolyComposable}
 
 trait CoreExports
-  extends Name.Implicits
+  extends NameImplicits
      with CheckOps       .Implicits
      with NamedOps       .Implicits
      with Conditional    .Implicits

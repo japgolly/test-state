@@ -1,8 +1,8 @@
 package teststate.run
 
+import japgolly.microlibs.name_fn._
 import teststate.core.CoreExports._
 import teststate.core.CoreExports3._
-import teststate.data.Name
 import teststate.typeclass.PolyComposable
 import teststate.typeclass.PolyComposable._
 

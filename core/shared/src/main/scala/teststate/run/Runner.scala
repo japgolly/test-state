@@ -1,5 +1,6 @@
 package teststate.run
 
+import japgolly.microlibs.name_fn._
 import scala.annotation.tailrec
 import scala.collection.mutable
 import teststate.core.CoreExports._

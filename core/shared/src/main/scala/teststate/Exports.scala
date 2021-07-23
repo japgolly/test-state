@@ -29,11 +29,11 @@ trait Exports
   type ExecutionModel[M[_]] = teststate.typeclass.ExecutionModel[M]
   val ExecutionModel = teststate.typeclass.ExecutionModel
 
-  type Name = teststate.data.Name
-  val Name = teststate.data.Name
+  type Name = japgolly.microlibs.name_fn.Name
+  val Name = japgolly.microlibs.name_fn.Name
 
-  type NameFn[-A] = teststate.data.NameFn[A]
-  val NameFn = teststate.data.NameFn
+  type NameFn[-A] = japgolly.microlibs.name_fn.NameFn[A]
+  val NameFn = japgolly.microlibs.name_fn.NameFn
 
   type Observer[-R, +O, +E] = teststate.run.Observer[R, O, E]
   val Observer = teststate.run.Observer

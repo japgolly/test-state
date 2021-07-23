@@ -56,14 +56,6 @@ object TestState {
   def byScalaVersion[A](f: PartialFunction[(Long, Long), Seq[A]]): Def.Initialize[Seq[A]] =
     Def.setting(CrossVersion.partialVersion(scalaVersion.value).flatMap(f.lift).getOrElse(Nil))
 
-  def definesMacros: Project => Project =
-    _.settings(
-      scalacOptions += "-language:experimental.macros",
-      libraryDependencies ++= Seq(
-        // "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-        // "org.scala-lang" % "scala-library" % scalaVersion.value,
-        "org.scala-lang" % "scala-compiler" % scalaVersion.value % Provided))
-
   def addMacroParadisePlugin = Def.settings(
     Seq(
       scalacOptions ++= byScalaVersion {
@@ -97,42 +89,45 @@ object TestState {
     Project("JVM", file(".rootJVM"))
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
-        coreJVM, coreMacrosJVM,
-        domZipperJVM, domZipperJsoup, domZipperSelenium,
-        extCatsJVM, extNyayaJVM, extSelenium,
-        utilJVM, utilSelenium)
+        coreJVM,
+        domZipperJsoup,
+        domZipperJVM,
+        domZipperSelenium,
+        extCatsJVM,
+        extNyayaJVM,
+        extSelenium,
+        utilJVM,
+        utilSelenium,
+      )
 
   lazy val rootJS =
     Project("JS", file(".rootJS"))
       .configure(commonSettings.jvm, preventPublication)
       .aggregate(
-        coreJS, coreMacrosJS,
-        domZipperJS, domZipperSizzle,
-        extCatsJS, extNyayaJS, extScalaJsReact,
-        utilJS)
+        coreJS,
+        domZipperJS,
+        domZipperSizzle,
+        extCatsJS,
+        extNyayaJS,
+        extScalaJsReact,
+        utilJS,
+      )
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-  lazy val coreMacrosJVM = coreMacros.jvm
-  lazy val coreMacrosJS  = coreMacros.js
-  lazy val coreMacros = crossProject(JSPlatform, JVMPlatform)
-    .in(file("core-macros"))
-    .configureCross(commonSettings, publicationSettings, testSettings)
-    .bothConfigure(definesMacros)
-    .settings(moduleName := "core-macros")
 
   lazy val coreJVM = core.jvm
   lazy val coreJS  = core.js
   lazy val core = crossProject(JSPlatform, JVMPlatform)
     .configureCross(commonSettings, publicationSettings)
-    .dependsOn(coreMacros, util)
+    .dependsOn(util)
     .configureCross(testSettings)
     .settings(
       libraryDependencies ++= Seq(
-        Dep.univEq   .value,
-        Dep.nyayaGen .value % Test,
-        Dep.nyayaProp.value % Test,
-        Dep.nyayaTest.value % Test,
+        Dep.microlibsNameFn.value,
+        Dep.univEq         .value,
+        Dep.nyayaGen       .value % Test,
+        Dep.nyayaProp      .value % Test,
+        Dep.nyayaTest      .value % Test,
     ))
     .jsSettings(
       libraryDependencies += Dep.scalaJsJavaTime.value % Provided)

@@ -1,6 +1,6 @@
 package teststate.typeclass
 
-import teststate.data.{Name, NameFn}
+import japgolly.microlibs.name_fn._
 
 final class Display[A](private val display: A => String) extends AnyVal {
   def apply(a: A): String =

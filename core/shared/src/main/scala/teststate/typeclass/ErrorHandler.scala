@@ -1,5 +1,6 @@
 package teststate.typeclass
 
+import japgolly.microlibs.name_fn._
 import java.io.{PrintStream, PrintWriter, StringWriter}
 import java.util.regex.Pattern
 import teststate.data._

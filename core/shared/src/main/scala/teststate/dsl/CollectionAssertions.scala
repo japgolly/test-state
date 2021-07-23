@@ -1,10 +1,10 @@
 package teststate.dsl
 
+import japgolly.microlibs.name_fn.Name.Implicits._
+import japgolly.microlibs.name_fn._
 import japgolly.univeq.UnivEq
 import scala.annotation.tailrec
 import scala.collection.mutable
-import teststate.data.Name.Implicits._
-import teststate.data.{Name, NameFn}
 import teststate.typeclass._
 
 object CollectionAssertions {

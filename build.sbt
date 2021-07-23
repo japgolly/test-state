@@ -4,8 +4,6 @@ val root              = TestState.root
 val rootJVM           = TestState.rootJVM
 val rootJS            = TestState.rootJS
 
-val coreMacrosJVM     = TestState.coreMacrosJVM
-val coreMacrosJS      = TestState.coreMacrosJS
 val utilJVM           = TestState.utilJVM
 val utilJS            = TestState.utilJS
 val utilSelenium      = TestState.utilSelenium

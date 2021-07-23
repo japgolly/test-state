@@ -31,6 +31,7 @@ object Dependencies {
   object Dep {
     val cats                 = Def.setting("org.typelevel"                     %%% "cats-core"               % Ver.cats)
     val jsoup                = Def.setting("org.jsoup"                           % "jsoup"                   % Ver.jsoup)
+    val microlibsNameFn      = Def.setting("com.github.japgolly.microlibs"     %%% "name-fn"                 % Ver.microlibs)
     val microlibsTestUtil    = Def.setting("com.github.japgolly.microlibs"     %%% "test-util"               % Ver.microlibs)
     val monocleCore          = Def.setting("dev.optics"                        %%% "monocle-core"            % Ver.monocle)
     val monocleMacro         = Def.setting("dev.optics"                        %%% "monocle-macro"           % Ver.monocle)

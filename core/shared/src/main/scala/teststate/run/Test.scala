@@ -1,5 +1,6 @@
 package teststate.run
 
+import japgolly.microlibs.name_fn._
 import teststate.core.CoreExports._
 import teststate.core.CoreExports2._
 import teststate.core._

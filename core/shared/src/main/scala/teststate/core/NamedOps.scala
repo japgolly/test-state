@@ -1,6 +1,7 @@
 package teststate.core
 
-import teststate.data.Name.Implicits._
+import japgolly.microlibs.name_fn.Name.Implicits._
+import japgolly.microlibs.name_fn._
 import teststate.data._
 
 case class NamedOps[A, I](renameBy: (A, NameFn[I] => NameFn[I]) => A) extends AnyVal

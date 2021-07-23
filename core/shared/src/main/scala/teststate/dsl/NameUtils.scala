@@ -1,7 +1,8 @@
 package teststate.dsl
 
-import teststate.data.Name.Implicits._
-import teststate.data.{BeforeAfter, Name}
+import japgolly.microlibs.name_fn.Name.Implicits._
+import japgolly.microlibs.name_fn._
+import teststate.data.BeforeAfter
 import teststate.typeclass._
 
 // TODO s/implicit d: Display/implicit val display: Display/ in all failure classes
