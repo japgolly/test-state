@@ -15,7 +15,7 @@ object TabSupportTest extends TestSuite {
     try {
       import tabSupport.TabHandle
       implicit val equalTH = Eq.fromUniversalEquals[TabHandle]
-      implicit def d = driver
+      implicit def d: D = driver
       val root = tabSupport.active()
       def tabs() = driver.getWindowHandles().asScala.toVector.sorted
       def tabsOpen() = driver.getWindowHandles().size

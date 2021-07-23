@@ -3,14 +3,16 @@ package teststate.example.react
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import monocle.Lens
-import monocle.macros.Lenses
+import monocle.macros.GenLens
 
 object TodoComponent {
 
-  @Lenses
   case class TodoItem(text: String, completed: Boolean)
 
-  @Lenses
+  object TodoItem {
+    val completed = GenLens[TodoItem](_.completed)
+  }
+
   case class State(newItemText  : String,
                    items        : Vector[TodoItem],
                    showCompleted: Boolean) {
@@ -19,6 +21,10 @@ object TodoComponent {
   }
 
   object State {
+    val newItemText   = GenLens[State](_.newItemText)
+    val items         = GenLens[State](_.items)
+    val showCompleted = GenLens[State](_.showCompleted)
+
     def item(idx: Int): Lens[State, TodoItem] =
       items andThen atVectorIndex(idx)
   }
