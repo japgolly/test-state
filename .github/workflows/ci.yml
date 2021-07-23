@@ -7,14 +7,15 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+
+    name: Scala v${{ matrix.scala }} / Java v${{ matrix.java }}
     strategy:
       matrix:
         include:
           - java: 8
             scala: 2.13.6
-    name: Scala v${{ matrix.scala }} / Java v${{ matrix.java }}
-    steps:
 
+    steps:
       - name: Git checkout
         uses: actions/checkout@v2
 
@@ -31,8 +32,11 @@ jobs:
       - name: Setup Scala.JS
         uses: japgolly/setup-scalajs@v1
 
-      - uses: browser-actions/setup-chrome@latest
-      - uses: browser-actions/setup-geckodriver@latest
+      - name: Setup Chromedriver
+        uses: browser-actions/setup-chrome@latest
+
+      - name: Setup Geckodriver
+        uses: browser-actions/setup-geckodriver@latest
 
       - name: Cache sbt
         uses: coursier/cache-action@v6.1
