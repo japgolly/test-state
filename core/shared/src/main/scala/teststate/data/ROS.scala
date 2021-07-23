@@ -38,8 +38,8 @@ final class ROS[+R, +O, +S](val ref: R, override val obs: O, override val state:
       case _ => false
     }
 
-           def withRef[A](newRef: A)    : ROS[A, O, S] = new ROS(newRef, obs, state)
-  override def withObs[A](newObs: A)    : ROS[R, A, S] = new ROS(ref, newObs, state)
+  def          withRef  [A](newRef: A)  : ROS[A, O, S] = new ROS(newRef, obs, state)
+  override def withObs  [A](newObs: A)  : ROS[R, A, S] = new ROS(ref, newObs, state)
   override def withState[A](newState: A): ROS[R, O, A] = new ROS(ref, obs, newState)
 
   val some: Some[this.type] =

@@ -20,7 +20,7 @@ object TestState {
   private val publicationSettings =
     Lib.publicationSettings(ghProject)
 
-  def scalacFlags = Seq(
+  def scalacCommonFlags = Seq(
     "-deprecation",
     "-unchecked",
     "-feature",
@@ -28,12 +28,21 @@ object TestState {
     "-language:implicitConversions",
     "-language:higherKinds",
     "-language:existentials",
+  )
+
+  def scalac2Flags = Seq(
     "-opt:l:inline",
     "-opt-inline-from:japgolly.univeq.**",
     "-opt-inline-from:teststate.**",
     "-Ywarn-dead-code",
     "-Ywarn-unused",
-    "-Ywarn-value-discard")
+    "-Ywarn-value-discard",
+  )
+
+  def scalac3Flags = Seq(
+    "-source:3.0-migration",
+    "-Ykind-projector",
+  )
 
   val commonSettings = ConfigureBoth(
     _.settings(
@@ -41,8 +50,10 @@ object TestState {
       homepage                      := Some(url("https://github.com/japgolly/" + ghProject)),
       licenses                      += ("Apache-2.0", url("http://opensource.org/licenses/Apache-2.0")),
       scalaVersion                  := Ver.scala2,
-      crossScalaVersions            := Seq(Ver.scala2),
-      scalacOptions                ++= scalacFlags,
+      crossScalaVersions            := Seq(Ver.scala2, Ver.scala3),
+      scalacOptions                ++= scalacCommonFlags,
+      scalacOptions                ++= scalac2Flags.filter(_ => scalaVersion.value.startsWith("2")),
+      scalacOptions                ++= scalac3Flags.filter(_ => scalaVersion.value.startsWith("3")),
       Test / scalacOptions         --= Seq("-Ywarn-dead-code"),
       ThisBuild / shellPrompt       := ((s: State) => Project.extract(s).currentRef.project + "> "),
       incOptions                    := incOptions.value.withLogRecompileOnMacro(false),

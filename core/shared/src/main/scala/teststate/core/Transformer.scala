@@ -5,14 +5,13 @@ import teststate.core.CoreExports2._
 import teststate.data.Or
 import teststate.typeclass.{ExecutionModel, ~~>}
 
-case class Transformer
-  [F [_], R , O , S , E ,
-   F2[_], R2, O2, S2, E2]
-  (actions   : Actions[F, R, O, S, E] => Actions[F2, R2, O2, S2, E2],
-   invariants: Invariants   [O, S, E] => Invariants     [O2, S2, E2],
-   points    : Points       [O, S, E] => Points         [O2, S2, E2],
-   arounds   : Arounds      [O, S, E] => Arounds        [O2, S2, E2])
-  (implicit val f1: ExecutionModel[F], val f2: ExecutionModel[F2]) {
+case class Transformer[F [_], R , O , S , E ,
+                       F2[_], R2, O2, S2, E2]
+    (actions   : Actions[F, R, O, S, E] => Actions[F2, R2, O2, S2, E2],
+     invariants: Invariants   [O, S, E] => Invariants     [O2, S2, E2],
+     points    : Points       [O, S, E] => Points         [O2, S2, E2],
+     arounds   : Arounds      [O, S, E] => Arounds        [O2, S2, E2])
+    (implicit val f1: ExecutionModel[F], val f2: ExecutionModel[F2]) {
 
   def mapF[X[_]](f: F2 ~~> X)(implicit x: ExecutionModel[X]) =
     Transformer[F, R, O, S, E, X, R2, O2, S2, E2](
