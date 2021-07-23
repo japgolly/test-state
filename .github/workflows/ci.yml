@@ -16,26 +16,26 @@ jobs:
     steps:
 
       - name: Git checkout
-        uses: actions/checkout@latest
+        uses: actions/checkout@v2
 
       - name: Setup Java and Scala
-        uses: olafurpg/setup-scala@latest
+        uses: olafurpg/setup-scala@v12
         with:
           java-version: adopt@1.${{ matrix.java }}
 
       - name: Setup Node
-        uses: actions/setup-node@latest
+        uses: actions/setup-node@v2
         with:
           node-version: '16'
 
       - name: Setup Scala.JS
-        uses: japgolly/setup-scalajs@latest
+        uses: japgolly/setup-scalajs@v1
 
       - uses: browser-actions/setup-chrome@latest
       - uses: browser-actions/setup-geckodriver@latest
 
       - name: Cache sbt
-        uses: coursier/cache-action@latest
+        uses: coursier/cache-action@v6.1
 
       - name: Build and test
         shell: bash
