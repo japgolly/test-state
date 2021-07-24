@@ -4,23 +4,23 @@ import cats.instances.string._
 import nyaya.prop._
 import nyaya.test.PropTest._
 import teststate.Exports._
-import teststate.RandomData.*
 import teststate.TestUtil._
 import teststate.typeclass.PolyComposable
 import teststate.typeclass.PolyComposable.{Can, SeqOp}
 import utest._
 
 object CompositionTest extends TestSuite {
+  import teststate.RandomData.dsl
 
   def associativity[A, B, C, AB, BC](implicit
                                      x1: PolyComposable[SeqOp, A, B, AB],
                                      x2: PolyComposable[SeqOp, B, C, BC],
-                                     x3: PolyComposable[SeqOp, AB, C, *.Actions],
-                                     x4: PolyComposable[SeqOp, A, BC, *.Actions]) = {
+                                     x3: PolyComposable[SeqOp, AB, C, dsl.Actions],
+                                     x4: PolyComposable[SeqOp, A, BC, dsl.Actions]) = {
 
     implicit def anyCanSeq[X]: Can[SeqOp, X] = Can
 
-    def results(a: *.Actions): String =
+    def results(a: dsl.Actions): String =
       "\n" + Plan.action(a).stateless.testU.runU().format(inspectionFormat)
 
     Prop.equal[(A, B, C)]("associativity")(

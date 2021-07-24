@@ -55,14 +55,14 @@ object SeleniumExample2 extends TestSuite {
 
   val observer: Observer[Ref, Obs, String] = Observer(_.observe())
 
-  val * = Dsl[Ref, Obs, Unit].withSeleniumTab(_.tab)
+  val dsl = Dsl[Ref, Obs, Unit].withSeleniumTab(_.tab)
 
   def searchFor(term: String) =
-    *.action(s"Search for '$term'")(_.obs.typeIntoSearch(term + Keys.ENTER))
+    dsl.action(s"Search for '$term'")(_.obs.typeIntoSearch(term + Keys.ENTER))
 
-  val resultCount = *.focus("Search result count").option(_.obs.resultCount)
+  val resultCount = dsl.focus("Search result count").option(_.obs.resultCount)
 
-  def simpleTest(searchTerm: String, minimumResults: Long): *.TestWithInitialState =
+  def simpleTest(searchTerm: String, minimumResults: Long): dsl.TestWithInitialState =
     Plan.action(
       searchFor(searchTerm) +> resultCount.assert.exists(s"≥ $minimumResults", _ >= minimumResults)
     )

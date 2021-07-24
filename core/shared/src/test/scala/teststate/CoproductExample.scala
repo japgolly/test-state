@@ -10,12 +10,12 @@ object CoproductExample {
   }
 
   object Txt {
-    val * = Dsl[Txt, String, String]
+    val dsl = Dsl[Txt, String, String]
 
-    val txt = *.focus("Txt value").obsAndState(identity, identity)
+    val txt = dsl.focus("Txt value").obsAndState(identity, identity)
 
     def add(a: String) =
-      *.action("Add")(_.ref.txt += a).updateState(_ + a)
+      dsl.action("Add")(_.ref.txt += a).updateState(_ + a)
         .addCheck(txt.assert.equal.beforeAndAfter)
 
     val test = Plan.action(add("x").times(2)).test(Observer(_.txt))
@@ -26,12 +26,12 @@ object CoproductExample {
   }
 
   object Num {
-    val * = Dsl[Num, Int, Int]
+    val dsl = Dsl[Num, Int, Int]
 
-    val num = *.focus("Number value").obsAndState(identity, identity)
+    val num = dsl.focus("Number value").obsAndState(identity, identity)
 
     def add(a: Int) =
-      *.action("Add")(_.ref.num += a).updateState(_ + a)
+      dsl.action("Add")(_.ref.num += a).updateState(_ + a)
         .addCheck(num.assert.equal.beforeAndAfter)
 
     val test = Plan.action(add(2).times(2)).test(Observer(_.num))
@@ -69,9 +69,9 @@ object CoproductExample {
     case class State(t: Type, num: Int, txt: String)
     type Obs = Int Either String
 
-    val * = Dsl[Top, Obs, State]
+    val dsl = Dsl[Top, Obs, State]
 
-    val curType = *.focus("Current type").obsAndState[Type]({
+    val curType = dsl.focus("Current type").obsAndState[Type]({
       case Left(_) => Type.Num
       case Right(_) => Type.Txt
     }, _.t)
@@ -108,9 +108,9 @@ object CoproductExample {
       curType.assert.equal
 
     val swapTypes =
-      *.action("Swap types")(_.ref.swap()).updateStateBy(i => i.state.copy(t = i.state.t.swap))
+      dsl.action("Swap types")(_.ref.swap()).updateStateBy(i => i.state.copy(t = i.state.t.swap))
 
-    val actions: *.Actions =
+    val actions: dsl.Actions =
       testNum >> swapTypes >> testTxt
 
     val test = Plan(actions, invariants).test(

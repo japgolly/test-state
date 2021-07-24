@@ -1,7 +1,7 @@
 package teststate.example.react
 
 import japgolly.scalajs.react.test._
-import monocle.macros.Lenses
+import monocle.macros.GenLens
 import org.scalajs.dom.html
 import teststate.example.react.MyTestState._
 
@@ -64,8 +64,12 @@ object TodoTestDsl {
    *
    * It is used to make ensure that observations about the real state (via [[TodoObs]]) are what we expect.
    */
-  @Lenses
   case class State(total: Int, completed: Int)
+
+  object State {
+    val total = GenLens[State](_.total)
+    val completed = GenLens[State](_.completed)
+  }
 
   val dsl = Dsl[Unit, TodoObs, State]
 

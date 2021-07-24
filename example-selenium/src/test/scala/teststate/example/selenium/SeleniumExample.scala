@@ -28,11 +28,11 @@ object SeleniumExample extends TestSuite {
 
   val observer: Observer[Ref, Obs, String] = Observer(ref => new Obs(FastDomZipperSelenium.html(ref)))
 
-  val * = Dsl[Ref, Obs, Unit]
+  val dsl = Dsl[Ref, Obs, Unit]
 
-  val clickGet = *.action("Click GET")(_.obs.clickButton())
+  val clickGet = dsl.action("Click GET")(_.obs.clickButton())
 
-  val responseText = *.focus("Response text").option(_.obs.responseText)
+  val responseText = dsl.focus("Response text").option(_.obs.responseText)
 
   def runTest() = {
     val driver = openBrowser()

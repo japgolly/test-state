@@ -120,24 +120,24 @@ object RetryTest extends TestSuite {
   var _value2 = 100
   val failOnValue2 = new SimFailure("value2()")
   def value2(): Int = synchronized { failOnValue2(_value2) }
-  val value2         = *.focus("value2").value(_.obs.value2())
-  val failOnValue2   = *.action("failOnValue2")(_.ref.failOnValue2.simFail(3))
+  val value2         = dsl.focus("value2").value(_.obs.value2())
+  val failOnValue2   = dsl.action("failOnValue2")(_.ref.failOnValue2.simFail(3))
   case class Obs(value: Int, valueCalls: Int, incCalls: Int, invariantOk: Boolean, value2: () => Int)
    */
 
   type State = Int
 
-  val * = Dsl[Ref, Obs, State]
+  val dsl = Dsl[Ref, Obs, State]
 
-  val value          = *.focus("value").value(_.obs.value)
-  val valueCalls     = *.focus("valueCalls").value(_.obs.valueCalls)
-  val incCalls       = *.focus("incCalls").value(_.obs.incCalls)
-  val invariantOk    = *.focus("invariantOk").value(_.obs.invariantOk)
+  val value          = dsl.focus("value").value(_.obs.value)
+  val valueCalls     = dsl.focus("valueCalls").value(_.obs.valueCalls)
+  val incCalls       = dsl.focus("incCalls").value(_.obs.incCalls)
+  val invariantOk    = dsl.focus("invariantOk").value(_.obs.invariantOk)
   val invariant      = invariantOk.assert(true)
-  val failOnValue    = *.action("failOnValue.simFail(3)")(_.ref.failOnValue.simFail(3))
-  val failOnInc      = *.action("failOnInc.simFail(3)")(_.ref.failOnInc.simFail(3)) +> valueCalls.assert.increment +> value.assert.noChange
-  val inc            = *.action("inc")(_.ref.inc())
-  val queueUpdate    = *.action("queueUpdate")(_.ref.queueUpdate(123))
+  val failOnValue    = dsl.action("failOnValue.simFail(3)")(_.ref.failOnValue.simFail(3))
+  val failOnInc      = dsl.action("failOnInc.simFail(3)")(_.ref.failOnInc.simFail(3)) +> valueCalls.assert.increment +> value.assert.noChange
+  val inc            = dsl.action("inc")(_.ref.inc())
+  val queueUpdate    = dsl.action("queueUpdate")(_.ref.queueUpdate(123))
   val incNormal      = inc +> incCalls.assert.increment +> valueCalls.assert.increment +> value.assert.increment
   val incFailOnValue = inc +> incCalls.assert.increment +> valueCalls.assert.increaseBy(4) +> value.assert.increment
   val incFailOnInc   = inc +> incCalls.assert.increment +> valueCalls.assert.increment +> value.assert.increment // incCalls +1 only cos that's what a successful action does
@@ -148,15 +148,15 @@ object RetryTest extends TestSuite {
 
   val observer = Observer((_: Ref).toObs())
 
-  def mkTest(plan: *.Plan, refMod: Ref => Unit = _ => ()) =
+  def mkTest(plan: dsl.Plan, refMod: Ref => Unit = _ => ()) =
     plan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
 
-  def assertRetryWorks(plan: *.Plan, refMod: Ref => Unit = _ => ()): Unit = {
+  def assertRetryWorks(plan: dsl.Plan, refMod: Ref => Unit = _ => ()): Unit = {
     _assertRetryWorks(plan, refMod)
     ()
   }
 
-  def _assertRetryWorks(plan: *.Plan, refMod: Ref => Unit = _ => ()): Report[String] = {
+  def _assertRetryWorks(plan: dsl.Plan, refMod: Ref => Unit = _ => ()): Report[String] = {
     val test = mkTest(plan, refMod)
     debug()
 
@@ -200,10 +200,10 @@ object RetryTest extends TestSuite {
   override def tests = Tests {
 
     "stackSafe" - {
-      val * = Dsl[Unit, Unit, Unit]
+      val dsl = Dsl[Unit, Unit, Unit]
       val fail = Some("fail")
       val result: Report[String] =
-        Plan.action(*.emptyAction +> *.point("fail")(_ => fail))
+        Plan.action(dsl.emptyAction +> dsl.point("fail")(_ => fail))
           .testU
           .stateless
           .withRetryPolicy(Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, teststate.Platform.StackTestSize))
@@ -260,16 +260,16 @@ object RetryTest extends TestSuite {
     "initial" - {
       "ref" - {
         val refMod = explodingRef()
-        val test = *.emptyPlan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
+        val test = dsl.emptyPlan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
         val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
         assert(!result.failed)
       }
       "obs" - {
-        val plan = Plan.action(*.emptyAction <+ valueCalls.assert(4))
+        val plan = Plan.action(dsl.emptyAction <+ valueCalls.assert(4))
         assertRetryWorks(plan, _.failOnValue.simFail(3))
       }
       "invariant" - {
-        assertRetryWorks(*.emptyPlan, _.invalidateInvariant())
+        assertRetryWorks(dsl.emptyPlan, _.invalidateInvariant())
       }
     }
 
@@ -277,13 +277,13 @@ object RetryTest extends TestSuite {
        "ref" - {
          val ref = new Ref
          var refFn = (_: Ref) => ()
-         val plan = Plan.action(*.action("hack")(_ => refFn = explodingRef()) >> *.emptyAction)
+         val plan = Plan.action(dsl.action("hack")(_ => refFn = explodingRef()) >> dsl.emptyAction)
          val test = plan.addInvariants(invariant).test(observer).withInitialState(0).withRefByName(ref(refFn))
          val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
          result.assert()
        }
       "obs" - {
-        val plan = Plan.action(failOnValue >> *.emptyAction +> valueCalls.assert(5))
+        val plan = Plan.action(failOnValue >> dsl.emptyAction +> valueCalls.assert(5))
         assertRetryWorks(plan)
       }
       "actionSingle" - {
@@ -301,11 +301,11 @@ object RetryTest extends TestSuite {
         assertRetryWorks(plan)
       }
       "actionDueToBadObs" - {
-        val plan = Plan.action(queueUpdate >> *.action("Throw unless obs.value = 123")(x => assert(x.obs.value == 123)))
+        val plan = Plan.action(queueUpdate >> dsl.action("Throw unless obs.value = 123")(x => assert(x.obs.value == 123)))
         assertRetryWorks(plan)
       }
       "preCondFail" - {
-        val plan = Plan.action(queueUpdate >> (*.emptyAction <+ value.assert(123)))
+        val plan = Plan.action(queueUpdate >> (dsl.emptyAction <+ value.assert(123)))
         assertRetryWorks(plan)
       }
       "postCondFail" - {
@@ -313,25 +313,25 @@ object RetryTest extends TestSuite {
         assertRetryWorks(plan)
       }
       "postEmptyFail" - {
-        val plan = Plan.action(queueUpdate >> *.emptyAction +> value.assert(123))
+        val plan = Plan.action(queueUpdate >> dsl.emptyAction +> value.assert(123))
         assertRetryWorks(plan)
       }
       // Actually no, checks are supposed to be pure!
       // 'preCondCrash {
-      //   val plan = Plan.action(failOnValue2 >> (*.emptyAction <+ value2.assert(100)))
+      //   val plan = Plan.action(failOnValue2 >> (dsl.emptyAction <+ value2.assert(100)))
       //   assertRetryWorks(plan)
       // }
       // 'postCondCrash {
-      //   val plan = Plan.action(failOnValue2 >> (*.emptyAction +> value2.assert(100)))
+      //   val plan = Plan.action(failOnValue2 >> (dsl.emptyAction +> value2.assert(100)))
       //   assertRetryWorks(plan)
       // }
       "invariant" - {
-        val plan = Plan.action(*.action("invalidate invariant")(_.ref.invalidateInvariant()))
+        val plan = Plan.action(dsl.action("invalidate invariant")(_.ref.invalidateInvariant()))
         assertRetryWorks(plan)
       }
 
       "reportObsErrorAfterActionError" - {
-        val plan = Plan.action(*.action("I love my little one, Nim") { x =>
+        val plan = Plan.action(dsl.action("I love my little one, Nim") { x =>
           x.ref.failOnValue.simFail(3)
           ???
         })
@@ -350,7 +350,7 @@ object RetryTest extends TestSuite {
       "state" - {
         val plan = Plan.action(
           (failOnInc >> incFailOnInc >> incNormal).updateState(_ + 1) >>
-          *.action("blah")(_ => ()) +> *.focus("state").value(_.state).assert(1)
+          dsl.action("blah")(_ => ()) +> dsl.focus("state").value(_.state).assert(1)
         )
         assertRetryWorks(plan)
       }

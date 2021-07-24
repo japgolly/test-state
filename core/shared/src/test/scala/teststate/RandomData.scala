@@ -7,7 +7,7 @@ import teststate.data.Sack
 
 object RandomData {
 
-  val * = Dsl[Unit, Unit, Unit]
+  val dsl = Dsl[Unit, Unit, Unit]
 
   private def applyEndos[A](basic: Gen[A])(endos: (A => A)*): Gen[A] = {
     val id: A => A = identity
@@ -23,24 +23,24 @@ object RandomData {
     } yield f(a)
   }
 
-  lazy val action: Gen[*.Actions] =
+  lazy val action: Gen[dsl.Actions] =
     applyEndos(
       Gen.choose(
-        *.emptyAction,
-        *.action("A")(_ => ()))
+        dsl.emptyAction,
+        dsl.action("A")(_ => ()))
     )(
       a => Sack.append(a, a),
       a => Sack.CoProduct("CoA", _ => a),
       a => a.group("AG"),
-      a => Action.liftInner(Action.SubTest(a, *.emptyInvariant))("ASub"),
+      a => Action.liftInner(Action.SubTest(a, dsl.emptyInvariant))("ASub"),
       a => a.skip
     )
 
-  lazy val point: Gen[*.Points] =
+  lazy val point: Gen[dsl.Points] =
     applyEndos(
       Gen.choose(
-        *.test("P1")(_ => true),
-        *.test("P0")(_ => false))
+        dsl.test("P1")(_ => true),
+        dsl.test("P0")(_ => false))
     )(
       a => Sack.append(a, a),
       a => Sack.CoProduct("CoP", _ => a),
