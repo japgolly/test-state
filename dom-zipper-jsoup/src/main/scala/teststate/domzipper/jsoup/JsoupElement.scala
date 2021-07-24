@@ -7,10 +7,10 @@ final case class JsoupElement(underlying: Element) {
   override def toString = underlying.toString
 
   def select(css: String): Vector[JsoupElement] =
-    underlying.select(css).asScala.iterator.filterNot(_ == underlying).map(JsoupElement).toVector
+    underlying.select(css).asScala.iterator.filterNot(_ == underlying).map(JsoupElement.apply).toVector
 
   lazy val children: Vector[JsoupElement] =
-    underlying.children().asScala.iterator.map(JsoupElement).toVector
+    underlying.children().asScala.iterator.map(JsoupElement.apply).toVector
 
   lazy val childrenSet: Set[JsoupElement] =
     children.toSet
@@ -19,7 +19,7 @@ final case class JsoupElement(underlying: Element) {
     select(css).filter(childrenSet.contains)
 
   def parent: Option[JsoupElement] =
-    Option(underlying.parent).map(JsoupElement)
+    Option(underlying.parent).map(JsoupElement.apply)
 
   def attr(name: String): Option[String] =
     if (underlying.attributes().hasKeyIgnoreCase(name))
