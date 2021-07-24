@@ -46,10 +46,7 @@ final case class JsoupElement(underlying: Element) {
   def outerHtml = underlying.outerHtml()
 
   def root: JsoupElement =
-    underlying.root() match {
-      case e: Element => JsoupElement(e)
-      case r          => JsoupElement(r.ownerDocument())
-    }
+    JsoupElement(underlying.root())
 
   def matches(sel: String): Boolean =
     root.underlying.select(sel).contains(this.underlying)
