@@ -349,7 +349,11 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       def equalBy(expect: OS => Option[A])(implicit eq: Equal[Option[A]], f: DisplayFailure[Option[A], E]): Points =
         value.assertB(positive).equalBy(expect)
 
+      @deprecated("Use .some", "2.5.0")
       def contains[B >: A](query: B)(implicit sa: Display[B], ea: Equal[B], ev: Contains.Failure[B] => E): Points =
+        some(query)
+
+      def some[B >: A](query: B)(implicit sa: Display[B], ea: Equal[B], ev: Contains.Failure[B] => E): Points =
         point(Contains(positive).name(focusName, sa(query)))(
           os => Contains(positive)(focusFn(os), query).map(ev))
 
