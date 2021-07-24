@@ -170,6 +170,9 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
   final def editables0n = collect0n(EditableSel)
   final def editables1n = collect1n(EditableSel)
 
+  def count(sel: String): Int =
+    collect0n(sel).size
+
   def exists(sel: String): Boolean =
     collect0n(sel).nonEmpty
 
