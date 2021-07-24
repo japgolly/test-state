@@ -1,12 +1,13 @@
 package teststate.selenium
 
+import org.openqa.selenium.chrome.ChromeDriver
 import cats.instances.string._
 import teststate.selenium.TestUtil._
 import utest._
 
 object MultiBrowserTest extends TestSuite {
 
-  implicit lazy val d = newChrome()
+  implicit lazy val d: ChromeDriver = newChrome()
   lazy val mb = MultiBrowser(d, GrowthStrategy.singleBrowser)
   def tabCount() = d.getWindowHandles.size
 

@@ -18,9 +18,9 @@ object Types {
 
   // OS →ˢ (NamedError E | OS →ᶜ E)
 
-  implicit def checkShapeProfunctorOps[C[-_, _], O, S, E](a: CheckShape[C, O, S, E]) =
+  implicit def checkShapeProfunctorOps[C[-_, _], O, S, E](a: CheckShape[C, O, S, E]): Profunctor.Ops[Sack, OS[O, S], NamedError[Failure[E]] Or C[OS[O, S], E]] =
     new Profunctor.Ops[Sack, OS[O, S], NamedError[Failure[E]] Or C[OS[O, S], E]](a)
 
-  implicit def checkShapeAProfunctorOps[C[-_, _], A, E](a: CheckShapeA[C, A, E]) =
+  implicit def checkShapeAProfunctorOps[C[-_, _], A, E](a: CheckShapeA[C, A, E]): Profunctor.Ops[Sack, A, NamedError[Failure[E]] Or C[A, E]] =
     new Profunctor.Ops[Sack, A, NamedError[Failure[E]] Or C[A, E]](a)
 }

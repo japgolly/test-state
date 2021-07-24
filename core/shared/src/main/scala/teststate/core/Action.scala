@@ -124,6 +124,6 @@ object Action {
     Conditional((a, f) => a.copy(inner = a.inner when f))
 
   // Scala needs this since partial unification
-  implicit def actionsProfunctor[F[_], R, O, S, E](a: Actions[F, R, O, S, E]) =
+  implicit def actionsProfunctor[F[_], R, O, S, E](a: Actions[F, R, O, S, E]): Profunctor.Ops[Sack, ROS[R, O, S], NamedError[Failure[E]] Or Action.Outer[F, R, O, S, E]] =
     new Profunctor.Ops[Sack, ROS[R, O, S], NamedError[Failure[E]] Or Action.Outer[F, R, O, S, E]](a)
 }

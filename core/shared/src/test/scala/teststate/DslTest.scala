@@ -8,7 +8,7 @@ import utest._
 
 object DslTest extends TestSuite {
 
-  val * = Dsl[Unit, Unit, Unit]
+  val dsl = Dsl[Unit, Unit, Unit]
 
 //  def extract1[A, B](s: Sack[A, B]): B =
 //     s match {
@@ -37,11 +37,11 @@ object DslTest extends TestSuite {
   override def tests = Tests {
 
     "changeTo" - {
-      "pos" - testName(*.focus("Counter").value(_ => 7).assert.changeTo(_ + 1),
+      "pos" - testName(dsl.focus("Counter").value(_ => 7).assert.changeTo(_ + 1),
         "Counter should be <?>.",
         "Counter should be 8.")
 
-      "neg" - testName(*.focus("Counter").value(_ => 7).assert.not.changeTo(_ + 1),
+      "neg" - testName(dsl.focus("Counter").value(_ => 7).assert.not.changeTo(_ + 1),
         "Counter shouldn't be <?>.",
         "Counter shouldn't be 8.")
 
@@ -49,24 +49,24 @@ object DslTest extends TestSuite {
     }
 
     "incrementBy" - {
-      "pos" - testName(*.focus("Counter").value(_ => 7).assert.increaseBy(2),
+      "pos" - testName(dsl.focus("Counter").value(_ => 7).assert.increaseBy(2),
         "Counter should increase by 2.",
         "Counter should increase by 2.")
 //        "Counter should be 9.")
 
-      "neg" - testName(*.focus("Counter").value(_ => 7).assert.not.increaseBy(2),
+      "neg" - testName(dsl.focus("Counter").value(_ => 7).assert.not.increaseBy(2),
         "Counter shouldn't increase by 2.",
         "Counter shouldn't increase by 2.")
 //        "Counter shouldn't be 9.")
     }
 
     "decrementBy" - {
-      "pos" - testName(*.focus("Counter").value(_ => 7).assert.decreaseBy(2),
+      "pos" - testName(dsl.focus("Counter").value(_ => 7).assert.decreaseBy(2),
         "Counter should decrease by 2.",
         "Counter should decrease by 2.")
 //        "Counter should be 5.")
 
-      "neg" - testName(*.focus("Counter").value(_ => 7).assert.not.decreaseBy(2),
+      "neg" - testName(dsl.focus("Counter").value(_ => 7).assert.not.decreaseBy(2),
         "Counter shouldn't decrease by 2.",
         "Counter shouldn't decrease by 2.")
 //        "Counter shouldn't be 5.")

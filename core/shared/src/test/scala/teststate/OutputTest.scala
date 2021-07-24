@@ -6,17 +6,17 @@ import utest._
 
 object OutputTest extends TestSuite {
 
-  val * = Dsl[Unit, Unit, Unit]
-  import *.{emptyAction, emptyInvariant}
+  val dsl = Dsl[Unit, Unit, Unit]
+  import dsl.{emptyAction, emptyInvariant}
 
-  def mockAction(name: String) = *.action(name)(_ => ())
-  def mockPoint (name: String) = *.point(name)(_ => None)
-  def mockAround(name: String) = *.around(name)(_ => ())((_, _) => None)
+  def mockAction(name: String) = dsl.action(name)(_ => ())
+  def mockPoint (name: String) = dsl.point(name)(_ => None)
+  def mockAround(name: String) = dsl.around(name)(_ => ())((_, _) => None)
 
   val action    = mockAction("Press button.")
   val action2   = mockAction("Pull lever.")
-  val actionF   = *.action("Press button!").attempt(_ => Some("BUTTON'S BROKEN"))
-  val actionFN  = *.action("Press button!").attempt(_ => Some("This has\nmultiple\nlines!!"))
+  val actionF   = dsl.action("Press button!").attempt(_ => Some("BUTTON'S BROKEN"))
+  val actionFN  = dsl.action("Press button!").attempt(_ => Some("This has\nmultiple\nlines!!"))
   val actionG   = (action >> action2).group("Groupiness.")
   val actionGF1 = (actionF >> action2).group("Groupiness.")
   val actionGF2 = (action >> actionF).group("Groupiness.")
@@ -26,11 +26,11 @@ object OutputTest extends TestSuite {
 
   val checkPoint   = mockPoint("Check stuff.")
   val checkPoint2  = mockPoint("Check more stuff.")
-  val checkPointF  = *.point("Check failure.")(_ => Some("Shit broke!"))
+  val checkPointF  = dsl.point("Check failure.")(_ => Some("Shit broke!"))
   val checkAround  = mockAround("Button count increased.")
-  val checkAroundF = *.around("Button count increased.")(_ => ())((_, _) => Some("2 != 3"))
+  val checkAroundF = dsl.around("Button count increased.")(_ => ())((_, _) => Some("2 != 3"))
 
-  val checkOS = *.focus("Hurp").obsAndState(_ => 1, _ => 1).assert.equal
+  val checkOS = dsl.focus("Hurp").obsAndState(_ => 1, _ => 1).assert.equal
 
   val i12 = mockPoint("Invariant 1") & mockPoint("Invariant 2")
 
@@ -47,7 +47,7 @@ object OutputTest extends TestSuite {
       .addCheck(mockPoint("Sub-post").after)
       .addCheck(mockAround("Sub-delta"))
 
-  def test(a: *.Actions, i: *.Invariants)(expect: String): Unit = {
+  def test(a: dsl.Actions, i: dsl.Invariants)(expect: String): Unit = {
     val r = Plan(a, i).stateless.testU.runU()
     assertRun(r, expect)
   }
@@ -96,13 +96,13 @@ object OutputTest extends TestSuite {
         """.stripMargin)
 
       "state" - {
-        val * = Dsl[Unit, Unit, Int]
-        val s = *.focus("state").value(_.state)
+        val dsl = Dsl[Unit, Unit, Int]
+        val s = dsl.focus("state").value(_.state)
 
         val r = Plan.action(
-          s.assert(3) +> *.emptyAction.updateState(_ + 1) // 3 -> 4
-            >> *.emptyAction.updateState(_ + 3) // -> 7
-            >> *.emptyAction.updateState(_ + 7) +> s.assert(14) // -> 14
+          s.assert(3) +> dsl.emptyAction.updateState(_ + 1) // 3 -> 4
+            >> dsl.emptyAction.updateState(_ + 3) // -> 7
+            >> dsl.emptyAction.updateState(_ + 7) +> s.assert(14) // -> 14
         ).testU.runU(3)
         assertRun(r,
           """
@@ -121,7 +121,7 @@ object OutputTest extends TestSuite {
       }
 
       "chooseBefore" - {
-        val chooseEmpty = *.chooseAction("nada")(_ => emptyAction)
+        val chooseEmpty = dsl.chooseAction("nada")(_ => emptyAction)
         test(chooseEmpty >> action, emptyInvariant)(
           """
             |✓ nada
@@ -133,7 +133,7 @@ object OutputTest extends TestSuite {
     }
 
     "invariants" - {
-      def t(i: *.Invariants)(expect: String) = test(emptyAction, i)(expect)
+      def t(i: dsl.Invariants)(expect: String) = test(emptyAction, i)(expect)
       "pass" - {
         "simplest" - t(checkPoint)(
           """
@@ -152,7 +152,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 2 checks.
           """.stripMargin)
 
-        "coproduct" - t(*.chooseInvariant("Who knows?!")(_ => checkPoint))(
+        "coproduct" - t(dsl.chooseInvariant("Who knows?!")(_ => checkPoint))(
           """
             |✓ Initial state.
             |  ✓ Check stuff.
@@ -184,7 +184,7 @@ object OutputTest extends TestSuite {
             |Performed 0 actions, 2 checks.
           """.stripMargin)
 
-        "coproduct" - t(*.chooseInvariantAttempt("Who knows?!")(_ => Left("Computer says no.")))(
+        "coproduct" - t(dsl.chooseInvariantAttempt("Who knows?!")(_ => Left("Computer says no.")))(
           """
             |✘ Initial state.
             |  ✘ Who knows?! -- Computer says no.
@@ -194,7 +194,7 @@ object OutputTest extends TestSuite {
     }
 
     "action" - {
-      def t(a: *.Actions)(expect: String) = test(a, emptyInvariant)(expect)
+      def t(a: dsl.Actions)(expect: String) = test(a, emptyInvariant)(expect)
       "pass" - {
         "simplest" - t(action)(
           """
@@ -394,7 +394,7 @@ object OutputTest extends TestSuite {
     }
 
     "actionG" - {
-      def t(a: *.Actions)(expect: String) = test(a, emptyInvariant)(expect)
+      def t(a: dsl.Actions)(expect: String) = test(a, emptyInvariant)(expect)
       "pass" - {
         "simple" - t(actionG)(
           """
@@ -720,7 +720,7 @@ object OutputTest extends TestSuite {
       "chain" - {
         def sub(n: Int, hasAction: Boolean) =
           Plan(
-            if (hasAction) mockAction(s"SubAction $n") else *.emptyAction,
+            if (hasAction) mockAction(s"SubAction $n") else dsl.emptyAction,
             mockPoint(s"Sub #$n invariant")
           ).asAction(s"Sub#$n")
 
@@ -757,14 +757,14 @@ object OutputTest extends TestSuite {
       }
 
       "nested" - {
-        def sub(n: String, a: *.Actions) =
+        def sub(n: String, a: dsl.Actions) =
           Plan(a, mockPoint("Invariant: " + n)).asAction("Subtest: " + n)
 
         def nest(a0: Boolean, b: Boolean, a2: Boolean) = {
           val n = "" //List(a0,b,a2).map(x => if (x) "1" else "0") mkString ""
           val n1 = n + ".1"
           val n2 = n + ".2"
-          var i = sub(n2, if (b) mockAction("Action: " + n2) else *.emptyAction)
+          var i = sub(n2, if (b) mockAction("Action: " + n2) else dsl.emptyAction)
           if (a0) i <<= mockAction("Action: " + n1 + "-0")
           if (a2) i >>= mockAction("Action: " + n1 + "-2")
           sub(n1, i)
@@ -1128,9 +1128,9 @@ object OutputTest extends TestSuite {
         // These CCs ensure correctness via .observe and .run
         case class State(s: Int)
         case class Obs(o: Int)
-        val * = Dsl[Unit, Obs, State]
-        val checkOSFail = *.focus("Evil").obsAndState(_.o, _.s).assert.equal
-        val action = *.action("Press button.")(_ => ())
+        val dsl = Dsl[Unit, Obs, State]
+        val checkOSFail = dsl.focus("Evil").obsAndState(_.o, _.s).assert.equal
+        val action = dsl.action("Press button.")(_ => ())
         val r = Plan.action(action addCheck checkOSFail.after)
           .test(Observer watch Obs(777))
           .runU(State(666))
@@ -1147,9 +1147,9 @@ object OutputTest extends TestSuite {
       "failLong" - {
         case class State(s: String)
         case class Obs(o: String)
-        val * = Dsl[Unit, Obs, State]
-        val checkOSFail = *.focus("Evil").obsAndState(_.o, _.s).assert.equal
-        val action = *.action("Press button.")(_ => ())
+        val dsl = Dsl[Unit, Obs, State]
+        val checkOSFail = dsl.focus("Evil").obsAndState(_.o, _.s).assert.equal
+        val action = dsl.action("Press button.")(_ => ())
         val r = Plan.action(action addCheck checkOSFail.after)
           .test(Observer watch Obs("wow\nthis\nisn't\nvery\nlong..."))
           .runU(State("wow\nthis\nis\nlong!"))
@@ -1176,9 +1176,9 @@ object OutputTest extends TestSuite {
 
     "existenceOfAround" - {
       var is = List(1, 2, 3)
-      val * = Dsl[Unit, List[Int], Boolean]
-      val a = *.action("Remove 2")(_ => is = List(1, 3)).updateState(_ => false)
-      val c = *.focus("X").collection(_.obs).assert.existenceOf(2)(_.state)
+      val dsl = Dsl[Unit, List[Int], Boolean]
+      val a = dsl.action("Remove 2")(_ => is = List(1, 3)).updateState(_ => false)
+      val c = dsl.focus("X").collection(_.obs).assert.existenceOf(2)(_.state)
       val r = Plan.action(a addCheck c.beforeAndAfter).test(Observer watch is).runU(true)
       assertRun(r,
         """
@@ -1195,7 +1195,7 @@ object OutputTest extends TestSuite {
 
     "named" - {
       "pass" - {
-        val r = Plan(*.emptyAction, checkPoint).named("Beauty").stateless.testU.runU()
+        val r = Plan(dsl.emptyAction, checkPoint).named("Beauty").stateless.testU.runU()
         assertRun(r,
           """
             |✓ Beauty
@@ -1206,7 +1206,7 @@ object OutputTest extends TestSuite {
           """.stripMargin)
       }
       "fail" - {
-        val r = Plan(*.emptyAction, checkPointF).named("Sorrow").stateless.testU.runU()
+        val r = Plan(dsl.emptyAction, checkPointF).named("Sorrow").stateless.testU.runU()
         assertRun(r,
           """
             |✘ Sorrow
@@ -1220,9 +1220,9 @@ object OutputTest extends TestSuite {
     // After a failure, the ROS shouldn't be used to try to evaluate future action names.
     // It will usually be wrong data, thus providing misleading names; sometimes it even crashes.
     "namesAfterFailure" - {
-      val x = *.action(NameFn[Any]("X:" + _))(_ => ???)
-      val y = *.chooseAction(NameFn[Any]("Y:" + _))(_ => ???)
-      test(actionF >> x >> y, *.emptyInvariant)(
+      val x = dsl.action(NameFn[Any]("X:" + _))(_ => ???)
+      val y = dsl.chooseAction(NameFn[Any]("Y:" + _))(_ => ???)
+      test(actionF >> x >> y, dsl.emptyInvariant)(
         """
           |✘ Press button! -- BUTTON'S BROKEN
           |- X:None
@@ -1232,13 +1232,13 @@ object OutputTest extends TestSuite {
     }
 
     "contextualiseChooseActionOnEmpty" - {
-      val a = *.chooseAction(NameFn {
+      val a = dsl.chooseAction(NameFn {
         case None    => "A"
         case Some(_) => "B"
       }) { _ =>
-        *.emptyAction
+        dsl.emptyAction
       }
-      test(a, *.emptyInvariant)(
+      test(a, dsl.emptyInvariant)(
         """
           |✓ B
           |✓ All pass.

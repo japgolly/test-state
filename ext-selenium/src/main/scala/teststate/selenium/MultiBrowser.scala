@@ -62,16 +62,16 @@ object MultiBrowser {
                                  multiTab: MultiTab[D],
                                  tabs    : Vector[Tab[D]]) {
         def closeRoot(): Unit = mutex {
-          implicit def d = driver
+          implicit def d: D = driver
           tabSupport.activate(rootTab)
           tabSupport.closeActive()
         }
       }
 
-      private var instances    = Vector.empty[Browser]
-      private var onNewDriver  = doNothing1: D => Unit
-      private var onNewDriverT = doNothing1: Tab[D] => Unit
-      private var onNewTab     = doNothing1: Tab[D] => Unit
+      private var instances    : Vector[Browser] = Vector.empty
+      private var onNewDriver  : D => Unit       = (doNothing1)
+      private var onNewDriverT : Tab[D] => Unit  = (doNothing1)
+      private var onNewTab     : Tab[D] => Unit  = (doNothing1)
 
       // Locks: outer
       override def onNewDriver(f: D => Unit): this.type =

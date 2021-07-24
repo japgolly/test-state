@@ -57,12 +57,12 @@ object Tab {
       private var closed      = false
       private var onFirstUse  = Option.empty[D => ProcMod]
       private var onEachUse   = Option.empty[D => ProcMod]
-      private var beforeClose = doNothing1: D => Unit
-      private var afterClose  = doNothing1: D => Unit
+      private var beforeClose = (doNothing1: D => Unit)
+      private var afterClose  = (doNothing1: D => Unit)
       private var afterClosed = doNothing0
 
       private def prepareWithoutLocking(): D = {
-        implicit def d = driver
+        implicit def d: D = driver
 
         if (closed)
           throw new TabAlreadyClosed()
@@ -118,7 +118,7 @@ object Tab {
         val callback = mutex {
           val affect = !closed
           if (affect) {
-            implicit def d = driver
+            implicit def d: D = driver
             for (t <- tab) {
               if (beforeClose ne doNothing1) {
                 tabSupport.activate(t)

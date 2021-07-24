@@ -12,7 +12,7 @@ object FastDomZipperSeleniumF {
   type FastDomZipperSeleniumF[F[_]] = DomZippersFastAndSlow.AtHome[F, Dom]
 
   def apply[F[_]: ErrorHandler](fast: DomZipperJsoupF[F, JDom], slow: DomZipperSeleniumF[F, () => Dom]): FastDomZipperSeleniumF[F] =
-    DomZippersFastAndSlow[F, DomZipperJsoupF, JDom, DomZipperSeleniumF, Dom](fast, slow.map(_()))
+    DomZippersFastAndSlow[F, DomZipperJsoupF, JDom, JDom, DomZipperSeleniumF, () => Dom, Dom](fast, slow.map(_()))
 
   final class Constructors[F[_]](implicit F: ErrorHandler[F]) {
     private val DomZipperSelenium = new DomZipperSeleniumF.Constructors[F]()

@@ -9,12 +9,12 @@ import utest._
 
 object ActionTest extends TestSuite {
 
-  val * = Dsl[Unit, Unit, Unit]
+  val dsl = Dsl[Unit, Unit, Unit]
 
-  val a1 = *.action("A1")(_ => ())
-  val a2 = *.action("A2")(_ => ())
-  val a3 = *.action("A3")(_ => ())
-  val c1 = *.chooseAction("C1")(_ => a1)
+  val a1 = dsl.action("A1")(_ => ())
+  val a2 = dsl.action("A2")(_ => ())
+  val a3 = dsl.action("A3")(_ => ())
+  val c1 = dsl.chooseAction("C1")(_ => a1)
   val g1 = (a1 >> a2).group("G1")
 
   override def tests = Tests {

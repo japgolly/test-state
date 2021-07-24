@@ -101,7 +101,9 @@ object CheckOps {
           }
       }
 
-    private def checkOpsInstanceForChecks[C[-_, _]](implicit sub: CheckOps[CheckShape1[C]#T]): CheckOps[CheckShape[C, *, *, *]] =
+    type CheckOpsCheckShape[C[-_, _]] = CheckOps[CheckShape[C, *, *, *]]
+
+    private def checkOpsInstanceForChecks[C[-_, _]](implicit sub: CheckOps[CheckShape1[C]#T]): CheckOpsCheckShape[C] =
       new CheckOps[CheckShape[C, *, *, *]] {
         import Sack._
 
@@ -126,9 +128,9 @@ object CheckOps {
           }
       }
 
-    implicit val checkOpsInstanceForPoints     = checkOpsInstanceForChecks[Point    ]
-    implicit val checkOpsInstanceForArounds    = checkOpsInstanceForChecks[Around   ]
-    implicit val checkOpsInstanceForInvariants = checkOpsInstanceForChecks[Invariant]
+    implicit val checkOpsInstanceForPoints    : CheckOpsCheckShape[Point    ] = checkOpsInstanceForChecks[Point    ]
+    implicit val checkOpsInstanceForArounds   : CheckOpsCheckShape[Around   ] = checkOpsInstanceForChecks[Around   ]
+    implicit val checkOpsInstanceForInvariants: CheckOpsCheckShape[Invariant] = checkOpsInstanceForChecks[Invariant]
 
     implicit def pointsToCheckOps    [O, S, E](c: Points    [O, S, E]): Ops[Points    , O, S, E] = new Ops(c)
     implicit def aroundsToCheckOps   [O, S, E](c: Arounds   [O, S, E]): Ops[Arounds   , O, S, E] = new Ops(c)
