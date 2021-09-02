@@ -22,7 +22,7 @@ object Dependencies {
     val univEq          = "1.5.0"
 
     // Internal
-    val kindProjector   = "0.13.0"
+    val kindProjector   = "0.13.1"
     val monocle         = "3.0.0"
     val reactJs         = "17.0.2"
     val scalaJsJavaTime = "1.0.0"
