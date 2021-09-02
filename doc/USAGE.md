@@ -10,28 +10,35 @@
 1. Choose dependencies and add to SBT.
     <br>Module descriptions are [here](../README.md#modules). Take what you need and delete the rest.
     ```scala
-    val TestStateVer = "2.3.0"
+    val TestStateVer = "2.4.1"
 
     libraryDependencies ++= Seq(
-      "com.github.japgolly.test-state" %%% "core"              % TestStateVer % "test",
-      "com.github.japgolly.test-state" %%% "dom-zipper"        % TestStateVer % "test",
-      "com.github.japgolly.test-state" %%% "dom-zipper-sizzle" % TestStateVer % "test",
-      "com.github.japgolly.test-state" %%% "ext-cats"          % TestStateVer % "test",
-      "com.github.japgolly.test-state" %%% "ext-nyaya"         % TestStateVer % "test",
-      "com.github.japgolly.test-state" %%% "ext-scalajs-react" % TestStateVer % "test",
+      "com.github.japgolly.test-state" %%% "core"                % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%% "dom-zipper"          % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%  "dom-zipper-jsoup"    % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%  "dom-zipper-selenium" % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%% "dom-zipper-sizzle"   % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%% "ext-cats"            % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%% "ext-nyaya"           % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%% "ext-scalajs-react"   % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%  "ext-selenium"        % TestStateVer % Test,
     )
     ```
 
     <br>Please note that if your sbt is setup to use [scalajs-bundler](https://scalacenter.github.io/scalajs-bundler/), *currently* you still need to enable the older JsDependenciesPlugin for the js dependencies from above to be included in your final js file. For example:
 
     ```scala
-       lazy val client = (project in file("client"))
-          .enablePlugins(ScalaJSPlugin)
-          .enablePlugins(ScalaJSBundlerPlugin)
-          .enablePlugins(JSDependenciesPlugin)   ← This is needed even if you are managing your other js depndencies using scalajs-bundler
+      lazy val client = (project in file("client"))
+         .enablePlugins(ScalaJSPlugin)
+         .enablePlugins(ScalaJSBundlerPlugin)
+         .enablePlugins(JSDependenciesPlugin) // Needed even if you're using scalajs-bundler
 
-       npmDependencies in Compile ++= Seq( "react"     -> "16.13.1", "react-dom" -> "16.13.1") ← scalajs-bundler style external js dependencies
-       ....
+      // scalajs-bundler style external js dependencies
+      Compile / npmDependencies ++= Seq(
+        "react"     -> "17.0.2",
+        "react-dom" -> "17.0.2",
+      )
+      ....
     ```
 
 1. Create a configuration for your needs.
