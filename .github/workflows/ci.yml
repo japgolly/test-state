@@ -28,4 +28,8 @@ jobs:
 
       - name: Build and test
         shell: bash
-        run: sbt++field scala${{ matrix.scala }} clean test
+        run: |
+          sbt++field scala${{ matrix.scala }} \
+            -J-Xmx4G \
+            -J-XX:+UseG1GC \
+            test
