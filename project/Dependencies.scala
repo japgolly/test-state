@@ -10,7 +10,7 @@ object Dependencies {
 
     // Exported
     val cats            = "2.6.1"
-    val jsoup           = "1.14.2"
+    val jsoup           = "1.14.3"
     val microlibs       = "3.0.1"
     val nyaya           = "0.11.0"
     val scala2          = "2.13.6"
@@ -22,8 +22,8 @@ object Dependencies {
     val univEq          = "1.6.0"
 
     // Internal
-    val kindProjector   = "0.13.1"
-    val monocle         = "3.1.0"
+    val kindProjector   = "0.13.2"
+    val monocle         = "3.0.0"
     val reactJs         = "17.0.2"
     val scalaJsJavaTime = "1.0.0"
     val utest           = "0.7.10"
