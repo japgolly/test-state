@@ -1,7 +1,7 @@
 package teststate.selenium
 
-import org.openqa.selenium.chrome.ChromeDriver
 import cats.instances.string._
+import org.openqa.selenium.chrome.ChromeDriver
 import teststate.selenium.TestUtil._
 import utest._
 

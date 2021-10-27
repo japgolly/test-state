@@ -6,7 +6,6 @@ import scala.reflect.ClassTag
 import scala.scalajs.js
 import teststate.domzipper.DomZipper.{CssSelResult, DomCollection, Layer}
 import teststate.domzipper.ErrorHandler.ErrorHandlerOptionOps
-import teststate.domzipper.JsDomExt._
 
 object DomZipperJsF {
   type Dom = dom.Element
