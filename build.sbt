@@ -5,6 +5,7 @@ ThisBuild / licenses      += ("Apache-2.0", url("http://opensource.org/licenses/
 ThisBuild / organization  := "com.github.japgolly.test-state"
 ThisBuild / shellPrompt   := ((s: State) => Project.extract(s).currentRef.project + "> ")
 ThisBuild / startYear     := Some(2016)
+ThisBuild / versionScheme := Some("early-semver")
 
 val root              = TestState.root
 val rootJVM           = TestState.rootJVM
