@@ -9,7 +9,7 @@ object Dependencies {
   object Ver {
 
     // Exported
-    val cats            = "2.6.1"
+    val cats            = "2.8.0"
     val jsoup           = "1.14.3"
     val microlibs       = "4.0.0"
     val nyaya           = "1.0.0"
