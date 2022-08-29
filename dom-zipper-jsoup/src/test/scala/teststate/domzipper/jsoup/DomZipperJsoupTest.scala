@@ -65,7 +65,7 @@ object DomZipperJsoupTest extends TestSuite {
 
     "outerHTML" - assertEq(name.outerHTML, nameInputHtml)
 
-    "innerHTML" - assertEq($("div.name").innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
+    "innerHTML" - assertEq($("div.name").innerHTML.split("\n").map(_.trim).mkString, s"$nameLabelHtml $nameInputHtml")
 
     "innerText" - assertEq($("div.name").innerText, "Name:")
 
@@ -135,7 +135,7 @@ object DomZipperJsoupTest extends TestSuite {
           """
             |Query failed: [pre]. Expected [1,n] results, not 0.
             |DESC: root -> .name
-            |HTML: <div class="name"> <label for="name">Name:</label><input type="text" id="name" name="user_name" value="Bob Loblaw" class=" a b  c "></div>
+            |HTML: <div class="name"><label for="name">Name:</label> <input type="text" id="name" name="user_name" value="Bob Loblaw" class=" a b  c "></div>
           """.stripMargin.trim
         val Left(actual) = $(".name").failToEither.collect1n("pre").zippers
         assertMultiline(actual, expect)

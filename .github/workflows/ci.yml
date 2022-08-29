@@ -19,10 +19,10 @@ jobs:
 
     steps:
       - name: Git checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Setup Scala
-        uses: japgolly/setup-everything-scala@v2.0
+        uses: japgolly/setup-everything-scala@v3.1
         with:
           java-version: adopt@1.${{ matrix.java }}
 
