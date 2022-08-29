@@ -142,6 +142,9 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
     }
   }
 
+  def fail(n: ActionName)(err: => E): Actions =
+    chooseActionAttempt(n)(_ => Left(err))
+
   def print(f: ROS => Any): Actions =
     print("Print <?>.", f)
 
