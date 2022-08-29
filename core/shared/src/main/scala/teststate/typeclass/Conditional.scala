@@ -14,6 +14,12 @@ object Conditional {
     def unless(f: I => Boolean): M =
       when(!f(_))
 
+    def when(b: => Boolean): M =
+      when(_ => b)
+
+    def unless(b: => Boolean): M =
+      unless(_ => b)
+
     def skip: M =
       when(_ => false)
   }
@@ -38,4 +44,3 @@ object Conditional {
 
   object Implicits extends Implicits
 }
-
