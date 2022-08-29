@@ -20,6 +20,12 @@ trait Exports
   type Dsl[F[_], R, O, S, E] = teststate.dsl.Dsl[F, R, O, S, E]
   val Dsl = teststate.dsl.Dsl
 
+  type ObsAndState[+O, +S] = teststate.data.OS[O, S]
+  val ObsAndState = teststate.data.OS
+
+  type RefObsAndState[+R, +O, +S] = teststate.data.ROS[R, O, S]
+  val RefObsAndState = teststate.data.ROS
+
   type Empty[+E] = teststate.typeclass.Empty[E]
   val Empty = teststate.typeclass.Empty
 
@@ -55,6 +61,9 @@ trait Exports
 
   type Result[+E] = teststate.data.Result[E]
   val Result = teststate.data.Result
+
+  type Failure[+E] = teststate.data.Failure[E]
+  val Failure = teststate.data.Failure
 
   val Retry = teststate.run.Retry
 
