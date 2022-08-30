@@ -56,10 +56,15 @@ abstract class ImplicitsTest1 extends AbstractTest {
   assertType[Arounds   [O, S, E]].map(_ mapO o21).is[Arounds   [O2, S, E]]
   assertType[Invariants[O, S, E]].map(_ mapO o21).is[Invariants[O2, S, E]]
 
-  // when
+  // when (fn)
   assertType[Points    [O, S, E]].map(_.when(_.obs.bool)).is[Points    [O, S, E]]
   assertType[Arounds   [O, S, E]].map(_.when(_.obs.bool)).is[Arounds   [O, S, E]]
   assertType[Invariants[O, S, E]].map(_.when(_.obs.bool)).is[Invariants[O, S, E]]
+
+  // when (bool)
+  assertType[Points    [O, S, E]].map(_.when(true)).is[Points    [O, S, E]]
+  assertType[Arounds   [O, S, E]].map(_.when(true)).is[Arounds   [O, S, E]]
+  assertType[Invariants[O, S, E]].map(_.when(true)).is[Invariants[O, S, E]]
 
   // compose (mono)
   testAA[Points    [O, S, E]](_ & _).is[Points    [O, S, E]]
