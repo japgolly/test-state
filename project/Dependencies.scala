@@ -14,7 +14,7 @@ object Dependencies {
     val microlibs       = "4.2.0"
     val nyaya           = "1.0.0"
     val scala2          = "2.13.8"
-    val scala3          = "3.1.3"
+    val scala3          = "3.2.0"
     val scalaJsDom      = "2.2.0"
     val scalaJsReact    = "2.1.1"
     val selenium        = "3.141.59"
