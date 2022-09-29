@@ -19,7 +19,7 @@ object Dependencies {
     val scalaJsReact    = "2.1.1"
     val selenium        = "3.141.59"
     val sizzle          = "2.3.0"
-    val univEq          = "2.0.0"
+    val univEq          = "2.0.1"
 
     // Internal
     val kindProjector   = "0.13.2"
