@@ -8,7 +8,6 @@ import org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv
 import org.scalajs.sbtplugin.ScalaJSPlugin
 import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import sbtcrossproject.CrossPlugin.autoImport.{crossProject, _}
-import sbtrelease.ReleasePlugin.autoImport._
 import scalajscrossproject.ScalaJSCrossPlugin.autoImport._
 import Dependencies._
 import Lib._
@@ -46,18 +45,15 @@ object TestState {
 
   val commonSettings = ConfigureBoth(
     _.settings(
-      scalaVersion                  := Ver.scala2,
-      crossScalaVersions            := Seq(Ver.scala2, Ver.scala3),
-      scalacOptions                ++= scalacCommonFlags,
-      scalacOptions                ++= scalac2Flags.filter(_ => scalaVersion.value.startsWith("2")),
-      scalacOptions                ++= scalac3Flags.filter(_ => scalaVersion.value.startsWith("3")),
-      Test / scalacOptions         --= Seq("-Ywarn-dead-code"),
-      incOptions                    := incOptions.value.withLogRecompileOnMacro(false),
-      updateOptions                 := updateOptions.value.withCachedResolution(true),
-      releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-      releaseTagComment             := s"v${(ThisBuild / version).value}",
-      releaseVcsSign                := true,
-      libraryDependencies          ++= Seq(Dep.kindProjector).filterNot(_ => scalaVersion.value.startsWith("3")),
+      scalaVersion          := Ver.scala2,
+      crossScalaVersions    := Seq(Ver.scala2, Ver.scala3),
+      scalacOptions        ++= scalacCommonFlags,
+      scalacOptions        ++= scalac2Flags.filter(_ => scalaVersion.value.startsWith("2")),
+      scalacOptions        ++= scalac3Flags.filter(_ => scalaVersion.value.startsWith("3")),
+      Test / scalacOptions --= Seq("-Ywarn-dead-code"),
+      incOptions            := incOptions.value.withLogRecompileOnMacro(false),
+      updateOptions         := updateOptions.value.withCachedResolution(true),
+      libraryDependencies  ++= Seq(Dep.kindProjector).filterNot(_ => scalaVersion.value.startsWith("3")),
   ))
 
   def byScalaVersion[A](f: PartialFunction[(Long, Long), Seq[A]]): Def.Initialize[Seq[A]] =

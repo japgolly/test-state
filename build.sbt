@@ -7,6 +7,8 @@ ThisBuild / shellPrompt   := ((s: State) => Project.extract(s).currentRef.projec
 ThisBuild / startYear     := Some(2016)
 ThisBuild / versionScheme := Some("early-semver")
 
+sonatypeProfileName := "com.github.japgolly"
+
 val root              = TestState.root
 val rootJVM           = TestState.rootJVM
 val rootJS            = TestState.rootJS
