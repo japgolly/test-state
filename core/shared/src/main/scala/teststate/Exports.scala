@@ -67,6 +67,9 @@ trait Exports
 
   val Retry = teststate.run.Retry
 
+  type RunCallbacks[F[_], -R, -O, -S, E] = teststate.run.RunCallbacks[F, R, O, S, E]
+  val RunCallbacks = teststate.run.RunCallbacks
+
   type Test[F[_], R, O, S, E] = teststate.run.Test[F, R, O, S, E]
   val Test = teststate.run.Test
 

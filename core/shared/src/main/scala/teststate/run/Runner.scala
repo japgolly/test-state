@@ -219,8 +219,9 @@ object Runner {
     val empty = apply(History.empty, History.empty)
   }
 
-  def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])(initialState: S, refFn: () => R): F[Report[E]] = {
-    val runner = new Runner[F, R, O, S, E](test.retryPolicy)(test.executionModel, test.attempt)
+  def run[F[_], R, O, S, E](test: Test[F, R, O, S, E])
+                           (initialState: S, refFn: () => R, callbacks: Option[RunCallbacks[F, R, O, S, E]]): F[Report[E]] = {
+    val runner = new Runner[F, R, O, S, E](test.retryPolicy, callbacks)(test.executionModel, test.attempt)
     runner.run(test)(initialState, refFn)
   }
 
@@ -257,13 +258,14 @@ object Runner {
       override def retry = true
     }
   }
-
 }
+
+// =====================================================================================================================
 
 /**
   * Internal use only. Not thread-safe (due to mutable stats). Don't expose.
   */
-private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
+private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callbacks: Option[RunCallbacks[F, R, O, S, E]])
                                             (implicit EM: ExecutionModel[F], attempt: ErrorHandler[E]) {
   import Runner.{ActionResultF => _, _}
 
@@ -486,7 +488,8 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
         EM.pure(p2)
     }
 
-  private def runAction[X](actionFn : ROS => Option[() => F[E Or (O => E Or S)]],
+  private def runAction[X](name     : Name,
+                           actionFn : ROS => Option[() => F[E Or (O => E Or S)]],
                            reObserve: () => F[FE Or (R, O)],
                            ros0     : ROS,
                            preChecks: ROS => ActionResult.PreCheckFail[P] Or X): F[ActionResult[O => E Or S, X]] = {
@@ -496,11 +499,22 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
 
     def go(ros: ROS): ResultF =
       actionFn(ros) match {
-        case Some(act1) =>
+        case Some(act1a) =>
 
           preChecks(ros) match {
             case Right(x) =>
               stats.actions += 1
+
+              val act1: () => F[E Or (O => E Or S)] =
+                if (callbacks.isEmpty)
+                  act1a
+                else
+                  () => EM.flatMap(callbacks.get.aroundAction(ros, name))(complete =>
+                    EM.flatMap(act1a())(result =>
+                      EM.map(complete(result.leftOption))(_ => result)
+                    )
+                  )
+
               def act2(): F[FE Or (O => E Or S)] = EM.map(act1())(_.leftMap(Failure NoCause _))
               def act3(): F[FE Or (O => E Or S)] = EM.recover(act2())
               EM.map(act3()) {
@@ -569,7 +583,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy)
                   case Action.Single(prepareAction) =>
 
                     val actionResultF =
-                      runAction(prepareAction, reObserve, p.ros, ros =>
+                      runAction(name, prepareAction, reObserve, p.ros, ros =>
                         runPreChecks(name, invariants, check, true, p.copy(ros = ros)))
 
                     def fail(f: (H, ROS, HH) => P, h: Name => H) =

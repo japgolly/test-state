@@ -6,7 +6,7 @@ import teststate.core.CoreExports._
 import teststate.core.Types.SackE
 import teststate.core._
 import teststate.data._
-import teststate.run.Observer
+import teststate.run.{Observer, RunCallbacks}
 import teststate.typeclass._
 
 object Dsl {
@@ -565,6 +565,13 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
     override def map[B: Display](f: A => B): ObsAndState[B] =
       new ObsAndState(focusName, f compose fo, f compose fs)
   }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  /** @since 3.2.0 */
+  def runCallbacks: RunCallbacks.Dsl[F, R, O, S, E] =
+      new RunCallbacks.Dsl
+
 }
 
 // TODO Runner should print state & obs on failure, each assertion needn't. It should print S and/or S' depending on the type of check (pre and/or post) that failed.

@@ -274,7 +274,7 @@ final case class TestWithInitialState[F[_], R, O, S, E](test: Test[F, R, O, S, E
     withoutRef.run()
 
   def withRef(ref: R): RunnableTest[F, R, O, S, E] =
-    RunnableTest(test, initialState, () => () => ref)
+    RunnableTest(test, initialState, () => () => ref, None)
 
   /** ref is evaluated once per test run, and reused after that */
   def withLazyRef(ref: => R): RunnableTest[F, R, O, S, E] =
@@ -282,19 +282,24 @@ final case class TestWithInitialState[F[_], R, O, S, E](test: Test[F, R, O, S, E
       lazy val r: R = ref
       val f: () => R = () => r
       f
-    })
+    }, None)
 
   /** ref is evaluated each time it's used */
   def withRefByName(ref: => R): RunnableTest[F, R, O, S, E] =
-    RunnableTest(test, initialState, () => () => ref)
+    RunnableTest(test, initialState, () => () => ref, None)
 
   def withoutRef(implicit ev: Unit =:= R): RunnableTest[F, R, O, S, E] =
-    RunnableTest(test, initialState, () => () => ())
+    RunnableTest(test, initialState, () => () => (), None)
 }
 
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
 
-final case class RunnableTest[F[_], R, O, S, E](test: Test[F, R, O, S, E], initialState: S, refFnFn: () => () => R) {
+final case class RunnableTest[F[_], R, O, S, E](test        : Test[F, R, O, S, E],
+                                                initialState: S,
+                                                refFnFn     : () => () => R,
+                                                callbacks   : Option[RunCallbacks[F, R, O, S, E]],
+                                               ) {
+
   def plan = test.plan
   def recover = test.attempt
   def observer = test.observer
@@ -304,8 +309,14 @@ final case class RunnableTest[F[_], R, O, S, E](test: Test[F, R, O, S, E], initi
     copy(test = test.withRetryPolicy(p))
 
   def trans[G[_]: ExecutionModel](t: F ~~> G): RunnableTest[G, R, O, S, E] =
-    copy(test = test.trans(t))
+    copy(test = test.trans(t), callbacks = callbacks.map(_.trans(t)))
+
+  def withCallbacks(c: RunCallbacks[F, R, O, S, E]): RunnableTest[F, R, O, S, E] =
+    withCallbacks(Some(c))
+
+  def withCallbacks(o: Option[RunCallbacks[F, R, O, S, E]]): RunnableTest[F, R, O, S, E] =
+    copy(callbacks = o)
 
   def run(): F[Report[E]] =
-    Runner.run(test)(initialState, refFnFn())
+    Runner.run(test)(initialState, refFnFn(), callbacks)
 }
