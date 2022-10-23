@@ -13,7 +13,7 @@ object Dependencies {
     val jsoup           = "1.15.3"
     val microlibs       = "4.2.1"
     val nyaya           = "1.1.0"
-    val scala2          = "2.13.9"
+    val scala2          = "2.13.10"
     val scala3          = "3.2.0"
     val scalaJsDom      = "2.3.0"
     val scalaJsReact    = "2.1.1"
