@@ -17,7 +17,7 @@ object Dependencies {
     val scala3          = "3.2.0"
     val scalaJsDom      = "2.3.0"
     val scalaJsReact    = "2.1.1"
-    val selenium        = "3.141.59"
+    val selenium        = "4.6.0"
     val sizzle          = "2.3.0"
     val univEq          = "2.0.1"
 
