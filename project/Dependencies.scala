@@ -23,7 +23,7 @@ object Dependencies {
 
     // Internal
     val kindProjector   = "0.13.2"
-    val monocle         = "3.1.0"
+    val monocle         = "3.2.0"
     val reactJs         = "17.0.2"
     val scalaJsJavaTime = "1.0.0"
     val utest           = "0.8.1"
