@@ -1,11 +1,13 @@
 package teststate
 
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import teststate.Exports._
 import teststate.data.Id
 import utest._
 
+@nowarn
 object StackTest extends TestSuite {
 
   def test[F[_]](name: String)(implicit EM: ExecutionModel[F]): F[Unit] = {

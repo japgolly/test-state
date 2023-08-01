@@ -187,10 +187,10 @@ object DomZippersFastAndSlow {
         override protected val pos = FastAndSlow.this
         override protected val peek = f
         override protected val isCapableFn = FastAndSlow.this.isCapableFn
-        override protected implicit def ffs0(z: () => F[SD]) = z
-        override protected implicit def ffs1(z: DomZippersFastAndSlow[F, () => F[SD], () => F[SD]]) = z
-        override protected implicit def ffs2[B](z: DomZippersFastAndSlow[F, () => F[SD], B]) = z
-        override protected implicit def ffs3[B](z: Vector[DomZippersFastAndSlow[F, () => F[SD], B]]) = z
+        override protected implicit def ffs0(z: () => F[SD]): Dom = z
+        override protected implicit def ffs1(z: DomZippersFastAndSlow[F, () => F[SD], () => F[SD]]): DomZippersFastAndSlow[F, Dom, Dom] = z
+        override protected implicit def ffs2[B](z: DomZippersFastAndSlow[F, () => F[SD], B]): DomZippersFastAndSlow[F, Dom, B] = z
+        override protected implicit def ffs3[B](z: Vector[DomZippersFastAndSlow[F, () => F[SD], B]]): Vector[DomZippersFastAndSlow[F, Dom, B]] = z
       }
     }
 

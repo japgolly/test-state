@@ -40,6 +40,7 @@ object TestState {
 
   def scalac3Flags = Seq(
     "-source:3.0-migration",
+    "-Wvalue-discard",
     "-Ykind-projector",
   )
 
@@ -50,7 +51,7 @@ object TestState {
       scalacOptions        ++= scalacCommonFlags,
       scalacOptions        ++= scalac2Flags.filter(_ => scalaVersion.value.startsWith("2")),
       scalacOptions        ++= scalac3Flags.filter(_ => scalaVersion.value.startsWith("3")),
-      Test / scalacOptions --= Seq("-Ywarn-dead-code"),
+      Test / scalacOptions --= Seq("-Wvalue-discard", "-Ywarn-dead-code"),
       incOptions            := incOptions.value.withLogRecompileOnMacro(false),
       updateOptions         := updateOptions.value.withCachedResolution(true),
       libraryDependencies  ++= Seq(Dep.kindProjector).filterNot(_ => scalaVersion.value.startsWith("3")),
