@@ -10,7 +10,7 @@ object Dependencies {
 
     // Exported
     val cats            = "2.9.0"
-    val jsoup           = "1.16.1"
+    val jsoup           = "1.16.2"
     val microlibs       = "4.2.1"
     val nyaya           = "1.1.0"
     val scala2          = "2.13.11"
