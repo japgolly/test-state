@@ -26,7 +26,7 @@ object Dependencies {
     val monocle         = "3.2.0"
     val reactJs         = "17.0.2"
     val scalaJsJavaTime = "1.0.0"
-    val utest           = "0.8.1"
+    val utest           = "0.8.2"
   }
 
   object Dep {
