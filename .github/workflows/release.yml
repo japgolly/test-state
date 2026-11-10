@@ -7,15 +7,50 @@ on:
 
 jobs:
 
+  ci:
+    name: Scala v${{ matrix.scala }} / Java v${{ matrix.java }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - java: 8
+            scala: 2
+          - java: 17
+            scala: 3
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Scala
+        uses: japgolly/setup-everything-scala@v4.1
+        with:
+          java-version: adoptium@1.${{ matrix.java }}
+          node-version: 26
+
+      - name: Build and test
+        shell: bash
+        run: |
+          sbt++field scala${{ matrix.scala }} \
+            -J-Xmx4G \
+            -J-XX:+UseG1GC \
+            test
+
   release:
+    needs: ci
     runs-on: ubuntu-latest
     steps:
 
       - name: Git checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Setup Scala
-        uses: japgolly/setup-everything-scala@v3.1
+        uses: japgolly/setup-everything-scala@v4.1
+        with:
+          java-version: adoptium@1.8
+          node-version: 26
 
       - name: Release
         run: sbt ci-release
@@ -26,4 +61,4 @@ jobs:
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
