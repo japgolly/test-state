@@ -84,6 +84,12 @@ object SeleniumExample2 extends TestSuite {
   }
 
   override def tests =  Tests {
-    testInParallel()
+
+    // This test is disabled because Google no longer returns the result count in its page results.
+    // I tried updating this in Nov 2026 but both Google and DuckDuckGo now respond with capture checks.
+    //
+    // The code is left in place here for demonstration purposes.
+    //
+    // testInParallel()
   }
 }
