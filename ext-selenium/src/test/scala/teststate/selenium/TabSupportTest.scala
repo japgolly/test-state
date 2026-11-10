@@ -78,7 +78,17 @@ object TabSupportTest extends TestSuite {
     }
 
     "firefox" - {
-      test(newFirefox(), "https://www.google.com/?tab=" + _)
+      try
+        test(newFirefox(), "https://www.google.com/?tab=" + _)
+      catch {
+        case e: org.openqa.selenium.WebDriverException =>
+          if (!CI && e.getMessage.contains("Cannot find firefox binary")) {
+            println("\u001b[1;33mSkipping Firefox test because Firefox is not installed.\u001b[0m")
+            e.printStackTrace()
+          } else {
+            throw e
+          }
+      }
     }
   }
 }
