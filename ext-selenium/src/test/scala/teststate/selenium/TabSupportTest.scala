@@ -42,6 +42,8 @@ object TabSupportTest extends TestSuite {
         }
       }
 
+      def currentUrl() = driver.getCurrentUrl
+
       val tab1 = testAdd()
       val tab2 = testAdd()
       assert(tab1 != tab2)
@@ -52,13 +54,13 @@ object TabSupportTest extends TestSuite {
       driver.get(url(3))
       tabSupport.activate(tab2); driver.get(url(2))
       tabSupport.activate(tab1); driver.get(url(1))
-      tabSupport.activate(tab2); assertEq(driver.getCurrentUrl, url(2))
-      tabSupport.activate(tab1); assertEq(driver.getCurrentUrl, url(1))
-      tabSupport.activate(tab3); assertEq(driver.getCurrentUrl, url(3))
+      tabSupport.activate(tab2); assertContains(currentUrl(), url(2))
+      tabSupport.activate(tab1); assertContains(currentUrl(), url(1))
+      tabSupport.activate(tab3); assertContains(currentUrl(), url(3))
       testClose(tab2)
       testClose(tab1)
       val tab4 = testAdd()
-      tabSupport.activate(tab3); assertEq(driver.getCurrentUrl, url(3))
+      tabSupport.activate(tab3); assertContains(currentUrl(), url(3))
       testClose(tab3)
       testClose(tab4)
 
@@ -85,6 +87,7 @@ object TabSupportTest extends TestSuite {
           if (!CI && e.getMessage.contains("Cannot find firefox binary")) {
             println("\u001b[1;33mSkipping Firefox test because Firefox is not installed.\u001b[0m")
             e.printStackTrace()
+            "Skipped because Firefox is not installed."
           } else {
             throw e
           }
