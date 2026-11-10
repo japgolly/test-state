@@ -31,9 +31,9 @@ object MultiBrowserTest extends TestSuite {
       .afterEachUse(_ => afterEach += 1)
     assertCB(0, 0, 0, 0) // tab usage is lazy
     assertEq("Tab count before new tab is used", tabCount(), 1)
-    assertEq(t.use(_.getCurrentUrl), google)
+    assertContains(t.use(_.getCurrentUrl), google) // assertContains because https://www.google.com/?zx=1794277290288
     assertCB(1, 1, 1, 1)
-    assertEq(t.use(_.getCurrentUrl), google)
+    assertContains(t.use(_.getCurrentUrl), google)
     assertCB(1, 1, 2, 2)
     assertEq("Tab count after new tab is used", tabCount(), 2)
     assertEq("Tab close when effective", t.closeTab(), true)
