@@ -47,12 +47,7 @@ object SeleniumExample extends TestSuite {
     report.assert()
   }
 
-  override def tests = CI match {
-
-    case None => Tests {
-      runTest()
-    }
-
-    case Some(_) => Tests {}
+  override def tests = Tests {
+    runTest()
   }
 }

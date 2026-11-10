@@ -4,8 +4,8 @@ import java.io.File
 
 object SeleniumTestUtil {
 
-  lazy val CI: Option[String] =
-    Option(System.getProperty("CI")).map(_.toLowerCase.trim).filter(_.nonEmpty)
+  lazy val CI: Boolean =
+    Option(System.getProperty("CI")).exists(_.nonEmpty)
 
   lazy val baseDirectory: File = {
     val p = "sbt.baseDirectory"

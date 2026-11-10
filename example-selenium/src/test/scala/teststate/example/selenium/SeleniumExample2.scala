@@ -83,12 +83,7 @@ object SeleniumExample2 extends TestSuite {
     results.foreach(_.assert(true))
   }
 
-  override def tests = CI match {
-
-    case None => Tests {
-      testInParallel()
-    }
-
-    case Some(_) => Tests {}
+  override def tests =  Tests {
+    testInParallel()
   }
 }

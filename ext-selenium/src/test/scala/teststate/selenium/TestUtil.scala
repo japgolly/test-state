@@ -5,16 +5,14 @@ import org.openqa.selenium.firefox.{FirefoxDriver, FirefoxOptions}
 
 object TestUtil extends japgolly.microlibs.testutil.TestUtil {
 
-  lazy val CI: Option[String] =
-    Option(System.getProperty("CI")).map(_.toLowerCase.trim).filter(_.nonEmpty)
+  lazy val CI: Boolean =
+    Option(System.getProperty("CI")).exists(_.nonEmpty)
 
   val google = "https://www.google.com/"
 
   def newChrome() = {
     val options = new ChromeOptions()
     options.setHeadless(true)
-    if (CI.contains("travis"))
-      options.addArguments("--no-sandbox")
     new ChromeDriver(options)
   }
 

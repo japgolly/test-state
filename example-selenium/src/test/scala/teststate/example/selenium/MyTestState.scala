@@ -14,17 +14,13 @@ object MyTestState
     with teststate.selenium.Exports
     with teststate.domzipper.selenium.Exports {
 
-  lazy val CI: Option[String] =
-    Option(System.getProperty("CI")).map(_.toLowerCase.trim).filter(_.nonEmpty)
+  lazy val CI: Boolean =
+    Option(System.getProperty("CI")).exists(_.nonEmpty)
 
   def newChrome() = {
     val options = new ChromeOptions()
     options.setHeadless(true)
     options.setPageLoadStrategy(PageLoadStrategy.NONE)
-
-    // Travis CI needs this
-    if (CI.contains("travis"))
-      options.addArguments("--no-sandbox")
 
     val driver = new ChromeDriver(options)
 

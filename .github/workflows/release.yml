@@ -36,6 +36,7 @@ jobs:
           sbt++field scala${{ matrix.scala }} \
             -J-Xmx4G \
             -J-XX:+UseG1GC \
+            -DCI=1 \
             test
 
   release:
