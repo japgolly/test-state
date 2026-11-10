@@ -4,7 +4,6 @@ import japgolly.microlibs.name_fn._
 import teststate.core.Action.{Actions => _, _}
 import teststate.core.CoreExports._
 import teststate.data._
-import teststate.typeclass.Profunctor.ToOps._
 import teststate.typeclass._
 
 // Applies to: Inner, Outer, Sack

@@ -9,24 +9,24 @@ object Dependencies {
   object Ver {
 
     // Exported
-    val cats            = "2.9.0"
-    val jsoup           = "1.16.1"
-    val microlibs       = "4.2.1"
-    val nyaya           = "1.1.0"
-    val scala2          = "2.13.11"
-    val scala3          = "3.3.0"
-    val scalaJsDom      = "2.6.0"
-    val scalaJsReact    = "2.1.1"
+    val cats            = "2.13.0"
+    val jsoup           = "1.24.1"
+    val microlibs       = "4.3.0"
+    val nyaya           = "1.2.0"
+    val scala2          = "2.13.18"
+    val scala3          = "3.3.9"
+    val scalaJsDom      = "2.8.1"
+    val scalaJsReact    = "2.1.4"
     val selenium        = "3.141.59"
     val sizzle          = "2.3.0"
-    val univEq          = "2.0.1"
+    val univEq          = "2.1.0"
 
     // Internal
-    val kindProjector   = "0.13.2"
-    val monocle         = "3.2.0"
+    val kindProjector   = "0.13.4"
+    val monocle         = "3.3.0"
     val reactJs         = "17.0.2"
     val scalaJsJavaTime = "1.0.0"
-    val utest           = "0.8.1"
+    val utest           = "0.8.4"
   }
 
   object Dep {
