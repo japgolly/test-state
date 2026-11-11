@@ -416,7 +416,11 @@ object DomZipper {
 
   sealed trait Capability
   object Capability {
-    case object RadioButtonChecked extends Capability
-    val all: List[Capability] = RadioButtonChecked ::Nil
+
+    /** The capability to check whether the element is checked (for checkboxes and radio buttons). */
+    case object Checked extends Capability
+
+    val all: List[Capability] =
+      Checked :: Nil
   }
 }

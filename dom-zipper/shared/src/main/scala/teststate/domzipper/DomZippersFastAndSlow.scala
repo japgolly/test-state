@@ -97,11 +97,11 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
   override def value     = fast.value
 
   override def checked =
-    if (fast.isCapable(DomZipper.Capability.RadioButtonChecked))
+    if (fast.isCapable(DomZipper.Capability.Checked))
       fast.checked
     else
-      F.flatMap(fast.matches("input[type=radio]")) {
-        case true => F.flatMap(slow())(_.checked)
+      F.flatMap(fast.matches("input[type=checkbox], input[type=radio]")) {
+        case true  => F.flatMap(slow())(_.checked)
         case false => fast.checked
       }
 

@@ -116,6 +116,16 @@ object FastDomZipperSeleniumTest extends TestSuite {
     "radioT" - assertEq($("input[type=radio]", 1 of 2).checked, true)
     "radioF" - assertEq($("input[type=radio]", 2 of 2).checked, false)
 
+    "checkboxLive" - {
+      val cb = $("input[type=checkbox]", 1 of 2)
+      assertEq(cb.checked, true)
+      cb.dom().click()
+      try
+        assertEq(cb.checked, false)
+      finally
+        cb.dom().click()
+    }
+
     "slow" - {
       def outerHtml(z: FastDomZipperSelenium) = htmlScrub.run(z.dom().getAttribute("outerHTML"))
       "outerHTML" - assertEq(outerHtml(name), nameInputHtml)
