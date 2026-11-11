@@ -1,15 +1,13 @@
 package teststate
 
 import cats.instances.string._
-import japgolly.microlibs.name_fn._
-import teststate.Exports._
 import teststate.TestUtil._
 import teststate.core._
-import teststate.core.NamedOps.ToOps._
 import teststate.data._
 import utest._
 
 object NamedOpsTest extends TestSuite {
+  import teststate.Exports._
 
   override def tests = Tests {
 

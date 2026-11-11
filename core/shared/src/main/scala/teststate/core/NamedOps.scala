@@ -34,7 +34,6 @@ object NamedOps {
   }
 
   object ToOps extends ToOps
-  import ToOps._
 
   trait Instances {
 
