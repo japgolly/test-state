@@ -1,6 +1,6 @@
 package teststate
 
-import teststate.Exports.{testStateAssertionSettings => _, _}
+import teststate.Exports._
 import teststate.TestUtil._
 import teststate.core.Around
 import teststate.data._
@@ -70,6 +70,15 @@ object DslTest extends TestSuite {
         "Counter shouldn't decrease by 2.",
         "Counter shouldn't decrease by 2.")
 //        "Counter shouldn't be 5.")
+    }
+
+    "testAround" - {
+      val dsl = Dsl[Unit, Unit, Int]
+      val inc = dsl.action("inc")(_ => ()).updateState(_ + 1)
+      val check = dsl.testAround("inc by 1", (before, after) => s"${before.state} -> ${after.state}")(
+        (before, after) => after.state - before.state == 1)
+      val report = Plan.action(inc +> check).testU.withInitialState(10).runU()
+      report.assert()
     }
 
   }

@@ -95,7 +95,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
     testAround(name, strErrorFn2)(testFn)
 
   def testAround(name: AroundName, error: (OS, OS) => E)(testFn: (OS, OS) => Boolean): Arounds =
-    around(name)(identity)((x, y) => if (testFn(x, y)) None else Some(error(x, y)))
+    around(name)(identity)((after, before) => if (testFn(before, after)) None else Some(error(before, after)))
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

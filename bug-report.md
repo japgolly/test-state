@@ -4,28 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 4. `Dsl.testAround` passes `(after, before)` in reverse order instead of `(before, after)` (`Dsl.scala`)
-
-* **Location:** `core/shared/src/main/scala/teststate/dsl/Dsl.scala` (lines 94–98)
-* **Code:**
-  ```scala
-  def around[A](name: NameFn[BeforeAfter[OS]])(before: OS => A)(test: (OS, A) => Option[E]): Arounds =
-    Around.DeltaA(name, os => Passed(before(os)), test)
-
-  def testAround(name: NameFn[BeforeAfter[OS]])(testFn: (OS, OS) => Boolean, error: (OS, OS) => E = null): Arounds = {
-    val err = Option(error).getOrElse(defaultErrorBA)
-    around(name)(identity)((x, y) => if (testFn(x, y)) None else Some(err(x, y)))
-  }
-  ```
-* **Problem:**
-  In `Around.DeltaA` (and `Dsl.around`), the `test` function has signature `(OS, A) => Option[E]`, where the first parameter is the **post-action** (`after`) `OS` and the second parameter `A` is the value captured **pre-action** (`before(os)`) — see `Runner.scala` line 466: `c.check.test(ros2, a)`.
-  In `FocusValue.testAround` (lines 221–225), this is handled by calling `testFn(a1, a2)` where `a1` is `before` and `a2` is `after`.
-  However, in top-level `Dsl.testAround` (line 97), `around(name)(identity)` binds `x` to the *after* `OS` and `y` to the *before* `OS`, and then calls `testFn(x, y)` and `err(x, y)` with `(after, before)`.
-* **Impact:**
-  Any assertion written with `dsl.testAround` receives `(after, before)` instead of `(before, after)` in both its predicate `testFn` and its error generator `error`.
-
----
-
 ## 5. `RunCallbacks.aroundAction` completion callback is skipped when an action throws an exception (`Runner.scala`)
 
 * **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 508–520)
