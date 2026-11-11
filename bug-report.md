@@ -4,39 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 9. Copy-paste bug in `TestStateNFEBA.thruAfter` and broken `NamedOps` for `Invariant.Delta`, `NamedError`, and `Sack.CoProduct` (`core/package.scala`, `checks.scala`, `NamedOps.scala`)
-
-* **Location:**
-  * `core/shared/src/main/scala/teststate/core/package.scala` (lines 13–19)
-  * `core/shared/src/main/scala/teststate/core/checks.scala` (lines 137–143)
-  * `core/shared/src/main/scala/teststate/core/NamedOps.scala` (lines 48–64)
-* **Code:**
-  ```scala
-  // core/package.scala
-  implicit final class TestStateNFEBA[A](private val f: NameFn[BeforeAfter[A]] => NameFn[BeforeAfter[A]]) extends AnyVal {
-    def thruBefore: NameFn[A] => NameFn[A] =
-      n => f(n.cmap(_.before)).cmap(BeforeAfter.same)
-
-    def thruAfter: NameFn[A] => NameFn[A] =
-      n => f(n.cmap(_.before)).cmap(BeforeAfter.same)
-  }
-
-  // checks.scala
-  implicit def invariantInstanceNamedOps[O, S, E]: NamedOps[Invariant[O, S, E], OS[O, S]] =
-    NamedOps((s, f) => s match {
-      case Point(x) => Point(x renameBy f)
-      case Delta(x) => Delta(x renameBy (n => f(n.cmap(BeforeAfter.same)).cmap(_.before)))
-    })
-  ```
-* **Problem:**
-  1. `TestStateNFEBA.thruAfter` is an exact copy-paste of `thruBefore` — it uses `_.before` instead of `_.after`.
-  2. In `invariantInstanceNamedOps`, renaming an `Invariant.Delta` transforms `NameFn[BeforeAfter[OS]]` via `n => f(n.cmap(BeforeAfter.same)).cmap(_.before)`. When the renamed `NameFn` is later invoked with `Some(BeforeAfter(before, after))`, `.cmap(_.before)` extracts `before` and `.cmap(BeforeAfter.same)` turns it into `BeforeAfter(before, before)`, completely discarding the `after` state when formatting the invariant's name.
-  3. In `NamedOps.scala`:
-     * `namedErrorOrXInstanceNamedOps` (line 62) matches `case l @ Left(_) => l` without renaming the `Name` inside `NamedError(name, err)`.
-     * `sackInstanceNamedOps` (line 51) and `sackInstanceNamedOpsBA` (line 58) match `case CoProduct(n, p) => CoProduct(f(n), p)` without propagating the rename into the inner `Sack` returned by `p(b)`.
-
----
-
 ## 10. `DomZipperBase.child(name, sel, which)` ignores `name` on success and produces wrong error on 0 matches (`DomZipperBase.scala`)
 
 * **Location:** `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipperBase.scala` (lines 61–73)
