@@ -4,29 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 2. `ExtScalaJsReact.executionModalAsyncCallback.recover` does not catch exceptions or failed `AsyncCallback`s (`ExtScalaJsReact.scala`)
-
-* **Location:** `ext-scalajs-react/src/main/scala/teststate/ExtScalaJsReact.scala` (lines 65–76)
-* **Code:**
-  ```scala
-  //  implicit val executionModalCallback: ExecutionModel[CallbackTo] = ...
-
-    val executionModalAsyncCallback: ExecutionModel[AsyncCallback] =
-      new ExecutionModel[AsyncCallback] {
-        // ...
-        override def recover[E, A](f: => F[Or[Failure[E], A]])(implicit attempt: ErrorHandler[E]): F[Or[Failure[E], A]] =
-          f.map(o => attempt.recover(o, teststate.data.Left(_)))
-      }
-  ```
-* **Problem:**
-  1. `f.map(...)` evaluates `f` outside any `try`/`catch` or `AsyncCallback.suspend` / `.attemptTry`. If evaluating `f` throws synchronously, or if the `AsyncCallback` itself fails with an exception, `.map` is never invoked.
-  2. When `.map(o => ...)` *is* invoked, `o` is already a strict, evaluated value of type `Or[Failure[E], A]`. Calling `attempt.recover(o, ...)` (which executes `try a catch { case t: Throwable => ... }` on the already-evaluated argument `o`) is a complete no-op.
-  3. The value is also misspelled `executionModalAsyncCallback` (`Modal` instead of `Model`, matching the commented-out `executionModalCallback` on line 21) and is missing the `implicit` modifier, so it is not automatically picked up for `AsyncCallback` tests.
-* **Impact:**
-  Uncaught exceptions thrown during actions or observations in `AsyncCallback` tests are not caught or converted into `Failure[E]` test failures; instead, they crash or fail the `AsyncCallback` unhandled.
-
----
-
 ## 3. `Mutex.monadic` uses thread-bound `ReentrantLock` across async `ExecutionModel` boundaries (`Mutex.scala`)
 
 * **Location:** `ext-selenium/src/main/scala/teststate/selenium/internal/Mutex.scala` (lines 11–31)

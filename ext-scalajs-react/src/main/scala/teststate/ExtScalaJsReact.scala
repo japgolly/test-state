@@ -72,7 +72,9 @@ trait ExtScalaJsReact extends domzipper.Exports {
         AsyncCallback.tailrec(a)(a => if (stop(a)) AsyncCallback.pure(Right(a)) else rec(a).map(Left(_)))
 
       override def recover[E, A](f: => F[Or[Failure[E], A]])(implicit attempt: ErrorHandler[E]): F[Or[Failure[E], A]] =
-        f.map(o => attempt.recover(o, teststate.data.Left(_)))
+        attempt.recover(
+          f.attempt.map(_.fold(t => teststate.data.Left(attempt(t)), identity)),
+          t => AsyncCallback.pure(teststate.data.Left(t)))
 
       override val now: F[Instant] =
         AsyncCallback.delay(Instant.now())
