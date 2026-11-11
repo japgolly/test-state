@@ -4,33 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 3. `Mutex.monadic` uses thread-bound `ReentrantLock` across async `ExecutionModel` boundaries (`Mutex.scala`)
-
-* **Location:** `ext-selenium/src/main/scala/teststate/selenium/internal/Mutex.scala` (lines 11–31)
-* **Code:**
-  ```scala
-  private[selenium] final class Mutex {
-    private val lock = new ReentrantLock()
-    // ...
-    def monadic[F[_], A](ma: => F[A])(implicit EM: ExecutionModel[F]): F[A] = {
-      val unlock = EM.point(lock.unlock())
-      def go: F[A] =
-        EM.flatMap(EM.point(lock.tryLock(30, TimeUnit.MILLISECONDS))) {
-          case true  => EM.doFinally(ma, unlock)
-          case false => EM.flatMap(EM.schedule(go, Wait))( identity)
-        }
-      go
-    }
-  }
-  ```
-* **Problem:**
-  `java.util.concurrent.locks.ReentrantLock` enforces thread-ownership semantics (`Thread.currentThread()`).
-  `Mutex.monadic` is used by `Tab.monadic` and `Dsl.withSeleniumTab` to guard `WebDriver` tab switching across arbitrary `ExecutionModel[F]` contexts (such as `ExecutionModel.scalaFuture`).
-  1. **Cross-thread unlock failure:** In `ExecutionModel[Future]`, `lock.tryLock(...)` acquires the lock on thread $T_1$. When `ma: Future[A]` completes, `unlock = EM.point(lock.unlock())` schedules `Future(lock.unlock())` on the `ExecutionContext`. Whenever `unlock` runs on a thread $T_2 \neq T_1$, `ReentrantLock.unlock()` throws `java.lang.IllegalMonitorStateException` and the lock is **never released**, permanently deadlocking all subsequent tab operations on that browser.
-  2. **Accidental reentrancy across concurrent tasks:** Because `ReentrantLock` is reentrant per thread, once thread $T_1$ acquires the lock and initiates an asynchronous `Future` inside `ma`, $T_1$ returns to the thread pool while the lock is still held by $T_1$. If $T_1$ picks up another tab's `Mutex.monadic` task for the same browser, `lock.tryLock(...)` immediately returns `true` (incrementing the hold count to 2 on $T_1$), allowing two concurrent `Tab` tasks to interleave `WebDriver` tab switches on the same browser instance.
-
----
-
 ## 4. `Dsl.testAround` passes `(after, before)` in reverse order instead of `(before, after)` (`Dsl.scala`)
 
 * **Location:** `core/shared/src/main/scala/teststate/dsl/Dsl.scala` (lines 94–98)

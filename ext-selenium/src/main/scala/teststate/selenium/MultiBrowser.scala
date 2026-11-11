@@ -132,14 +132,13 @@ object MultiBrowser {
 
             val setup =
               if (onNewDriverT eq doNothing1) None else Some {
-                val setupTab    = createTabWithoutLocking(browserIndex)
-                val setupFn     = onNewDriverT
-                val browserLock = mutex.lock
+                val setupTab = createTabWithoutLocking(browserIndex)
+                val setupFn  = onNewDriverT
                 // Lock browser so that no one else can create a new tab in this browser before setup completes
-                browserLock.lock()
+                mutex.lock()
                 () => {
                   try setupFn(setupTab)
-                  finally browserLock.unlock()
+                  finally mutex.unlock()
                   // closeTab() will attempt to acquire the outer lock through the afterClosed callback so the
                   // browser lock must be released beforehand to maintain lock-ordering (i.e. outer before browser)
                   setupTab.closeTab()
