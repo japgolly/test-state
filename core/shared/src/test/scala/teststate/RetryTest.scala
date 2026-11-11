@@ -346,11 +346,21 @@ object RetryTest extends TestSuite {
       }
 
       "state" - {
-        val plan = Plan.action(
-          (failOnInc >> incFailOnInc >> incNormal).updateState(_ + 1) >>
-          dsl.action("blah")(_ => ()) +> dsl.focus("state").value(_.state).assert(1)
-        )
-        assertRetryWorks(plan)
+        val state = dsl.focus("state").value(_.state)
+        "single" - {
+          val plan = Plan.action(
+            (failOnInc >> incFailOnInc >> incNormal).updateState(_ + 1) >>
+            dsl.action("blah")(_ => ()) +> state.assert(1)
+          )
+          assertRetryWorks(plan)
+        }
+        "group" - {
+          val plan = Plan.action(
+            queueUpdate.updateState(_ + 1).group("grp") +> value.assert(123) >>
+            dsl.action("blah")(_ => ()) +> state.assert(1)
+          )
+          assertRetryWorks(plan)
+        }
       }
     }
 

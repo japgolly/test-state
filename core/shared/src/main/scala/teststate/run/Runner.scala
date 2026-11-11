@@ -629,7 +629,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
 
                         def reObserveAndPostCheck: F[(ROS, HH)] =
                           EM.map(reObserve()) {
-                            case Right((r, o)) => runPostChecks(ROS(r, o, ros.state))
+                            case Right((r, o)) => runPostChecks(ROS(r, o, childResults.ros.state))
                             case Left(_)       => initialPostCheck
                           }
 

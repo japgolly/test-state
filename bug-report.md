@@ -4,40 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 1. `Action.Group` post-condition retry overwrites post-group state with pre-group state (`Runner.scala`)
-
-* **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 619–640)
-* **Code:**
-  ```scala
-  case Action.Group(actions, cond) =>
-    // ...
-    def run(): F[SubTestResult[R, O, S, E]] =
-      EM.flatMap(start(actions, ros))(childResults =>
-        if (childResults.failed)
-          EM.point(childResults)
-        else {
-          val initialPostCheck =
-            () => EM.point(runPostChecks(childResults.ros))
-
-          val reObserveAndPostCheck =
-            (r: R, o: O) => EM.point(runPostChecks(ROS(r, o, ros.state)))
-
-          val postChecksWithRetry =
-            retryPostCheck(initialPostCheck)(reObserveAndPostCheck)
-
-          EM.map(postChecksWithRetry)(x => SubTestResult(x._1, childResults.state.copy(failed = x._2)))
-        }
-      )
-  ```
-* **Problem:**
-  When an `Action.Group` finishes running its inner `actions`, `childResults.ros.state` contains the updated test state `S` produced by the actions inside the group, whereas `ros.state` is the state *before* the group started (`p.ros.state`).
-  `initialPostCheck` correctly passes `childResults.ros` to `runPostChecks`. However, on retry (`reObserveAndPostCheck`), line 632 constructs `ROS(r, o, ros.state)` using the stale pre-group `ros.state` instead of `childResults.ros.state`.
-* **Impact:**
-  1. Whenever a group's post-condition or invariant requires a retry (`Retry.Scope.PostConditions`), all retried post-conditions and invariants are evaluated against the stale pre-group state `ros.state`.
-  2. Worse, `runPostChecks` returns the `ROS` passed to it (`x._1`), which `onComplete` stores as the new runner state (`p.copy(ros = ros2, ...)` at line 427). Thus, a single retry of a group's post-conditions silently wipes out all state modifications (`updateState` / `modState`) performed by every action inside the group for the remainder of the entire test.
-
----
-
 ## 2. `ExtScalaJsReact.executionModalAsyncCallback.recover` does not catch exceptions or failed `AsyncCallback`s (`ExtScalaJsReact.scala`)
 
 * **Location:** `ext-scalajs-react/src/main/scala/teststate/ExtScalaJsReact.scala` (lines 65–76)
