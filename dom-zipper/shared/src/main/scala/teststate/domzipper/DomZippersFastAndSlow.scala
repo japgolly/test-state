@@ -94,7 +94,12 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
   override def tagName   = fast.tagName
   override def innerText = fast.innerText
   override def classes   = fast.classes
-  override def value     = fast.value
+
+  override def value =
+    if (fast.isCapable(DomZipper.Capability.Value))
+      fast.value
+    else
+      F.flatMap(slow())(_.value)
 
   override def checked =
     if (fast.isCapable(DomZipper.Capability.Checked))

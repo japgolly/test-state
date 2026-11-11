@@ -420,7 +420,10 @@ object DomZipper {
     /** The capability to check whether the element is checked (for checkboxes and radio buttons). */
     case object Checked extends Capability
 
+    /** The capability to check whether the element has a value (for input fields). */
+    case object Value extends Capability
+
     val all: List[Capability] =
-      Checked :: Nil
+      Checked :: Value :: Nil
   }
 }

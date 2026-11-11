@@ -26,7 +26,6 @@ This report details bugs, defects, and problems identified across the `test-stat
   ```
 * **Problem:**
   In browsers, user interactions (such as typing into an `<input>` or `<textarea>`, or choosing an `<option>` in a `<select>`) update the live DOM properties (`.value`, `.selected`), **not** the initial HTML attributes serialized in `outerHTML`.
-  2. `DomZippersFastAndSlow.value` always delegates to `fast.value` (Jsoup's `val()`), which only sees the static `value="..."` HTML attribute from `outerHTML` and misses any text typed into `<input>` or `<textarea>` via `sendKeys`.
   3. `DomZipper.selectedOption` queries `collect("option[selected]")`, which matches the static `[selected]` HTML attribute rather than the live `selected` DOM property (which is why the test in `DomZipperJsTest.scala` line 85 had to be commented out).
 
 ---

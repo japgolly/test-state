@@ -126,6 +126,18 @@ object FastDomZipperSeleniumTest extends TestSuite {
         cb.dom().click()
     }
 
+    "valueLive" - {
+      val n = name
+      n.dom().sendKeys(" Law Firm")
+      try {
+        assertEq(n.dom().getAttribute("value"), "Bob Loblaw Law Firm")
+        assertEq(n.value, "Bob Loblaw Law Firm")
+      } finally {
+        n.dom().clear()
+        n.dom().sendKeys("Bob Loblaw")
+      }
+    }
+
     "slow" - {
       def outerHtml(z: FastDomZipperSelenium) = htmlScrub.run(z.dom().getAttribute("outerHTML"))
       "outerHTML" - assertEq(outerHtml(name), nameInputHtml)

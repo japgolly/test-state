@@ -70,7 +70,9 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     new DomZipperSeleniumF(pos, peek)
 
   override def isCapable(c: DomZipper.Capability) = c match {
-    case DomZipper.Capability.Checked => true
+    case DomZipper.Capability.Checked
+       | DomZipper.Capability.Value
+       => true
   }
 
   override def unmap =
