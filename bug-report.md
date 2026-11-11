@@ -4,31 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 10. `DomZipperBase.child(name, sel, which)` ignores `name` on success and produces wrong error on 0 matches (`DomZipperBase.scala`)
-
-* **Location:** `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipperBase.scala` (lines 61–73)
-* **Code:**
-  ```scala
-  final override def child[ sel: CssSel](name: String, sel: sel, which: MofN): Next = {
-    val results = if (sel.css.isEmpty) children1n else children1n(sel)
-    F.flatMap(results.zippers) { zippers =>
-      def q = if (name.isEmpty) "Q" else s"$name q"
-      def desc = if (sel.css.isEmpty) ">*" else sel.css
-      if (zippers.isEmpty)
-        F.fail(s"${q}uery failed: [$desc]. Expected ${which.n} results, not 0.")
-      else if (zippers.length != which.n)
-        F.fail(s"${q}uery failed: [$desc]. Expected ${which.n} results, not ${zippers.length}.")
-      else
-        F.point(zippers(which.m - 1))
-    }
-  }
-  ```
-* **Problem:**
-  1. Line 62 calls `children1n` / `children1n(sel)` instead of `children0n` / `children0n(sel)`. When 0 child elements match, `results.zippers` fails inside `Container1N` with `"Query failed: [>*]. Expected [1,n] results, not 0."` before reaching line 65. Consequently, the `if (zippers.isEmpty)` branch on lines 65–66 is dead code, and both the custom `name` and expected count `which.n` are omitted from the failure message.
-  2. When `zippers.length == which.n` succeeds (line 71), it returns `zippers(which.m - 1)` whose `Layer` was created by `children1n` with `name = "collect"`, discarding the `name` parameter passed to `child(name, sel, which)`.
-
----
-
 ## 11. `DomZippersFastAndSlow.cmap` evaluates `colS.zippers` on the unfiltered collection, breaking `.filter` on `collect01` / `children01` (`DomZippersFastAndSlow.scala`)
 
 * **Location:** `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZippersFastAndSlow.scala` (lines 45–61)

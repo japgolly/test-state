@@ -113,6 +113,15 @@ object DomZipperJsoupTest extends TestSuite {
     "child" - {
       "sole" - assertEq($("form").child("h3").innerText, "HI")
       "nOfM" - assertEq($("form").child("div", 2 of 3)("h3").innerText, "EH??")
+      "nameOnSuccess" - {
+        val c = $("form").child("FirstDiv", "div", 1 of 3)
+        assertContains(c.describe, "FirstDiv")
+      }
+      "err0" - {
+        val Left(actual) = $("form").failToEither.child("MyButton", "button")
+        val expect = "MyButton query failed: [> button]. Expected 1 results, not 0."
+        assertContains(actual, expect)
+      }
     }
 
     "children" - {
