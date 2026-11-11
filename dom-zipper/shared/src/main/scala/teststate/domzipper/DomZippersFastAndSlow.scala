@@ -80,6 +80,11 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
   override def scrubHtml(f: HtmlScrub) =
     bimap(_.scrubHtml(f), _.scrubHtml(f))
 
+  override def startConsistencyCheck(): () => F[Unit] = {
+    val c = slow().map(_.startConsistencyCheck())
+    () => c.flatMap(_())
+  }
+
   protected override def _outerHTML = fast.outerHTML
   protected override def _innerHTML = fast.innerHTML
 

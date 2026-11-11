@@ -6,6 +6,7 @@ import cats.instances.string._
 import cats.instances.vector._
 import japgolly.microlibs.testutil.TestUtil._
 import org.jsoup.Jsoup
+import teststate.domzipper.{DomZippersFastAndSlow, ErrorHandler}
 import teststate.domzipper.jsoup.Exports._
 import utest._
 
@@ -150,6 +151,20 @@ object DomZipperJsoupTest extends TestSuite {
         val Left(actual) = $("form")("select", 2 of 2).failToEither.collect01("option").zippers
         assertMultiline(actual, expect)
       }
+    }
+
+    "fastAndSlowConsistency" - {
+      implicit def errorHandler = ErrorHandler.ReturnOption
+      val slowDoc = Jsoup.parse("<div><h3>Before</h3></div>")
+      val slow = DomZipperJsoup.failToOption(slowDoc)
+      val fast = DomZipperJsoup.failToOption.parseHtml(slow.outerHTML)
+      val both = DomZippersFastAndSlow[Option, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fast, slow)
+
+      val res = both.ensureConsistency { d =>
+        slowDoc.selectFirst("h3").text("After") // mutate live 'slow' DOM mid-observation
+        d.innerText
+      }
+      assertEq(res, None)
     }
 
   }

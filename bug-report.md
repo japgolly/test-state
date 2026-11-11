@@ -4,35 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 6. `startConsistencyCheck()` and `ensureConsistency()` are a no-op on `FastDomZipperSelenium` (`DomZipper.scala`, `DomZippersFastAndSlow.scala`)
-
-* **Location:**
-  * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipper.scala` (lines 53–71)
-  * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZippersFastAndSlow.scala` (line 83)
-  * `doc/SELENIUM.md` (lines 76–96) and `example-selenium/src/test/scala/teststate/example/selenium/SeleniumExample2.scala` (lines 17–19)
-* **Code:**
-  ```scala
-  // DomZipper.scala
-  final def startConsistencyCheck(): ConsistencyCheck = {
-    val initial = outerHTML
-    F.map(initial)(i => () => {
-      val current = outerHTML
-      F.flatMap(current)(c =>
-        if (c == i) F.pass else F.fail("DOM changed during observation"))
-    })
-  }
-
-  // DomZippersFastAndSlow.scala
-  override protected def _outerHTML: F[String] = fast.outerHTML
-  ```
-* **Problem:**
-  `doc/SELENIUM.md` and `SeleniumExample2.scala` specifically instruct users to call `.startConsistencyCheck()` / `.ensureConsistency(...)` on `FastDomZipperSelenium` so that `test-state` can detect if the browser DOM changes mid-observation and retry.
-  However, `FastDomZipperSelenium` is a `DomZippersFastAndSlow` instance whose `_outerHTML` delegates to `fast.outerHTML`. `fast` is a `DomZipperJsoup` parsed once into an immutable in-memory Jsoup DOM when `FastDomZipperSelenium` was instantiated.
-* **Impact:**
-  Calling `startConsistencyCheck()` and later invoking the returned `ConsistencyCheck` (or using `ensureConsistency`) on `FastDomZipperSelenium` simply compares the static in-memory Jsoup `outerHTML` against itself (`c == i` is always `true`) without ever querying `slow().outerHTML` on the live Selenium `WebDriver`. It never detects DOM changes during observation.
-
----
-
 ## 7. Mismatched root elements in `FastDomZipperSelenium.html` and `DomZipperJsoup.body` (`FastDomZipperSeleniumF.scala`, `DomZipperJsoupF.scala`)
 
 * **Location:**
