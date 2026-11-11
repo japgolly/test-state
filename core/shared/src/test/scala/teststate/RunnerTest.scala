@@ -356,5 +356,36 @@ object RunnerTest extends TestSuite {
         """.stripMargin)
     }
 
+    "callbacks" - {
+      "before" - {
+        var events = Vector.empty[String]
+        val cb = dsl.runCallbacks.aroundActions.before((_, name) => events :+= s"before:${name.value}")
+        val actOk = dsl.action("ok")(_ => events :+= "run:ok")
+        val actCrash = dsl.action("crash")(_ => { events :+= "run:crash"; sys.error("boom") })
+        Plan.action(actOk >> actCrash).test(Observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
+        assertEq(events, Vector(
+          "before:ok",
+          "run:ok",
+          "before:crash",
+          "run:crash",
+        ))
+      }
+
+      "after" - {
+        var events = Vector.empty[(String, Option[String])]
+        val cb = dsl.runCallbacks.aroundActions.after((_, name, err) => events :+= (name.value -> err))
+        val actOk = dsl.action("ok")(_ => ())
+        val actFail = dsl.action("fail").attempt(_ => Some("err"))
+        val actCrash = dsl.action("crash")(_ => sys.error("boom"))
+        Plan.action(actOk >> actFail).test(Observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
+        Plan.action(actCrash).test(Observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
+        assertEq(events, Vector(
+          "ok" -> None,
+          "fail" -> Some("err"),
+          "crash" -> Some("java.lang.RuntimeException: boom"),
+        ))
+      }
+    }
+
   }
 }

@@ -4,32 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 5. `RunCallbacks.aroundAction` completion callback is skipped when an action throws an exception (`Runner.scala`)
-
-* **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 508–520)
-* **Code:**
-  ```scala
-  val act1a: () => F[Or[Failure[E], S]] =
-    () => action.run(ros)
-  val act1: () => F[Or[Failure[E], S]] =
-    callbacks.fold(act1a)(callbacks =>
-      () => EM.flatMap(callbacks.get.aroundAction(ros, name))(complete =>
-        EM.flatMap(act1a())(result =>
-          EM.map(complete(result.leftOption))(_ => result)
-        )
-      )
-    )
-  val act2 = wrapStack(ros, name)(act1)
-  def act3() = EM.recover(act2())
-  ```
-* **Problem:**
-  `EM.recover` wraps `act2()` (outside `act1`), whereas the `aroundAction` completion callback `complete(result.leftOption)` is chained inside `act1` via `EM.flatMap(act1a())(...)`.
-  Most actions (such as those created via `dsl.action(name)(ros => ...)`) signal failure by throwing an exception, which `EM.recover` catches at `act3()`. When `act1a()` throws synchronously or returns a failed `F` (e.g. failed `Future`), `EM.flatMap(act1a())` short-circuits over `complete(...)` before `EM.recover` converts the exception into `Left(Failure(...))`.
-* **Impact:**
-  `RunCallbacks.aroundActions` (`after` and `timed` callbacks) are never invoked when an action fails by throwing an exception.
-
----
-
 ## 6. `startConsistencyCheck()` and `ensureConsistency()` are a no-op on `FastDomZipperSelenium` (`DomZipper.scala`, `DomZippersFastAndSlow.scala`)
 
 * **Location:**

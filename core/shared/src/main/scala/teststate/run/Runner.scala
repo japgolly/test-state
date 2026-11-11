@@ -505,18 +505,19 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
             case Right(x) =>
               stats.actions += 1
 
-              val act1: () => F[E Or (O => E Or S)] =
+              def act1(): F[FE Or (O => E Or S)] = EM.map(act1a())(_.leftMap(Failure NoCause _))
+              def act2(): F[FE Or (O => E Or S)] = EM.recover(act1())
+
+              def act3(): F[FE Or (O => E Or S)] =
                 if (callbacks.isEmpty)
-                  act1a
+                  act2()
                 else
-                  () => EM.flatMap(callbacks.get.aroundAction(ros, name))(complete =>
-                    EM.flatMap(act1a())(result =>
-                      EM.map(complete(result.leftOption))(_ => result)
+                  EM.flatMap(callbacks.get.aroundAction(ros, name))(complete =>
+                    EM.flatMap(act2())(result =>
+                      EM.map(complete(result.leftOption.map(_.failure)))(_ => result)
                     )
                   )
 
-              def act2(): F[FE Or (O => E Or S)] = EM.map(act1())(_.leftMap(Failure NoCause _))
-              def act3(): F[FE Or (O => E Or S)] = EM.recover(act2())
               EM.map(act3()) {
                 case Right(nextStateFn) => ActionResult.Success(nextStateFn, x)
                 case Left(e) => ActionResult.ActionFail(e, x)
