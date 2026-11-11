@@ -4,22 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 12. `DomZipperJsF.value` throws `js.TypeError` when `.value` is `undefined` (`DomZipperJsF.scala`)
-
-* **Location:** `dom-zipper/js/src/main/scala/teststate/domzipper/DomZipperJsF.scala` (lines 120–131)
-* **Code:**
-  ```scala
-  private def dynamicMethod[B](f: js.Dynamic => Any): Option[B] =
-     f(dom.asInstanceOf[js.Dynamic]).asInstanceOf[js.UndefOr[B]].toOption
-
-  override protected def _value: F[String] =
-    dynamicMethod[String](_.value.toString) orFail s".value failed on $dom."
-  ```
-* **Problem:**
-  Inside `dynamicMethod`, `_.value.toString` calls `.toString` on `_.value` *before* `dynamicMethod` wraps the result in `js.UndefOr`. If `dom` does not have a `value` property (e.g. a `<div>` or `<span>`), `_.value` is `js.undefined`, and calling `.toString` on `undefined` immediately throws a JavaScript `TypeError` instead of returning `None` and failing cleanly via `ErrorHandler[F]` (`orFail`).
-
----
-
 ## 13. Dynamic DOM state (`value`, checkbox `checked`, `selectedOption`) reads static HTML attributes instead of live DOM properties (`DomZippersFastAndSlow.scala`, `DomZipper.scala`)
 
 * **Location:**

@@ -127,7 +127,7 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     }
 
   override def value: F[String] =
-    dynamicMethod[String](_.value.toString) orFail s".value failed on $dom."
+    dynamicMethod[String](_.value).map(_.toString) orFail s".value failed on $dom."
 
   /** Cast DOM to [[js.Dynamic]] and invoke a method expected to return `A` if successful. */
   def dynamicMethod[B](f: js.Dynamic => Any): Option[B] =
