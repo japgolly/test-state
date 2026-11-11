@@ -107,6 +107,12 @@ object FastDomZipperSeleniumTest extends TestSuite {
     "htmlToBody" - assertEq(html("body").classes, Set("haha"))
     "bodyToBody" - assertEq(body.classes, Set("haha"))
 
+    "htmlRoot" - {
+      assertEq(html.tagName, "html")
+      assertEq(html.child("body").classes, Set("haha"))
+      assertEq(html.children1n.map(_.tagName), html.children1n.map(_.dom().getTagName))
+    }
+
     "radioT" - assertEq($("input[type=radio]", 1 of 2).checked, true)
     "radioF" - assertEq($("input[type=radio]", 2 of 2).checked, false)
 

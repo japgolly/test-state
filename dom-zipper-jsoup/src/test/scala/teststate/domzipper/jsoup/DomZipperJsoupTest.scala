@@ -167,6 +167,18 @@ object DomZipperJsoupTest extends TestSuite {
       assertEq(res, None)
     }
 
+    "html" - {
+      val h = DomZipperJsoup.parseHtml(htmlSource)
+      assertEq(h.tagName, "html")
+      assertEq(h.child("body").tagName, "body")
+    }
+
+    "body" - {
+      val b = DomZipperJsoup.body(Jsoup.parse(htmlSource))
+      assertEq(b.tagName, "body")
+      assertEq(b.children1n.map(_.tagName), Vector("form"))
+    }
+
   }
 
 }

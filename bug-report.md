@@ -4,39 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 7. Mismatched root elements in `FastDomZipperSelenium.html` and `DomZipperJsoup.body` (`FastDomZipperSeleniumF.scala`, `DomZipperJsoupF.scala`)
-
-* **Location:**
-  * `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/FastDomZipperSeleniumF.scala` (lines 21–25)
-  * `dom-zipper-jsoup/src/main/scala/teststate/domzipper/jsoup/DomZipperJsoupF.scala` (lines 29–36)
-* **Code:**
-  ```scala
-  // FastDomZipperSeleniumF.scala
-  final def html(driver: WebDriver)(implicit errorHandler: ErrorHandler[F]): FastDomZipperSelenium = {
-    val s = DomZipperSelenium.html(driver)
-    val f = DomZipperJsoup.parseHtml(s.outerHTML)
-     new FastDomZipperSeleniumF( Nil, f, () => s)(errorHandler, htmlScrub)
-  }
-
-  // DomZipperJsoupF.scala
-  final def body(body: Document)(implicit errorHandler: ErrorHandler[F]): DomZipperJsoup =
-    apply("body", body)
-
-  final def parseHtml(html: String)(implicit errorHandler: ErrorHandler[F]): DomZipperJsoup =
-    this.html(Jsoup.parse(html, ""))
-  ```
-* **Problem:**
-  1. In `DomZipperJsoupF.Constructors.body(body: Document)` (line 33), `apply("body", body)` wraps the `org.jsoup.nodes.Document` node (`#root`) directly instead of `body.body()` (whereas `parseBody` on line 40 calls `.selectFirst("body")`).
-  2. In `DomZipperJsoupF.Constructors.parseHtml`, `Jsoup.parse(html, "")` returns a Jsoup `Document` whose root node has `tagName == "#root"` and whose child is the `<html>` element.
-     Meanwhile, in `FastDomZipperSeleniumF.Constructors.html(driver)`, `s = DomZipperSelenium.html(driver)` is positioned at the `<html>` element (`driver.findElement(By.tagName("html"))`), whereas `f = DomZipperJsoup.parseHtml(s.outerHTML)` is positioned at the Jsoup `Document` (`#root`) *above* `<html>`.
-* **Impact:**
-  In `FastDomZipperSelenium.html(driver)`, `fast` and `slow` point to different levels of the DOM hierarchy:
-  * `$.tagName` returns `"#root"` instead of `"html"`.
-  * `$.children0n` on `fast` returns `Vector(<html>)`, whereas on `slow` it returns `Vector(<head>, <body>)`.
-  * Direct child queries like `$.child("body")` or `$("> body")` fail on `FastDomZipperSelenium.html(driver)` while succeeding on `DomZipperSelenium.html(driver)`.
-
----
-
 ## 8. Bitwise shift operator precedence bug in `ScrollLogic.Line.startAndSize` (`SeleniumExt.scala`)
 
 * **Location:** `util-selenium/src/main/scala/teststate/util/SeleniumExt.scala` (lines 148–153)

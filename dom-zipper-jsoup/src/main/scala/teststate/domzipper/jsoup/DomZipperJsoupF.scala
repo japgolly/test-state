@@ -29,11 +29,14 @@ object DomZipperJsoupF {
     def apply(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
       apply("root", doc)
 
-    def body(body: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
-      apply("body", body)
+    def html(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
+      apply("html", doc.selectFirst("html"))
+
+    def body(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
+      apply("body", doc.body())
 
     def parseHtml(html: String)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
-      apply(Jsoup.parse(html))
+      this.html(Jsoup.parse(html))
 
     def parseBody(bodyHtml: String)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] = {
       // Jsoup is weird
