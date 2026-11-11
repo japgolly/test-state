@@ -154,7 +154,7 @@ object DomZipperJsoupTest extends TestSuite {
     }
 
     "fastAndSlowConsistency" - {
-      implicit def errorHandler = ErrorHandler.ReturnOption
+      implicit def errorHandler: ErrorHandler[Option] = ErrorHandler.ReturnOption
       val slowDoc = Jsoup.parse("<div><h3>Before</h3></div>")
       val slow = DomZipperJsoup.failToOption(slowDoc)
       val fast = DomZipperJsoup.failToOption.parseHtml(slow.outerHTML)
