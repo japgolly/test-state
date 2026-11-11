@@ -4,31 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 11. `DomZippersFastAndSlow.cmap` evaluates `colS.zippers` on the unfiltered collection, breaking `.filter` on `collect01` / `children01` (`DomZippersFastAndSlow.scala`)
-
-* **Location:** `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZippersFastAndSlow.scala` (lines 45–61)
-* **Code:**
-  ```scala
-  private def cmap[C[x] <: DomCollection.Container[F, x], A](f: Fast => DomCollection[F, C, NextF],
-                                                             s: Slow => DomCollection[F, C, NextS]): DomCollection[F, C, Next] = {
-    val colF = f(fast)
-    import colF.C
-    lazy val colS = F.map(slow())(s)
-    val rawResults: F[Vector[Next]] =
-      F.map(colF.rawResults)(_.iterator.zipWithIndex.map { case (f, i) =>
-        lazy val s = F.flatMap(colS)(_.zippers).map(C.get(_, i))
-        addLayer(f.curLayer, f, () => s)
-      }.toVector)
-    new DomCollection(colF.layerDesc, rawResults)(F, C)
-  }
-  ```
-* **Problem:**
-  `colF.rawResults` is the unfiltered `Vector[NextF]` before the container constraint `C` (e.g., `Container01` for `[0,1]`) or `.filter` is applied.
-  However, for each element at raw index `i`, `lazy val s` calls `F.flatMap(colS)(_.zippers).map(C.get(_, i))` instead of indexing into `colS.rawResults(i)`.
-  If a user runs `$.collect01("button").filter(_.innerText == "Submit")` on a page with 3 buttons (only 1 of which is `"Submit"`), `fast` filters `rawResults` down to 1 element and `Container01` succeeds. However, as soon as `.dom()` is called on that element, `s` forces `colS.zippers` on the **unfiltered** `colS` (`Container01` with 3 elements), which throws `"Expected [0,1] results, not 3."` (or for `i >= 1`, `C.get( Option, i )` ignores `i` because `Container01.get` is `(c, _) => c.get`).
-
----
-
 ## 12. `DomZipperJsF.value` throws `js.TypeError` when `.value` is `undefined` (`DomZipperJsF.scala`)
 
 * **Location:** `dom-zipper/js/src/main/scala/teststate/domzipper/DomZipperJsF.scala` (lines 120–131)

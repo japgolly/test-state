@@ -240,6 +240,12 @@ object DomZipper {
         case Some(f) => rawResults.filter(f)
       }
 
+    private def validateRaw: F[Unit] =
+      if (filterFn.isEmpty)
+        F.pass(())
+      else
+        F.map(C(enrichErr, rawResults))(_ => ())
+
     private def fail[B](errMsg: String): F[B] =
       F fail enrichErr(errMsg)
 
@@ -253,10 +259,10 @@ object DomZipper {
       result.length
 
     def zippers: F[C[Z[F, A]]] =
-      C(enrichErr, result)
+      F.flatMap(validateRaw)(_ => C(enrichErr, result))
 
     def map[B](f: Z[F, A] => B): F[C[B]] =
-      C(enrichErr, result.map(f))
+      F.flatMap(validateRaw)(_ => C(enrichErr, result.map(f)))
 
     @deprecated("Use .map", "2.2.0")
     def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
@@ -289,10 +295,12 @@ object DomZipper {
     }
 
     def singleton: F[Z[F, A]] =
-      if (size == 1)
-        F pass result.head
-      else
-        fail(s"Expected exactly 1 result but have $size.")
+      F.flatMap(validateRaw)(_ =>
+        if (size == 1)
+          F pass result.head
+        else
+          fail(s"Expected exactly 1 result but have $size.")
+      )
 
     def headOption: Option[Z[F, A]] =
       result.headOption
@@ -301,16 +309,20 @@ object DomZipper {
       result.lastOption
 
     def head: F[Z[F, A]] =
-      if (result.isEmpty)
-        fail("You called .head but collection is empty.")
-      else
-        F pass result.head
+      F.flatMap(validateRaw)(_ =>
+        if (result.isEmpty)
+          fail("You called .head but collection is empty.")
+        else
+          F pass result.head
+      )
 
     def last: F[Z[F, A]] =
-      if (result.isEmpty)
-        fail("You called .last but collection is empty.")
-      else
-        F pass result.last
+      F.flatMap(validateRaw)(_ =>
+        if (result.isEmpty)
+          fail("You called .last but collection is empty.")
+        else
+          F pass result.last
+      )
 
     def outerHTMLs: F[C[String]] = map(_.outerHTML)
     def innerHTMLs: F[C[String]] = map(_.innerHTML)

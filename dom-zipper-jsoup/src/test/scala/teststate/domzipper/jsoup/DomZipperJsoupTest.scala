@@ -160,6 +160,16 @@ object DomZipperJsoupTest extends TestSuite {
         val Left(actual) = $("form")("select", 2 of 2).failToEither.collect01("option").zippers
         assertMultiline(actual, expect)
       }
+      "01FilterStrict" - {
+        val expect =
+          """
+            |Query failed: [option]. Expected [0,1] results, not 2.
+            |DESC: root -> form -> select
+            |HTML: <select> <option value="a">A</option> <option value="b">B</option> </select>
+          """.stripMargin.trim
+        val Left(actual) = $("form")("select", 2 of 2).failToEither.collect01("option").filter(_.value == Right("a")).zippers
+        assertMultiline(actual, expect)
+      }
     }
 
     "fastAndSlowConsistency" - {
@@ -174,6 +184,29 @@ object DomZipperJsoupTest extends TestSuite {
         d.innerText
       }
       assertEq(res, None)
+    }
+
+    "fastAndSlowCollect01FilterStrict" - {
+      implicit def errorHandler: ErrorHandler[Option] = ErrorHandler.ReturnOption
+      val doc = Jsoup.parse("<div><button>Cancel</button><button>Submit</button></div>")
+      val slow = DomZipperJsoup.failToOption(doc)
+      val fast = DomZipperJsoup.failToOption.parseHtml(slow.outerHTML)
+      val both = DomZippersFastAndSlow[Option, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fast, slow)
+      val res = both.collect01("button").filter(_.innerText == "Submit").zippers
+      assert(res.isEmpty)
+    }
+
+    "fastAndSlowCollect01FilterValid" - {
+      implicit def errorHandler: ErrorHandler[Option] = ErrorHandler.ReturnOption
+      val doc = Jsoup.parse("<div><button>Submit</button></div>")
+      val slow = DomZipperJsoup.failToOption(doc)
+      val fast = DomZipperJsoup.failToOption.parseHtml(slow.outerHTML)
+      val both = DomZippersFastAndSlow[Option, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fast, slow)
+      val res = both.collect01("button").filter(_.innerText == "Submit").zippers
+      assert(res.isDefined)
+      assert(res.get.isDefined)
+      assertEq(res.get.get.innerText, "Submit")
+      assertEq(res.get.get.dom().map(_.innerText), Some("Submit"))
     }
 
     "html" - {
