@@ -4,25 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 8. Bitwise shift operator precedence bug in `ScrollLogic.Line.startAndSize` (`SeleniumExt.scala`)
-
-* **Location:** `util-selenium/src/main/scala/teststate/util/SeleniumExt.scala` (lines 148–153)
-* **Code:**
-  ```scala
-  def startAndSize(start: Int, size: Int): Line =
-    new Line(
-      start = start,
-      size  = size,
-      mid   = start + size >> 1,
-      end   = start + size - 1)
-  ```
-* **Problem:**
-  In Scala, `+` has higher precedence than `>>`. Therefore, `start + size >> 1` parses as `(start + size) >> 1` instead of `start + (size >> 1)` (compare with `startAndSizeJs` on line 164: `s"($start + $size/2)"`).
-* **Impact:**
-  For any non-zero `start`, `mid` is miscalculated (e.g. for `start = 100, size = 50`, `mid` is calculated as `(100 + 50) >> 1 = 75`, which is outside `[100, 149]`, instead of `125`). This corrupts `ScrollLogic.ShowMiddle` and `ScrollLogic.Minimal` scroll offset calculations whenever `Line.startAndSize` is used.
-
----
-
 ## 9. Copy-paste bug in `TestStateNFEBA.thruAfter` and broken `NamedOps` for `Invariant.Delta`, `NamedError`, and `Sack.CoProduct` (`core/package.scala`, `checks.scala`, `NamedOps.scala`)
 
 * **Location:**

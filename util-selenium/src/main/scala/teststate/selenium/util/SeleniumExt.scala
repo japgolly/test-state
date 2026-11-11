@@ -149,7 +149,7 @@ object Internals {
         Line(
           start = start,
           size  = size,
-          mid   = start + size >> 1,
+          mid   = start + (size >> 1),
           end   = start + size)
 
       def startAndEnd(start: Int, end: Int): Line[Int] =
