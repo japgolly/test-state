@@ -8,9 +8,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 * **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 383–478, 434–443, 491–547, 645–670)
 * **Problems:**
-  2. **Pre-action `Around` check `before` functions (`checksPre.pre.deltas`) are evaluated *after* the action (line 404):**
-     While `halfChecksI = runHalfChecks(checksPre.invariants.deltas, Vector.empty)` is evaluated *before* the action runs (line 395), `val halfChecks = runHalfChecks(checksPre.pre.deltas, halfChecksI)` is placed inside `val postChecksFn = (ros: ROS[R, O, S]) => { ... }` (line 404), which only executes *after* the action has completed (and re-runs on every post-check retry). Although `runHalfChecks` passes `p.ros` (the pre-action `ROS`), if `p.ros.obs` or `p.ros.ref` accesses live or lazy state (such as `DomZipperSelenium`), `d.before(p.ros)` observes post-action state instead of pre-action state.
-     *(A related issue exists in `Dsl.scala` line 272 in `FocusValue.AssertOps.changeTo`, where `NameFn(NameUtils.equalFn(focusName, positive, i => expect(focusFn(i.before))))` re-evaluates `focusFn(i.before)` after the action when generating the assertion name, as noted in `DslTest.scala` line 48.)*
   3. **Pre-check retry in `Action.Group` and `Action.SubTest` discards the re-observed `ROS` (lines 434–443, 645–647, 666–670):**
      When `runPreChecksWithRetry` retries a failing pre-condition, `reObserve` produces a new `(r, o)` and checks `preChecks(ROS(r, o, p0.ros.state))`. However, `runPreChecksWithRetry` returns `F[Boolean]` and discards the newly observed `ROS(r, o, p0.ros.state)`. `Action.Group` and `Action.SubTest` then proceed to run `run()` using the stale, pre-retry `ros`.
   4. **`Action.Single` retries pre-condition failures under `Retry.Scope.Action` instead of `Retry.Scope.PreConditions` (line 546):**

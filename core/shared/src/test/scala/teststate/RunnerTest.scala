@@ -394,6 +394,27 @@ object RunnerTest extends TestSuite {
             |Performed 1 action, 2 checks.
           """.stripMargin)
       }
+
+      "aroundPreRunsBeforeAction" - {
+        var state = 0
+        var actionRan = false
+        val dsl = Dsl[Unit, Int, Unit]
+        val check = dsl.around("Recorded pre-state")(os => {
+          assert(!actionRan)
+          os.obs
+        })((os, before) => {
+          assert(actionRan)
+          if (before == 0 && os.obs == 1) None else Some(s"Expected 0 -> 1, got $before -> ${os.obs}")
+        })
+        val action = dsl.action("Inc")(_ => {
+          actionRan = true
+          state = 1
+        }) +> check
+        val plan = Plan.action(action)
+        val test = plan.stateless.test(Observer(_ => state))
+        val report = test.runU()
+        assert(report.result == Result.Pass)
+      }
     }
 
     "callbacks" - {

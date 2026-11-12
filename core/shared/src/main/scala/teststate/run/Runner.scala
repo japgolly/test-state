@@ -394,16 +394,15 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
       // Perform around-pre
       val halfChecksI: Vector[HalfCheck[O, S, E]] =
         runHalfChecks(checksPre.invariants.deltas)
+      val halfChecksA: Vector[HalfCheck[O, S, E]] =
+        runHalfChecks(checksPre.pre.deltas)
 
       val postChecksFn: PostCheckFn =
         failed =>
           if (failed)
             _ => PostCheckResults.empty
           else
-            ros => {
-              val halfChecksA = runHalfChecks(checksPre.pre.deltas)
-              postChecks(halfChecksA, halfChecksI, checksPre, invariants, arounds, p, ros)
-            }
+            ros => postChecks(halfChecksA, halfChecksI, checksPre, invariants, arounds, p, ros)
 
       val postAction: (H, ROS, HH) => P = {
         case (step, ros2, hh) =>
