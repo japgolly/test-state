@@ -68,6 +68,7 @@ final class DomZipperJsoupF[F[_], A](override protected val layers: DomZipperBas
 
   override def isCapable(c: DomZipper.Capability) = c match {
     case DomZipper.Capability.Checked
+       | DomZipper.Capability.Selected
        | DomZipper.Capability.Value
        => false
   }

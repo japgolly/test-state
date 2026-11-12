@@ -88,8 +88,8 @@ object DomZipperJsoupTest extends TestSuite {
 
     "selectedOption" - {
       "nonSelect" - assertEq($.failToOption.selectedOption.map(_ => ()), None)
-      "some" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
-      "none" - assertEq($("select", 2 of 2).selectedOptionText, None)
+      "explicit" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
+      "default" - assertEq($("select", 2 of 2).selectedOptionText, Some("A"))
     }
 
     "findSelfOrChildWithAttribute" - {

@@ -55,8 +55,16 @@ object DomZipperSeleniumTest extends TestSuite {
 
     "selectedOption" - {
       "nonSelect" - assertEq($.failToOption.selectedOption.map(_ => ()), None)
-      "some" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
-      "none" - assertEq($("select", 2 of 2).selectedOptionText, None)
+      "explicit" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
+      "default" - assertEq($("select", 2 of 2).selectedOptionText, Some("A"))
+      "live" - {
+        val select = $("select", 1 of 2)
+        select("option", 4 of 4).dom().click()
+        try
+          assertEq(select.selectedOptionText, Some("Audi"))
+        finally
+          select("option", 2 of 4).dom().click()
+      }
     }
 
     "findSelfOrChildWithAttribute" - {

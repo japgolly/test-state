@@ -188,8 +188,25 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
   /** The currently selected option in a &lt;select&gt; dropdown. */
   def selectedOption: F[DomCollection[Self, F, Option, Dom, A]] =
     tagName.toUpperCase match {
-      case "SELECT" => F pass collect01("option[selected]")
-      case x        => F fail enrichErr(s"<$x> is not a <SELECT>")
+      case "SELECT" =>
+        val c = collect01("option[selected]")
+        val c2 =
+          if (c.isEmpty && getAttribute("multiple").isEmpty) {
+            val all = collect0n("option")
+            if (all.isEmpty)
+              c
+            else
+              new DomCollection[Self, F, Option, Dom, A](
+                all.enrichErr,
+                all.rawResults.take(1),
+                None,
+                F.C01
+              )
+          } else
+            c
+        F pass c2
+      case x =>
+        F fail enrichErr(s"<$x> is not a <SELECT>")
     }
 
   /** The text value of the currently selected option in a &lt;select&gt; dropdown. */
@@ -420,10 +437,13 @@ object DomZipper {
     /** The capability to check whether the element is checked (for checkboxes and radio buttons). */
     case object Checked extends Capability
 
+    /** The capability to check whether a select's option is selected. */
+    case object Selected extends Capability
+
     /** The capability to check whether the element has a value (for input fields). */
     case object Value extends Capability
 
     val all: List[Capability] =
-      Checked :: Value :: Nil
+      Checked :: Selected :: Value :: Nil
   }
 }

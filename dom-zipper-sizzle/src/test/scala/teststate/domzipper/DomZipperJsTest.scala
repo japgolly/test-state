@@ -80,9 +80,7 @@ object DomZipperJsTest extends TestSuite {
     "selectedOption" - {
       "nonSelect" - assertEq($.failToOption.selectedOption.map(_ => ()), None)
       "some" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
-
-      // Disabled because it seems this is undefined behaviour
-      // 'none - assertEq($("select", 2 of 2).selectedOptionText, None)
+      "default" - assertEq($("select", 2 of 2).selectedOptionText, Some("A"))
     }
 
     "findSelfOrChildWithAttribute" - {

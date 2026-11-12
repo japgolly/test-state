@@ -59,11 +59,11 @@ object FastDomZipperSeleniumTest extends TestSuite {
         "some" - assertEq(name.classes, Set("a", "b", "c"))
       }
 
-  //    'selectedOption {
-  //      'nonSelect - assertEq($.failToOption.selectedOption.map(_ => ()), None)
-  //      'some - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
-  //      'none - assertEq($("select", 2 of 2).selectedOptionText, None)
-  //    }
+    //  "selectedOption" - {
+    //    "nonSelect" - assertEq($.failToOption.selectedOption.map(_ => ()), None)
+    //    "some" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
+    //    "none" - assertEq($("select", 2 of 2).selectedOptionText, None)
+    //  }
 
       "findSelfOrChildWithAttribute" - {
         def attr = "data-coding"
@@ -135,6 +135,23 @@ object FastDomZipperSeleniumTest extends TestSuite {
       } finally {
         n.dom().clear()
         n.dom().sendKeys("Bob Loblaw")
+      }
+    }
+
+    "selectedOptionLive" - {
+      "explicit" - {
+        val select = $("select", 1 of 2)
+        assertEq(select.selectedOptionText, Some("Saab"))
+        select("option", 4 of 4).dom().click()
+        try
+          assertEq(select.selectedOptionText, Some("Audi"))
+        finally
+          select("option", 2 of 4).dom().click()
+      }
+
+      "default" - {
+        val select2 = $("select", 2 of 2)
+        assertEq(select2.selectedOptionText, Some("A"))
       }
     }
 

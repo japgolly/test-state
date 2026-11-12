@@ -110,6 +110,37 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
         case false => fast.checked
       }
 
+  override def selectedOption =
+    tagName.toUpperCase match {
+      case "SELECT" =>
+        if (fast.isCapable(DomZipper.Capability.Selected))
+          super.selectedOption
+        else {
+          val optionsBoth = collect0n("option")
+          F.flatMap(slow()) { s =>
+            F.flatMap(s.selectedOption) { selCol =>
+              F.map(selCol.zippers) { selOpt =>
+                val idx = selOpt match {
+                  case Some(sel) =>
+                    val allSlow = s.collect0n("option").rawResults
+                    allSlow.indexWhere(_.extract == sel.extract)
+                  case None =>
+                    -1
+                }
+                new DomCollection[({ type L[X[_], Y] = DomZippersFastAndSlow[X, Dom, Y] })#L, F, Option, Dom, A](
+                  enrichErr  = optionsBoth.enrichErr,
+                  rawResults = if (idx >= 0 && optionsBoth.rawResults.isDefinedAt(idx)) Vector(optionsBoth.rawResults(idx)) else Vector.empty,
+                  filterFn   = None,
+                  C          = F.C01
+                )
+              }
+            }
+          }
+        }
+      case x =>
+        F fail enrichErr(s"<$x> is not a <SELECT>")
+    }
+
   override def parent: F[DomZippersFastAndSlow[F, Dom, A]] =
     bimapF(_.parent, _.parent)
 

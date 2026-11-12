@@ -4,32 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 13. Dynamic DOM state (`value`, checkbox `checked`, `selectedOption`) reads static HTML attributes instead of live DOM properties (`DomZippersFastAndSlow.scala`, `DomZipper.scala`)
-
-* **Location:**
-  * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZippersFastAndSlow.scala` (lines 92–101)
-  * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipper.scala` (lines 189–193)
-* **Code:**
-  ```scala
-  // DomZippersFastAndSlow.scala
-  override def value: F[String] = fast.value
-
-  override def checked: F[Boolean] =
-    F.flatMap(fast.tagName.map(_ == "input") && fast.attr("type").map(_.contains("radio"))) {
-      case true  => F.flatMap(slow())(_.checked)
-      case false => fast.checked
-    }
-
-  // DomZipper.scala
-  final def selectedOption[Out[_]](implicit C: Container[Option, Out]): Out[Self] =
-    collect("option[selected]")(C)
-  ```
-* **Problem:**
-  In browsers, user interactions (such as typing into an `<input>` or `<textarea>`, or choosing an `<option>` in a `<select>`) update the live DOM properties (`.value`, `.selected`), **not** the initial HTML attributes serialized in `outerHTML`.
-  3. `DomZipper.selectedOption` queries `collect("option[selected]")`, which matches the static `[selected]` HTML attribute rather than the live `selected` DOM property (which is why the test in `DomZipperJsTest.scala` line 85 had to be commented out).
-
----
-
 ## 14. `ExecutionModel.scalaFuture` leaks `java.util.Timer` threads and hangs `Promise`s on synchronous exceptions (`ExecutionModel.scala`)
 
 * **Location:** `core/shared/src/main/scala/teststate/typeclass/ExecutionModel.scala` (lines 90–143)

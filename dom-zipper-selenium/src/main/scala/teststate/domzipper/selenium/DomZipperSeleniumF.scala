@@ -71,6 +71,7 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
 
   override def isCapable(c: DomZipper.Capability) = c match {
     case DomZipper.Capability.Checked
+       | DomZipper.Capability.Selected
        | DomZipper.Capability.Value
        => true
   }
@@ -131,4 +132,20 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
 
   override def value: F[String] =
     getAttribute("value") orFail s".value failed on <${dom().getTagName}>."
+
+  override def selectedOption: F[DomCollection[DomZipperSeleniumF, F, Option, Dom, A]] =
+    tagName.toUpperCase match {
+      case "SELECT" =>
+        val sel = "option:checked"
+        val results = runCssQuery(sel)
+        val selected =
+          if (results.isEmpty && getAttribute("multiple").isEmpty) {
+            val all = runCssQuery("option")
+            if (all.nonEmpty) Vector(all.head) else Vector.empty
+          } else
+            results
+        F pass newDomCollection(sel, selected, F.C01)
+      case x =>
+        F fail enrichErr(s"<$x> is not a <SELECT>")
+    }
 }
