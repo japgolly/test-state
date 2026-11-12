@@ -401,8 +401,8 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
             _ => PostCheckResults.empty
           else
             ros => {
-              val halfChecks = runHalfChecks(checksPre.pre.deltas, halfChecksI)
-              postChecks(halfChecks, checksPre, invariants, arounds, p, ros)
+              val halfChecksA = runHalfChecks(checksPre.pre.deltas)
+              postChecks(halfChecksA, halfChecksI, checksPre, invariants, arounds, p, ros)
             }
 
       val postAction: (H, ROS, HH) => P = {
@@ -442,7 +442,8 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
     withRetryF1(Retry.Scope.PreConditions, EM.point(preCheckFn(p0)), retry)(retryCheckAround0)
   }
 
-  private def postChecks(hcs       : Vector[HalfCheck[O, S, E]],
+  private def postChecks(hcsA      : Vector[HalfCheck[O, S, E]],
+                         hcsI      : Vector[HalfCheck[O, S, E]],
                          checksPre : PreCheck[UnpackChecks[List, O, S, E]],
                          invariants: Invariants[O, S, E],
                          arounds   : Arounds[O, S, E],
@@ -461,7 +462,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
     val post = {
       val b = History.newBuilder[E](stats)
       checksPostA.errors foreach b.addNE
-      b.addEach(hcs)(
+      b.addEach(hcsA)(
         c => c.check.name)(Some(BeforeAfter(p.ros, ros2)),
         c => c.before.flatMap(a => Tri failedOption c.check.test(ros2, a).noCause)) // Perform around-post
       b.addEach(checksPostA.afters)(_.name)(ros2.some, _.test(ros2).noCause) // Perform post
@@ -472,6 +473,9 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
     val invs = {
       val b = History.newBuilder[E](stats)
       checksPostI.errors foreach b.addNE
+      b.addEach(hcsI)(
+        c => c.check.name)(Some(BeforeAfter(p.ros, ros2)),
+        c => c.before.flatMap(a => Tri failedOption c.check.test(ros2, a).noCause))
       b.addEach(checksPostI.afters)(_.name)(ros2.some, _.test(ros2).noCause)
       b.group(InvariantsName)
     }

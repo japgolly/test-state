@@ -154,7 +154,7 @@ object RunnerTest extends TestSuite {
           """
             |✘ NOP
             |  ✓ Action
-            |  ✘ Post-conditions
+            |  ✘ Invariants
             |    ✘ what? -- java.lang.RuntimeException: Crashhh!
             |Performed 1 action, 1 check.
           """.stripMargin)
@@ -354,6 +354,46 @@ object RunnerTest extends TestSuite {
           |✓ All pass.
           |Performed 1 action, 2 checks.
         """.stripMargin)
+    }
+
+    "deltaInvariantReporting" - {
+      "onlyDelta" - {
+        var i = 0
+        val dsl = Dsl[Unit, Unit, Unit]
+        val action = dsl.action("Inc")(_ => i += 1)
+        val deltaInv = dsl.testAround("InvDelta")((_, _) => true)
+        val plan = Plan.action(action).addInvariants(deltaInv)
+        val test = plan.stateless.testU
+        assertRun(test.runU(),
+          """
+            |✓ Inc
+            |  ✓ Action
+            |  ✓ Invariants
+            |    ✓ InvDelta
+            |✓ All pass.
+            |Performed 1 action, 1 check.
+          """.stripMargin)
+      }
+
+      "withPostCond" - {
+        var i = 0
+        val dsl = Dsl[Unit, Unit, Unit]
+        val action = dsl.action("Inc")(_ => i += 1) +> dsl.test("PostCond")(_ => true)
+        val deltaInv = dsl.testAround("InvDelta")((_, _) => true)
+        val plan = Plan.action(action).addInvariants(deltaInv)
+        val test = plan.stateless.testU
+        assertRun(test.runU(),
+          """
+            |✓ Inc
+            |  ✓ Action
+            |  ✓ Post-conditions
+            |    ✓ PostCond
+            |  ✓ Invariants
+            |    ✓ InvDelta
+            |✓ All pass.
+            |Performed 1 action, 2 checks.
+          """.stripMargin)
+      }
     }
 
     "callbacks" - {
