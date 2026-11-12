@@ -31,18 +31,24 @@ object GrowthStrategy {
     apply("singleBrowser", _ => 0)
 
   /** Max out browsers first, then start adding tabs */
-  def maxBrowsers(maxBrowsers: Int): GrowthStrategy =
+  def maxBrowsers(maxBrowsers: Int): GrowthStrategy = {
+    if (maxBrowsers < 1)
+      throw new IllegalArgumentException(s"maxBrowsers must be > 0, but was $maxBrowsers")
     apply(s"maxBrowsers($maxBrowsers)", x =>
       if (x.length < maxBrowsers) {
         val i = x.indexWhere(_ == 0)
         if (i >= 0) i else x.length
       } else
         x.zipWithIndex.minBy(_._1)._2)
+  }
 
   /** Max out tabs first, then start adding browsers */
-  def maxTabs(maxTabsPerBrowser: Int): GrowthStrategy =
+  def maxTabs(maxTabsPerBrowser: Int): GrowthStrategy = {
+    if (maxTabsPerBrowser < 1)
+      throw new IllegalArgumentException(s"maxTabsPerBrowser must be > 0, but was $maxTabsPerBrowser")
     apply(s"maxTabs($maxTabsPerBrowser)", x => {
       val i = x.indexWhere(_ < maxTabsPerBrowser)
       if (i >= 0) i else x.length
     })
+  }
 }
