@@ -137,11 +137,18 @@ object MultiBrowser {
                 // Lock browser so that no one else can create a new tab in this browser before setup completes
                 mutex.lock()
                 () => {
-                  try setupFn(setupTab)
-                  finally mutex.unlock()
-                  // closeTab() will attempt to acquire the outer lock through the afterClosed callback so the
-                  // browser lock must be released beforehand to maintain lock-ordering (i.e. outer before browser)
-                  setupTab.closeTab()
+                  try
+                    setupFn(setupTab)
+                  finally {
+                    try
+                      mutex.unlock()
+                    finally {
+                      // closeTab() will attempt to acquire the outer lock through the afterClosed callback so the
+                      // browser lock must be released beforehand to maintain lock-ordering (i.e. outer before browser)
+                      setupTab.closeTab()
+                      ()
+                    }
+                  }
                 }
               }
             val tab = createTabWithoutLocking(browserIndex)

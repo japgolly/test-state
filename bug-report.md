@@ -27,9 +27,7 @@ This report details bugs, defects, and problems identified across the `test-stat
           setupTab.closeTab()
           tab
   ```
-* **Problems:**
-  1. **Leaked temp tab on exception:** In `openTab` (lines 142–146), `setupTab.closeTab()` is placed *outside* the `try ... finally` block. If `setupFn(setupTab)` throws an exception, `setupTab.closeTab()` is never called, leaving the temporary tab open in the browser and registered in `browser.tabs`.
-  2. **Temporary setup tab triggers `onNewTab` and inflates tab counts for `GrowthStrategy`:** `setupTab = createTabWithoutLocking(browserIndex)` registers `setupTab` in `browser.tabs` and schedules `onNewTab(setupTab)` on it. Furthermore, `outerMutex.unlock()` is called on line 141 *before* `setupTab.closeTab()` runs on line 146, so concurrent callers to `openTab()` while `setupFn` is executing see `browser.tabs.length` inflated by the temporary setup tab, causing `GrowthStrategy` (e.g. `maxTabs` or `maxBrowsers`) to misroute new tabs to other browsers.
+* **Problems:*  2. **Temporary setup tab triggers `onNewTab` and inflates tab counts for `GrowthStrategy`:** `setupTab = createTabWithoutLocking(browserIndex)` registers `setupTab` in `browser.tabs` and schedules `onNewTab(setupTab)` on it. Furthermore, `outerMutex.unlock()` is called on line 141 *before* `setupTab.closeTab()` runs on line 146, so concurrent callers to `openTab()` while `setupFn` is executing see `browser.tabs.length` inflated by the temporary setup tab, causing `GrowthStrategy` (e.g. `maxTabs` or `maxBrowsers`) to misroute new tabs to other browsers.
 
 ---
 
