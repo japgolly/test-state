@@ -1,11 +1,13 @@
 package teststate.domzipper.jsoup
 
+import cats.instances.int._
 import cats.instances.option._
 import cats.instances.set._
 import cats.instances.string._
 import cats.instances.vector._
 import japgolly.microlibs.testutil.TestUtil._
 import org.jsoup.Jsoup
+import teststate.domzipper.{DomZippersFastAndSlow, ErrorHandler}
 import teststate.domzipper.jsoup.Exports._
 import utest._
 
@@ -87,8 +89,8 @@ object DomZipperJsoupTest extends TestSuite {
 
     "selectedOption" - {
       "nonSelect" - assertEq($.failToOption.selectedOption.map(_ => ()), None)
-      "some" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
-      "none" - assertEq($("select", 2 of 2).selectedOptionText, None)
+      "explicit" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
+      "default" - assertEq($("select", 2 of 2).selectedOptionText, Some("A"))
     }
 
     "findSelfOrChildWithAttribute" - {
@@ -112,6 +114,15 @@ object DomZipperJsoupTest extends TestSuite {
     "child" - {
       "sole" - assertEq($("form").child("h3").innerText, "HI")
       "nOfM" - assertEq($("form").child("div", 2 of 3)("h3").innerText, "EH??")
+      "nameOnSuccess" - {
+        val c = $("form").child("FirstDiv", "div", 1 of 3)
+        assertContains(c.describe, "FirstDiv")
+      }
+      "err0" - {
+        val Left(actual) = $("form").failToEither.child("MyButton", "button")
+        val expect = "MyButton query failed: [> button]. Expected 1 results, not 0."
+        assertContains(actual, expect)
+      }
     }
 
     "children" - {
@@ -149,6 +160,147 @@ object DomZipperJsoupTest extends TestSuite {
           """.stripMargin.trim
         val Left(actual) = $("form")("select", 2 of 2).failToEither.collect01("option").zippers
         assertMultiline(actual, expect)
+      }
+      "01FilterStrict" - {
+        val expect =
+          """
+            |Query failed: [option]. Expected [0,1] results, not 2.
+            |DESC: root -> form -> select
+            |HTML: <select> <option value="a">A</option> <option value="b">B</option> </select>
+          """.stripMargin.trim
+        val Left(actual) = $("form")("select", 2 of 2).failToEither.collect01("option").filter(_.value == Right("a")).zippers
+        assertMultiline(actual, expect)
+      }
+    }
+
+    "fastAndSlowConsistency" - {
+      implicit def errorHandler: ErrorHandler[Option] = ErrorHandler.ReturnOption
+      val slowDoc = Jsoup.parse("<div><h3>Before</h3></div>")
+      val slow = DomZipperJsoup.failToOption(slowDoc)
+      val fast = DomZipperJsoup.failToOption.parseHtml(slow.outerHTML)
+      val both = DomZippersFastAndSlow[Option, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fast, slow)
+
+      val res = both.ensureConsistency { d =>
+        slowDoc.selectFirst("h3").text("After") // mutate live 'slow' DOM mid-observation
+        d.innerText
+      }
+      assertEq(res, None)
+    }
+
+    "fastAndSlowCollect01FilterStrict" - {
+      implicit def errorHandler: ErrorHandler[Option] = ErrorHandler.ReturnOption
+      val doc = Jsoup.parse("<div><button>Cancel</button><button>Submit</button></div>")
+      val slow = DomZipperJsoup.failToOption(doc)
+      val fast = DomZipperJsoup.failToOption.parseHtml(slow.outerHTML)
+      val both = DomZippersFastAndSlow[Option, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fast, slow)
+      val res = both.collect01("button").filter(_.innerText == "Submit").zippers
+      assert(res.isEmpty)
+    }
+
+    "fastAndSlowCollect01FilterValid" - {
+      implicit def errorHandler: ErrorHandler[Option] = ErrorHandler.ReturnOption
+      val doc = Jsoup.parse("<div><button>Submit</button></div>")
+      val slow = DomZipperJsoup.failToOption(doc)
+      val fast = DomZipperJsoup.failToOption.parseHtml(slow.outerHTML)
+      val both = DomZippersFastAndSlow[Option, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fast, slow)
+      val res = both.collect01("button").filter(_.innerText == "Submit").zippers
+      assert(res.isDefined)
+      assert(res.get.isDefined)
+      assertEq(res.get.get.innerText, "Submit")
+      assertEq(res.get.get.dom().map(_.innerText), Some("Submit"))
+    }
+
+    "html" - {
+      val h = DomZipperJsoup.parseHtml(htmlSource)
+      assertEq(h.tagName, "html")
+      assertEq(h.child("body").tagName, "body")
+    }
+
+    "body" - {
+      val b = DomZipperJsoup.body(Jsoup.parse(htmlSource))
+      assertEq(b.tagName, "body")
+      assertEq(b.children1n.map(_.tagName), Vector("form"))
+    }
+
+    "htmlScrubNotAppliedRedundantly" - {
+      val expectedOuter =
+        """<!--s--><html>
+          | <head></head>
+          | <body>
+          |  <div>
+          |   <span>hello</span>
+          |  </div>
+          | </body>
+          |</html>""".stripMargin
+
+      val expectedInner =
+        """<!--s--><head></head>
+          |<body>
+          | <div>
+          |  <span>hello</span>
+          | </div>
+          |</body>""".stripMargin
+
+      "jsoup" - {
+        var outerRuns = 0
+        val scrubOuter = HtmlScrub { s =>
+          outerRuns += 1
+          s"<!--s-->$s"
+        }
+        val zOuter = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubOuter)
+
+        "outerHTML" - {
+          val html = zOuter.outerHTML
+          assertEq("outerHTML scrub invocation count", outerRuns, 1)
+          assertEq("outerHTML output", html, expectedOuter)
+        }
+
+        var innerRuns = 0
+        val scrubInner = HtmlScrub { s =>
+          innerRuns += 1
+          s"<!--s-->$s"
+        }
+        val zInner = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubInner)
+
+        "innerHTML" - {
+          val html = zInner.innerHTML
+          assertEq("innerHTML scrub invocation count", innerRuns, 1)
+          assertEq("innerHTML output", html, expectedInner)
+        }
+      }
+
+      "fastAndSlow" - {
+        implicit val errorHandler: ErrorHandler[ErrorHandler.Id] = ErrorHandler.Throw
+
+        var outerRuns = 0
+        val scrubOuter = HtmlScrub { s =>
+          outerRuns += 1
+          s"<!--s-->$s"
+        }
+        val fastOuter = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubOuter)
+        val slowOuter = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubOuter)
+        val bothOuter = DomZippersFastAndSlow[ErrorHandler.Id, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fastOuter, slowOuter)
+
+        "outerHTML" - {
+          val html = bothOuter.outerHTML
+          assertEq("both.outerHTML scrub invocation count", outerRuns, 1)
+          assertEq("both.outerHTML output", html, expectedOuter)
+        }
+
+        var innerRuns = 0
+        val scrubInner = HtmlScrub { s =>
+          innerRuns += 1
+          s"<!--s-->$s"
+        }
+        val fastInner = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubInner)
+        val slowInner = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubInner)
+        val bothInner = DomZippersFastAndSlow[ErrorHandler.Id, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fastInner, slowInner)
+
+        "innerHTML" - {
+          val html = bothInner.innerHTML
+          assertEq("both.innerHTML scrub invocation count", innerRuns, 1)
+          assertEq("both.innerHTML output", html, expectedInner)
+        }
       }
     }
 

@@ -132,17 +132,23 @@ object MultiBrowser {
 
             val setup =
               if (onNewDriverT eq doNothing1) None else Some {
-                val setupTab    = createTabWithoutLocking(browserIndex)
-                val setupFn     = onNewDriverT
-                val browserLock = mutex.lock
+                val setupTab = browser.multiTab.openTab()
+                val setupFn  = onNewDriverT
                 // Lock browser so that no one else can create a new tab in this browser before setup completes
-                browserLock.lock()
+                mutex.lock()
                 () => {
-                  try setupFn(setupTab)
-                  finally browserLock.unlock()
-                  // closeTab() will attempt to acquire the outer lock through the afterClosed callback so the
-                  // browser lock must be released beforehand to maintain lock-ordering (i.e. outer before browser)
-                  setupTab.closeTab()
+                  try
+                    setupFn(setupTab)
+                  finally {
+                    try
+                      mutex.unlock()
+                    finally {
+                      // closeTab() will attempt to acquire the outer lock through the afterClosed callback so the
+                      // browser lock must be released beforehand to maintain lock-ordering (i.e. outer before browser)
+                      setupTab.closeTab()
+                      ()
+                    }
+                  }
                 }
               }
             val tab = createTabWithoutLocking(browserIndex)
@@ -203,11 +209,16 @@ object MultiBrowser {
           case 1 => f(as.head)
           case n =>
             val threadPool = Executors.newFixedThreadPool(n)
-            implicit val ec = ExecutionContext.fromExecutorService(threadPool)
-            val fs = Future.traverse(as)(b => Future(f(b)))
-            Await.result(fs, Duration.Inf)
-            threadPool.shutdown()
-            ec.shutdown()
+            try {
+              implicit val ec = ExecutionContext.fromExecutorService(threadPool)
+              try {
+                val fs = Future.traverse(as)(b => Future(f(b)))
+                Await.result(fs, Duration.Inf)
+                ()
+              } finally
+                ec.shutdown()
+            } finally
+              threadPool.shutdown()
         }
       }
     }

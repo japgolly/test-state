@@ -15,8 +15,8 @@ final case class VectorTree[+A](elements: Vector[Node[A]]) {
   def prettyPrintedLines(indent: String = "  "): Iterator[String] =
     iteratorWithLevel().map(x => (indent * x._1) + x._2)
 
-  def ana[B](f: (A, Vector[B]) => B): Vector[B] =
-    elements.map(n => f(n.value, n.children.ana(f)))
+  def cata[B](f: (A, Vector[B]) => B): Vector[B] =
+    elements.map(n => f(n.value, n.children.cata(f)))
 
   override def toString: String =
     prettyPrintedLines().mkString("\n")

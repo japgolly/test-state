@@ -59,11 +59,11 @@ object FastDomZipperSeleniumTest extends TestSuite {
         "some" - assertEq(name.classes, Set("a", "b", "c"))
       }
 
-  //    'selectedOption {
-  //      'nonSelect - assertEq($.failToOption.selectedOption.map(_ => ()), None)
-  //      'some - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
-  //      'none - assertEq($("select", 2 of 2).selectedOptionText, None)
-  //    }
+    //  "selectedOption" - {
+    //    "nonSelect" - assertEq($.failToOption.selectedOption.map(_ => ()), None)
+    //    "some" - assertEq($("select", 1 of 2).selectedOptionText, Some("Saab"))
+    //    "none" - assertEq($("select", 2 of 2).selectedOptionText, None)
+    //  }
 
       "findSelfOrChildWithAttribute" - {
         def attr = "data-coding"
@@ -107,8 +107,53 @@ object FastDomZipperSeleniumTest extends TestSuite {
     "htmlToBody" - assertEq(html("body").classes, Set("haha"))
     "bodyToBody" - assertEq(body.classes, Set("haha"))
 
+    "htmlRoot" - {
+      assertEq(html.tagName, "html")
+      assertEq(html.child("body").classes, Set("haha"))
+      assertEq(html.children1n.map(_.tagName), html.children1n.map(_.dom().getTagName))
+    }
+
     "radioT" - assertEq($("input[type=radio]", 1 of 2).checked, true)
     "radioF" - assertEq($("input[type=radio]", 2 of 2).checked, false)
+
+    "checkboxLive" - {
+      val cb = $("input[type=checkbox]", 1 of 2)
+      assertEq(cb.checked, true)
+      cb.dom().click()
+      try
+        assertEq(cb.checked, false)
+      finally
+        cb.dom().click()
+    }
+
+    "valueLive" - {
+      val n = name
+      n.dom().sendKeys(" Law Firm")
+      try {
+        assertEq(n.dom().getAttribute("value"), "Bob Loblaw Law Firm")
+        assertEq(n.value, "Bob Loblaw Law Firm")
+      } finally {
+        n.dom().clear()
+        n.dom().sendKeys("Bob Loblaw")
+      }
+    }
+
+    "selectedOptionLive" - {
+      "explicit" - {
+        val select = $("select", 1 of 2)
+        assertEq(select.selectedOptionText, Some("Saab"))
+        select("option", 4 of 4).dom().click()
+        try
+          assertEq(select.selectedOptionText, Some("Audi"))
+        finally
+          select("option", 2 of 4).dom().click()
+      }
+
+      "default" - {
+        val select2 = $("select", 2 of 2)
+        assertEq(select2.selectedOptionText, Some("A"))
+      }
+    }
 
     "slow" - {
       def outerHtml(z: FastDomZipperSelenium) = htmlScrub.run(z.dom().getAttribute("outerHTML"))

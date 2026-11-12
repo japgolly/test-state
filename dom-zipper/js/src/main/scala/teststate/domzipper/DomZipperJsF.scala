@@ -63,7 +63,10 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     new DomZipperJsF(pos, peek)
 
   override def isCapable(c: DomZipper.Capability) = c match {
-    case DomZipper.Capability.RadioButtonChecked => true
+    case DomZipper.Capability.Checked
+       | DomZipper.Capability.Selected
+       | DomZipper.Capability.Value
+       => true
   }
 
   override def unmap =
@@ -77,10 +80,10 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
   override protected def _parent: F[Dom] =
     liftNode(dom.parentNode)
 
-  override protected def _outerHTML: String =
+  override protected[domzipper] def _outerHTML: String =
     dynamicString(_.outerHTML)
 
-  override protected def _innerHTML: String =
+  override protected[domzipper] def _innerHTML: String =
     dynamicString(_.innerHTML)
 
   private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]) =
@@ -127,7 +130,23 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     }
 
   override def value: F[String] =
-    dynamicMethod[String](_.value.toString) orFail s".value failed on $dom."
+    dynamicMethod[String](_.value).map(_.toString) orFail s".value failed on $dom."
+
+  override def selectedOption: F[DomCollection[DomZipperJsF, F, Option, Dom, A]] =
+    tagName.toUpperCase match {
+      case "SELECT" =>
+        val sel = "option:checked"
+        val results = runCssQuery(sel)
+        val selected =
+          if (results.isEmpty && getAttribute("multiple").isEmpty) {
+            val all = runCssQuery("option")
+            if (all.nonEmpty) Vector(all.head) else Vector.empty
+          } else
+            results
+        F pass newDomCollection(sel, selected, F.C01)
+      case x =>
+        F fail enrichErr(s"<$x> is not a <SELECT>")
+    }
 
   /** Cast DOM to [[js.Dynamic]] and invoke a method expected to return `A` if successful. */
   def dynamicMethod[B](f: js.Dynamic => Any): Option[B] =

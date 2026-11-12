@@ -15,6 +15,6 @@ package object core {
       n => f(n.cmap(_.before)).cmap(BeforeAfter.same)
 
     def thruAfter: NameFn[A] => NameFn[A] =
-      n => f(n.cmap(_.before)).cmap(BeforeAfter.same)
+      n => f(n.cmap(_.after)).cmap(BeforeAfter.same)
   }
 }

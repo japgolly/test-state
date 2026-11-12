@@ -112,7 +112,7 @@ object ActionOps {
 
     /** All steps will be marked as skipped. */
     def toReport: Report[Nothing] = {
-      val steps = nameTree.ana[History.Step[Nothing]]((name, children) =>
+      val steps = nameTree.cata[History.Step[Nothing]]((name, children) =>
         History.Step(Name.now(name), Result.Skip, History(children, Result.Skip)))
       Report(None, History(steps), Stats.empty)
     }

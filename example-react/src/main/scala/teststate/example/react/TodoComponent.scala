@@ -41,9 +41,9 @@ object TodoComponent {
 
       val items =
         if (s.showCompleted)
-          s.items
+          s.items.zipWithIndex
         else
-          s.items.iterator.filterNot(_.completed)
+          s.items.iterator.zipWithIndex.filterNot(_._1.completed).toVector
 
       <.div(
         renderNew(s.newItemText),
@@ -72,14 +72,14 @@ object TodoComponent {
           "Add"))
     }
 
-    private def renderList(items: IterableOnce[TodoItem]): TagMod =
-      if (items.iterator.isEmpty)
+    private def renderList(items: Vector[(TodoItem, Int)]): TagMod =
+      if (items.isEmpty)
         EmptyVdom
       else
         <.div(
           "Todo List",
           <.ul(
-            items.iterator.zipWithIndex.map { case (item, idx) =>
+            items.map { case (item, idx) =>
               <.li(
                 ^.key := idx,
                 renderItem(item, idx))

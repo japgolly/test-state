@@ -75,6 +75,7 @@ object TodoTest extends TestSuite {
       >> completeItem("hello2") +> visibleItemNames.size.assert.decrement
       >> toggleShowCompleted    +> visibleItemNames.size.assert.increment
       >> toggleShowCompleted    +> visibleItemNames.assert("hello", "blah 3")
+      >> completeItem("blah 3") +> visibleItemNames.assert("hello")
     )
 
     runTest(plan).assert()

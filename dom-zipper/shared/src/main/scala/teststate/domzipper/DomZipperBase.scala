@@ -59,7 +59,7 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
   }
 
   final override def child(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-    val results = if (sel.isEmpty) children1n else children1n(sel)
+    val results = if (sel.isEmpty) children0n else children0n(sel)
     val desc = if (sel.isEmpty) ">*" else cssPrepend_>(sel)
     F.flatMap(results.zippers) { zippers =>
       if (zippers.length != which.n)
@@ -68,7 +68,7 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
           enrichErr(s"${q}uery failed: [$desc]. Expected ${which.n} results, not ${zippers.length}.")
         }
       else
-        F pass zippers(which.m - 1)
+        F pass addLayer(Layer(name, desc, zippers(which.m - 1).dom))
     }
   }
 
@@ -83,8 +83,8 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
 
   final override def dom: Dom = layers.latest.dom
 
-  protected def _outerHTML: String
-  protected def _innerHTML: String
+  protected[domzipper] def _outerHTML: String
+  protected[domzipper] def _innerHTML: String
 
   protected def collect        [C[_]](sel: String, C: Container[F, C])              : DomCollection[Self, F, C, Dom, A]
   protected def collectChildren[C[_]](desc: String, C: Container[F, C])             : DomCollection[Self, F, C, Dom, A]

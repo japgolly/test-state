@@ -131,8 +131,8 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
 
   def dom: Dom
 
-  protected def _outerHTML: String
-  protected def _innerHTML: String
+  protected[domzipper] def _outerHTML: String
+  protected[domzipper] def _innerHTML: String
 
   def matches(css: String): F[Boolean]
 
@@ -188,8 +188,25 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
   /** The currently selected option in a &lt;select&gt; dropdown. */
   def selectedOption: F[DomCollection[Self, F, Option, Dom, A]] =
     tagName.toUpperCase match {
-      case "SELECT" => F pass collect01("option[selected]")
-      case x        => F fail enrichErr(s"<$x> is not a <SELECT>")
+      case "SELECT" =>
+        val c = collect01("option[selected]")
+        val c2 =
+          if (c.isEmpty && getAttribute("multiple").isEmpty) {
+            val all = collect0n("option")
+            if (all.isEmpty)
+              c
+            else
+              new DomCollection[Self, F, Option, Dom, A](
+                all.enrichErr,
+                all.rawResults.take(1),
+                None,
+                F.C01
+              )
+          } else
+            c
+        F pass c2
+      case x =>
+        F fail enrichErr(s"<$x> is not a <SELECT>")
     }
 
   /** The text value of the currently selected option in a &lt;select&gt; dropdown. */
@@ -240,6 +257,12 @@ object DomZipper {
         case Some(f) => rawResults.filter(f)
       }
 
+    private def validateRaw: F[Unit] =
+      if (filterFn.isEmpty)
+        F.pass(())
+      else
+        F.map(C(enrichErr, rawResults))(_ => ())
+
     private def fail[B](errMsg: String): F[B] =
       F fail enrichErr(errMsg)
 
@@ -253,10 +276,10 @@ object DomZipper {
       result.length
 
     def zippers: F[C[Z[F, A]]] =
-      C(enrichErr, result)
+      F.flatMap(validateRaw)(_ => C(enrichErr, result))
 
     def map[B](f: Z[F, A] => B): F[C[B]] =
-      C(enrichErr, result.map(f))
+      F.flatMap(validateRaw)(_ => C(enrichErr, result.map(f)))
 
     @deprecated("Use .map", "2.2.0")
     def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
@@ -289,10 +312,12 @@ object DomZipper {
     }
 
     def singleton: F[Z[F, A]] =
-      if (size == 1)
-        F pass result.head
-      else
-        fail(s"Expected exactly 1 result but have $size.")
+      F.flatMap(validateRaw)(_ =>
+        if (size == 1)
+          F pass result.head
+        else
+          fail(s"Expected exactly 1 result but have $size.")
+      )
 
     def headOption: Option[Z[F, A]] =
       result.headOption
@@ -301,16 +326,20 @@ object DomZipper {
       result.lastOption
 
     def head: F[Z[F, A]] =
-      if (result.isEmpty)
-        fail("You called .head but collection is empty.")
-      else
-        F pass result.head
+      F.flatMap(validateRaw)(_ =>
+        if (result.isEmpty)
+          fail("You called .head but collection is empty.")
+        else
+          F pass result.head
+      )
 
     def last: F[Z[F, A]] =
-      if (result.isEmpty)
-        fail("You called .last but collection is empty.")
-      else
-        F pass result.last
+      F.flatMap(validateRaw)(_ =>
+        if (result.isEmpty)
+          fail("You called .last but collection is empty.")
+        else
+          F pass result.last
+      )
 
     def outerHTMLs: F[C[String]] = map(_.outerHTML)
     def innerHTMLs: F[C[String]] = map(_.innerHTML)
@@ -404,7 +433,17 @@ object DomZipper {
 
   sealed trait Capability
   object Capability {
-    case object RadioButtonChecked extends Capability
-    val all: List[Capability] = RadioButtonChecked ::Nil
+
+    /** The capability to check whether the element is checked (for checkboxes and radio buttons). */
+    case object Checked extends Capability
+
+    /** The capability to check whether a select's option is selected. */
+    case object Selected extends Capability
+
+    /** The capability to check whether the element has a value (for input fields). */
+    case object Value extends Capability
+
+    val all: List[Capability] =
+      Checked :: Selected :: Value :: Nil
   }
 }

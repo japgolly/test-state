@@ -58,8 +58,13 @@ object RunCallbacks {
       @inline def apply(aroundAction: (ROS[R, O, S], Name) => F[Option[E] => F[Unit]]): RunCallbacks[F, R, O, S, E] =
         RunCallbacks(aroundAction)
 
+      private val noopAfter: Option[E] => F[Unit] = {
+        val u = F.pure(())
+        _ => u
+      }
+
       def before(f: (ROS[R, O, S], Name) => F[Unit]): RunCallbacks[F, R, O, S, E] =
-        apply((ros, n) => F.pure(_ => f(ros, n)))
+        apply((ros, n) => F.map(f(ros, n))(_ => noopAfter))
 
       def after(f: (ROS[R, O, S], Name, Option[E]) => F[Unit]): RunCallbacks[F, R, O, S, E] =
         apply((ros, n) => F.pure(oe => f(ros, n, oe)))

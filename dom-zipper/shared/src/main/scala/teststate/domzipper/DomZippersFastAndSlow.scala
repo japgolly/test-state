@@ -80,8 +80,13 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
   override def scrubHtml(f: HtmlScrub) =
     bimap(_.scrubHtml(f), _.scrubHtml(f))
 
-  protected override def _outerHTML = fast.outerHTML
-  protected override def _innerHTML = fast.innerHTML
+  override def startConsistencyCheck(): () => F[Unit] = {
+    val c = slow().map(_.startConsistencyCheck())
+    () => c.flatMap(_())
+  }
+
+  override protected[domzipper] def _outerHTML = fast._outerHTML
+  override protected[domzipper] def _innerHTML = fast._innerHTML
 
   override def matches     (css: String)  = fast.matches(css)
   override def getAttribute(name: String) = fast.getAttribute(name)
@@ -89,16 +94,52 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
   override def tagName   = fast.tagName
   override def innerText = fast.innerText
   override def classes   = fast.classes
-  override def value     = fast.value
+
+  override def value =
+    if (fast.isCapable(DomZipper.Capability.Value))
+      fast.value
+    else
+      F.flatMap(slow())(_.value)
 
   override def checked =
-    if (fast.isCapable(DomZipper.Capability.RadioButtonChecked))
+    if (fast.isCapable(DomZipper.Capability.Checked))
       fast.checked
     else
-      F.flatMap(fast.matches("input[type=radio]")) {
-        case true => F.flatMap(slow())(_.checked)
+      F.flatMap(fast.matches("input[type=checkbox], input[type=radio]")) {
+        case true  => F.flatMap(slow())(_.checked)
         case false => fast.checked
       }
+
+  override def selectedOption =
+    tagName.toUpperCase match {
+      case "SELECT" =>
+        if (fast.isCapable(DomZipper.Capability.Selected))
+          super.selectedOption
+        else {
+          val optionsBoth = collect0n("option")
+          F.flatMap(slow()) { s =>
+            F.flatMap(s.selectedOption) { selCol =>
+              F.map(selCol.zippers) { selOpt =>
+                val idx = selOpt match {
+                  case Some(sel) =>
+                    val allSlow = s.collect0n("option").rawResults
+                    allSlow.indexWhere(_.extract == sel.extract)
+                  case None =>
+                    -1
+                }
+                new DomCollection[({ type L[X[_], Y] = DomZippersFastAndSlow[X, Dom, Y] })#L, F, Option, Dom, A](
+                  enrichErr  = optionsBoth.enrichErr,
+                  rawResults = if (idx >= 0 && optionsBoth.rawResults.isDefinedAt(idx)) Vector(optionsBoth.rawResults(idx)) else Vector.empty,
+                  filterFn   = None,
+                  C          = F.C01
+                )
+              }
+            }
+          }
+        }
+      case x =>
+        F fail enrichErr(s"<$x> is not a <SELECT>")
+    }
 
   override def parent: F[DomZippersFastAndSlow[F, Dom, A]] =
     bimapF(_.parent, _.parent)

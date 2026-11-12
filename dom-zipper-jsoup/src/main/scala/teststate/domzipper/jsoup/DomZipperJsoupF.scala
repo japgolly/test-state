@@ -29,11 +29,14 @@ object DomZipperJsoupF {
     def apply(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
       apply("root", doc)
 
-    def body(body: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
-      apply("body", body)
+    def html(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
+      apply("html", doc.selectFirst("html"))
+
+    def body(doc: Document)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
+      apply("body", doc.body())
 
     def parseHtml(html: String)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] =
-      apply(Jsoup.parse(html))
+      this.html(Jsoup.parse(html))
 
     def parseBody(bodyHtml: String)(implicit scrub: HtmlScrub): DomZipperJsoupF[F, Dom] = {
       // Jsoup is weird
@@ -64,7 +67,10 @@ final class DomZipperJsoupF[F[_], A](override protected val layers: DomZipperBas
     new DomZipperJsoupF(pos, peek)
 
   override def isCapable(c: DomZipper.Capability) = c match {
-    case DomZipper.Capability.RadioButtonChecked => false
+    case DomZipper.Capability.Checked
+       | DomZipper.Capability.Selected
+       | DomZipper.Capability.Value
+       => false
   }
 
   override def unmap =
@@ -96,11 +102,11 @@ final class DomZipperJsoupF[F[_], A](override protected val layers: DomZipperBas
   override def getAttribute(name: String): Option[String] =
     dom.attr(name)
 
-  protected override def _outerHTML =
-    htmlScrub.run(dom.outerHtml)
+  override protected[domzipper] def _outerHTML =
+    dom.outerHtml
 
-  protected override def _innerHTML =
-    htmlScrub.run(dom.innerHtml)
+  override protected[domzipper] def _innerHTML =
+    dom.innerHtml
 
   override def innerText: String =
     dom.innerText

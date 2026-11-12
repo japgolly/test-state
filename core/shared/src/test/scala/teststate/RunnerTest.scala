@@ -154,7 +154,7 @@ object RunnerTest extends TestSuite {
           """
             |✘ NOP
             |  ✓ Action
-            |  ✘ Post-conditions
+            |  ✘ Invariants
             |    ✘ what? -- java.lang.RuntimeException: Crashhh!
             |Performed 1 action, 1 check.
           """.stripMargin)
@@ -354,6 +354,98 @@ object RunnerTest extends TestSuite {
           |✓ All pass.
           |Performed 1 action, 2 checks.
         """.stripMargin)
+    }
+
+    "deltaInvariantReporting" - {
+      "onlyDelta" - {
+        var i = 0
+        val dsl = Dsl[Unit, Unit, Unit]
+        val action = dsl.action("Inc")(_ => i += 1)
+        val deltaInv = dsl.testAround("InvDelta")((_, _) => true)
+        val plan = Plan.action(action).addInvariants(deltaInv)
+        val test = plan.stateless.testU
+        assertRun(test.runU(),
+          """
+            |✓ Inc
+            |  ✓ Action
+            |  ✓ Invariants
+            |    ✓ InvDelta
+            |✓ All pass.
+            |Performed 1 action, 1 check.
+          """.stripMargin)
+      }
+
+      "withPostCond" - {
+        var i = 0
+        val dsl = Dsl[Unit, Unit, Unit]
+        val action = dsl.action("Inc")(_ => i += 1) +> dsl.test("PostCond")(_ => true)
+        val deltaInv = dsl.testAround("InvDelta")((_, _) => true)
+        val plan = Plan.action(action).addInvariants(deltaInv)
+        val test = plan.stateless.testU
+        assertRun(test.runU(),
+          """
+            |✓ Inc
+            |  ✓ Action
+            |  ✓ Post-conditions
+            |    ✓ PostCond
+            |  ✓ Invariants
+            |    ✓ InvDelta
+            |✓ All pass.
+            |Performed 1 action, 2 checks.
+          """.stripMargin)
+      }
+
+      "aroundPreRunsBeforeAction" - {
+        var state = 0
+        var actionRan = false
+        val dsl = Dsl[Unit, Int, Unit]
+        val check = dsl.around("Recorded pre-state")(os => {
+          assert(!actionRan)
+          os.obs
+        })((os, before) => {
+          assert(actionRan)
+          if (before == 0 && os.obs == 1) None else Some(s"Expected 0 -> 1, got $before -> ${os.obs}")
+        })
+        val action = dsl.action("Inc")(_ => {
+          actionRan = true
+          state = 1
+        }) +> check
+        val plan = Plan.action(action)
+        val test = plan.stateless.test(Observer(_ => state))
+        val report = test.runU()
+        assert(report.result == Result.Pass)
+      }
+    }
+
+    "callbacks" - {
+      "before" - {
+        var events = Vector.empty[String]
+        val cb = dsl.runCallbacks.aroundActions.before((_, name) => events :+= s"before:${name.value}")
+        val actOk = dsl.action("ok")(_ => events :+= "run:ok")
+        val actCrash = dsl.action("crash")(_ => { events :+= "run:crash"; sys.error("boom") })
+        Plan.action(actOk >> actCrash).test(Observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
+        assertEq(events, Vector(
+          "before:ok",
+          "run:ok",
+          "before:crash",
+          "run:crash",
+        ))
+      }
+
+      "after" - {
+        var events = Vector.empty[(String, Option[String])]
+        val cb = dsl.runCallbacks.aroundActions.after((_, name, err) => events :+= (name.value -> err))
+        val actOk = dsl.action("ok")(_ => ())
+        val actFail = dsl.action("fail").attempt(_ => Some("err"))
+        val actCrash = dsl.action("crash")(_ => sys.error("boom"))
+        Plan.action(actOk >> actFail).test(Observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
+        Plan.action(actCrash).test(Observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
+        assertEq(events, Vector(
+          "ok" -> None,
+          "fail" -> Some("err"),
+          "crash" -> Some("java.lang.RuntimeException: boom"),
+        ))
+      }
     }
 
   }

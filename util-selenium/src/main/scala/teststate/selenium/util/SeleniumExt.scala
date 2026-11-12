@@ -72,7 +72,7 @@ object Internals {
 
   class WebElementExt(private val self: WebElement) extends AnyVal {
     def classes(): Set[String] = {
-      val clsStr = self.getAttribute("class").trim
+      val clsStr = Option(self.getAttribute("class")).fold("")(_.trim)
       if (clsStr.isEmpty)
         Set.empty
       else
@@ -149,7 +149,7 @@ object Internals {
         Line(
           start = start,
           size  = size,
-          mid   = start + size >> 1,
+          mid   = start + (size >> 1),
           end   = start + size)
 
       def startAndEnd(start: Int, end: Int): Line[Int] =

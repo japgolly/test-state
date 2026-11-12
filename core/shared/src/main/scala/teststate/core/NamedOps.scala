@@ -34,7 +34,6 @@ object NamedOps {
   }
 
   object ToOps extends ToOps
-  import ToOps._
 
   trait Instances {
 
@@ -42,25 +41,34 @@ object NamedOps {
 //      NamedOps((s, f) => s.rmap(n.renameBy(_, f)))
 
     implicit def sackInstanceNamedOps[A, B](implicit nb: NamedOps[B, A]): NamedOps[Sack[A, B], A] =
-      NamedOps((s, f) =>
-        s match {
-          case Sack.Value(b)        => Sack.Value(nb.renameBy(b, f))
-          case Sack.Product(ss)     => Sack.Product(ss map (_ renameBy f))
-          case Sack.CoProduct(n, p) => Sack.CoProduct(f(n), p)
-        }
-      )
+      NamedOps { (s, f) =>
+        def go(s: Sack[A, B]): Sack[A, B] =
+          s match {
+            case Sack.Value(b)        => Sack.Value(nb.renameBy(b, f))
+            case Sack.Product(ss)     => Sack.Product(ss map go)
+            case Sack.CoProduct(n, p) => Sack.CoProduct(f(n), p andThen go)
+          }
+        go(s)
+      }
 
     implicit def sackInstanceNamedOpsBA[A, B, I](implicit nb: NamedOps[B, BeforeAfter[A]]): NamedOps[Sack[A, B], BeforeAfter[A]] =
-      NamedOps((s, f) =>
-        s match {
-          case Sack.Value(b)        => Sack.Value(nb.renameBy(b, f))
-          case Sack.Product(ss)     => Sack.Product(ss map (_ renameBy f))
-          case Sack.CoProduct(n, p) => Sack.CoProduct(f.thruBefore(n), p)
-        }
-      )
+      NamedOps { (s, f) =>
+        def go(s: Sack[A, B]): Sack[A, B] =
+          s match {
+            case Sack.Value(b)        => Sack.Value(nb.renameBy(b, f))
+            case Sack.Product(ss)     => Sack.Product(ss map go)
+            case Sack.CoProduct(n, p) => Sack.CoProduct(f.thruBefore(n), p andThen go)
+          }
+        go(s)
+      }
 
     implicit def namedErrorOrXInstanceNamedOps[A, I, E](implicit n: NamedOps[A, I]): NamedOps[NamedError[E] Or A, I] =
-      NamedOps((o, f) => o.map(n.renameBy(_, f)))
+      NamedOps((o, f) =>
+        o match {
+          case Right(a) => Right(n.renameBy(a, f))
+          case Left(e)  => Left(NamedError(f(NameFn.const(e.name))(None), e.error))
+        }
+      )
   }
 
   trait Implicits extends Instances with ToOps

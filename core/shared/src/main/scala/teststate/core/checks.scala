@@ -138,8 +138,7 @@ object Invariant {
     NamedOps((i, f) => i match {
       case Point(x) => Point(x renameBy f)
       case Delta(x) =>
-        // Hmmmm......
-        Delta(x renameBy (n => f(n.cmap(BeforeAfter.same)).cmap(_.before)))
+        Delta(x renameBy (n => NameFn(oba => f(NameFn.const(n(oba)))(oba.map(_.after)))))
     })
 
   implicit def invariantInstanceDisplay[I, E]: Display[Invariant[I, E]] =
