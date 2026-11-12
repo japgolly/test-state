@@ -102,11 +102,11 @@ final class DomZipperJsoupF[F[_], A](override protected val layers: DomZipperBas
   override def getAttribute(name: String): Option[String] =
     dom.attr(name)
 
-  protected override def _outerHTML =
-    htmlScrub.run(dom.outerHtml)
+  override protected[domzipper] def _outerHTML =
+    dom.outerHtml
 
-  protected override def _innerHTML =
-    htmlScrub.run(dom.innerHtml)
+  override protected[domzipper] def _innerHTML =
+    dom.innerHtml
 
   override def innerText: String =
     dom.innerText

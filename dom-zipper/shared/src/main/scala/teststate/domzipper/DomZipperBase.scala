@@ -83,8 +83,8 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
 
   final override def dom: Dom = layers.latest.dom
 
-  protected def _outerHTML: String
-  protected def _innerHTML: String
+  protected[domzipper] def _outerHTML: String
+  protected[domzipper] def _innerHTML: String
 
   protected def collect        [C[_]](sel: String, C: Container[F, C])              : DomCollection[Self, F, C, Dom, A]
   protected def collectChildren[C[_]](desc: String, C: Container[F, C])             : DomCollection[Self, F, C, Dom, A]

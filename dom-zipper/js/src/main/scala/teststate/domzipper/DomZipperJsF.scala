@@ -80,10 +80,10 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
   override protected def _parent: F[Dom] =
     liftNode(dom.parentNode)
 
-  override protected def _outerHTML: String =
+  override protected[domzipper] def _outerHTML: String =
     dynamicString(_.outerHTML)
 
-  override protected def _innerHTML: String =
+  override protected[domzipper] def _innerHTML: String =
     dynamicString(_.innerHTML)
 
   private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]) =

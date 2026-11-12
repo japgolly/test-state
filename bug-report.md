@@ -6,9 +6,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ## 17. Additional Minor Defects
 
-2. **`DomZipperJsoupF.scala` (lines 99–103) & `DomZippersFastAndSlow.scala` (lines 83–84) — Redundant `htmlScrub` applications:**
-   `DomZipper.outerHTML` and `DomZipper.innerHTML` (`DomZipper.scala` lines 154–155) already apply `F.map(_outerHTML)(htmlScrub.run)`. However, `DomZipperJsoupF._outerHTML` and `_innerHTML` also call `htmlScrub.run(...)`, and `DomZippersFastAndSlow._outerHTML` delegates to `fast.outerHTML` (which calls `DomZipper.outerHTML` on `fast`). As a result, `htmlScrub` is applied **twice** on `DomZipperJsoup` and **three times** on `FastDomZipperSelenium`.
-
 3. **`GrowthStrategy.scala` (line 34) — `GrowthStrategy.maxBrowsers(n)` crashes when `n <= 0`:**
    ```scala
    if (openTabsPerBrowser.length < maxBrowsers)

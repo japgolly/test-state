@@ -87,10 +87,10 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
   override protected def _parent: F[Dom] =
     F.attempt(() => dom().parent()(driver))
 
-  override protected def _outerHTML: String =
+  override protected[domzipper] def _outerHTML: String =
     getAttribute("outerHTML").getOrElse("null")
 
-  override protected def _innerHTML: String =
+  override protected[domzipper] def _innerHTML: String =
     getAttribute("innerHTML").getOrElse("null")
 
   private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =

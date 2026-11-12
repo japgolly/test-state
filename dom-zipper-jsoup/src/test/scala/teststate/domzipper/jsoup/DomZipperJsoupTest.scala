@@ -1,5 +1,6 @@
 package teststate.domzipper.jsoup
 
+import cats.instances.int._
 import cats.instances.option._
 import cats.instances.set._
 import cats.instances.string._
@@ -219,6 +220,88 @@ object DomZipperJsoupTest extends TestSuite {
       val b = DomZipperJsoup.body(Jsoup.parse(htmlSource))
       assertEq(b.tagName, "body")
       assertEq(b.children1n.map(_.tagName), Vector("form"))
+    }
+
+    "htmlScrubNotAppliedRedundantly" - {
+      val expectedOuter =
+        """<!--s--><html>
+          | <head></head>
+          | <body>
+          |  <div>
+          |   <span>hello</span>
+          |  </div>
+          | </body>
+          |</html>""".stripMargin
+
+      val expectedInner =
+        """<!--s--><head></head>
+          |<body>
+          | <div>
+          |  <span>hello</span>
+          | </div>
+          |</body>""".stripMargin
+
+      "jsoup" - {
+        var outerRuns = 0
+        val scrubOuter = HtmlScrub { s =>
+          outerRuns += 1
+          s"<!--s-->$s"
+        }
+        val zOuter = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubOuter)
+
+        "outerHTML" - {
+          val html = zOuter.outerHTML
+          assertEq("outerHTML scrub invocation count", outerRuns, 1)
+          assertEq("outerHTML output", html, expectedOuter)
+        }
+
+        var innerRuns = 0
+        val scrubInner = HtmlScrub { s =>
+          innerRuns += 1
+          s"<!--s-->$s"
+        }
+        val zInner = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubInner)
+
+        "innerHTML" - {
+          val html = zInner.innerHTML
+          assertEq("innerHTML scrub invocation count", innerRuns, 1)
+          assertEq("innerHTML output", html, expectedInner)
+        }
+      }
+
+      "fastAndSlow" - {
+        implicit val errorHandler: ErrorHandler[ErrorHandler.Id] = ErrorHandler.Throw
+
+        var outerRuns = 0
+        val scrubOuter = HtmlScrub { s =>
+          outerRuns += 1
+          s"<!--s-->$s"
+        }
+        val fastOuter = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubOuter)
+        val slowOuter = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubOuter)
+        val bothOuter = DomZippersFastAndSlow[ErrorHandler.Id, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fastOuter, slowOuter)
+
+        "outerHTML" - {
+          val html = bothOuter.outerHTML
+          assertEq("both.outerHTML scrub invocation count", outerRuns, 1)
+          assertEq("both.outerHTML output", html, expectedOuter)
+        }
+
+        var innerRuns = 0
+        val scrubInner = HtmlScrub { s =>
+          innerRuns += 1
+          s"<!--s-->$s"
+        }
+        val fastInner = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubInner)
+        val slowInner = DomZipperJsoup.parseHtml("<div><span>hello</span></div>")(scrubInner)
+        val bothInner = DomZippersFastAndSlow[ErrorHandler.Id, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fastInner, slowInner)
+
+        "innerHTML" - {
+          val html = bothInner.innerHTML
+          assertEq("both.innerHTML scrub invocation count", innerRuns, 1)
+          assertEq("both.innerHTML output", html, expectedInner)
+        }
+      }
     }
 
   }

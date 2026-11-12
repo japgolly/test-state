@@ -131,8 +131,8 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
 
   def dom: Dom
 
-  protected def _outerHTML: String
-  protected def _innerHTML: String
+  protected[domzipper] def _outerHTML: String
+  protected[domzipper] def _innerHTML: String
 
   def matches(css: String): F[Boolean]
 

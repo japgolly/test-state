@@ -85,8 +85,8 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
     () => c.flatMap(_())
   }
 
-  protected override def _outerHTML = fast.outerHTML
-  protected override def _innerHTML = fast.innerHTML
+  override protected[domzipper] def _outerHTML = fast._outerHTML
+  override protected[domzipper] def _innerHTML = fast._innerHTML
 
   override def matches     (css: String)  = fast.matches(css)
   override def getAttribute(name: String) = fast.getAttribute(name)
