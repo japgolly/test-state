@@ -18,8 +18,5 @@ This report details bugs, defects, and problems identified across the `test-stat
    ```
    When `openTabsPerBrowser` isInitially empty (`Vector.empty`) and `maxBrowsers <= 0`, `openTabsPerBrowser.length < maxBrowsers` is `false`, and `.minBy(_._1)` throws `UnsupportedOperationException: empty.minBy`.
 
-4. **`VectorTree.scala` (line 18) — Misnamed recursion scheme `ana`:**
-   `def ana[B](f: (A, Vector[B]) => B): Vector[B]` folds a `VectorTree[A]` bottom-up into `Vector[B]`, which is a catamorphism (`cata`), not an anamorphism (`ana`).
-
 5. **`TodoComponent.scala` (lines 42–46, 82–86) — Wrong item index completed in example React app when `showCompleted` is `false`:**
    In `example-react`, `render` filters `s.items` with `s.items.iterator.filterNot(_.completed)` *before* `renderList` calls `.zipWithIndex` to bind `completeItem(idx)`. When completed items are hidden (`showCompleted == false`) and an earlier item in `s.items` is already completed, `idx` is the index in the filtered pending list rather than in `s.items`, so clicking "Complete" marks the wrong item in `s.items`.
