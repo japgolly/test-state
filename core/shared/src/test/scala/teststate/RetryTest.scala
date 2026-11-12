@@ -306,6 +306,24 @@ object RetryTest extends TestSuite {
         val plan = Plan.action(queueUpdate >> (dsl.emptyAction <+ value.assert(123)))
         assertRetryWorks(plan)
       }
+      "preCondRetryGroupObsFresh" - {
+        var recordedObs = Vector.empty[Int]
+        val child = dsl.action("Record obs")(x => recordedObs :+= x.obs.value)
+        val group = child.group("grp") <+ value.assert(123)
+        val plan = Plan.action(queueUpdate >> group)
+        val test = mkTest(plan).withRetryPolicy(retryPolicy)
+        test.run()
+        assertEq(recordedObs, Vector(123))
+      }
+      "preCondRetrySubTestObsFresh" - {
+        var recordedSubObs = Vector.empty[Int]
+        val child = dsl.action("Record sub obs")(x => recordedSubObs :+= x.obs.value)
+        val subtest = Plan.action(child).asAction("sub") <+ value.assert(123)
+        val plan = Plan.action(queueUpdate >> subtest)
+        val test = mkTest(plan).withRetryPolicy(retryPolicy)
+        test.run()
+        assertEq(recordedSubObs, Vector(123))
+      }
       "postCondFail" - {
         val plan = Plan.action(queueUpdate +> value.assert(123))
         assertRetryWorks(plan)

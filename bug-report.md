@@ -8,8 +8,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 * **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 383–478, 434–443, 491–547, 645–670)
 * **Problems:**
-  3. **Pre-check retry in `Action.Group` and `Action.SubTest` discards the re-observed `ROS` (lines 434–443, 645–647, 666–670):**
-     When `runPreChecksWithRetry` retries a failing pre-condition, `reObserve` produces a new `(r, o)` and checks `preChecks(ROS(r, o, p0.ros.state))`. However, `runPreChecksWithRetry` returns `F[Boolean]` and discards the newly observed `ROS(r, o, p0.ros.state)`. `Action.Group` and `Action.SubTest` then proceed to run `run()` using the stale, pre-retry `ros`.
   4. **`Action.Single` retries pre-condition failures under `Retry.Scope.Action` instead of `Retry.Scope.PreConditions` (line 546):**
      In `runActionWithRetry` (line 546), `retry(Retry.Scope.Action, attempt0, ...)` is used for the entire `tryAction` loop, which includes `preChecks`. If a pre-condition fails on an `Action.Single`, it is retried using `Retry.Scope.Action` instead of `Retry.Scope.PreConditions`. Furthermore, if `reObserve()` fails on retry, `onRetry` (lines 536–544) re-evaluates `initialPreCheck` (double-counting `stats.checks` and mutating the report builder a second time) and falls back to the first attempt's error rather than the latest attempt's error.
   5. **`Action.SubTest` post-conditions are not retried (line 664):**
