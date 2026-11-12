@@ -4,15 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 15. Check execution, categorization, and retry bugs in `Runner` (`Runner.scala`)
-
-* **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 383–478, 434–443, 491–547, 645–670)
-* **Problems:**
-  5. **`Action.SubTest` post-conditions are not retried (line 664):**
-     In `case Action.SubTest(sac, cond) =>` (line 664), `val postFailed = runPostChecks(ros2)._2` is called directly without `retryPostCheck`, unlike `Action.Single` (line 595) and `Action.Group` (line 637).
-
----
-
 ## 16. Concurrency, tab-counting, and resource-leak bugs in `MultiBrowser` (`MultiBrowser.scala`)
 
 * **Location:** `ext-selenium/src/main/scala/teststate/selenium/MultiBrowser.scala` (lines 98–156, 200–212)

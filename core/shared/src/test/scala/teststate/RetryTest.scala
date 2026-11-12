@@ -361,6 +361,11 @@ object RetryTest extends TestSuite {
         val plan = Plan.action(queueUpdate +> value.assert(123))
         assertRetryWorks(plan)
       }
+      "postCondSubTest" - {
+        val subtest = Plan.action(queueUpdate).asAction("sub") +> value.assert(123)
+        val plan = Plan.action(subtest)
+        assertRetryWorks(plan)
+      }
       "postEmptyFail" - {
         val plan = Plan.action(queueUpdate >> dsl.emptyAction +> value.assert(123))
         assertRetryWorks(plan)

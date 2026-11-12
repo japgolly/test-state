@@ -494,6 +494,27 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
         EM.pure(p2)
     }
 
+  private def retryPostChecks(history: H, ros: ROS, postCheckFn: PostCheckFn, reObserve: () => F[FE Or (R, O)]): F[(H, ROS, HH)] = {
+    val runPostChecks: ROS => (ROS, HH) = {
+      val f = postCheckFn(history.failed)
+      ros2 => (ros2, f(ros2))
+    }
+
+    val initialPostCheck: (ROS, HH) =
+      runPostChecks(ros)
+
+    def reObserveAndPostCheck: F[(ROS, HH)] =
+      EM.map(reObserve()) {
+        case Right((r, o)) => runPostChecks(ROS(r, o, ros.state))
+        case Left(_)       => initialPostCheck
+      }
+
+    val postCheckWithRetry: F[(ROS, HH)] =
+      _withRetryF(Retry.Scope.PostConditions, initialPostCheck)(reObserveAndPostCheck, _._2.retry)
+
+    EM.map(postCheckWithRetry)(x => (history, x._1, x._2))
+  }
+
   private def runAction[X](name      : Name,
                            actionFn  : ROS => Option[() => F[E Or (O => E Or S)]],
                            reObserve : () => F[FE Or (R, O)],
@@ -639,27 +660,8 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                   case Action.Group(actions, cond) =>
 
                     def run(ros: ROS, postCheckFn: PostCheckFn): F[(H, ROS, HH)] =
-                      EM.flatMap(start(actions, ros))(childResults => {
-
-                        val runPostChecks: ROS => (ROS, HH) = {
-                          val f = postCheckFn(childResults.history.failed)
-                          ros2 => (ros2, f(ros2))
-                        }
-
-                        val initialPostCheck: (ROS, HH) =
-                          runPostChecks(childResults.ros)
-
-                        def reObserveAndPostCheck: F[(ROS, HH)] =
-                          EM.map(reObserve()) {
-                            case Right((r, o)) => runPostChecks(ROS(r, o, childResults.ros.state))
-                            case Left(_)       => initialPostCheck
-                          }
-
-                        def postCheckWithRetry: F[(ROS, HH)] =
-                          _withRetryF(Retry.Scope.PostConditions, initialPostCheck)(reObserveAndPostCheck, _._2.retry)
-
-                        EM.map(postCheckWithRetry)(x => (childResults.history, x._1, x._2))
-                      })
+                      EM.flatMap(start(actions, ros))(childResults =>
+                        retryPostChecks(childResults.history, childResults.ros, postCheckFn, reObserve))
 
                     // Retry here doesn't make sense. This bit is pure and deterministic
                     attempt.attempt(cond.permit(p.ros)) match {
@@ -683,7 +685,8 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                     val runFn = (ros: ROS, postChks: PostCheckFn) => {
                       val t    = Plan(action, subInvariants).test(test.observer)
                       val subP = subtest(t, invariants, refFn, ros, false)
-                      EM.map(subP)(s => (s.history, s.ros, postChks(s.history.failed)(s.ros)))
+                      EM.flatMap(subP)(s =>
+                        retryPostChecks(s.history, s.ros, postChks, reObserve))
                     }
                     val p0         = p.copy(history = History.empty)
                     val preChecks1 = (p: P) => runPreChecks(name, Sack.empty, check, false, p)
