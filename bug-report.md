@@ -35,13 +35,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ## 17. Additional Minor Defects
 
-1. **`SeleniumExt.scala` (line 75) — `NullPointerException` in `WebElementExt.classes`:**
-   ```scala
-   def classes: Set[String] =
-     self.getAttribute("class").trim match {
-   ```
-   In Selenium, `WebElement.getAttribute("class")` returns `null` when the element has no `class` attribute (or on certain drivers). Calling `.trim` directly without `Option(self.getAttribute("class"))` (unlike `getValue()` on line 86) throws a `NullPointerException`.
-
 2. **`DomZipperJsoupF.scala` (lines 99–103) & `DomZippersFastAndSlow.scala` (lines 83–84) — Redundant `htmlScrub` applications:**
    `DomZipper.outerHTML` and `DomZipper.innerHTML` (`DomZipper.scala` lines 154–155) already apply `F.map(_outerHTML)(htmlScrub.run)`. However, `DomZipperJsoupF._outerHTML` and `_innerHTML` also call `htmlScrub.run(...)`, and `DomZippersFastAndSlow._outerHTML` delegates to `fast.outerHTML` (which calls `DomZipper.outerHTML` on `fast`). As a result, `htmlScrub` is applied **twice** on `DomZipperJsoup` and **three times** on `FastDomZipperSelenium`.
 
