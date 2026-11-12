@@ -4,48 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 14. `ExecutionModel.scalaFuture` leaks `java.util.Timer` threads and hangs `Promise`s on synchronous exceptions (`ExecutionModel.scala`)
-
-* **Location:** `core/shared/src/main/scala/teststate/typeclass/ExecutionModel.scala` (lines 90–143)
-* **Code:**
-  ```scala
-  implicit def scalaFuture(implicit ec: ExecutionContext): ExecutionModel[Future] =
-    new ExecutionModel[Future] {
-      private val timer = new Timer(true)
-
-      override def schedule[A](task: => Future[A], delay: FiniteDuration): Future[A] = {
-        val promise = Promise[A]()
-        timer.schedule(new TimerTask {
-          override def run(): Unit = {
-            ec.execute(new Runnable {
-              override def run(): Unit =
-                promise.completeWith(task)
-            })
-          }
-        }, delay.toMillis)
-        promise.future
-      }
-
-      override def doFinally[A, B](main: => Future[A], last: => Future[B]): Future[A] = {
-        val p = Promise[A]()
-        val fa = main
-        fa.onComplete { a =>
-          val fb = last
-          fb.onComplete {
-            case t: util.Failure[_] => p.complete(t.asInstanceOf[util.Failure[A]])
-            case _: util.Success[_] => p.complete(a)
-          }
-        }
-        p.future
-      }
-  ```
-* **Problem:**
-  1. **Thread leak:** `implicit def scalaFuture` creates a new `java.util.Timer(true)` instance every time the implicit is resolved. Each `new Timer(true)` spawns a new background `TimerThread` OS thread that is never cancelled.
-  2. **Uncompleted `Promise` in `schedule`:** In `promise.completeWith(task)` (line 115), `task` is evaluated strictly before `completeWith` is called. If evaluating `task` throws a synchronous exception, the `Runnable` dies uncaught and `promise.future` hangs forever.
-  3. **Uncompleted `Promise` and skipped `last` in `doFinally`:** In `doFinally` (lines 126–129), `val fa = main` is evaluated outside a `try`/`catch` (if `main` throws synchronously, `last` never runs), and `val fb = last` inside `fa.onComplete` is also evaluated outside a `try`/`catch` (if `last` throws synchronously, `p` is never completed and `p.future` hangs forever).
-
----
-
 ## 15. Check execution, categorization, and retry bugs in `Runner` (`Runner.scala`)
 
 * **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 383–478, 434–443, 491–547, 645–670)

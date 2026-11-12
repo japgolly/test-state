@@ -87,11 +87,11 @@ object ExecutionModel {
       }
     }
 
+  private[this] lazy val futureTimer = new Timer(true)
+
   implicit def scalaFuture(implicit ec: ExecutionContext): ExecutionModel[Future] =
     new AlreadyStackSafe[Future] {
       import scala.util.{Failure => ScalaFailure, Success => ScalaSuccess}
-
-      private val timer = new Timer(true)
 
       override def point  [A]   (a: => A)                = Future(a)
       override def pure   [A]   (a: A)                   = Future successful a
@@ -112,33 +112,32 @@ object ExecutionModel {
           override def run(): Unit =
             ec.execute(new Runnable {
               override def run(): Unit = {
-                promise.completeWith(task)
+                try {
+                  promise.completeWith(task)
+                } catch {
+                  case t: Throwable => promise.failure(t)
+                }
                 ()
               }
             })
         }
-        timer.schedule(timerTask, new Date(startAt.toEpochMilli))
+        try {
+          futureTimer.schedule(timerTask, new Date(startAt.toEpochMilli))
+        } catch {
+          case t: Throwable => promise.failure(t)
+        }
         promise.future
       }
 
       override def doFinally[A, B](main: => Future[A], last: => Future[B]): Future[A] = {
-
-        // Scala 2.12+
-        // main.transformWith(ta => last.transform {
-        //   case ScalaSuccess(_) => ta
-        //   case ScalaFailure(t) => ScalaFailure(t)
-        // })
-
-        val p = Promise[A]()
-        val fa = main
-        fa.onComplete { ta =>
-          val fb = last
-          fb.onComplete {
-            case ScalaSuccess(_) => p.complete(ta)
-            case ScalaFailure(f) => p.failure(f)
+        val fa = try main catch { case t: Throwable => Future.failed(t) }
+        fa.transformWith { ta =>
+          val fb = try last catch { case t: Throwable => Future.failed(t) }
+          fb.transform {
+            case ScalaSuccess(_) => ta
+            case ScalaFailure(f) => ScalaFailure(f)
           }
         }
-        p.future
       }
     }
 
