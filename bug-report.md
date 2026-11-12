@@ -30,15 +30,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 * **Problems:**
   1. **Leaked temp tab on exception:** In `openTab` (lines 142–146), `setupTab.closeTab()` is placed *outside* the `try ... finally` block. If `setupFn(setupTab)` throws an exception, `setupTab.closeTab()` is never called, leaving the temporary tab open in the browser and registered in `browser.tabs`.
   2. **Temporary setup tab triggers `onNewTab` and inflates tab counts for `GrowthStrategy`:** `setupTab = createTabWithoutLocking(browserIndex)` registers `setupTab` in `browser.tabs` and schedules `onNewTab(setupTab)` on it. Furthermore, `outerMutex.unlock()` is called on line 141 *before* `setupTab.closeTab()` runs on line 146, so concurrent callers to `openTab()` while `setupFn` is executing see `browser.tabs.length` inflated by the temporary setup tab, causing `GrowthStrategy` (e.g. `maxTabs` or `maxBrowsers`) to misroute new tabs to other browsers.
-  3. **Thread pool leak in `MultiBrowser.par` (lines 205–210):**
-     ```scala
-     val threadPool = Executors.newFixedThreadPool(n)
-     implicit val ec = ExecutionContext.fromExecutorService(threadPool)
-     val fs = Future.traverse(browsers.indices)(i => Future( f(browsers(i))))
-     Await.result(fs, Duration.Inf)
-     threadPool.shutdown()
-     ```
-     `threadPool.shutdown()` is not in a `try`/`finally` block. If `f` throws in any browser (e.g. during `close()`), `Await.result` rethrows and the non-daemon fixed thread pool is leaked.
 
 ---
 

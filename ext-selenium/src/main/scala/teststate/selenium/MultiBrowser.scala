@@ -202,11 +202,16 @@ object MultiBrowser {
           case 1 => f(as.head)
           case n =>
             val threadPool = Executors.newFixedThreadPool(n)
-            implicit val ec = ExecutionContext.fromExecutorService(threadPool)
-            val fs = Future.traverse(as)(b => Future(f(b)))
-            Await.result(fs, Duration.Inf)
-            threadPool.shutdown()
-            ec.shutdown()
+            try {
+              implicit val ec = ExecutionContext.fromExecutorService(threadPool)
+              try {
+                val fs = Future.traverse(as)(b => Future(f(b)))
+                Await.result(fs, Duration.Inf)
+                ()
+              } finally
+                ec.shutdown()
+            } finally
+              threadPool.shutdown()
         }
       }
     }
