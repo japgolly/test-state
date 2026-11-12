@@ -306,6 +306,39 @@ object RetryTest extends TestSuite {
         val plan = Plan.action(queueUpdate >> (dsl.emptyAction <+ value.assert(123)))
         assertRetryWorks(plan)
       }
+      "preCondScope" - {
+        val singleAction = dsl.action("single")(_ => ())
+        val plan = Plan.action(queueUpdate >> (singleAction <+ value.assert(123)))
+        var scopes = Vector.empty[Retry.Scope]
+        val policy = Retry.Policy((ctx, _) => {
+          scopes :+= ctx.scope
+          if (ctx.scope == Retry.Scope.PreConditions && ctx.retryCount < 3)
+            Some(Instant.now())
+          else
+            None
+        })
+        val test = mkTest(plan).withRetryPolicy(policy)
+        val result = test.run()
+        result.assert()
+        assert(scopes.nonEmpty)
+        assert(scopes.forall(_ == Retry.Scope.PreConditions))
+      }
+      "actionRetryObsFail" - {
+        var actionAttempts = 0
+        val act = dsl.action("failAct").attempt { x =>
+          actionAttempts += 1
+          if (actionAttempts == 1)
+            x.ref.failOnValue.simFail(1)
+          Some("action error")
+        }
+        val plan = Plan.action(act <+ value.assert(0))
+        val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 1)
+        val test = mkTest(plan).withRetryPolicy(policy)
+        val result = test.run()
+        assert(result.failed)
+        assertEq(result.stats.performedActions, 1)
+        assertEq(result.stats.performedChecks, 2)
+      }
       "preCondRetryGroupObsFresh" - {
         var recordedObs = Vector.empty[Int]
         val child = dsl.action("Record obs")(x => recordedObs :+= x.obs.value)

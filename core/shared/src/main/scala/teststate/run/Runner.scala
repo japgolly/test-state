@@ -494,63 +494,78 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
         EM.pure(p2)
     }
 
-  private def runAction[X](name     : Name,
-                           actionFn : ROS => Option[() => F[E Or (O => E Or S)]],
-                           reObserve: () => F[FE Or (R, O)],
-                           ros0     : ROS,
-                           preChecks: ROS => ActionResult.PreCheckFail[P] Or X): F[ActionResult[O => E Or S, X]] = {
+  private def runAction[X](name      : Name,
+                           actionFn  : ROS => Option[() => F[E Or (O => E Or S)]],
+                           reObserve : () => F[FE Or (R, O)],
+                           ros0      : ROS,
+                           preChecks : ROS => ActionResult.PreCheckFail[P] Or X,
+                           p0        : P): F[ActionResult[O => E Or S, (ROS, X)]] = {
 
-    type Result = ActionResult[O => E Or S, X]
-    type ResultF = F[Result]
+    type Result = ActionResult[O => E Or S, (ROS, X)]
 
-    def go(ros: ROS): ResultF =
+    def runPreChecksWithRetryFor(ros: ROS): F[ActionResult.PreCheckFail[P] Or (ROS, X)] =
+      runPreChecksWithRetry(p => preChecks(p.ros), reObserve, p0.copy(ros = ros))
+
+    def runActionOnly(ros: ROS, x: X, act: () => F[E Or (O => E Or S)]): F[Result] = {
+      stats.actions += 1
+
+      def act1(): F[FE Or (O => E Or S)] = EM.map(act())(_.leftMap(Failure NoCause _))
+      def act2(): F[FE Or (O => E Or S)] = EM.recover(act1())
+
+      def act3(): F[FE Or (O => E Or S)] =
+        if (callbacks.isEmpty)
+          act2()
+        else
+          EM.flatMap(callbacks.get.aroundAction(ros, name))(complete =>
+            EM.flatMap(act2())(result =>
+              EM.map(complete(result.leftOption.map(_.failure)))(_ => result)
+            )
+          )
+
+      EM.map(act3()) {
+        case Right(nextStateFn) => ActionResult.Success(nextStateFn, (ros, x))
+        case Left(e)            => ActionResult.ActionFail(e, (ros, x))
+      }
+    }
+
+    def tryAttempt(ros: ROS): F[Result] =
       actionFn(ros) match {
-        case Some(act1a) =>
-
-          preChecks(ros) match {
-            case Right(x) =>
-              stats.actions += 1
-
-              def act1(): F[FE Or (O => E Or S)] = EM.map(act1a())(_.leftMap(Failure NoCause _))
-              def act2(): F[FE Or (O => E Or S)] = EM.recover(act1())
-
-              def act3(): F[FE Or (O => E Or S)] =
-                if (callbacks.isEmpty)
-                  act2()
-                else
-                  EM.flatMap(callbacks.get.aroundAction(ros, name))(complete =>
-                    EM.flatMap(act2())(result =>
-                      EM.map(complete(result.leftOption.map(_.failure)))(_ => result)
-                    )
-                  )
-
-              EM.map(act3()) {
-                case Right(nextStateFn) => ActionResult.Success(nextStateFn, x)
-                case Left(e) => ActionResult.ActionFail(e, x)
-              }
-
-            case Left(e) => EM.pure(e)
-          }
-
         case None =>
           EM.pure(ActionResult.Skip)
+
+        case Some(_) =>
+          EM.flatMap(runPreChecksWithRetryFor(ros)) {
+            case Right((rosPass, x)) =>
+              actionFn(rosPass) match {
+                case Some(act) => runActionOnly(rosPass, x, act)
+                case None      => EM.pure(ActionResult.Skip)
+              }
+            case Left(ActionResult.PreCheckFail(p2, _)) =>
+              EM.pure(ActionResult.PreCheckFail(p2, false))
+          }
       }
 
-    lazy val initialPreCheck = preChecks(ros0)
-
-    def onRetry(initialFailure: Result): ResultF =
+    def onRetry(lastFailure: Result): F[Result] =
       EM.flatMap(reObserve()) {
-        case Right((r, o)) => go(ROS(r, o, ros0.state))
-        case Left(e)       =>
+        case Right((r, o)) =>
+          tryAttempt(ROS(r, o, ros0.state))
+        case Left(e) =>
           val actionFailure: Option[FE] =
-            initialFailure match {
+            lastFailure match {
               case ActionResult.ActionFail(fe, _) => Some(fe)
-              case _ => None // The shit types don't let me prove this but this isn't possible
+              case ActionResult.ObsFail(fe, _, _) => fe
+              case _                              => None
             }
-          EM.pure(initialPreCheck.fold(identity, ActionResult.ObsFail(actionFailure, e, _)))
+          val lastROS_X: (ROS, X) =
+            lastFailure match {
+              case ActionResult.ActionFail(_, rx) => rx
+              case ActionResult.ObsFail(_, _, rx) => rx
+              case _                              => (ros0, null.asInstanceOf[X])
+            }
+          EM.pure(ActionResult.ObsFail(actionFailure, e, lastROS_X))
       }
 
-    withRetryF1I(Retry.Scope.Action, go(ros0))(onRetry, _.retry)
+    withRetryF1I(Retry.Scope.Action, tryAttempt(ros0))(onRetry, _.retry)
   }
 
   private def subtest(test: Test,
@@ -591,30 +606,30 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
 
                     val actionResultF =
                       runAction(name, prepareAction, reObserve, p.ros, ros =>
-                        runPreChecks(name, invariants, check, true, p.copy(ros = ros)))
+                        runPreChecks(name, invariants, check, true, p.copy(ros = ros)), p)
 
-                    def fail(f: (H, ROS, HH) => P, h: Name => H) =
-                      f(h(ActionName), ros, PostCheckResults.empty)
+                    def fail(f: (H, ROS, HH) => P, h: Name => H, rosFail: ROS) =
+                      f(h(ActionName), rosFail, PostCheckResults.empty)
 
                     EM.flatMap(actionResultF) {
 
-                      case ActionResult.Success(nextStateFn, (postCheckFn, onComplete)) =>
+                      case ActionResult.Success(nextStateFn, (rosAct, (postCheckFn, onComplete))) =>
                         EM.map(observeAndTestWithRetry(refFn, test, nextStateFn, postCheckFn(false))) {
                           case Right((ros2, hh)) => onComplete(histPassFn(ActionName), ros2, hh)
-                          case Left((where, fe)) => fail(onComplete, hist2Fn(Pass, History.Step(where, Fail(fe))))
+                          case Left((where, fe)) => fail(onComplete, hist2Fn(Pass, History.Step(where, Fail(fe))), rosAct)
                         }
 
                       case ActionResult.PreCheckFail(p2, _) =>
                         EM.pure(p2)
 
-                      case ActionResult.ActionFail(e, (_, onComplete)) =>
-                        EM pure fail(onComplete, hist1Fn(Fail(e)))
+                      case ActionResult.ActionFail(e, (rosAct, (_, onComplete))) =>
+                        EM pure fail(onComplete, hist1Fn(Fail(e)), rosAct)
 
-                      case ActionResult.ObsFail(Some(ae), oe, (_, onComplete)) =>
-                        EM pure fail(onComplete, hist2Fn(Fail(ae), History.Step(Observation, Fail(oe))))
+                      case ActionResult.ObsFail(Some(ae), oe, (rosAct, (_, onComplete))) =>
+                        EM pure fail(onComplete, hist2Fn(Fail(ae), History.Step(Observation, Fail(oe))), rosAct)
 
-                      case ActionResult.ObsFail(None, e, (_, onComplete)) =>
-                        EM pure fail(onComplete, hist1Fn(Fail(e)))
+                      case ActionResult.ObsFail(None, e, (rosAct, (_, onComplete))) =>
+                        EM pure fail(onComplete, hist1Fn(Fail(e)), rosAct)
 
                       case ActionResult.Skip =>
                         EM.pure(p :+ History.Step(name, Skip))

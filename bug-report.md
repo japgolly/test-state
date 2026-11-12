@@ -8,8 +8,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 * **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 383–478, 434–443, 491–547, 645–670)
 * **Problems:**
-  4. **`Action.Single` retries pre-condition failures under `Retry.Scope.Action` instead of `Retry.Scope.PreConditions` (line 546):**
-     In `runActionWithRetry` (line 546), `retry(Retry.Scope.Action, attempt0, ...)` is used for the entire `tryAction` loop, which includes `preChecks`. If a pre-condition fails on an `Action.Single`, it is retried using `Retry.Scope.Action` instead of `Retry.Scope.PreConditions`. Furthermore, if `reObserve()` fails on retry, `onRetry` (lines 536–544) re-evaluates `initialPreCheck` (double-counting `stats.checks` and mutating the report builder a second time) and falls back to the first attempt's error rather than the latest attempt's error.
   5. **`Action.SubTest` post-conditions are not retried (line 664):**
      In `case Action.SubTest(sac, cond) =>` (line 664), `val postFailed = runPostChecks(ros2)._2` is called directly without `retryPostCheck`, unlike `Action.Single` (line 595) and `Action.Group` (line 637).
 
