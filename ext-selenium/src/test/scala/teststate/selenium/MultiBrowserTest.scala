@@ -1,7 +1,11 @@
 package teststate.selenium
 
 import cats.instances.string._
+import java.util.concurrent.{CountDownLatch, TimeUnit}
 import org.openqa.selenium.chrome.ChromeDriver
+import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import teststate.selenium.TestUtil._
 import utest._
 
@@ -66,6 +70,68 @@ object MultiBrowserTest extends TestSuite {
 
     "openAndClose1" - testOpenAndClose()
     "openAndClose2" - testOpenAndClose()
+
+    "setupTabNotTriggerOnNewTab" - {
+      var newTabs = Vector.empty[Tab[ChromeDriver]]
+      var setupTab: Tab[ChromeDriver] = null
+
+      val mb2 = MultiBrowser(newChrome(), GrowthStrategy.singleBrowser)
+        .onNewDriverWithTempTab(t => setupTab = t)
+        .onNewTab(t => newTabs :+= t)
+
+      try {
+        val userTab = mb2.openTab()
+        assertEq("onNewTab call count", newTabs.length, 1)
+        assert(newTabs.head eq userTab)
+        assert(setupTab != null)
+        assert(!newTabs.exists(_ eq setupTab))
+      } finally {
+        mb2.close()
+      }
+    }
+
+    "growthStrategyTabCountNotInflatedByTempTab" - {
+      val setupStarted = new CountDownLatch(1)
+      val secondTabRequested = new CountDownLatch(1)
+
+      var browserCount = 0
+      def createDriver() = {
+        browserCount += 1
+        newChrome()
+      }
+
+      var observedTabCounts = Vector.empty[IndexedSeq[Int]]
+      val recordingStrategy = GrowthStrategy { counts =>
+        observedTabCounts :+= counts
+        if (counts.nonEmpty)
+          secondTabRequested.countDown()
+        GrowthStrategy.maxTabs(2).nextBrowser(counts)
+      }
+
+      val mb2 = MultiBrowser(createDriver(), recordingStrategy)
+        .onNewDriverWithTempTab { _ =>
+          setupStarted.countDown()
+          if (!secondTabRequested.await(5, TimeUnit.SECONDS))
+            sys.error("Timed out waiting for secondTabRequested")
+        }
+
+      try {
+        val t1 = Future { mb2.openTab() }
+
+        if (!setupStarted.await(5, TimeUnit.SECONDS))
+          sys.error("Timed out waiting for setupStarted")
+
+        val t2 = Future { mb2.openTab() }
+
+        Await.result(t1, 10.seconds)
+        Await.result(t2, 10.seconds)
+
+        assert(observedTabCounts.last == Vector(1))
+        assertEq("Number of browsers created", browserCount, 1)
+      } finally {
+        mb2.close()
+      }
+    }
 
     "close" - mb.close()
   }

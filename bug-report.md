@@ -4,33 +4,6 @@ This report details bugs, defects, and problems identified across the `test-stat
 
 ---
 
-## 16. Concurrency, tab-counting, and resource-leak bugs in `MultiBrowser` (`MultiBrowser.scala`)
-
-* **Location:** `ext-selenium/src/main/scala/teststate/selenium/MultiBrowser.scala` (lines 98–156, 200–212)
-* **Code:**
-  ```scala
-  override def openTab(): Tab[D] = {
-    outerMutex.lock()
-    try {
-      // ...
-      onNewDriverWithTempTab match {
-        case Some(setupFn) if isNewBrowser =>
-          val setupTab = createTabWithoutLocking(browserIndex)
-          val tab = createTabWithoutLocking(browserIndex)
-          val browserLock = browsers(browserIndex).mutex
-          browserLock.lock()
-          outerMutex.unlock()
-          try
-            setupFn(setupTab)
-          finally
-            browserLock.unlock()
-          setupTab.closeTab()
-          tab
-  ```
-* **Problems:*  2. **Temporary setup tab triggers `onNewTab` and inflates tab counts for `GrowthStrategy`:** `setupTab = createTabWithoutLocking(browserIndex)` registers `setupTab` in `browser.tabs` and schedules `onNewTab(setupTab)` on it. Furthermore, `outerMutex.unlock()` is called on line 141 *before* `setupTab.closeTab()` runs on line 146, so concurrent callers to `openTab()` while `setupFn` is executing see `browser.tabs.length` inflated by the temporary setup tab, causing `GrowthStrategy` (e.g. `maxTabs` or `maxBrowsers`) to misroute new tabs to other browsers.
-
----
-
 ## 17. Additional Minor Defects
 
 2. **`DomZipperJsoupF.scala` (lines 99–103) & `DomZippersFastAndSlow.scala` (lines 83–84) — Redundant `htmlScrub` applications:**
