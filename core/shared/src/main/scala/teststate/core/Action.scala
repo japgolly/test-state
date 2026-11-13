@@ -40,25 +40,31 @@ object Action {
       apply[F, R, O, S, E](actions, Cond.always)
 
     final case class Cond[-R, -O, -S, +E](permit: ROS[R, O, S] => E Or Boolean) extends AnyVal { self =>
+
+      def isAlways: Boolean =
+        permit eq Cond.always.permit
+
       def skip(ros: ROS[R, O, S]): E Or Boolean =
         permit(ros).map(!_)
 
       def |+|[RR <: R, OO <: O, SS <: S, EE >: E](next: Cond[RR, OO, SS, EE]): Cond[RR, OO, SS, EE] =
-        if (permit eq Cond.always.permit)
+        if (isAlways)
           next
+        else if (next.isAlways)
+          this
         else
           Cond[RR, OO, SS, EE](ros =>
-            for {
-              a <- self.permit(ros)
-              b <- next.permit(ros)
-            } yield a && b
+            self.permit(ros) match {
+              case Right(true) => next.permit(ros)
+              case x           => x
+            }
           )
 
       def mapE[A](f: E => A): Cond[R, O, S, A] =
-        Cond(permit(_).leftMap(f))
+        if (isAlways) Cond.always else Cond(permit(_).leftMap(f))
 
       def mapR[A](f: A => R): Cond[A, O, S, E] =
-        Cond(ros => permit(ros.mapR(f)))
+        if (isAlways) Cond.always else Cond(ros => permit(ros.mapR(f)))
 
       def pmapR[A, EE >: E](f: A => EE Or R): Cond[A, O, S, EE] =
         Cond(ros => ros.emapR(f).flatMap(permit))
@@ -67,10 +73,7 @@ object Action {
         Cond(ros => ros.emapO(f).flatMap(permit))
 
       def mapOS[A, B](f: A => O, g: B => S): Cond[R, A, B, E] =
-        Cond(ros => permit(ros.mapOS(f, g)))
-
-      def modS[OO <: O, SS <: S, EE >: E](m: OO => SS => EE Or SS): Cond[R, OO, SS, EE] =
-        Cond(ros => m(ros.obs)(ros.state).flatMap(s2 => permit(ros.withState(s2))))
+        if (isAlways) Cond.always else Cond(ros => permit(ros.mapOS(f, g)))
     }
 
     object Cond {

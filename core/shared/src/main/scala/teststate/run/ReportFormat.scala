@@ -152,7 +152,9 @@ object ReportFormat {
         val secfmt = "%." + secPrec + "f sec"
         d =>
           if (d.toMicros == 0)
-            d.toNanos.toString + " μs"
+            d.toNanos.toString + " ns"
+          else if (d.toMillis == 0)
+            d.toMicros.toString + " μs"
           else if (d.toSeconds == 0)
             d.toMillis.toString + " ms"
           else
@@ -255,7 +257,7 @@ object ReportFormat {
       // val BRIGHT_CYAN    = "\u001b[96m"
       // val BRIGHT_WHITE   = "\u001b[97m"
       Settings(
-        indent        = "  ",
+        indent        = uncoloured.indent,
         onPass        = BOLD + BRIGHT_GREEN + uncoloured.onPass + RESET + WHITE,
         onFail        = BRIGHT_RED + uncoloured.onFail + BOLD,
         onSkip        = BOLD + BRIGHT_YELLOW + uncoloured.onSkip + RESET + BRIGHT_BLACK,

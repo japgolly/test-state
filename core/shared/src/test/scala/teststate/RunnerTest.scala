@@ -243,15 +243,77 @@ object RunnerTest extends TestSuite {
     }
 
     "modS" - {
-      var i = 9
-      val dsl = Dsl[Unit, Int, Int]
-      val inc = dsl.action("inc")(_ => i = i + 1)
-        .updateState(_ + 8)
-        .updateStateBy(_.state - 3)
-        .updateState(_ - 4)
-      val h = Plan.action(inc.times(3)).test(Observer watch i).withInitialState(i).runU()
-      assertEq(h.failure, None)
-      assertEq(i, 12)
+      "single" - {
+        var i = 9
+        val dsl = Dsl[Unit, Int, Int]
+        val inc = dsl.action("inc")(_ => i = i + 1)
+          .updateState(_ + 8)
+          .updateStateBy(_.state - 3)
+          .updateState(_ - 4)
+        val h = Plan.action(inc.times(3)).test(Observer watch i).withInitialState(i).runU()
+        assertEq(h.failure, None)
+        assertEq(i, 12)
+      }
+
+      "groupCondition" - {
+        var ran1 = false
+        var ran2 = false
+        var stateAfter = -1
+        val dsl = Dsl[Unit, Unit, Int]
+        val a1 = dsl.action("A1")(_ => ran1 = true)
+        val a2 = dsl.action("A2")(_ => ran2 = true)
+        val a3 = dsl.action("A3")(ros => stateAfter = ros.state)
+        val g = (a1 >> a2).group("G").when(_.state == 0).updateState(_ + 1)
+        val h = Plan.action(g >> a3).testU.withInitialState(0).runU()
+        assertEq(h.failure, None)
+        assertEq(ran1, true)
+        assertEq(ran2, true)
+        assertEq(stateAfter, 1)
+        assertEq(h.history.result, Result.Pass)
+      }
+
+      "groupConditionShortCircuit" - {
+        var ran1 = false
+        var ran2 = false
+        var nextCondEvaluated = false
+        val dsl = Dsl[Unit, Unit, Int]
+        val a1 = dsl.action("A1")(_ => ran1 = true)
+        val a2 = dsl.action("A2")(_ => ran2 = true)
+        val g = (a1 >> a2).group("G")
+          .when(_ => false)
+          .when(_ => {
+            nextCondEvaluated = true
+            true
+          })
+        val h = Plan.action(g).testU.withInitialState(0).runU()
+        assertEq(h.failure, None)
+        assertEq(ran1, false)
+        assertEq(ran2, false)
+        assertEq(nextCondEvaluated, false)
+        assertEq(h.history.result, Result.Skip)
+      }
+
+      "groupPostObservation" - {
+        var obs = "before"
+        var ran = false
+        var stateAfter = -1
+        val dsl = Dsl[Unit, String, Int]
+        val a1 = dsl.action("A1")(_ => {
+          ran = true
+          obs = "after"
+        })
+        val a2 = dsl.action("A2")(_ => ())
+        val a3 = dsl.action("A3")(ros => stateAfter = ros.state)
+        val g = (a1 >> a2).group("G").updateStateAttemptBy(os =>
+          if (os.obs == "after") Right(os.state + 1)
+          else Left(s"Expected post-obs 'after', got '${os.obs}'")
+        )
+        val h = Plan.action(g >> a3).test(Observer watch obs).withInitialState(0).runU()
+        assertEq(h.failure, None)
+        assertEq(ran, true)
+        assertEq(stateAfter, 1)
+        assertEq(h.history.result, Result.Pass)
+      }
     }
 
     "skip" - {
@@ -445,6 +507,70 @@ object RunnerTest extends TestSuite {
           "fail" -> Some("err"),
           "crash" -> Some("java.lang.RuntimeException: boom"),
         ))
+      }
+    }
+
+    "singlePrepare" - {
+      import scala.concurrent.duration._
+
+      "whenException" - {
+        val d = Dsl[Unit, Unit, Unit]
+        val act = d.action("act")(_ => ()).when(_ => sys.error("when boom"))
+        val report = Plan.action(act).testU.stateless.runU()
+        assert(report.failed)
+        assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: when boom"))
+      }
+
+      "pmapRException" - {
+        val d = Dsl[Unit, Unit, Unit]
+        val act = d.action("act")(_ => ()).pmapR[Unit](_ => sys.error("pmapR boom"))
+        val report = Plan.action(act).testU.stateless.runU()
+        assert(report.failed)
+        assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: pmapR boom"))
+      }
+
+      "evaluatedOnceWhenNoRetry" - {
+        var calls = 0
+        val d = Dsl[Unit, Unit, Unit]
+        val act = d.action("act")(_ => ()).when { _ =>
+          calls += 1
+          true
+        }
+        val report = Plan.action(act).testU.stateless.runU()
+        assert(!report.failed)
+        assertEq(calls, 1)
+      }
+
+      "exceptionAfterPreCheckRetry" - {
+        var obsCall = 0
+        val d = Dsl[Unit, Int, Unit]
+        val obs = Observer[Unit, Int](_ => {
+          obsCall += 1
+          obsCall
+        })
+        val v = d.focus("v").value(_.obs)
+        val act = (d.action("act")(_ => ()) <+ v.assert(2)).when { ros =>
+          if (ros.obs == 1) true
+          else sys.error("when retry boom")
+        }
+        val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 1)
+        val report = Plan.action(act).test(obs).stateless.withRetryPolicy(policy).runU()
+        assert(report.failed)
+        assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: when retry boom"))
+      }
+
+      "exceptionWithRetryAndObsFail" - {
+        var obsCall = 0
+        val d = Dsl[Unit, Int, Unit]
+        val obs = Observer.attempt[Unit, Int, String] { _ =>
+          obsCall += 1
+          if (obsCall == 1) Right(1) else Left("obs err")
+        }
+        val act = d.action("act")(_ => ()).when(_ => sys.error("when boom"))
+        val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 1)
+        val report = Plan.action(act).test(obs).stateless.withRetryPolicy(policy).runU()
+        assert(report.failed)
+        assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: when boom"))
       }
     }
 

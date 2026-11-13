@@ -1,5 +1,7 @@
 package teststate.data
 
+import japgolly.univeq._
+import scala.annotation.nowarn
 
 sealed abstract class Or[+A, +B] extends Product with Serializable {
   def fold[C](l: A => C, r: B => C): C
@@ -103,4 +105,8 @@ object Or {
     e.fold(Left(_), Right(_))
 
   val rightTrue = Right(true)
+
+  @nowarn("cat=unused")
+  implicit def univEq[A: UnivEq, B: UnivEq]: UnivEq[Or[A, B]] =
+    UnivEq.derive
 }

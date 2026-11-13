@@ -247,16 +247,17 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       def equalWhenDefined(expect: Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
         expect match {
           case Some(a) => equal(a)
-          case None    => point(NameUtils.equal(focusName, positive, expect))(_ => None).skip
+          case None    => point(NameUtils.subjectShouldVerb(focusName, positive, "be <?>"))(_ => None).skip
         }
 
       def equalByWhenDefined(expect: OS => Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
-        point(NameFn(NameUtils.equalOptionFn(focusName, positive, expect)))(os =>
-          expect(os) match {
-            case Some(a) => f.expectMaybeEqual(positive, ex = a, actual = focusFn(os))
-            case None    => None
+        sack1(Point(
+          NameFn(NameUtils.equalOptionFn(focusName, positive, expect)),
+          os => expect(os) match {
+            case Some(a) => Tri.failedOption(f.expectMaybeEqual(positive, ex = a, actual = focusFn(os)))
+            case None    => Skipped
           }
-        )
+        ))
 
       def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         equal(before).before & equal(after).after
@@ -279,13 +280,27 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       def noChange(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         not.change
 
+      private def changeBy(name: Name, expect: A => A)(implicit e: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
+        mkAround(
+          name,
+          (a1, a2) =>
+            if (positive)
+              f.expectChange(from = a1, expected = expect(a1), actual = a2)(s, e)
+            else
+              f.expectNotEqual(unexpected = expect(a1), actual = a2)(s, e)
+        )
+
       def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
-        changeTo(n.plus(_, a))(q, f)
-        .rename(NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)))
+        changeBy(
+          NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)),
+          n.plus(_, a)
+        )(q, f, s)
 
       def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
-        changeTo(n.minus(_, a))(q, f)
-          .rename(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
+        changeBy(
+          NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)),
+          n.minus(_, a)
+        )(q, f, s)
 
       def increment(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
         increaseBy(n.one)(n, q, f, s)
@@ -389,11 +404,11 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
     def rename(n: => String) = new FocusColl[C, A](n, focusFn)
     def run = focusFn
 
-    def map[B](f: A => B): FocusColl[Iterator, B] =
-      mapColl(_.iterator map f)
+    def map[B](f: A => B): FocusColl[Vector, B] =
+      mapColl(_.iterator.map(f).toVector)
 
-    def filter(f: A => Boolean): FocusColl[Iterator, A] =
-      mapColl(_.iterator filter f)
+    def filter(f: A => Boolean): FocusColl[Vector, A] =
+      mapColl(_.iterator.filter(f).toVector)
 
     def mapColl[D[X] <: IterableOnce[X], B](f: C[A] => D[B]): FocusColl[D, B] =
       new FocusColl(focusName, f compose focusFn)
@@ -509,7 +524,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
         val d = ElemChanges(positive)
         around(
           NameFn(NameUtils.collChangeFn(focusName, positive, "change", del, add)))(
-          focusFn)(
+          os => focusFn(os).iterator.toVector)(
           (os, b) =>
             d(ElemChanges.Args(
               before    = b,
