@@ -1246,7 +1246,21 @@ object OutputTest extends TestSuite {
         """.stripMargin)
     }
 
-    // action combinators
+    "formatDuration" - {
+      import scala.concurrent.duration._
+      import teststate.run.ReportFormat
+      val f = ReportFormat.Default.StatsFormat.formatDuration(1)
+
+      "nanos0"     - assertEq(f(0.nanos), "0 ns")
+      "nanos500"   - assertEq(f(500.nanos), "500 ns")
+      "micros1"    - assertEq(f(1.micros), "1 μs")
+      "micros450"  - assertEq(f(450.micros), "450 μs")
+      "micros999"  - assertEq(f(999.micros), "999 μs")
+      "millis1"    - assertEq(f(1.millis), "1 ms")
+      "millis500"  - assertEq(f(500.millis), "500 ms")
+      "seconds2"   - assertEq(f(2.seconds), "2.0 sec")
+      "seconds3_5" - assertEq(f(3500.millis), "3.5 sec")
+    }
 
   }
 }
