@@ -510,5 +510,69 @@ object RunnerTest extends TestSuite {
       }
     }
 
+    "singlePrepare" - {
+      import scala.concurrent.duration._
+
+      "whenException" - {
+        val d = Dsl[Unit, Unit, Unit]
+        val act = d.action("act")(_ => ()).when(_ => sys.error("when boom"))
+        val report = Plan.action(act).testU.stateless.runU()
+        assert(report.failed)
+        assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: when boom"))
+      }
+
+      "pmapRException" - {
+        val d = Dsl[Unit, Unit, Unit]
+        val act = d.action("act")(_ => ()).pmapR[Unit](_ => sys.error("pmapR boom"))
+        val report = Plan.action(act).testU.stateless.runU()
+        assert(report.failed)
+        assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: pmapR boom"))
+      }
+
+      "evaluatedOnceWhenNoRetry" - {
+        var calls = 0
+        val d = Dsl[Unit, Unit, Unit]
+        val act = d.action("act")(_ => ()).when { _ =>
+          calls += 1
+          true
+        }
+        val report = Plan.action(act).testU.stateless.runU()
+        assert(!report.failed)
+        assertEq(calls, 1)
+      }
+
+      "exceptionAfterPreCheckRetry" - {
+        var obsCall = 0
+        val d = Dsl[Unit, Int, Unit]
+        val obs = Observer[Unit, Int](_ => {
+          obsCall += 1
+          obsCall
+        })
+        val v = d.focus("v").value(_.obs)
+        val act = (d.action("act")(_ => ()) <+ v.assert(2)).when { ros =>
+          if (ros.obs == 1) true
+          else sys.error("when retry boom")
+        }
+        val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 1)
+        val report = Plan.action(act).test(obs).stateless.withRetryPolicy(policy).runU()
+        assert(report.failed)
+        assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: when retry boom"))
+      }
+
+      "exceptionWithRetryAndObsFail" - {
+        var obsCall = 0
+        val d = Dsl[Unit, Int, Unit]
+        val obs = Observer.attempt[Unit, Int, String] { _ =>
+          obsCall += 1
+          if (obsCall == 1) Right(1) else Left("obs err")
+        }
+        val act = d.action("act")(_ => ()).when(_ => sys.error("when boom"))
+        val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 1)
+        val report = Plan.action(act).test(obs).stateless.withRetryPolicy(policy).runU()
+        assert(report.failed)
+        assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: when boom"))
+      }
+    }
+
   }
 }
