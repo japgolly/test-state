@@ -157,5 +157,86 @@ object DslTest extends TestSuite {
       }
     }
 
+    "focusColl" - {
+      val os = OS((), ())
+
+      "mapReusability" - {
+        val coll = dsl.focus("Items").collection(_ => List(1, 2, 3))
+        val mapped = coll.map(_ * 2)
+        val res = mapped.run(os)
+        assertEq(res.iterator.toList, List(2, 4, 6))
+        assertEq(res.iterator.toList, List(2, 4, 6))
+      }
+
+      "filterReusability" - {
+        val coll = dsl.focus("Items").collection(_ => List(1, 2, 3))
+        val filtered = coll.filter(_ > 1)
+        val res = filtered.run(os)
+        assertEq(res.iterator.toList, List(2, 3))
+        assertEq(res.iterator.toList, List(2, 3))
+      }
+
+      "elemChangesRetryWithMap" - {
+        import scala.concurrent.duration._
+        import teststate.run.Retry
+        var items = List(1, 2)
+        var postCheckAttempts = 0
+        val dsl = Dsl[Unit, List[Int], Unit]
+        val check = dsl.focus("Items")
+          .collection((os: OS[List[Int], Unit]) => os.obs)
+          .map(identity)
+          .assert.elemChanges()(add = 3)
+        val action = dsl.action("add 3")(_ => {
+          postCheckAttempts = 0
+        }) +> check
+        val obs = Observer.watch({
+          postCheckAttempts += 1
+          if (postCheckAttempts >= 2) items = List(1, 2, 3)
+          items
+        })
+        val plan = Plan.action(action)
+        val test = plan.test(obs).stateless
+          .withRetryPolicy(Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2))
+        val report = test.runU()
+        report.assert()
+      }
+
+      "elemChangesRetryWithIterator" - {
+        import scala.concurrent.duration._
+        import teststate.run.Retry
+        var items = List(1, 2)
+        var postCheckAttempts = 0
+        val dsl = Dsl[Unit, List[Int], Unit]
+        val check = dsl.focus("Items")
+          .collection((os: OS[List[Int], Unit]) => os.obs.iterator)
+          .assert.elemChanges()(add = 3)
+        val action = dsl.action("add 3")(_ => {
+          postCheckAttempts = 0
+        }) +> check
+        val obs = Observer.watch({
+          postCheckAttempts += 1
+          if (postCheckAttempts >= 2) items = List(1, 2, 3)
+          items
+        })
+        val plan = Plan.action(action)
+        val test = plan.test(obs).stateless
+          .withRetryPolicy(Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2))
+        val report = test.runU()
+        report.assert()
+      }
+
+      "elemChangesMutable" - {
+        val buf = scala.collection.mutable.ArrayBuffer(1, 2)
+        val dsl = Dsl[Unit, Unit, Unit]
+        val check = dsl.focus("Items")
+          .collection(_ => buf)
+          .map(_ * 2)
+          .assert.elemChanges()(add = 6)
+        val action = dsl.action("mutate")(_ => buf += 3) +> check
+        val report = Plan.action(action).testU.stateless.runU()
+        report.assert()
+      }
+    }
+
   }
 }

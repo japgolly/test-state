@@ -4,34 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 4. `FocusColl.map` and `FocusColl.filter` return `FocusColl[Iterator, _]`, causing single-use `Iterator` exhaustion on `elemChanges` retries
-
-* **Location:** `core/shared/src/main/scala/teststate/dsl/Dsl.scala` (lines 392–396, 508–520)
-* **Current Code:**
-  ```scala
-  def map[B](f: A => B): FocusColl[Iterator, B] =
-    mapColl(_.iterator map f)
-
-  def filter(f: A => Boolean): FocusColl[Iterator, A] =
-    mapColl(_.iterator filter f)
-  ```
-* **Issue:**
-  1. Because `FocusColl.map` and `FocusColl.filter` produce `FocusColl[Iterator, _]`, `focusFn` returns a lazy, single-use `Iterator`.
-  2. In `elemChangesBy`, `around` captures `b = focusFn(beforeOS)` before the action runs, but `b.iterator` is not consumed until *after* the action runs inside `ElemChanges`:
-     * When `Retry.Scope.PostConditions` retries a failed post-condition (`Runner.scala:497–515`), `Runner` reuses the `HalfCheck` (`b`) captured before the action. The first post-check consumes and exhausts `b: Iterator[A]`, so all subsequent retry attempts see an empty `before` collection.
-     * If `beforeOS.obs` wraps a mutable collection or live DOM reference, a lazy `Iterator` (`_.iterator.map(f)`) will read the mutated post-action elements when evaluated in the post-check.
-* **Proposed Change:**
-  Materialize `Vector` in `FocusColl.map` and `FocusColl.filter`, and materialize `before` in `elemChangesBy`:
-  ```scala
-  def map[B](f: A => B): FocusColl[Vector, B] =
-    mapColl(_.iterator.map(f).toVector)
-
-  def filter(f: A => Boolean): FocusColl[Vector, A] =
-    mapColl(_.iterator.filter(f).toVector)
-  ```
-
----
-
 ## 5. `DisplayFailure.expectChange` is unused by `increaseBy` / `decreaseBy`, hiding the before and expected values in failure messages
 
 * **Locations:**
