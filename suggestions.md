@@ -4,43 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 7. `ReportFormat.Default.StatsFormat.formatDuration` has off-by-one time unit checks
-
-* **Location:** `core/shared/src/main/scala/teststate/run/ReportFormat.scala` (lines 151–160)
-* **Current Code:**
-  ```scala
-  def formatDuration(secPrec: Int): FiniteDuration => String = {
-    val secfmt = "%." + secPrec + "f sec"
-    d =>
-      if (d.toMicros == 0)
-        d.toNanos.toString + " μs"
-      else if (d.toSeconds == 0)
-        d.toMillis.toString + " ms"
-      else
-        secfmt.format(d.toMicros.toDouble / 1000000)
-  }
-  ```
-* **Issue:**
-  1. When `d < 1 microsecond` (e.g. `500 nanoseconds`), `d.toMicros == 0` is true, and it formats `d.toNanos` with the `" μs"` suffix (`"500 μs"`, off by 1000x).
-  2. When `1 μs <= d < 1 ms` (e.g. `450 microseconds`), `d.toMicros == 0` is false and `d.toSeconds == 0` is true, so it falls into `d.toMillis.toString + " ms"` and prints `"0 ms"`.
-* **Proposed Change:**
-  ```scala
-  def formatDuration(secPrec: Int): FiniteDuration => String = {
-    val secfmt = "%." + secPrec + "f sec"
-    d =>
-      if (d.toMicros == 0)
-        d.toNanos.toString + " ns"
-      else if (d.toMillis == 0)
-        d.toMicros.toString + " μs"
-      else if (d.toSeconds == 0)
-        d.toMillis.toString + " ms"
-      else
-        secfmt.format(d.toMicros.toDouble / 1000000)
-  }
-  ```
-
----
-
 ## 8. `ErrorHandler.toStringWithStackTrace` duplicates `err.toString` on the first two lines, and `ErrorHandler.name` prints `"WithCause(...)"` on exception
 
 * **Location:** `core/shared/src/main/scala/teststate/typeclass/ErrorHandler.scala` (lines 21–35, 45–69)
