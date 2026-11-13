@@ -4,32 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 11. `Runner.runPreChecksWithRetry` re-runs `preCheckFn(p0)` on stale `ROS` when `reObserve()` fails, inflating `stats.checks`
-
-* **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 433–445)
-* **Current Code:**
-  ```scala
-  private def runPreChecksWithRetry[A, B](preCheckFn: P => ActionResult.PreCheckFail[A] Or B,
-                                          reObserve : () => F[FE Or (R, O)],
-                                          p0        : P): F[ActionResult.PreCheckFail[A] Or (ROS, B)] = {
-    def retry: F[ActionResult.PreCheckFail[A] Or (ROS, B)] =
-      EM.map(reObserve()) {
-        case Right((r, o)) =>
-          val ros = ROS(r, o, p0.ros.state)
-          preCheckFn(p0.copy(ros = ros)).map((ros, _))
-        case Left(_) =>
-          preCheckFn(p0).map((p0.ros, _))
-      }
-    withRetryF1(Retry.Scope.PreConditions, EM.point(preCheckFn(p0).map((p0.ros, _))), retry)(retryCheckAround0)
-  }
-  ```
-* **Issue:**
-  When `reObserve()` fails (`Left(_)`), `retry` calls `preCheckFn(p0)` again on the old `p0`. Because `preCheckFn` executes `runPreChecks`, it re-evaluates all pre-condition checks on the stale `p0.ros` and increments `stats.checks` for each check even though no new observation was obtained.
-* **Proposed Change:**
-  Reuse the previous `PreCheckFail` result when `reObserve()` returns `Left(_)` instead of calling `preCheckFn(p0)` again.
-
----
-
 ## 12. `ReportFormat.Default.addColour` ignores `uncoloured.indent` and hardcodes `"  "`
 
 * **Location:** `core/shared/src/main/scala/teststate/run/ReportFormat.scala` (lines 246–266)

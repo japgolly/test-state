@@ -448,6 +448,30 @@ object RetryTest extends TestSuite {
           """.stripMargin)
       }
 
+      "preCondRetryObsFailKeepsLatestAndChecks" - {
+        var obsCall = 0
+        val d = Dsl[Unit, Int, Unit]
+        val v = d.focus("v").value(_.obs)
+        val obs = Observer.attempt[Unit, Int, String] { _ =>
+          obsCall += 1
+          obsCall match {
+            case 1 => Right(0)
+            case 2 => Right(50)
+            case _ => Left("obs err")
+          }
+        }
+        val act = d.action("act")(_ => ()) <+ v.assert(123)
+        val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2)
+        val report = Plan.action(act).test(obs).stateless.withRetryPolicy(policy).runU()
+        assertRun(report,
+          """
+            |✘ act
+            |  ✘ Pre-conditions
+            |    ✘ v should be 123. -- Got 50.
+            |Performed 0 actions, 2 checks (with 2 retries).
+          """.stripMargin)
+      }
+
       "state" - {
         val state = dsl.focus("state").value(_.state)
         "single" - {
