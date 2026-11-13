@@ -116,7 +116,13 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
   }
 
   override def getAttribute(name: String): Option[String] =
-    Option(dom().getAttribute(name))
+    try
+      Option(dom().getAttribute(name))
+    catch {
+      // javascript error: a.getAttributeNode is not a function
+      case _: org.openqa.selenium.JavascriptException =>
+        None
+    }
 
   override def tagName: String =
     dom().getTagName()
