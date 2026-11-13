@@ -4,48 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 3. `FocusValue.AssertOps.equalByWhenDefined` passes instead of skipping when `expect(os)` is `None`, and `equalWhenDefined(None)` formats step name as `"should be None."`
-
-* **Location:** `core/shared/src/main/scala/teststate/dsl/Dsl.scala` (lines 247–259)
-* **Current Code:**
-  ```scala
-  def equalWhenDefined(expect: Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
-    expect match {
-      case Some(a) => equal(a)
-      case None    => point(NameUtils.equal(focusName, positive, expect))(_ => None).skip
-    }
-
-  def equalByWhenDefined(expect: OS => Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
-    point(NameFn(NameUtils.equalOptionFn(focusName, positive, expect)))(os =>
-      expect(os) match {
-        case Some(a) => f.expectMaybeEqual(positive, ex = a, actual = focusFn(os))
-        case None    => None
-      }
-    )
-  ```
-* **Issue:**
-  1. In `equalByWhenDefined`, when `expect(os)` is `None`, returning `None` from `point(...)(os => Option[E])` is converted via `Tri.failedOption(None)` into **`Passed(())` (`Result.Pass`)**, not `Skipped`. As a result, the test report outputs `✓ <focusName> should be <?>.` as a passed check and increments `stats.checks`, rather than skipping the check (`- <focusName> should be <?>.`) as `equalWhenDefined(None)` does.
-  2. In `equalWhenDefined(None)`, `NameUtils.equal(focusName, positive, expect)` resolves `Display[Option[A]]` for `expect = None`, naming the skipped step `"<focusName> should be None."` instead of `"<focusName> should be <?>."`.
-* **Proposed Change:**
-  ```scala
-  def equalWhenDefined(expect: Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
-    expect match {
-      case Some(a) => equal(a)
-      case None    => point(NameUtils.subjectShouldVerb(focusName, positive, "be <?>"))(_ => None).skip
-    }
-
-  def equalByWhenDefined(expect: OS => Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
-    sack1(Point(
-      NameFn(NameUtils.equalOptionFn(focusName, positive, expect)),
-      os => expect(os) match {
-        case Some(a) => Tri.failedOption(f.expectMaybeEqual(positive, ex = a, actual = focusFn(os)))
-        case None    => Skipped
-      }
-    ))
-  ```
-
----
-
 ## 4. `FocusColl.map` and `FocusColl.filter` return `FocusColl[Iterator, _]`, causing single-use `Iterator` exhaustion on `elemChanges` retries
 
 * **Location:** `core/shared/src/main/scala/teststate/dsl/Dsl.scala` (lines 392–396, 508–520)

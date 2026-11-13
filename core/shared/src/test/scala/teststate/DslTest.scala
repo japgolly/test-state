@@ -28,6 +28,12 @@ object DslTest extends TestSuite {
       case _ => sys error ("What? " + c)
     }
 
+  def extractPoint1[O, S, E](c: Points[O, S, E]): teststate.core.Point[OS[O, S], E] =
+    c match {
+      case Sack.Value(Right(p)) => p
+      case _ => sys error ("What? " + c)
+    }
+
   def testName[O, S, E](c: Arounds[O, S, E], expectF: String, expectC: String): Unit = {
     val n = extractAroundDelta1(c).name
     assertEq(n(None).value, expectF)
@@ -79,6 +85,76 @@ object DslTest extends TestSuite {
         (before, after) => after.state - before.state == 1)
       val report = Plan.action(inc +> check).testU.withInitialState(10).runU()
       report.assert()
+    }
+
+    "equalWhenDefined" - {
+      val os = OS((), ())
+      "none" - {
+        val p = dsl.focus("Counter").value(_ => 7).assert.equalWhenDefined(None)
+        val point = extractPoint1(p)
+        assertEq(point.name(None).value, "Counter should be <?>.")
+        val result = point.test(os)
+        assert(result == Skipped)
+      }
+      "noneNeg" - {
+        val p = dsl.focus("Counter").value(_ => 7).assert.not.equalWhenDefined(None)
+        val point = extractPoint1(p)
+        assertEq(point.name(None).value, "Counter shouldn't be <?>.")
+        val result = point.test(os)
+        assert(result == Skipped)
+      }
+      "some" - {
+        val p = dsl.focus("Counter").value(_ => 7).assert.equalWhenDefined(Some(7))
+        val point = extractPoint1(p)
+        assertEq(point.name(None).value, "Counter should be 7.")
+        val result = point.test(os)
+        assert(result == Tri.pass)
+      }
+    }
+
+    "equalByWhenDefined" - {
+      val os = OS((), ())
+      "none" - {
+        val p = dsl.focus("Counter").value(_ => 7).assert.equalByWhenDefined(_ => None)
+        val point = extractPoint1(p)
+        assertEq(point.name(None).value, "Counter should be <?>.")
+        assertEq(point.name(Some(os)).value, "Counter should be <?>.")
+        val result = point.test(os)
+        assert(result == Skipped)
+      }
+      "noneNeg" - {
+        val p = dsl.focus("Counter").value(_ => 7).assert.not.equalByWhenDefined(_ => None)
+        val point = extractPoint1(p)
+        assertEq(point.name(None).value, "Counter shouldn't be <?>.")
+        assertEq(point.name(Some(os)).value, "Counter shouldn't be <?>.")
+        val result = point.test(os)
+        assert(result == Skipped)
+      }
+      "someMatch" - {
+        val p = dsl.focus("Counter").value(_ => 7).assert.equalByWhenDefined(_ => Some(7))
+        val point = extractPoint1(p)
+        assertEq(point.name(None).value, "Counter should be <?>.")
+        assertEq(point.name(Some(os)).value, "Counter should be 7.")
+        val result = point.test(os)
+        assert(result == Tri.pass)
+      }
+      "someMismatch" - {
+        val p = dsl.focus("Counter").value(_ => 7).assert.equalByWhenDefined(_ => Some(8))
+        val point = extractPoint1(p)
+        assertEq(point.name(None).value, "Counter should be <?>.")
+        assertEq(point.name(Some(os)).value, "Counter should be 8.")
+        val result = point.test(os)
+        assert(result match { case Failed(_) => true; case _ => false })
+      }
+      "runner" - {
+        val dsl = Dsl[Unit, Int, Unit]
+        val check = dsl.focus("num").value(_.obs).assert.equalByWhenDefined(_ => None)
+        val action = dsl.action("act")(_ => ()) +> check
+        val report = Plan.action(action).test(Observer.watch(123)).stateless.runU()
+        val text = report.format(Report.Format.Default.uncolouredAscii.alwaysShowChildren)
+        assertContains(text, "[skip] num should be <?>.")
+        assertEq(report.stats.performedChecks, 0)
+      }
     }
 
   }
