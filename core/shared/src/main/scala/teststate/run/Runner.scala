@@ -295,12 +295,16 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
 
   private def withRetryF1I[A](scope: Retry.Scope, firstAttempt: => F[A])(repeatAttempts: A => F[A], failed: A => Boolean)
                             (implicit stats: Stats.Mutable): F[A] =
-    EM.flatMap(firstAttempt)(a0 => _withRetryF(scope, a0)(repeatAttempts(a0), failed))
+    EM.flatMap(firstAttempt)(_withRetryFI(scope, _)(repeatAttempts, failed))
 
   private def _withRetryF[A](scope: Retry.Scope, initialA: A)(retryF: => F[A], failed: A => Boolean)
-                            (implicit stats: Stats.Mutable): F[A] = {
-    def retryWithStats = EM.flatMap(EM.point(stats.retries += 1))(_ => retryF)
-    retryPolicy.retryI(scope, initialA)(failed, retryWithStats)
+                            (implicit stats: Stats.Mutable): F[A] =
+    _withRetryFI(scope, initialA)(_ => retryF, failed)
+
+  private def _withRetryFI[A](scope: Retry.Scope, initialA: A)(retryF: A => F[A], failed: A => Boolean)
+                             (implicit stats: Stats.Mutable): F[A] = {
+    def retryWithStats(a: A) = EM.flatMap(EM.point(stats.retries += 1))(_ => retryF(a))
+    retryPolicy.retryFnI(scope, initialA)(failed, retryWithStats)
   }
 
   private def observeWithRetry(test: Test, ref: R): F[FE Or O] =
@@ -503,14 +507,14 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
     val initialPostCheck: (ROS, HH) =
       runPostChecks(ros)
 
-    def reObserveAndPostCheck: F[(ROS, HH)] =
+    def reObserveAndPostCheck(last: (ROS, HH)): F[(ROS, HH)] =
       EM.map(reObserve()) {
         case Right((r, o)) => runPostChecks(ROS(r, o, ros.state))
-        case Left(_)       => initialPostCheck
+        case Left(_)       => last
       }
 
     val postCheckWithRetry: F[(ROS, HH)] =
-      _withRetryF(Retry.Scope.PostConditions, initialPostCheck)(reObserveAndPostCheck, _._2.retry)
+      _withRetryFI(Retry.Scope.PostConditions, initialPostCheck)(reObserveAndPostCheck, _._2.retry)
 
     EM.map(postCheckWithRetry)(x => (history, x._1, x._2))
   }
