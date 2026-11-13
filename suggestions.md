@@ -4,51 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 6. `NameUtils` takes `focusName: String` strictly and captures a single-use `Iterator` inside a lazy `Name` in `collChangeFn`
-
-* **Location:** `core/shared/src/main/scala/teststate/dsl/NameUtils.scala` (lines 15–58)
-* **Current Code:**
-  ```scala
-  def subjectShouldVerb(focusName: String, pos: Boolean, verb: String): Name =
-    s"$focusName ${should(pos)} $verb."
-
-  def equal[A](focusName: String, pos: Boolean, expect: A)(implicit sa: Display[A]): Name = {
-    lazy val _expectedText = sa(expect)
-    Name {
-      val expectedText = _expectedText
-      if (expectedText.contains('\n'))
-        subjectShouldVerb(focusName, pos, "be:\n  " + expectedText.replace("\n", "\n  ")).value.stripSuffix(".")
-      else
-        subjectShouldVerb(focusName, pos, "be " + expectedText).value
-    }
-  }
-  ...
-  def collChangeFn[I, A](focusName: String,
-                         pos      : Boolean,
-                         verb     : String,
-                         expectDel: I => IterableOnce[A],
-                         expectAdd: I => IterableOnce[A])
-                        (implicit sa: Display[A]): Option[BeforeAfter[I]] => Name = {
-    case None    => s"$focusName ${should(pos)} $verb: <?>."
-    case Some(BeforeAfter(i, _)) =>
-      val del = expectDel(i)
-      val add = expectAdd(i)
-      val as = del.iterator.map("-" + sa(_)) ++ add.iterator.map("+" + sa(_))
-      if (as.isEmpty)
-        s"$focusName ${should(!pos)} $verb."
-      else
-        s"$focusName ${should(pos)} $verb: ${as mkString " "}."
-  }
-  ```
-* **Issue:**
-  1. Every class in `Dsl.scala` (`Focus`, `FocusValue`, `FocusOption`, `FocusColl`, `BiFocus`, `ObsAndState`) takes `focusName: => String` by-name so that names are evaluated lazily. However, all methods in `NameUtils` take `focusName: String` (and `verb: String`) strictly, forcing evaluation of `focusName` eagerly at DSL construction time.
-  2. In `collChangeFn`, `as` is a single-use `Iterator[String]`. Line 57 returns `s"$focusName ${should(pos)} $verb: ${as mkString " "}."`, which implicitly converts to `Name.Later(() => ...)`. If `.value` is accessed more than once on that `Name`, the first access exhausts `as` and subsequent accesses evaluate `as.mkString(" ")` as `""`. Wrapping the computed string in `Name.now(...)` avoids allocating a `Name.Later` closure and prevents iterator exhaustion.
-  3. In `NameUtils.equal`, `lazy val _expectedText = sa(expect)` allocates an extra lazy ref outside `Name { ... }`, and inside `Name { ... }` it calls `subjectShouldVerb(...).value`, allocating a temporary `Name.Later` only to immediately unwrap `.value`.
-* **Proposed Change:**
-  Take `focusName: => String` and `verb: => String` by-name in `NameUtils`, use `Name.now(...)` in `collChangeFn`, and avoid the intermediate `Name.Later` allocation inside `NameUtils.equal`.
-
----
-
 ## 7. `ReportFormat.Default.StatsFormat.formatDuration` has off-by-one time unit checks
 
 * **Location:** `core/shared/src/main/scala/teststate/run/ReportFormat.scala` (lines 151–160)
