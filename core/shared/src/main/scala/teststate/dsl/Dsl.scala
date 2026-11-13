@@ -390,11 +390,11 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
     def rename(n: => String) = new FocusColl[C, A](n, focusFn)
     def run = focusFn
 
-    def map[B](f: A => B): FocusColl[Iterator, B] =
-      mapColl(_.iterator map f)
+    def map[B](f: A => B): FocusColl[Vector, B] =
+      mapColl(_.iterator.map(f).toVector)
 
-    def filter(f: A => Boolean): FocusColl[Iterator, A] =
-      mapColl(_.iterator filter f)
+    def filter(f: A => Boolean): FocusColl[Vector, A] =
+      mapColl(_.iterator.filter(f).toVector)
 
     def mapColl[D[X] <: IterableOnce[X], B](f: C[A] => D[B]): FocusColl[D, B] =
       new FocusColl(focusName, f compose focusFn)
@@ -510,7 +510,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
         val d = ElemChanges(positive)
         around(
           NameFn(NameUtils.collChangeFn(focusName, positive, "change", del, add)))(
-          focusFn)(
+          os => focusFn(os).iterator.toVector)(
           (os, b) =>
             d(ElemChanges.Args(
               before    = b,
