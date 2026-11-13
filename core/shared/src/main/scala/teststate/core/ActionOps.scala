@@ -280,7 +280,7 @@ object ActionOps {
                 run(_).map(f => () => em.map(f())(
                   _.map(g => (o: O) => g(o) flatMap m(o))
                 )))
-            case Group(a, c)   => Group(a.modS(name, m), c.modS(m))
+            case Group(a, c)   => Group(a.modS(name, m), c)
             case SubTest(a, i) => SubTest(a.modS(name, m), i)
           }
       }

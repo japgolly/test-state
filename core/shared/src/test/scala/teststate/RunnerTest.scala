@@ -243,15 +243,56 @@ object RunnerTest extends TestSuite {
     }
 
     "modS" - {
-      var i = 9
-      val dsl = Dsl[Unit, Int, Int]
-      val inc = dsl.action("inc")(_ => i = i + 1)
-        .updateState(_ + 8)
-        .updateStateBy(_.state - 3)
-        .updateState(_ - 4)
-      val h = Plan.action(inc.times(3)).test(Observer watch i).withInitialState(i).runU()
-      assertEq(h.failure, None)
-      assertEq(i, 12)
+      "single" - {
+        var i = 9
+        val dsl = Dsl[Unit, Int, Int]
+        val inc = dsl.action("inc")(_ => i = i + 1)
+          .updateState(_ + 8)
+          .updateStateBy(_.state - 3)
+          .updateState(_ - 4)
+        val h = Plan.action(inc.times(3)).test(Observer watch i).withInitialState(i).runU()
+        assertEq(h.failure, None)
+        assertEq(i, 12)
+      }
+
+      "groupCondition" - {
+        var ran1 = false
+        var ran2 = false
+        var stateAfter = -1
+        val dsl = Dsl[Unit, Unit, Int]
+        val a1 = dsl.action("A1")(_ => ran1 = true)
+        val a2 = dsl.action("A2")(_ => ran2 = true)
+        val a3 = dsl.action("A3")(ros => stateAfter = ros.state)
+        val g = (a1 >> a2).group("G").when(_.state == 0).updateState(_ + 1)
+        val h = Plan.action(g >> a3).testU.withInitialState(0).runU()
+        assertEq(h.failure, None)
+        assertEq(ran1, true)
+        assertEq(ran2, true)
+        assertEq(stateAfter, 1)
+        assertEq(h.history.result, Result.Pass)
+      }
+
+      "groupPostObservation" - {
+        var obs = "before"
+        var ran = false
+        var stateAfter = -1
+        val dsl = Dsl[Unit, String, Int]
+        val a1 = dsl.action("A1")(_ => {
+          ran = true
+          obs = "after"
+        })
+        val a2 = dsl.action("A2")(_ => ())
+        val a3 = dsl.action("A3")(ros => stateAfter = ros.state)
+        val g = (a1 >> a2).group("G").updateStateAttemptBy(os =>
+          if (os.obs == "after") Right(os.state + 1)
+          else Left(s"Expected post-obs 'after', got '${os.obs}'")
+        )
+        val h = Plan.action(g >> a3).test(Observer watch obs).withInitialState(0).runU()
+        assertEq(h.failure, None)
+        assertEq(ran, true)
+        assertEq(stateAfter, 1)
+        assertEq(h.history.result, Result.Pass)
+      }
     }
 
     "skip" - {
