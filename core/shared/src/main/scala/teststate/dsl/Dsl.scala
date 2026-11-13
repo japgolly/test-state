@@ -247,16 +247,17 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       def equalWhenDefined(expect: Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
         expect match {
           case Some(a) => equal(a)
-          case None    => point(NameUtils.equal(focusName, positive, expect))(_ => None).skip
+          case None    => point(NameUtils.subjectShouldVerb(focusName, positive, "be <?>"))(_ => None).skip
         }
 
       def equalByWhenDefined(expect: OS => Option[A])(implicit e: Equal[A], f: DisplayFailure[A, E]): Points =
-        point(NameFn(NameUtils.equalOptionFn(focusName, positive, expect)))(os =>
-          expect(os) match {
-            case Some(a) => f.expectMaybeEqual(positive, ex = a, actual = focusFn(os))
-            case None    => None
+        sack1(Point(
+          NameFn(NameUtils.equalOptionFn(focusName, positive, expect)),
+          os => expect(os) match {
+            case Some(a) => Tri.failedOption(f.expectMaybeEqual(positive, ex = a, actual = focusFn(os)))
+            case None    => Skipped
           }
-        )
+        ))
 
       def beforeAndAfter(before: A, after: A)(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         equal(before).before & equal(after).after
