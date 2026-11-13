@@ -257,7 +257,7 @@ object ReportFormat {
       // val BRIGHT_CYAN    = "\u001b[96m"
       // val BRIGHT_WHITE   = "\u001b[97m"
       Settings(
-        indent        = "  ",
+        indent        = uncoloured.indent,
         onPass        = BOLD + BRIGHT_GREEN + uncoloured.onPass + RESET + WHITE,
         onFail        = BRIGHT_RED + uncoloured.onFail + BOLD,
         onSkip        = BOLD + BRIGHT_YELLOW + uncoloured.onSkip + RESET + BRIGHT_BLACK,
