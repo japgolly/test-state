@@ -348,5 +348,48 @@ object DslTest extends TestSuite {
       }
     }
 
+    "nameUtils" - {
+      import teststate.dsl.NameUtils
+
+      "collChangeFn" - {
+        val fn = NameUtils.collChangeFn[Unit, Int]("Items", true, "change", _ => List(1), _ => List(2))
+        val name = fn(Some(BeforeAfter((), ())))
+        assertEq(name.value, "Items should change: -1 +2.")
+        assertEq(name.value, "Items should change: -1 +2.")
+      }
+
+      "subjectShouldVerbLaziness" - {
+        var evaluated = false
+        def focusName = { evaluated = true; "Items" }
+        val name = NameUtils.subjectShouldVerb(focusName, true, "verb")
+        assert(!evaluated)
+        assertEq(name.value, "Items should verb.")
+        assert(evaluated)
+      }
+
+      "equalLaziness" - {
+        var evaluated = false
+        def focusName = { evaluated = true; "Items" }
+        val name = NameUtils.equal(focusName, true, 3)
+        assert(!evaluated)
+        assertEq(name.value, "Items should be 3.")
+        assert(evaluated)
+      }
+
+      "equalFnLaziness" - {
+        var evaluated = false
+        def focusName = { evaluated = true; "Items" }
+        val fn = NameUtils.equalFn[Unit, Int](focusName, true, _ => 3)
+        assert(!evaluated)
+        assertEq(fn(None).value, "Items should be <?>.")
+        assert(evaluated)
+      }
+
+      "equalMultiline" - {
+        val name = NameUtils.equal("Data", true, "line1\nline2")
+        assertEq(name.value, "Data should be:\n  line1\n  line2")
+      }
+    }
+
   }
 }
