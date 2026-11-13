@@ -289,10 +289,6 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                            (implicit stats: Stats.Mutable): F[A] =
     EM.flatMap(impureRun)(_withRetryF(scope, _)(impureRun, failed))
 
-  private def withRetryF1[A](scope: Retry.Scope, firstAttempt: => F[A], repeatAttempts: => F[A])(failed: A => Boolean)
-                            (implicit stats: Stats.Mutable): F[A] =
-    EM.flatMap(firstAttempt)(_withRetryF(scope, _)(repeatAttempts, failed))
-
   private def withRetryF1I[A](scope: Retry.Scope, firstAttempt: => F[A])(repeatAttempts: A => F[A], failed: A => Boolean)
                             (implicit stats: Stats.Mutable): F[A] =
     EM.flatMap(firstAttempt)(_withRetryFI(scope, _)(repeatAttempts, failed))
@@ -437,15 +433,16 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
   private def runPreChecksWithRetry[A, B](preCheckFn: P => ActionResult.PreCheckFail[A] Or B,
                                           reObserve : () => F[FE Or (R, O)],
                                           p0        : P): F[ActionResult.PreCheckFail[A] Or (ROS, B)] = {
-    def retry: F[ActionResult.PreCheckFail[A] Or (ROS, B)] =
+    type Res = ActionResult.PreCheckFail[A] Or (ROS, B)
+    def retry(last: Res): F[Res] =
       EM.map(reObserve()) {
         case Right((r, o)) =>
           val ros = ROS(r, o, p0.ros.state)
           preCheckFn(p0.copy(ros = ros)).map((ros, _))
         case Left(_) =>
-          preCheckFn(p0).map((p0.ros, _))
+          last
       }
-    withRetryF1(Retry.Scope.PreConditions, EM.point(preCheckFn(p0).map((p0.ros, _))), retry)(retryCheckAround0)
+    withRetryF1I(Retry.Scope.PreConditions, EM.point(preCheckFn(p0).map((p0.ros, _))))(retry, retryCheckAround0)
   }
 
   private def postChecks(hcsA      : Vector[HalfCheck[O, S, E]],
