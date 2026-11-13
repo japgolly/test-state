@@ -272,6 +272,27 @@ object RunnerTest extends TestSuite {
         assertEq(h.history.result, Result.Pass)
       }
 
+      "groupConditionShortCircuit" - {
+        var ran1 = false
+        var ran2 = false
+        var nextCondEvaluated = false
+        val dsl = Dsl[Unit, Unit, Int]
+        val a1 = dsl.action("A1")(_ => ran1 = true)
+        val a2 = dsl.action("A2")(_ => ran2 = true)
+        val g = (a1 >> a2).group("G")
+          .when(_ => false)
+          .when(_ => {
+            nextCondEvaluated = true
+            true
+          })
+        val h = Plan.action(g).testU.withInitialState(0).runU()
+        assertEq(h.failure, None)
+        assertEq(ran1, false)
+        assertEq(ran2, false)
+        assertEq(nextCondEvaluated, false)
+        assertEq(h.history.result, Result.Skip)
+      }
+
       "groupPostObservation" - {
         var obs = "before"
         var ran = false
