@@ -280,13 +280,27 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       def noChange(implicit e: Equal[A], f: DisplayFailure[A, E]): Arounds =
         not.change
 
+      private def changeBy(name: Name, expect: A => A)(implicit e: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
+        mkAround(
+          name,
+          (a1, a2) =>
+            if (positive)
+              f.expectChange(from = a1, expected = expect(a1), actual = a2)(s, e)
+            else
+              f.expectNotEqual(unexpected = expect(a1), actual = a2)(s, e)
+        )
+
       def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
-        changeTo(n.plus(_, a))(q, f)
-        .rename(NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)))
+        changeBy(
+          NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)),
+          n.plus(_, a)
+        )(q, f, s)
 
       def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
-        changeTo(n.minus(_, a))(q, f)
-          .rename(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
+        changeBy(
+          NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)),
+          n.minus(_, a)
+        )(q, f, s)
 
       def increment(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
         increaseBy(n.one)(n, q, f, s)

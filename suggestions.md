@@ -4,30 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 5. `DisplayFailure.expectChange` is unused by `increaseBy` / `decreaseBy`, hiding the before and expected values in failure messages
-
-* **Locations:**
-  * `core/shared/src/main/scala/teststate/dsl/Dsl.scala` (lines 270–295)
-  * `core/shared/src/main/scala/teststate/dsl/DisplayFailure.scala` (lines 8, 28–35, 53–54)
-* **Current Code:**
-  ```scala
-  // Dsl.scala
-  def increaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
-    changeTo(n.plus(_, a))(q, f)
-    .rename(NameUtils.subjectShouldVerb(focusName, positive, "increase by " + s(a)))
-
-  def decreaseBy(a: A)(implicit n: Numeric[A], q: Equal[A], f: DisplayFailure[A, E], s: Display[A]): Arounds =
-    changeTo(n.minus(_, a))(q, f)
-      .rename(NameUtils.subjectShouldVerb(focusName, positive, "decrease by " + s(a)))
-  ```
-* **Issue:**
-  `DisplayFailure.expectedEqual` intentionally omits `expected` (`"Got 8."`) because it assumes the step name already contains `"should be 9."` (`DisplayFailure.scala:40`). However, `increaseBy` and `decreaseBy` call `changeTo` and then `.rename` the step to `"Counter should increase by 2."`, removing the target value `9` from the step name. When `Counter` starts at `7` and becomes `8`, the failure report is `✘ Counter should increase by 2. -- Got 8.`, hiding both the before value (`7`) and expected after value (`9`). Meanwhile, `DisplayFailure.expectChange` (`"Got 8, expected 7 to change into 9."` / `"Expected 7 to change, but it didn't."`) is already implemented in `DisplayFailure.scala` (lines 28–35) but is never called anywhere.
-  Additionally, `increaseBy`, `decreaseBy`, `increment`, and `decrement` take a redundant `implicit s: Display[A]` parameter even though `FocusValue[A]` already has `implicit displayA: Display[A]` in class scope (`Dsl.scala:189`).
-* **Proposed Change:**
-  Use `f.expectChange(from = a1, expected = expect(a1), actual = a2)` when `positive` is `true` in `increaseBy` / `decreaseBy` (or in a helper for renamed `changeTo` assertions).
-
----
-
 ## 6. `NameUtils` takes `focusName: String` strictly and captures a single-use `Iterator` inside a lazy `Name` in `collChangeFn`
 
 * **Location:** `core/shared/src/main/scala/teststate/dsl/NameUtils.scala` (lines 15–58)

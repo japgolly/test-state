@@ -238,5 +238,115 @@ object DslTest extends TestSuite {
       }
     }
 
+    "increaseBy" - {
+      val dsl = Dsl[Unit, Int, Unit]
+      val focus = dsl.focus("Counter").value(_.obs)
+      val fmt = Report.Format.Default.uncolouredAscii.alwaysShowChildren
+
+      "pass" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 9) +> focus.assert.increaseBy(2)
+        Plan.action(a).test(Observer.watch(x)).stateless.runU().assert()
+      }
+
+      "failDifferent" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 8) +> focus.assert.increaseBy(2)
+        val r = Plan.action(a).test(Observer.watch(x)).stateless.runU()
+        val text = r.format(fmt)
+        assertContains(text, "Got 8, expected 7 to change into 9.")
+      }
+
+      "failUnchanged" - {
+        val x = 7
+        val a = dsl.action("act")(_ => ()) +> focus.assert.increaseBy(2)
+        val r = Plan.action(a).test(Observer.watch(x)).stateless.runU()
+        val text = r.format(fmt)
+        assertContains(text, "Expected 7 to change, but it didn't.")
+      }
+
+      "negPass" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 8) +> focus.assert.not.increaseBy(2)
+        Plan.action(a).test(Observer.watch(x)).stateless.runU().assert()
+      }
+
+      "negFail" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 9) +> focus.assert.not.increaseBy(2)
+        val r = Plan.action(a).test(Observer.watch(x)).stateless.runU()
+        val text = r.format(fmt)
+        assertContains(text, "Expected 9 to change, but it didn't.")
+      }
+    }
+
+    "decreaseBy" - {
+      val dsl = Dsl[Unit, Int, Unit]
+      val focus = dsl.focus("Counter").value(_.obs)
+      val fmt = Report.Format.Default.uncolouredAscii.alwaysShowChildren
+
+      "pass" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 5) +> focus.assert.decreaseBy(2)
+        Plan.action(a).test(Observer.watch(x)).stateless.runU().assert()
+      }
+
+      "failDifferent" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 6) +> focus.assert.decreaseBy(2)
+        val r = Plan.action(a).test(Observer.watch(x)).stateless.runU()
+        val text = r.format(fmt)
+        assertContains(text, "Got 6, expected 7 to change into 5.")
+      }
+
+      "failUnchanged" - {
+        val x = 7
+        val a = dsl.action("act")(_ => ()) +> focus.assert.decreaseBy(2)
+        val r = Plan.action(a).test(Observer.watch(x)).stateless.runU()
+        val text = r.format(fmt)
+        assertContains(text, "Expected 7 to change, but it didn't.")
+      }
+    }
+
+    "increment" - {
+      val dsl = Dsl[Unit, Int, Unit]
+      val focus = dsl.focus("Counter").value(_.obs)
+      val fmt = Report.Format.Default.uncolouredAscii.alwaysShowChildren
+
+      "pass" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 8) +> focus.assert.increment
+        Plan.action(a).test(Observer.watch(x)).stateless.runU().assert()
+      }
+
+      "failDifferent" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 10) +> focus.assert.increment
+        val r = Plan.action(a).test(Observer.watch(x)).stateless.runU()
+        val text = r.format(fmt)
+        assertContains(text, "Got 10, expected 7 to change into 8.")
+      }
+    }
+
+    "decrement" - {
+      val dsl = Dsl[Unit, Int, Unit]
+      val focus = dsl.focus("Counter").value(_.obs)
+      val fmt = Report.Format.Default.uncolouredAscii.alwaysShowChildren
+
+      "pass" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 6) +> focus.assert.decrement
+        Plan.action(a).test(Observer.watch(x)).stateless.runU().assert()
+      }
+
+      "failDifferent" - {
+        var x = 7
+        val a = dsl.action("act")(_ => x = 10) +> focus.assert.decrement
+        val r = Plan.action(a).test(Observer.watch(x)).stateless.runU()
+        val text = r.format(fmt)
+        assertContains(text, "Got 10, expected 7 to change into 6.")
+      }
+    }
+
   }
 }
