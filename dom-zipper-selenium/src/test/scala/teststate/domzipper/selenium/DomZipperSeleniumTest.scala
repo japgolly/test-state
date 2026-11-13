@@ -105,5 +105,19 @@ object DomZipperSeleniumTest extends TestSuite {
       assertEq(c.parent.child().outerHTML, "<h3>EH?</h3>")
     }
 
+    "parentCachesWebElement" - {
+      val p = $("form").child("div", 3 of 3)("h3").parent
+      assert(p.dom() eq p.dom())
+    }
+
+    "parentMissingFailToOption" - {
+      assertEq($.failToOption.parent.flatMap(_.failToOption.parent).isEmpty, true)
+    }
+
+    "parentMissingFailToEither" - {
+      val res = $.failToEither.parent.flatMap(_.failToEither.parent)
+      assert(res.isLeft)
+    }
+
   }
 }

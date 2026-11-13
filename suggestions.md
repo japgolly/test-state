@@ -4,29 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 13. `DomZipperSeleniumF._parent` wraps closure allocation in `F.attempt` instead of the `dom().parent()` call (Bug & Performance)
-
-* **Location:** `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/DomZipperSeleniumF.scala` (lines 87–88)
-* **Current Code:**
-  ```scala
-  override protected def _parent: F[Dom] =
-    F.attempt(() => dom().parent()(driver))
-  ```
-* **Issue:**
-  1. **Error handling bug:** Because `type Dom = () => WebElement`, the expression passed to `F.attempt` is the lambda literal `() => dom().parent()(driver)`. Constructing a `Function0` never throws an exception, so `F.attempt` is a complete no-op when `.parent` is called. If `dom().parent()(driver)` fails or returns `null`, `z.failToOption.parent` and `z.failToEither.parent` erroneously succeed with `Some`/`Right` and throw an unhandled exception later when the zipper is inspected.
-  2. **Performance issue:** Unlike `cssSelSelenium` (line 21) and `collectChildren` (lines 103, 108)—which eagerly resolve each `WebElement` and wrap the resolved reference in `() => elem`—`_parent` re-evaluates `dom().parent()(driver)` (executing JS over WebDriver) on **every single operation** on the parent zipper (`.tagName`, `.outerHTML`, `.innerText`, `.classes`, etc.).
-* **Proposed Change:**
-  ```scala
-  override protected def _parent: F[Dom] =
-    F.attempt {
-      val p = dom().parent()(driver)
-      if (p == null) sys.error(enrichErr("Element doesn't have a parent."))
-      () => p
-    }
-  ```
-
----
-
 ## 14. `FastDomZipperSeleniumF.html` and `.body` apply `htmlScrub` redundantly (twice) and prior to Jsoup parsing
 
 * **Location:** `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/FastDomZipperSeleniumF.scala` (lines 21–31)
