@@ -68,9 +68,6 @@ object Action {
 
       def mapOS[A, B](f: A => O, g: B => S): Cond[R, A, B, E] =
         Cond(ros => permit(ros.mapOS(f, g)))
-
-      def modS[OO <: O, SS <: S, EE >: E](m: OO => SS => EE Or SS): Cond[R, OO, SS, EE] =
-        Cond(ros => m(ros.obs)(ros.state).flatMap(s2 => permit(ros.withState(s2))))
     }
 
     object Cond {

@@ -4,42 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 1. `ActionOps.modS` erroneously modifies a `Group`'s pre-execution condition (`Cond.modS`)
-
-* **Locations:**
-  * `core/shared/src/main/scala/teststate/core/ActionOps.scala` (lines 276–285)
-  * `core/shared/src/main/scala/teststate/core/Action.scala` (lines 72–73)
-* **Current Code:**
-  ```scala
-  // ActionOps.scala
-  override def modS[F[_], R, O, S, E](x: Inner[F, R, O, S, E])(name: Option[String], m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
-    x match {
-      case Single(run) =>
-        Single[F, R, O, S, E](
-          run(_).map(f => () => em.map(f())(
-            _.map(g => (o: O) => g(o) flatMap m(o))
-          )))
-      case Group(a, c)   => Group(a.modS(name, m), c.modS(m))
-      case SubTest(a, i) => SubTest(a.modS(name, m), i)
-    }
-
-  // Action.scala
-  def modS[OO <: O, SS <: S, EE >: E](m: OO => SS => EE Or SS): Cond[R, OO, SS, EE] =
-    Cond(ros => m(ros.obs)(ros.state).flatMap(s2 => permit(ros.withState(s2))))
-  ```
-* **Issue:**
-  `modS` (which backs `.updateState`, `.updateStateAttempt`, `.updateStateBy`, and `.updateStateAttemptBy`) is a **post-action** state transition modifier: for `Single`, it modifies the state *after* the action executes, and for `Product(ss)` (`ActionOps.scala:380`) it modifies `ss.last`.
-  However, on `Group(a, c)`, line 283 also calls `c.modS(m)`. Because `c: Group.Cond` is evaluated in `Runner` *before* the group runs (`Runner.scala:667`) to decide whether the group is permitted or skipped:
-  1. For `(a1 >> a2).group("G").when(_.state == 0).updateState(_ + 1)`, when the initial state is `0`, `c.modS` applies `_ + 1` *before* evaluating `when(_.state == 0)`, sees `state == 1`, and falsely skips the group.
-  2. For `group.updateStateAttemptBy(m)` where `m` validates the *post-action* observation `O`, `c.modS(m)` runs `m` against the *pre-action* observation before any action in the group has executed.
-* **Proposed Change:**
-  Do not apply `modS` to `c` in `Group`, and remove `Cond.modS`:
-  ```scala
-  case Group(a, c) => Group(a.modS(name, m), c)
-  ```
-
----
-
 ## 2. `Action.Group.Cond.|+|` does not short-circuit on `Right(false)`, misses right-identity check, and `Cond` transformations lose `Cond.always` identity
 
 * **Location:** `core/shared/src/main/scala/teststate/core/Action.scala` (lines 46–74)
