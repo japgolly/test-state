@@ -1,6 +1,7 @@
 package teststate.domzipper.jsoup
 
 import org.jsoup.nodes.Element
+import org.jsoup.select.QueryParser
 import scala.jdk.CollectionConverters._
 
 final case class JsoupElement(underlying: Element) {
@@ -12,17 +13,16 @@ final case class JsoupElement(underlying: Element) {
   lazy val children: Vector[JsoupElement] =
     underlying.children().asScala.iterator.map(JsoupElement.apply).toVector
 
-  lazy val childrenSet: Set[JsoupElement] =
-    children.toSet
-
-  def selectChildren(css: String): Vector[JsoupElement] =
-    select(css).filter(childrenSet.contains)
+  def selectChildren(css: String): Vector[JsoupElement] = {
+    val eval = QueryParser.parse(css)
+    children.filter(c => eval.matches(underlying, c.underlying))
+  }
 
   def parent: Option[JsoupElement] =
     Option(underlying.parent).map(JsoupElement.apply)
 
   def attr(name: String): Option[String] =
-    if (underlying.attributes().hasKeyIgnoreCase(name))
+    if (underlying.hasAttr(name))
       Some(underlying.attr(name))
     else
       None
@@ -40,7 +40,7 @@ final case class JsoupElement(underlying: Element) {
     underlying.classNames.asScala.toSet
 
   def isSelected: Boolean =
-    underlying.attributes().hasKeyIgnoreCase("checked")
+    underlying.hasAttr("checked")
 
   def innerHtml = underlying.html()
   def outerHtml = underlying.outerHtml()
@@ -49,5 +49,5 @@ final case class JsoupElement(underlying: Element) {
     JsoupElement(underlying.root())
 
   def matches(sel: String): Boolean =
-    root.underlying.select(sel).contains(this.underlying)
+    underlying.is(sel)
 }
