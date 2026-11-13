@@ -554,20 +554,28 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
     }
 
     def tryAttempt(ros: ROS): F[Result] =
-      actionFn(ros) match {
-        case None =>
+      attempt.attempt(actionFn(ros)) match {
+        case Right(None) =>
           EM.pure(ActionResult.Skip)
 
-        case Some(_) =>
+        case Right(Some(act0)) =>
           EM.flatMap(runPreChecksWithRetryFor(ros)) {
             case Right((rosPass, x)) =>
-              actionFn(rosPass) match {
-                case Some(act) => runActionOnly(rosPass, x, act)
-                case None      => EM.pure(ActionResult.Skip)
-              }
+              if (rosPass eq ros)
+                runActionOnly(rosPass, x, act0)
+              else
+                attempt.attempt(actionFn(rosPass)) match {
+                  case Right(Some(act)) => runActionOnly(rosPass, x, act)
+                  case Right(None)      => EM.pure(ActionResult.Skip)
+                  case Left(fe)         => EM.pure(ActionResult.ActionFail(fe, (rosPass, x)))
+                }
             case Left(ActionResult.PreCheckFail(p2, _)) =>
               EM.pure(ActionResult.PreCheckFail(p2, false))
           }
+
+        case Left(fe) =>
+          val p2 = p0.copy(ros = ros) :+ History.Step(name, Fail(fe))
+          EM.pure(ActionResult.PreCheckFail(p2, true))
       }
 
     def onRetry(lastFailure: Result): F[Result] =
@@ -575,19 +583,24 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
         case Right((r, o)) =>
           tryAttempt(ROS(r, o, ros0.state))
         case Left(e) =>
-          val actionFailure: Option[FE] =
-            lastFailure match {
-              case ActionResult.ActionFail(fe, _) => Some(fe)
-              case ActionResult.ObsFail(fe, _, _) => fe
-              case _                              => None
-            }
-          val lastROS_X: (ROS, X) =
-            lastFailure match {
-              case ActionResult.ActionFail(_, rx) => rx
-              case ActionResult.ObsFail(_, _, rx) => rx
-              case _                              => (ros0, null.asInstanceOf[X])
-            }
-          EM.pure(ActionResult.ObsFail(actionFailure, e, lastROS_X))
+          lastFailure match {
+            case ActionResult.PreCheckFail(p2, r) =>
+              EM.pure(ActionResult.PreCheckFail(p2, r))
+            case _ =>
+              val actionFailure: Option[FE] =
+                lastFailure match {
+                  case ActionResult.ActionFail(fe, _) => Some(fe)
+                  case ActionResult.ObsFail(fe, _, _) => fe
+                  case _                              => None
+                }
+              val lastROS_X: (ROS, X) =
+                lastFailure match {
+                  case ActionResult.ActionFail(_, rx) => rx
+                  case ActionResult.ObsFail(_, _, rx) => rx
+                  case _                              => (ros0, null.asInstanceOf[X])
+                }
+              EM.pure(ActionResult.ObsFail(actionFailure, e, lastROS_X))
+          }
       }
 
     withRetryF1I(Retry.Scope.Action, tryAttempt(ros0))(onRetry, _.retry)
