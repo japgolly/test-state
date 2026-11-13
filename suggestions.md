@@ -4,26 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 9. `Runner.withRetryF1I` passes the first attempt `a0` instead of the latest attempt to `repeatAttempts`, and `retryPostChecks` reverts to `initialPostCheck` on `reObserve()` failure
-
-* **Locations:**
-  * `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 296–298, 506–510, 569–589)
-  * `core/shared/src/main/scala/teststate/run/Retry.scala` (lines 30–55)
-* **Current Code:**
-  ```scala
-  // Runner.scala
-  private def withRetryF1I[A](scope: Retry.Scope, firstAttempt: => F[A])(repeatAttempts: A => F[A], failed: A => Boolean)
-                            (implicit stats: Stats.Mutable): F[A] =
-    EM.flatMap(firstAttempt)(a0 => _withRetryF(scope, a0)(repeatAttempts(a0), failed))
-  ```
-* **Issue:**
-  1. In `runAction`, `onRetry(lastFailure: Result)` is passed to `withRetryF1I`. However, `withRetryF1I` always passes `a0` (the very first attempt's result) to `repeatAttempts(a0)` on every subsequent retry rather than the previous retry's result. If Attempt 1 fails with `ActionFail(e1, rx1)`, Retry 1 re-observes and runs the action again failing with `ActionFail(e2, rx2)`, and Retry 2 fails during `reObserve()`, `onRetry` receives `a0` (`e1, rx1`) instead of `e2, rx2`.
-  2. Similarly, in `retryPostChecks` (`Runner.scala:506–510`), if `reObserve()` fails on a later retry after an earlier retry succeeded in `reObserve()`, `case Left(_) => initialPostCheck` reverts to the initial `ROS` and `PostCheckResults` instead of the latest one.
-* **Proposed Change:**
-  Update `Retry.Policy.retryI` (or add a stateful overload) to pass the current `a: A` from the `tailrec` state `(a, retryCtx1)` into `retryF: A => F[A]`.
-
----
-
 ## 10. Uncaught exceptions in `Action.Single` preparation (`.when` / `.unless` / `pmapR` / `pmapO`) crash `Runner` instead of failing the step, and `actionFn` is evaluated twice
 
 * **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 552–567)
