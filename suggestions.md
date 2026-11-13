@@ -4,24 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 12. `ReportFormat.Default.addColour` ignores `uncoloured.indent` and hardcodes `"  "`
-
-* **Location:** `core/shared/src/main/scala/teststate/run/ReportFormat.scala` (lines 246–266)
-* **Current Code:**
-  ```scala
-    def addColour(uncoloured: Settings): Settings = {
-      ...
-      Settings(
-        indent        = "  ",
-        onPass        = BOLD + BRIGHT_GREEN + uncoloured.onPass + RESET + WHITE,
-  ```
-* **Issue:**
-  Every field of `uncoloured` is preserved when constructing the coloured `Settings` except `indent`, which is hardcoded to `"  "`. If a caller customizes `indent` on `Settings` and passes it to `addColour`, their custom indentation is lost.
-* **Proposed Change:**
-  Use `indent = uncoloured.indent`.
-
----
-
 ## 13. `DomZipperSeleniumF._parent` wraps closure allocation in `F.attempt` instead of the `dom().parent()` call (Bug & Performance)
 
 * **Location:** `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/DomZipperSeleniumF.scala` (lines 87–88)

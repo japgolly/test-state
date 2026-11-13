@@ -1262,5 +1262,12 @@ object OutputTest extends TestSuite {
       "seconds3_5" - assertEq(f(3500.millis), "3.5 sec")
     }
 
+    "addColourPreservesIndent" - {
+      import teststate.run.ReportFormat
+      val custom = ReportFormat.Default.uncoloured.copy(indent = "    ")
+      val coloured = ReportFormat.Default.addColour(custom)
+      assertEq(coloured.indent, "    ")
+    }
+
   }
 }
