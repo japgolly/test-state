@@ -20,13 +20,13 @@ object FastDomZipperSeleniumF {
 
     def html(driver: WebDriver)(implicit scrub: HtmlScrub): FastDomZipperSeleniumF[F] = {
       val s = DomZipperSelenium.html(driver)
-      val f = DomZipperJsoup.parseHtml(s.outerHTML)
+      val f = DomZipperJsoup.parseHtml(s._outerHTML)
       FastDomZipperSeleniumF(f, s)
     }
 
     def body(driver: WebDriver)(implicit scrub: HtmlScrub): FastDomZipperSeleniumF[F] = {
       val s = DomZipperSelenium.body(driver)
-      val f = DomZipperJsoup.parseBody(s.outerHTML)
+      val f = DomZipperJsoup.parseBody(s._outerHTML)
       FastDomZipperSeleniumF(f, s)
     }
 

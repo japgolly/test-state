@@ -4,45 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 14. `FastDomZipperSeleniumF.html` and `.body` apply `htmlScrub` redundantly (twice) and prior to Jsoup parsing
-
-* **Location:** `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/FastDomZipperSeleniumF.scala` (lines 21–31)
-* **Current Code:**
-  ```scala
-  def html(driver: WebDriver)(implicit scrub: HtmlScrub): FastDomZipperSeleniumF[F] = {
-    val s = DomZipperSelenium.html(driver)
-    val f = DomZipperJsoup.parseHtml(s.outerHTML)
-    FastDomZipperSeleniumF(f, s)
-  }
-
-  def body(driver: WebDriver)(implicit scrub: HtmlScrub): FastDomZipperSeleniumF[F] = {
-    val s = DomZipperSelenium.body(driver)
-    val f = DomZipperJsoup.parseBody(s.outerHTML)
-    FastDomZipperSeleniumF(f, s)
-  }
-  ```
-* **Issue:**
-  1. `s.outerHTML` applies `scrub.run(s._outerHTML)` to the entire raw HTML string before passing it to `DomZipperJsoup.parseHtml` / `parseBody`. Then `DomZipperJsoup` also captures the implicit `scrub` and applies `scrub.run(...)` a **second time** whenever `.outerHTML` or `.innerHTML` is called on the `FastDomZipperSeleniumF`.
-  2. Running `scrub` eagerly on the entire document HTML when instantiating `FastDomZipperSelenium` performs unnecessary regex work on every observation step even when `outerHTML`/`innerHTML` is never inspected.
-  3. Applying `scrub` before `Jsoup.parse` can alter the parsed Jsoup DOM structure relative to the live Selenium DOM, risking desynchronization between `fast` and `slow`.
-* **Proposed Change:**
-  Use `s._outerHTML` (which is `protected[domzipper]`) when feeding the raw HTML into `DomZipperJsoup`:
-  ```scala
-  def html(driver: WebDriver)(implicit scrub: HtmlScrub): FastDomZipperSeleniumF[F] = {
-    val s = DomZipperSelenium.html(driver)
-    val f = DomZipperJsoup.parseHtml(s._outerHTML)
-    FastDomZipperSeleniumF(f, s)
-  }
-
-  def body(driver: WebDriver)(implicit scrub: HtmlScrub): FastDomZipperSeleniumF[F] = {
-    val s = DomZipperSelenium.body(driver)
-    val f = DomZipperJsoup.parseBody(s._outerHTML)
-    FastDomZipperSeleniumF(f, s)
-  }
-  ```
-
----
-
 ## 15. `JsoupElement.matches` and `JsoupElement.selectChildren` perform full-document / full-subtree queries instead of direct element evaluation
 
 * **Location:** `dom-zipper-jsoup/src/main/scala/teststate/domzipper/jsoup/JsoupElement.scala` (lines 12–28, 42–52)
