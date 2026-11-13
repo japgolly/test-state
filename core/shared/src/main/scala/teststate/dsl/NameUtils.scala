@@ -1,6 +1,5 @@
 package teststate.dsl
 
-import japgolly.microlibs.name_fn.Name.Implicits._
 import japgolly.microlibs.name_fn._
 import teststate.data.BeforeAfter
 import teststate.typeclass._
