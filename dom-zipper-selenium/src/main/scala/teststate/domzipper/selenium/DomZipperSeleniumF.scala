@@ -85,7 +85,12 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     new DomZipperSeleniumF(layers, peek)($, h, g, driver)
 
   override protected def _parent: F[Dom] =
-    F.attempt(() => dom().parent()(driver))
+    F.flatMap(F.attempt(dom().parent()(driver))) { p =>
+      if (p == null)
+        F.fail(enrichErr("Element doesn't have a parent."))
+      else
+        F.pass(() => p)
+    }
 
   override protected[domzipper] def _outerHTML: String =
     getAttribute("outerHTML").getOrElse("null")
@@ -116,7 +121,13 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
   }
 
   override def getAttribute(name: String): Option[String] =
-    Option(dom().getAttribute(name))
+    try
+      Option(dom().getAttribute(name))
+    catch {
+      // javascript error: a.getAttributeNode is not a function
+      case _: org.openqa.selenium.JavascriptException =>
+        None
+    }
 
   override def tagName: String =
     dom().getTagName()

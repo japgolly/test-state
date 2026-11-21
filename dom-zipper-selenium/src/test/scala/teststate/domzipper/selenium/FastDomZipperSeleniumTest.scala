@@ -15,17 +15,20 @@ object FastDomZipperSeleniumTest extends TestSuite {
   implicit def htmlScrub: HtmlScrub =
     HtmlScrub.default >> HtmlScrub.joinLines
 
-  lazy val (html, body) = {
+  lazy val driver: ChromeDriver = {
     val testHtmlPath = SeleniumTestUtil.testResource("test.html").getAbsoluteFile
     val options = new ChromeOptions()
     options.setHeadless(true)
     options.addArguments("--no-sandbox") // Travis workaround: https://github.com/SeleniumHQ/selenium/issues/4961
-    val driver = new ChromeDriver(options)
-    driver.manage().timeouts().implicitlyWait(1, TimeUnit.NANOSECONDS)
-    driver.onShutdownQuit()
-    driver.get("file://" + testHtmlPath)
-    (FastDomZipperSelenium.html(driver), FastDomZipperSelenium.body(driver))
+    val d = new ChromeDriver(options)
+    d.manage().timeouts().implicitlyWait(1, TimeUnit.NANOSECONDS)
+    d.onShutdownQuit()
+    d.get("file://" + testHtmlPath)
+    d
   }
+
+  lazy val (html, body) =
+    (FastDomZipperSelenium.html(driver), FastDomZipperSelenium.body(driver))
 
   def $ = html
 
@@ -39,7 +42,7 @@ object FastDomZipperSeleniumTest extends TestSuite {
     "fast" - {
       "outerHTML" - assertEq(name.outerHTML, nameInputHtml)
 
-      "innerHTML" - assertEq($("div.name").innerHTML.split("\n").map(_.trim).mkString, nameLabelHtml + nameInputHtml)
+      "innerHTML" - assertEq($("div.name").innerHTML, s"$nameLabelHtml $nameInputHtml")
 
       "innerText" - assertEq($("div.name").innerText, "Name:")
 
@@ -175,6 +178,26 @@ object FastDomZipperSeleniumTest extends TestSuite {
       val s = $.slowOnly()
       val _: FastDomZipperSelenium = s
       ()
+    }
+
+    "htmlScrub" - {
+      "appliedOnceOnInspectionHtml" - {
+        var calls = 0
+        val scrub = HtmlScrub { s => calls += 1; s }
+        val z = FastDomZipperSelenium.html(driver)(scrub)
+        assertEq(calls, 0)
+        z.outerHTML
+        assertEq(calls, 1)
+      }
+
+      "appliedOnceOnInspectionBody" - {
+        var calls = 0
+        val scrub = HtmlScrub { s => calls += 1; s }
+        val z = FastDomZipperSelenium.body(driver)(scrub)
+        assertEq(calls, 0)
+        z.outerHTML
+        assertEq(calls, 1)
+      }
     }
   }
 }

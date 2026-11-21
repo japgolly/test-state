@@ -304,6 +304,52 @@ object DomZipperJsoupTest extends TestSuite {
       }
     }
 
+    "jsoupElement" - {
+      final class ProbeElement extends org.jsoup.nodes.Element("span") {
+        def hasAttrs: Boolean = hasAttributes()
+      }
+
+      "attrDoesNotAllocateAttributes" - {
+        val raw = new ProbeElement
+        val el = JsoupElement(raw)
+        assert(!raw.hasAttrs)
+        assertEq(el.attr("id"), None)
+        assert(!raw.hasAttrs)
+      }
+
+      "attrCaseInsensitive" - {
+        assertEq(name.dom.attr("VALUE"), Some("Bob Loblaw"))
+        assertEq(name.dom.attr("nonexistent"), None)
+      }
+
+      "isSelectedDoesNotAllocateAttributes" - {
+        val raw = new ProbeElement
+        val el = JsoupElement(raw)
+        assert(!raw.hasAttrs)
+        assertEq(el.isSelected, false)
+        assert(!raw.hasAttrs)
+      }
+
+      "isSelectedTrue" - {
+        assertEq($("input[type=checkbox]", 1 of 2).dom.isSelected, true)
+        assertEq($("input[type=checkbox]", 2 of 2).dom.isSelected, false)
+      }
+
+      "selectChildrenImmediateOnly" - {
+        val form = $("form").dom
+        assertEq(form.selectChildren("h3").map(_.innerText), Vector("HI"))
+        assert(form.selectChildren("input").isEmpty)
+        assertEq(form.selectChildren("div").size, 3)
+      }
+
+      "matchesDetached" - {
+        val detached = JsoupElement(Jsoup.parse("<div class='a'><span id='s'></span></div>").selectFirst("span"))
+        assert(detached.matches("span"))
+        assert(detached.matches("div.a > span#s"))
+        assert(!detached.matches("p"))
+      }
+    }
+
   }
 
 }
