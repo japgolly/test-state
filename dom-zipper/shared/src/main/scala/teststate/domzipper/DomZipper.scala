@@ -251,17 +251,14 @@ object DomZipper {
       private[domzipper] val C         : DomCollection.Container[F, C])
       (implicit val F: ErrorHandler[F]) {
 
-    private val result: Vector[Z[F, A]] =
+    private lazy val result: Vector[Z[F, A]] =
       filterFn match {
         case None    => rawResults
         case Some(f) => rawResults.filter(f)
       }
 
     private def validateRaw: F[Unit] =
-      if (filterFn.isEmpty)
-        F.pass(())
-      else
-        F.map(C(enrichErr, rawResults))(_ => ())
+      F.map(C(enrichErr, rawResults))(_ => ())
 
     private def fail[B](errMsg: String): F[B] =
       F fail enrichErr(errMsg)
@@ -276,10 +273,16 @@ object DomZipper {
       result.length
 
     def zippers: F[C[Z[F, A]]] =
-      F.flatMap(validateRaw)(_ => C(enrichErr, result))
+      if (filterFn.isEmpty)
+        C(enrichErr, rawResults)
+      else
+        F.flatMap(validateRaw)(_ => C(enrichErr, result))
 
     def map[B](f: Z[F, A] => B): F[C[B]] =
-      F.flatMap(validateRaw)(_ => C(enrichErr, result.map(f)))
+      if (filterFn.isEmpty)
+        C(enrichErr, rawResults.map(f))
+      else
+        F.flatMap(validateRaw)(_ => C(enrichErr, result.map(f)))
 
     @deprecated("Use .map", "2.2.0")
     def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
@@ -292,19 +295,19 @@ object DomZipper {
       map(_.dom)
 
     def mapDoms[B](f: Dom => B): F[C[B]] =
-      F.map(doms)(C.map(_)(f))
+      map(z => f(z.dom))
 
     def traverseDoms[B](f: Dom => F[B]): F[C[B]] =
-      F.flatMap(doms)(C.traverse(_)(f))
+      traverse(z => f(z.dom))
 
     def extracts: F[C[A]] =
       map(_.extract)
 
     def mapExtracts[B](f: A => B): F[C[B]] =
-      F.map(extracts)(C.map(_)(f))
+      map(z => f(z.extract))
 
     def traverseExtracts[B](f: A => F[B]): F[C[B]] =
-      F.flatMap(extracts)(C.traverse(_)(f))
+      traverse(z => f(z.extract))
 
     def filter(f: Z[F, A] => Boolean): DomCollection[Z, F, C, Dom, A] = {
       val f2: Z[F, A] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
@@ -345,9 +348,9 @@ object DomZipper {
     def innerHTMLs: F[C[String]] = map(_.innerHTML)
     def innerTexts: F[C[String]] = map(_.innerText)
 
-    def collect01 = new DomCollection[Z, F, Option, Dom, A](enrichErr, result, None, new DomCollection.Container01[F])
-    def collect0n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, new DomCollection.Container0N[F])
-    def collect1n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, new DomCollection.Container1N[F])
+    def collect01 = new DomCollection[Z, F, Option, Dom, A](enrichErr, result, None, F.C01)
+    def collect0n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, F.C0N)
+    def collect1n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, F.C1N)
   }
 
   // ===================================================================================================================

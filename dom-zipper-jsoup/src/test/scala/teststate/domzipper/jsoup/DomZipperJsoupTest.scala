@@ -350,6 +350,68 @@ object DomZipperJsoupTest extends TestSuite {
       }
     }
 
+    "domCollection" - {
+      def assertLeftContains(res: Either[String, Any], substr: String): Unit = {
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), substr)
+      }
+
+      "collect01HeadValidates" - {
+        assertLeftContains($("form")("select", 2 of 2).failToEither.collect01("option").head, "Expected [0,1] results, not 2.")
+      }
+
+      "collect01LastValidates" - {
+        assertLeftContains($("form")("select", 2 of 2).failToEither.collect01("option").last, "Expected [0,1] results, not 2.")
+      }
+
+      "collect01SingletonValidates" - {
+        assertLeftContains($("form")("select", 2 of 2).failToEither.collect01("option").singleton, "Expected [0,1] results, not 2.")
+      }
+
+      "collect1nHeadValidates" - {
+        assertLeftContains($("form").failToEither.collect1n("pre").head, "Expected [1,n] results, not 0.")
+      }
+
+      "collect1nLastValidates" - {
+        assertLeftContains($("form").failToEither.collect1n("pre").last, "Expected [1,n] results, not 0.")
+      }
+
+      "collect1nSingletonValidates" - {
+        assertLeftContains($("form").failToEither.collect1n("pre").singleton, "Expected [1,n] results, not 0.")
+      }
+
+      "collect01SingleSuccess" - {
+        val col = $("form").failToEither.collect01("> h3")
+        assertEq(col.head.map(_.innerText).toOption, Some("HI"))
+        assertEq(col.last.map(_.innerText).toOption, Some("HI"))
+        assertEq(col.singleton.map(_.innerText).toOption, Some("HI"))
+      }
+
+      "filterLazy" - {
+        var calls = 0
+        val col = $("form").collect0n("option").filter { _ => calls += 1; true }.filter(_.getAttribute("value").isDefined)
+        assertEq(calls, 0)
+        assertEq(col.size, 6)
+        assertEq(calls, 6)
+      }
+
+      "mapAndTraverseDomsAndExtracts" - {
+        val sel = $("form")("select", 2 of 2).failToEither
+        val col = sel.collect1n("option")
+        assertEq(col.mapDoms(_.attr("value")).toOption, Some(Vector(Some("a"), Some("b"))))
+        assertEq(col.traverseDoms(d => Right(d.innerText)).toOption, Some(Vector("A", "B")))
+        assertEq(col.mapExtracts(_.innerText).toOption, Some(Vector("A", "B")))
+        assertEq(col.traverseExtracts(d => Right(d.innerText)).toOption, Some(Vector("A", "B")))
+        assertLeftContains(sel.collect01("option").mapDoms(_.innerText), "Expected [0,1] results, not 2.")
+      }
+
+      "containerConversions" - {
+        val sel = $("form")("select", 2 of 2).failToEither
+        assertEq(sel.collect01("option").collect0n.zippers.map(_.map(_.innerText)).toOption, Some(Vector("A", "B")))
+        assertEq(sel.collect0n("option").collect1n.zippers.map(_.map(_.innerText)).toOption, Some(Vector("A", "B")))
+      }
+    }
+
   }
 
 }
