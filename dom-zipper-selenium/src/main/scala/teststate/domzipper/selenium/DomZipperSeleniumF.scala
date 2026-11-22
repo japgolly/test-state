@@ -102,9 +102,14 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     dom().children().map(() => _)
 
   override protected def rawChildren(sel: String): CssSelResult[Dom] = {
-    // WebElement implements hashCode and equals sensibly
-    val all: Set[WebElement] = runCssQuery(sel).iterator.map(_()).toSet
-    dom().children().iterator.filter(all.contains).map(() => _).toVector
+    val results = runCssQuery(sel)
+    if (results.isEmpty)
+      Vector.empty
+    else {
+      // WebElement implements hashCode and equals sensibly
+      val all: Set[WebElement] = results.iterator.map(_()).toSet
+      dom().children().iterator.filter(all.contains).map(() => _).toVector
+    }
   }
 
   override def matches(css: String): F[Boolean] = {

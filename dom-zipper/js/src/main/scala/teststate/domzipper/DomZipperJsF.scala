@@ -95,8 +95,13 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     childIterator.toVector
 
   override protected def rawChildren(sel: String): CssSelResult[Dom] = {
-    val all = runCssQuery(sel).toSet
-    childIterator.filter(all.contains).toVector
+    val results = runCssQuery(sel)
+    if (results.isEmpty)
+      Vector.empty
+    else {
+      val all = results.toSet
+      childIterator.filter(all.contains).toVector
+    }
   }
 
   override def matches(css: String): F[Boolean] =

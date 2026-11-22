@@ -4,12 +4,10 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 18. Wasted allocations in `DomZipperBase.child`, `count`, `exists`, and redundant WebDriver calls on empty child queries
+## 18. Wasted allocations in `DomZipperBase.child`, `count`, and `exists`
 
 * **Locations:**
   * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipperBase.scala` (lines 46–104)
-  * `dom-zipper/js/src/main/scala/teststate/domzipper/DomZipperJsF.scala`
-  * `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/DomZipperSeleniumF.scala`
 * **Current Code:**
   ```scala
   // DomZipperBase.scala
@@ -30,9 +28,8 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 * **Issue:**
   1. `DomZipperBase.child` calls `children0n` / `children0n(sel)`, which constructs a `DomCollection` and wraps **every** child DOM element in `addLayer(Layer("collect", desc, a))` (allocating a `Layer`, a new `Layers` vector, and a new `DomZipper` instance per child), only to extract `zippers(which.m - 1).dom`, discard all of them, and call `addLayer(Layer(name, desc, ...))` again.
   2. `DomZipper.count(sel)` and `DomZipper.exists(sel)` (`DomZipper.scala:173–177`) call `collect0n(sel).size` and `collect0n(sel).nonEmpty`, wrapping every matched DOM node in a `Layer`, `Layers`, and `DomZipper` instance just to check the vector length.
-  3. In `DomZipperSeleniumF.rawChildren(sel)` and `DomZipperJsF.rawChildren(sel)`, even when `runCssQuery(sel)` returns an empty result (`all.isEmpty`), it still executes `dom().children()` (a second WebDriver network round-trip in Selenium) and iterates all child nodes.
 * **Proposed Change:**
-  Use `rawChildren` / `rawChildren(sel)` directly in `DomZipperBase.child`, override `count` and `exists` in `DomZipperBase` using `runCssQuery(sel)`, and short-circuit `rawChildren(sel)` in JS and Selenium when `runCssQuery(sel)` is empty.
+  Use `rawChildren` / `rawChildren(sel)` directly in `DomZipperBase.child`, and override `count` and `exists` in `DomZipperBase` using `runCssQuery(sel)`.
 
 ---
 
