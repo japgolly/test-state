@@ -5,7 +5,9 @@ package teststate.domzipper
  */
 case class HtmlScrub(run: String => String) {
   def >>(that: HtmlScrub): HtmlScrub =
-    HtmlScrub(run andThen that.run)
+    if (this eq HtmlScrub.empty) that
+    else if (that eq HtmlScrub.empty) this
+    else HtmlScrub(run andThen that.run)
 
   def <<(that: HtmlScrub): HtmlScrub =
     that >> this
@@ -18,7 +20,7 @@ object HtmlScrub {
     HtmlScrub(r.replaceAllIn(_, replacement))
   }
 
-  def empty: HtmlScrub =
+  val empty: HtmlScrub =
     HtmlScrub(identity)
 
   val removeComments: HtmlScrub =
@@ -26,6 +28,6 @@ object HtmlScrub {
 
   def default = removeComments
 
-  def joinLines: HtmlScrub =
+  val joinLines: HtmlScrub =
     replaceAll(">[\n\r\t ]*\n[\n\r\t ]*<", "><") >> replaceAll("[\n\r\t ]*\n[\n\r\t ]*", " ")
 }

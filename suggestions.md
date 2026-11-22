@@ -4,30 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 20. `HtmlScrub.joinLines` and `HtmlScrub.empty` are `def`s, recompiling regexes on every access
-
-* **Location:** `dom-zipper/shared/src/main/scala/teststate/domzipper/HtmlScrub.scala` (lines 6–31)
-* **Current Code:**
-  ```scala
-  case class HtmlScrub(run: String => String) {
-    def >>(that: HtmlScrub): HtmlScrub =
-      HtmlScrub(run andThen that.run)
-  ...
-  object HtmlScrub {
-    def empty: HtmlScrub =
-      HtmlScrub(identity)
-    ...
-    def joinLines: HtmlScrub =
-      replaceAll(">[\n\r\t ]*\n[\n\r\t ]*<", "><") >> replaceAll("[\n\r\t ]*\n[\n\r\t ]*", " ")
-  }
-  ```
-* **Issue:**
-  `joinLines` and `empty` are defined as `def` instead of `val`. When users define `implicit def htmlScrub: HtmlScrub = HtmlScrub.default >> HtmlScrub.joinLines` (as in `DomZipperJsoupTest` and `FastDomZipperSeleniumTest`), every implicit lookup of `HtmlScrub` recompiles two `Regex` patterns (`Pattern.compile`) and allocates 3 `HtmlScrub` objects. Additionally, composing with `HtmlScrub.empty` via `>>` wraps an extra `identity` function call in `andThen`.
-* **Proposed Change:**
-  Make `empty` and `joinLines` `val`s, and short-circuit `>>` when either operand is `HtmlScrub.empty`.
-
----
-
 ## 21. `DomCollection.vectorTraverse` is not stack-safe and allocates $O(N)$ intermediate `Vector`s and closures
 
 * **Location:** `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipper.scala` (lines 419–428)
