@@ -4,13 +4,12 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 18. Wasted allocations in `DomZipperBase.child`, `count`, `exists`, redundant WebDriver calls on empty child queries, and duplicated collection / `selectedOption` logic across backends
+## 18. Wasted allocations in `DomZipperBase.child`, `count`, `exists`, and redundant WebDriver calls on empty child queries
 
 * **Locations:**
   * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipperBase.scala` (lines 46–104)
-  * `dom-zipper/js/src/main/scala/teststate/domzipper/DomZipperJsF.scala` (lines 89–106, 135–149)
-  * `dom-zipper-jsoup/src/main/scala/teststate/domzipper/jsoup/DomZipperJsoupF.scala` (lines 84–95)
-  * `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/DomZipperSeleniumF.scala` (lines 96–110, 136–150)
+  * `dom-zipper/js/src/main/scala/teststate/domzipper/DomZipperJsF.scala`
+  * `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/DomZipperSeleniumF.scala`
 * **Current Code:**
   ```scala
   // DomZipperBase.scala
@@ -31,10 +30,9 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 * **Issue:**
   1. `DomZipperBase.child` calls `children0n` / `children0n(sel)`, which constructs a `DomCollection` and wraps **every** child DOM element in `addLayer(Layer("collect", desc, a))` (allocating a `Layer`, a new `Layers` vector, and a new `DomZipper` instance per child), only to extract `zippers(which.m - 1).dom`, discard all of them, and call `addLayer(Layer(name, desc, ...))` again.
   2. `DomZipper.count(sel)` and `DomZipper.exists(sel)` (`DomZipper.scala:173–177`) call `collect0n(sel).size` and `collect0n(sel).nonEmpty`, wrapping every matched DOM node in a `Layer`, `Layers`, and `DomZipper` instance just to check the vector length.
-  3. In `DomZipperSeleniumF.collectChildren(desc, sel, C)` (lines 105–110) and `DomZipperJsF.collectChildren(desc, sel, C)` (lines 103–106), even when `runCssQuery(sel)` returns an empty result (`all.isEmpty`), it still executes `dom().children()` (a second WebDriver network round-trip in Selenium) and iterates all child nodes.
-  4. `newDomCollection`, `collect`, and `collectChildren` are duplicated across `DomZipperJsF`, `DomZipperJsoupF`, and `DomZipperSeleniumF`, and `selectedOption` is duplicated identically in `DomZipperJsF` (lines 135–149) and `DomZipperSeleniumF` (lines 136–150).
+  3. In `DomZipperSeleniumF.rawChildren(sel)` and `DomZipperJsF.rawChildren(sel)`, even when `runCssQuery(sel)` returns an empty result (`all.isEmpty`), it still executes `dom().children()` (a second WebDriver network round-trip in Selenium) and iterates all child nodes.
 * **Proposed Change:**
-  Have subclasses implement `protected def rawChildren: CssSelResult[Dom]` and `protected def rawChildren(sel: String): CssSelResult[Dom]` (short-circuiting in JS and Selenium when `runCssQuery(sel)` is empty), and centralize `newDomCollection`, `collect`, `collectChildren`, `child`, `count`, and `exists` in `DomZipperBase`.
+  Use `rawChildren` / `rawChildren(sel)` directly in `DomZipperBase.child`, override `count` and `exists` in `DomZipperBase` using `runCssQuery(sel)`, and short-circuit `rawChildren(sel)` in JS and Selenium when `runCssQuery(sel)` is empty.
 
 ---
 

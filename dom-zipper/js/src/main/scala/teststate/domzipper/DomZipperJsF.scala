@@ -4,7 +4,7 @@ import org.scalajs.dom
 import org.scalajs.dom.html
 import scala.reflect.ClassTag
 import scala.scalajs.js
-import teststate.domzipper.DomZipper.{CssSelResult, DomCollection, Layer}
+import teststate.domzipper.DomZipper.{CssSelResult, Layer}
 import teststate.domzipper.ErrorHandler.ErrorHandlerOptionOps
 
 object DomZipperJsF {
@@ -86,23 +86,17 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
   override protected[domzipper] def _innerHTML: String =
     dynamicString(_.innerHTML)
 
-  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]) =
-    DomCollection[DomZipperJsF, F, C, Dom, Dom, A](desc, enrichErr, result, C)(addLayer)
-
-  protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]) =
-    newDomCollection(sel, runCssQuery(sel), C)
-
   private def childIterator: Iterator[Dom] =
     dom.childNodes.iterator.collect {
       case e: org.scalajs.dom.Element => e
     }
 
-  protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]) =
-    newDomCollection(desc, childIterator.toVector, C)
+  override protected def rawChildren: CssSelResult[Dom] =
+    childIterator.toVector
 
-  protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]) = {
+  override protected def rawChildren(sel: String): CssSelResult[Dom] = {
     val all = runCssQuery(sel).toSet
-    newDomCollection(desc, childIterator.filter(all.contains).toVector, C)
+    childIterator.filter(all.contains).toVector
   }
 
   override def matches(css: String): F[Boolean] =
@@ -131,22 +125,6 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
 
   override def value: F[String] =
     dynamicMethod[String](_.value).map(_.toString) orFail s".value failed on $dom."
-
-  override def selectedOption: F[DomCollection[DomZipperJsF, F, Option, Dom, A]] =
-    tagName.toUpperCase match {
-      case "SELECT" =>
-        val sel = "option:checked"
-        val results = runCssQuery(sel)
-        val selected =
-          if (results.isEmpty && getAttribute("multiple").isEmpty) {
-            val all = runCssQuery("option")
-            if (all.nonEmpty) Vector(all.head) else Vector.empty
-          } else
-            results
-        F pass newDomCollection(sel, selected, F.C01)
-      case x =>
-        F fail enrichErr(s"<$x> is not a <SELECT>")
-    }
 
   /** Cast DOM to [[js.Dynamic]] and invoke a method expected to return `A` if successful. */
   def dynamicMethod[B](f: js.Dynamic => Any): Option[B] =

@@ -86,9 +86,20 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
   protected[domzipper] def _outerHTML: String
   protected[domzipper] def _innerHTML: String
 
-  protected def collect        [C[_]](sel: String, C: Container[F, C])              : DomCollection[Self, F, C, Dom, A]
-  protected def collectChildren[C[_]](desc: String, C: Container[F, C])             : DomCollection[Self, F, C, Dom, A]
-  protected def collectChildren[C[_]](desc: String, sel: String, C: Container[F, C]): DomCollection[Self, F, C, Dom, A]
+  final protected def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: Container[F, C]): DomCollection[Self, F, C, Dom, A] =
+    DomCollection[Self, F, C, Dom, Dom, A](desc, enrichErr, result, C)(addLayer)
+
+  protected def rawChildren: CssSelResult[Dom]
+  protected def rawChildren(sel: String): CssSelResult[Dom]
+
+  protected def collect[C[_]](sel: String, C: Container[F, C]): DomCollection[Self, F, C, Dom, A] =
+    newDomCollection(sel, runCssQuery(sel), C)
+
+  protected def collectChildren[C[_]](desc: String, C: Container[F, C]): DomCollection[Self, F, C, Dom, A] =
+    newDomCollection(desc, rawChildren, C)
+
+  protected def collectChildren[C[_]](desc: String, sel: String, C: Container[F, C]): DomCollection[Self, F, C, Dom, A] =
+    newDomCollection(desc, rawChildren(sel), C)
 
   final override def collect01(sel: String): DomCollection[Self, F, Option, Dom, A] = collect(sel, F.C01)
   final override def collect0n(sel: String): DomCollection[Self, F, Vector, Dom, A] = collect(sel, F.C0N)
@@ -101,6 +112,22 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
   final override def children01(sel: String): DomCollection[Self, F, Option, Dom, A] = collectChildren(cssPrepend_>(sel), sel, F.C01)
   final override def children0n(sel: String): DomCollection[Self, F, Vector, Dom, A] = collectChildren(cssPrepend_>(sel), sel, F.C0N)
   final override def children1n(sel: String): DomCollection[Self, F, Vector, Dom, A] = collectChildren(cssPrepend_>(sel), sel, F.C1N)
+
+  override def selectedOption: F[DomCollection[Self, F, Option, Dom, A]] =
+    tagName.toUpperCase match {
+      case "SELECT" =>
+        val sel = if (isCapable(DomZipper.Capability.Selected)) "option:checked" else "option[selected]"
+        val results = runCssQuery(sel)
+        val selected =
+          if (results.isEmpty && getAttribute("multiple").isEmpty) {
+            val all = runCssQuery("option")
+            if (all.nonEmpty) Vector(all.head) else Vector.empty
+          } else
+            results
+        F pass newDomCollection(sel, selected, F.C01)
+      case x =>
+        F fail enrichErr(s"<$x> is not a <SELECT>")
+    }
 }
 
 object DomZipperBase {

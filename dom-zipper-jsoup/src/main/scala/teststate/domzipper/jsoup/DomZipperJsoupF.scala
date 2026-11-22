@@ -2,7 +2,7 @@ package teststate.domzipper.jsoup
 
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import teststate.domzipper.DomZipper.{CssSelResult, DomCollection, Layer}
+import teststate.domzipper.DomZipper.{CssSelResult, Layer}
 import teststate.domzipper.ErrorHandler.ErrorHandlerOptionOps
 import teststate.domzipper._
 
@@ -81,17 +81,11 @@ final class DomZipperJsoupF[F[_], A](override protected val layers: DomZipperBas
   override protected def copySelf[G[_]](h: HtmlScrub, g: ErrorHandler[G]) =
     new DomZipperJsoupF(layers, peek)($, h, g)
 
-  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]) =
-    DomCollection[DomZipperJsoupF, F, C, Dom, Dom, A](desc, enrichErr, result, C)(addLayer)
+  override protected def rawChildren: CssSelResult[Dom] =
+    dom.children
 
-  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]) =
-    newDomCollection(sel, runCssQuery(sel), C)
-
-  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]) =
-    newDomCollection(desc, dom.children, C)
-
-  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]) =
-    newDomCollection(desc, dom.selectChildren(sel), C)
+  override protected def rawChildren(sel: String): CssSelResult[Dom] =
+    dom.selectChildren(sel)
 
   override protected def _parent: F[Dom] =
     F.option(dom.parent, s"$dom doesn't have a parent.")
