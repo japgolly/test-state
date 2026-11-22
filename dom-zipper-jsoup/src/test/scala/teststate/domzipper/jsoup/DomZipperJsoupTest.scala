@@ -210,6 +210,53 @@ object DomZipperJsoupTest extends TestSuite {
       assertEq(res.get.get.dom().map(_.innerText), Some("Submit"))
     }
 
+    "fastAndSlowCmapDesync" - {
+      type E[A] = Either[String, A]
+      implicit def errorHandler: ErrorHandler[E] = ErrorHandler.ReturnEither
+
+      def mkBoth(html: String) = {
+        val doc = Jsoup.parse(html)
+        val slow = DomZipperJsoup.failToEither(doc)
+        val fast = DomZipperJsoup.failToEither.parseHtml(slow.outerHTML)
+        val both = DomZippersFastAndSlow[E, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fast, slow)
+        (doc, both)
+      }
+
+      "collect0nElementRemoved" - {
+        val (doc, both) = mkBoth("<div><button>Cancel</button><button>Submit</button></div>")
+        val Right(btns) = both.collect0n("button").zippers
+        doc.select("button").last().remove()
+        val res = btns(1).dom()
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), "Inconsistency detected")
+      }
+
+      "collect01ElementRemoved" - {
+        val (doc, both) = mkBoth("<div><button>Submit</button></div>")
+        val Right(Some(btn)) = both.collect01("button").zippers
+        doc.selectFirst("button").remove()
+        val res = btn.dom()
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), "Inconsistency detected")
+      }
+
+      "collect01ElementAdded" - {
+        val (doc, both) = mkBoth("<div><button>Submit</button></div>")
+        val Right(Some(btn)) = both.collect01("button").zippers
+        doc.selectFirst("div").append("<button>Extra</button>")
+        val res = btn.dom()
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), "Expected [0,1] results, not 2.")
+      }
+
+      "collect01ToCollect0nFailsWhenInvalid" - {
+        val (_, both) = mkBoth("<div><button>Cancel</button><button>Submit</button></div>")
+        val res = both.collect01("button").collect0n.zippers
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), "Expected [0,1] results, not 2.")
+      }
+    }
+
     "html" - {
       val h = DomZipperJsoup.parseHtml(htmlSource)
       assertEq(h.tagName, "html")

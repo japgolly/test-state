@@ -4,53 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 17. `DomZippersFastAndSlow.cmap` uses `colS.flatMap(_.zippers).map(C.get(_, i))`, breaking after container conversion and throwing `IndexOutOfBoundsException` on DOM desync
-
-* **Location:** `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZippersFastAndSlow.scala` (lines 45–61)
-* **Current Code:**
-  ```scala
-  private def cmap[C[_]](runF: Fast => DomCollection[FastF, F, C, FX, FD],
-                         runS: Slow => DomCollection[SlowF, F, C, SX, SD]) = {
-    val colF = runF(fast)
-    lazy val colS = slow().map(runS)
-    val C = colF.C
-    val rawResults = Vector.tabulate(colF.size) { i =>
-      val f = colF.rawResults(i)
-      lazy val s = colS.flatMap(_.zippers).map(C.get(_, i))
-      FastAndSlow[F, FastF, FX, FD, SlowF, SX, SD](f, () => s, isCapableFn).toDomZipper(peek)
-    }
-  ```
-* **Issue:**
-  1. Each element's slow zipper `s` closes over the original `C` and calls `colS.flatMap(_.zippers).map(C.get(_, i))`. If a `collect01` collection has 2 elements and is converted to `0n` via `.collect0n`, or inspected via `.headOption` / `.lastOption`, accessing the slow zipper on any element fails because `colS.flatMap(_.zippers)` still validates against `Container01`, and `Container01.get(as, idx)` is `as.get` (ignoring `idx`).
-  2. If the live (`slow`) DOM changes mid-observation and has fewer matching elements than `colF`, `C.get(_, i)` throws an uncatchable `IndexOutOfBoundsException` / `NoSuchElementException` instead of failing cleanly via `ErrorHandler[F]`.
-* **Proposed Change:**
-  Index `runS(_).rawResults` directly with a bounds check:
-  ```scala
-  private def cmap[C[_]](runF: Fast => DomCollection[FastF, F, C, FX, FD],
-                         runS: Slow => DomCollection[SlowF, F, C, SX, SD]) = {
-    val colF = runF(fast)
-    lazy val rawS = slow().map(runS(_).rawResults)
-    val rawResults = Vector.tabulate(colF.size) { i =>
-      val f = colF.rawResults(i)
-      lazy val s = rawS.flatMap { rs =>
-        if (rs.isDefinedAt(i))
-          F.pass(rs(i))
-        else
-          F.fail(colF.enrichErr(s"Inconsistency detected: element $i missing in slow DOM (found ${rs.length})."))
-      }
-      FastAndSlow[F, FastF, FX, FD, SlowF, SX, SD](f, () => s, isCapableFn).toDomZipper(peek)
-    }
-    new DomCollection[({ type L[X[_], Y] = DomZippersFastAndSlow[X, Dom, Y] })#L, F, C, Dom, A](
-      enrichErr  = colF.enrichErr,
-      rawResults = rawResults,
-      filterFn   = None,
-      C          = colF.C
-    )
-  }
-  ```
-
----
-
 ## 18. Wasted allocations in `DomZipperBase.child`, `count`, `exists`, redundant WebDriver calls on empty child queries, and duplicated collection / `selectedOption` logic across backends
 
 * **Locations:**
