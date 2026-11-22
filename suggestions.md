@@ -4,34 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 18. Wasted allocations in `DomZipperBase.child`
-
-* **Locations:**
-  * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipperBase.scala` (lines 61–73)
-* **Current Code:**
-  ```scala
-  // DomZipperBase.scala
-  final override def child(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-    val results = if (sel.isEmpty) children0n else children0n(sel)
-    val desc = if (sel.isEmpty) ">*" else cssPrepend_>(sel)
-    F.flatMap(results.zippers) { zippers =>
-      if (zippers.length != which.n)
-        F fail {
-          val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-          enrichErr(s"${q}uery failed: [$desc]. Expected ${which.n} results, not ${zippers.length}.")
-        }
-      else
-        F pass addLayer(Layer(name, desc, zippers(which.m - 1).dom))
-    }
-  }
-  ```
-* **Issue:**
-  `DomZipperBase.child` calls `children0n` / `children0n(sel)`, which constructs a `DomCollection` and wraps **every** child DOM element in `addLayer(Layer("collect", desc, a))` (allocating a `Layer`, a new `Layers` vector, and a new `DomZipper` instance per child), only to extract `zippers(which.m - 1).dom`, discard all of them, and call `addLayer(Layer(name, desc, ...))` again.
-* **Proposed Change:**
-  Use `rawChildren` / `rawChildren(sel)` directly in `DomZipperBase.child`.
-
----
-
 ## 19. `DomZipperJsF.classes` returns `Set.empty` on SVG elements, and `dynamicMethod` returns `Some(null)` when a JS property is `null`
 
 * **Location:** `dom-zipper/js/src/main/scala/teststate/domzipper/DomZipperJsF.scala` (lines 123–134, 152–153)

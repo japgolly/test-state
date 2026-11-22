@@ -43,34 +43,27 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
   final protected def runCssQuery(sel: String): CssSelResult[Dom] =
     $.run(sel, dom)
 
-  final override def apply(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-    val results = runCssQuery(sel)
+  private def selectOne(name: String, desc: String, results: CssSelResult[Dom], which: MofN): F[Self[F, A]] =
     if (results.length != which.n)
       F fail {
         val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-        enrichErr(s"${q}uery failed: [$sel]. Expected ${which.n} results, not ${results.length}.")
+        enrichErr(s"${q}uery failed: [$desc]. Expected ${which.n} results, not ${results.length}.")
       }
     else
       F pass {
         val nextDom = results(which.m - 1)
-        val nextLayer = Layer(name, sel, nextDom)
+        val nextLayer = Layer(name, desc, nextDom)
         addLayer(nextLayer)
       }
-  }
 
-  final override def child(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-    val results = if (sel.isEmpty) children0n else children0n(sel)
-    val desc = if (sel.isEmpty) ">*" else cssPrepend_>(sel)
-    F.flatMap(results.zippers) { zippers =>
-      if (zippers.length != which.n)
-        F fail {
-          val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-          enrichErr(s"${q}uery failed: [$desc]. Expected ${which.n} results, not ${zippers.length}.")
-        }
-      else
-        F pass addLayer(Layer(name, desc, zippers(which.m - 1).dom))
-    }
-  }
+  final override def apply(name: String, sel: String, which: MofN): F[Self[F, A]] =
+    selectOne(name, sel, runCssQuery(sel), which)
+
+  final override def child(name: String, sel: String, which: MofN): F[Self[F, A]] =
+    if (sel.isEmpty)
+      selectOne(name, ">*", rawChildren, which)
+    else
+      selectOne(name, cssPrepend_>(sel), rawChildren(sel), which)
 
   // ====================
   // DOM & DOM inspection
