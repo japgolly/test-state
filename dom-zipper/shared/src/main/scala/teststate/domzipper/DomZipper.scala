@@ -435,16 +435,16 @@ object DomZipper {
         as(idx)
     }
 
-    private def vectorTraverse[F[_], A, B](c: Vector[A])(f: A => F[B])(implicit F: ErrorHandler[F]): F[Vector[B]] = {
-      def go(i: Int, v: Vector[B]): F[Vector[B]] =
-        if (i == c.length)
-          F pass v
-        else {
-          val a = c(i)
-          F.flatMap(f(a))(b => go(i + 1, v :+ b))
-        }
-      go(0, Vector.empty)
-    }
+    private def vectorTraverse[F[_], A, B](c: Vector[A])(f: A => F[B])(implicit F: ErrorHandler[F]): F[Vector[B]] =
+      if (c.isEmpty)
+        F.pass(Vector.empty)
+      else {
+        type Res = scala.collection.mutable.Builder[B, Vector[B]]
+        val builder: Res = Vector.newBuilder[B]
+        builder.sizeHint(c.length)
+        val r = c.foldLeft(F.pass(builder))((acc, a) => F.flatMap(acc)(bs => F.map(f(a))(b => (bs += b): Res)))
+        F.map(r)(_.result())
+      }
 
   }
 

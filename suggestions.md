@@ -4,39 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 21. `DomCollection.vectorTraverse` is not stack-safe and allocates $O(N)$ intermediate `Vector`s and closures
-
-* **Location:** `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipper.scala` (lines 419–428)
-* **Current Code:**
-  ```scala
-  private def vectorTraverse[F[_], A, B](c: Vector[A])(f: A => F[B])(implicit F: ErrorHandler[F]): F[Vector[B]] = {
-    def go(i: Int, v: Vector[B]): F[Vector[B]] =
-      if (i == c.length)
-        F pass v
-      else {
-        val a = c(i)
-        F.flatMap(f(a))(b => go(i + 1, v :+ b))
-      }
-    go(0, Vector.empty)
-  }
-  ```
-* **Issue:**
-  `go` is not tail-recursive because the recursive call `go(i + 1, v :+ b)` is inside the closure passed to `F.flatMap`. For synchronous `ErrorHandler`s (`Throw`, `ReturnEither`, `ReturnOption`), traversing a collection of size $N$ consumes $O(N)$ stack frames, allocates $N$ closure objects, and copies `v :+ b` $N$ times.
-* **Proposed Change:**
-  Use `foldLeft` with `Vector.newBuilder[B]`:
-  ```scala
-  private def vectorTraverse[F[_], A, B](c: Vector[A])(f: A => F[B])(implicit F: ErrorHandler[F]): F[Vector[B]] =
-    if (c.isEmpty)
-      F.pass(Vector.empty)
-    else {
-      val init = F.pass(Vector.newBuilder[B])
-      val r = c.foldLeft(init)((acc, a) => F.flatMap(acc)(bs => F.map(f(a))(bs += _)))
-      F.map(r)(_.result())
-    }
-  ```
-
----
-
 ## 22. `domzipper.ErrorHandler.attempt` passes `null` when `Throwable#getMessage` is `null`, and several `DomZipper` failure paths omit `enrichErr`
 
 * **Locations:**
