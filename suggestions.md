@@ -4,31 +4,23 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 22. `domzipper.ErrorHandler.attempt` passes `null` when `Throwable#getMessage` is `null`, and several `DomZipper` failure paths omit `enrichErr`
+## 22. Several `DomZipper` failure paths omit `enrichErr`
 
 * **Locations:**
-  * `dom-zipper/shared/src/main/scala/teststate/domzipper/ErrorHandler.scala` (lines 24–27)
   * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipper.scala` (lines 151–152)
   * `dom-zipper/js/src/main/scala/teststate/domzipper/DomZipperJsF.scala` (lines 120–121, 132–133, 159–160)
   * `dom-zipper-jsoup/src/main/scala/teststate/domzipper/jsoup/DomZipperJsoupF.scala` (lines 96–97, 114–115)
   * `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/DomZipperSeleniumF.scala` (lines 133–134)
 * **Current Code:**
   ```scala
-  // ErrorHandler.scala
-  def attempt[A](a: => A): Result[A] =
-    try pass(a) catch {
-      case NonFatal(t) => fail(t.getMessage)
-    }
-
   // DomZipper.scala
   final def needAttribute(name: String): F[String] =
     F.option(getAttribute(name), s"$tagName doesn't have attribute $name")
   ```
 * **Issue:**
-  1. In `ErrorHandler.attempt`, `t.getMessage` returns `null` when an exception is constructed without a message (e.g. `new NullPointerException()`), causing `ReturnEither` to return `Left(null)`.
-  2. `DomZipper.needAttribute`, `.value`, `.checked`, `_parent`, and `domAs` fail without wrapping their error message in `enrichErr(...)`, omitting the `DESC: ... \n HTML: ...` context that all other `DomZipper` errors provide. Since `F.option` and `orFail` take the error string by-name (`=> String`), calling `enrichErr(...)` has zero cost when no error occurs.
+  `DomZipper.needAttribute`, `.value`, `.checked`, `_parent`, and `domAs` fail without wrapping their error message in `enrichErr(...)`, omitting the `DESC: ... \n HTML: ...` context that all other `DomZipper` errors provide. Since `F.option` and `orFail` take the error string by-name (`=> String`), calling `enrichErr(...)` has zero cost when no error occurs.
 * **Proposed Change:**
-  Use `Option(t.getMessage).getOrElse(t.toString)` in `ErrorHandler.attempt`, and wrap the error messages in `needAttribute`, `.value`, `.checked`, `_parent`, and `domAs` with `enrichErr(...)`.
+  Wrap the error messages in `needAttribute`, `.value`, `.checked`, `_parent`, and `domAs` with `enrichErr(...)`.
 
 ---
 
