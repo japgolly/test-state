@@ -4,10 +4,10 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 18. Wasted allocations in `DomZipperBase.child`, `count`, and `exists`
+## 18. Wasted allocations in `DomZipperBase.child`
 
 * **Locations:**
-  * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipperBase.scala` (lines 46–104)
+  * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipperBase.scala` (lines 61–73)
 * **Current Code:**
   ```scala
   // DomZipperBase.scala
@@ -26,10 +26,9 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
   }
   ```
 * **Issue:**
-  1. `DomZipperBase.child` calls `children0n` / `children0n(sel)`, which constructs a `DomCollection` and wraps **every** child DOM element in `addLayer(Layer("collect", desc, a))` (allocating a `Layer`, a new `Layers` vector, and a new `DomZipper` instance per child), only to extract `zippers(which.m - 1).dom`, discard all of them, and call `addLayer(Layer(name, desc, ...))` again.
-  2. `DomZipper.count(sel)` and `DomZipper.exists(sel)` (`DomZipper.scala:173–177`) call `collect0n(sel).size` and `collect0n(sel).nonEmpty`, wrapping every matched DOM node in a `Layer`, `Layers`, and `DomZipper` instance just to check the vector length.
+  `DomZipperBase.child` calls `children0n` / `children0n(sel)`, which constructs a `DomCollection` and wraps **every** child DOM element in `addLayer(Layer("collect", desc, a))` (allocating a `Layer`, a new `Layers` vector, and a new `DomZipper` instance per child), only to extract `zippers(which.m - 1).dom`, discard all of them, and call `addLayer(Layer(name, desc, ...))` again.
 * **Proposed Change:**
-  Use `rawChildren` / `rawChildren(sel)` directly in `DomZipperBase.child`, and override `count` and `exists` in `DomZipperBase` using `runCssQuery(sel)`.
+  Use `rawChildren` / `rawChildren(sel)` directly in `DomZipperBase.child`.
 
 ---
 

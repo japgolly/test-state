@@ -170,6 +170,12 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
   override def children0n = cmap(_.children0n, _.children0n)
   override def children1n = cmap(_.children1n, _.children1n)
 
+  override def count(sel: String): Int =
+    fast.count(sel)
+
+  override def exists(sel: String): Boolean =
+    fast.exists(sel)
+
   override def enrichErr(msg: String) = fast.enrichErr(msg)
 }
 

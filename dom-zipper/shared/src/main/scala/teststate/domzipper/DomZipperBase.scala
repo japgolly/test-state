@@ -113,6 +113,12 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
   final override def children0n(sel: String): DomCollection[Self, F, Vector, Dom, A] = collectChildren(cssPrepend_>(sel), sel, F.C0N)
   final override def children1n(sel: String): DomCollection[Self, F, Vector, Dom, A] = collectChildren(cssPrepend_>(sel), sel, F.C1N)
 
+  final override def count(sel: String): Int =
+    runCssQuery(sel).length
+
+  final override def exists(sel: String): Boolean =
+    runCssQuery(sel).nonEmpty
+
   override def selectedOption: F[DomCollection[Self, F, Option, Dom, A]] =
     tagName.toUpperCase match {
       case "SELECT" =>
