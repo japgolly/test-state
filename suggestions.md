@@ -4,44 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 19. `DomZipperJsF.classes` returns `Set.empty` on SVG elements, and `dynamicMethod` returns `Some(null)` when a JS property is `null`
-
-* **Location:** `dom-zipper/js/src/main/scala/teststate/domzipper/DomZipperJsF.scala` (lines 123–134, 152–153)
-* **Current Code:**
-  ```scala
-  override def classes: Set[String] =
-    dom match {
-      case h: html.Element =>
-        val c = h.classList
-        (0 until c.length).iterator.map(c.apply).toSet
-      case _ =>
-        Set.empty
-    }
-
-  override def value: F[String] =
-    dynamicMethod[String](_.value).map(_.toString) orFail s".value failed on $dom."
-  ...
-  def dynamicMethod[B](f: js.Dynamic => Any): Option[B] =
-    f(dom.asInstanceOf[js.Dynamic]).asInstanceOf[js.UndefOr[B]].toOption
-  ```
-* **Issue:**
-  1. In the DOM standard and in `scalajs-dom`, `classList` is defined directly on `org.scalajs.dom.Element`, not only on `html.Element` (`HTMLElement`). Matching `case h: html.Element` performs an unnecessary runtime `instanceof HTMLElement` check and causes `.classes` to falsely return `Set.empty` for `<svg>` and all SVG elements. Also, in `childIterator` (lines 95–98), `dom.children.iterator` directly iterates child `Element`s without traversing text/comment nodes in `dom.childNodes`.
-  2. In Scala.js, `js.UndefOr[B].toOption` only checks for `undefined`; if a JS property evaluates to `null`, `.toOption` returns `Some(null)`, which then throws a `NullPointerException` in `value` (`dynamicMethod[String](_.value).map(_.toString)`) or leaks `Some(null)` to callers.
-* **Proposed Change:**
-  ```scala
-  override def classes: Set[String] = {
-    val c = dom.classList
-    (0 until c.length).iterator.map(c.apply).toSet
-  }
-
-  def dynamicMethod[B](f: js.Dynamic => Any): Option[B] = {
-    val raw = f(dom.asInstanceOf[js.Dynamic])
-    if (raw == null || js.isUndefined(raw)) None else Some(raw.asInstanceOf[B])
-  }
-  ```
-
----
-
 ## 20. `HtmlScrub.joinLines` and `HtmlScrub.empty` are `def`s, recompiling regexes on every access
 
 * **Location:** `dom-zipper/shared/src/main/scala/teststate/domzipper/HtmlScrub.scala` (lines 6–31)

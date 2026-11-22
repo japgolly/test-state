@@ -1,5 +1,6 @@
 package teststate.domzipper
 
+import cats.instances.boolean._
 import cats.instances.option._
 import cats.instances.set._
 import cats.instances.string._
@@ -75,6 +76,25 @@ object DomZipperJsTest extends TestSuite {
     "classes" - {
       "none" - assertEq($("form").classes, Set.empty[String])
       "some" - assertEq(name.classes, Set("a", "b", "c"))
+      "svg" - {
+        val svg = dom.document.createElementNS("http://www.w3.org/2000/svg", "svg")
+        svg.setAttribute("class", "icon active")
+        assertEq(DomZipperJs(svg).classes, Set("icon", "active"))
+      }
+    }
+
+    "dynamicMethod" - {
+      "nullReturnsNone" - assertEq(name.dynamicMethod[String](_ => null), None)
+      "undefinedReturnsNone" - assertEq(name.dynamicMethod[String](_.nonExistentProp), None)
+      "defined" - {
+        assertEq(name.dynamicMethod[String](_.value), Some("Bob Loblaw"))
+        assertEq(name.dynamicMethod[Boolean](_.disabled), Some(false))
+      }
+      "valueWithNullFailsCleanly" - {
+        val el = dom.document.createElement("div")
+        el.asInstanceOf[scala.scalajs.js.Dynamic].value = null
+        assertEq(DomZipperJs.failToOption(el).value, None)
+      }
     }
 
     "selectedOption" - {

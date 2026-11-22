@@ -87,9 +87,7 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     dynamicString(_.innerHTML)
 
   private def childIterator: Iterator[Dom] =
-    dom.childNodes.iterator.collect {
-      case e: org.scalajs.dom.Element => e
-    }
+    dom.children.iterator
 
   override protected def rawChildren: CssSelResult[Dom] =
     childIterator.toVector
@@ -119,21 +117,19 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
   override def checked: F[Boolean] =
     dynamicMethod[Boolean](_.checked) orFail s".checked failed on $dom."
 
-  override def classes: Set[String] =
-    dom match {
-      case h: html.Element =>
-        val c = h.classList
-        (0 until c.length).iterator.map(c.apply).toSet
-      case _ =>
-        Set.empty
-    }
+  override def classes: Set[String] = {
+    val c = dom.classList
+    (0 until c.length).iterator.map(c.apply).toSet
+  }
 
   override def value: F[String] =
     dynamicMethod[String](_.value).map(_.toString) orFail s".value failed on $dom."
 
   /** Cast DOM to [[js.Dynamic]] and invoke a method expected to return `A` if successful. */
-  def dynamicMethod[B](f: js.Dynamic => Any): Option[B] =
-    f(dom.asInstanceOf[js.Dynamic]).asInstanceOf[js.UndefOr[B]].toOption
+  def dynamicMethod[B](f: js.Dynamic => Any): Option[B] = {
+    val raw = f(dom.asInstanceOf[js.Dynamic])
+    if (raw == null || js.isUndefined(raw)) None else Some(raw.asInstanceOf[B])
+  }
 
   /** Cast DOM to [[js.Dynamic]], invoke a method, return the result as a `String`. */
   def dynamicString(f: js.Dynamic => Any): String =
