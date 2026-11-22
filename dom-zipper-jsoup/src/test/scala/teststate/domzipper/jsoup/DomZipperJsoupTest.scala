@@ -407,8 +407,27 @@ object DomZipperJsoupTest extends TestSuite {
 
       "containerConversions" - {
         val sel = $("form")("select", 2 of 2).failToEither
-        assertEq(sel.collect01("option").collect0n.zippers.map(_.map(_.innerText)).toOption, Some(Vector("A", "B")))
-        assertEq(sel.collect0n("option").collect1n.zippers.map(_.map(_.innerText)).toOption, Some(Vector("A", "B")))
+
+        "collect01ToCollect0nFailsWhenInvalid" - {
+          assertLeftContains(sel.collect01("option").collect0n.zippers, "Expected [0,1] results, not 2.")
+        }
+
+        "collect01ToCollect0nToCollect1nFailsWhenInvalid" - {
+          assertLeftContains(sel.collect01("option").collect0n.collect1n.zippers, "Expected [0,1] results, not 2.")
+        }
+
+        "collect1nToCollect0nFailsWhenEmpty" - {
+          assertLeftContains($("form").failToEither.collect1n("pre").collect0n.zippers, "Expected [1,n] results, not 0.")
+        }
+
+        "collect1nFilterToCollect01Valid" - {
+          assertEq(sel.collect1n("option").filter(_.innerText == "B").collect01.zippers.map(_.map(_.innerText)).toOption, Some(Some("B")))
+          assertEq(sel.collect1n("option").filter(_.innerText == "Z").collect01.zippers.map(_.map(_.innerText)).toOption, Some(None))
+        }
+
+        "collect0nToCollect1nValid" - {
+          assertEq(sel.collect0n("option").collect1n.zippers.map(_.map(_.innerText)).toOption, Some(Vector("A", "B")))
+        }
       }
     }
 

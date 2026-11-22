@@ -248,7 +248,8 @@ object DomZipper {
       private[domzipper] val enrichErr : String => String,
       private[domzipper] val rawResults: Vector[Z[F, A]],
                              filterFn  : Option[Z[F, A] => Boolean],
-      private[domzipper] val C         : DomCollection.Container[F, C])
+      private[domzipper] val C         : DomCollection.Container[F, C],
+                             prevCheck : Option[() => F[Unit]] = None)
       (implicit val F: ErrorHandler[F]) {
 
     private lazy val result: Vector[Z[F, A]] =
@@ -258,7 +259,10 @@ object DomZipper {
       }
 
     private def validateRaw: F[Unit] =
-      F.map(C(enrichErr, rawResults))(_ => ())
+      prevCheck match {
+        case None    => F.map(C(enrichErr, rawResults))(_ => ())
+        case Some(p) => F.flatMap(p())(_ => F.map(C(enrichErr, rawResults))(_ => ()))
+      }
 
     private def fail[B](errMsg: String): F[B] =
       F fail enrichErr(errMsg)
@@ -274,13 +278,19 @@ object DomZipper {
 
     def zippers: F[C[Z[F, A]]] =
       if (filterFn.isEmpty)
-        C(enrichErr, rawResults)
+        prevCheck match {
+          case None    => C(enrichErr, rawResults)
+          case Some(p) => F.flatMap(p())(_ => C(enrichErr, rawResults))
+        }
       else
         F.flatMap(validateRaw)(_ => C(enrichErr, result))
 
     def map[B](f: Z[F, A] => B): F[C[B]] =
       if (filterFn.isEmpty)
-        C(enrichErr, rawResults.map(f))
+        prevCheck match {
+          case None    => C(enrichErr, rawResults.map(f))
+          case Some(p) => F.flatMap(p())(_ => C(enrichErr, rawResults.map(f)))
+        }
       else
         F.flatMap(validateRaw)(_ => C(enrichErr, result.map(f)))
 
@@ -311,7 +321,7 @@ object DomZipper {
 
     def filter(f: Z[F, A] => Boolean): DomCollection[Z, F, C, Dom, A] = {
       val f2: Z[F, A] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
-      new DomCollection(enrichErr, rawResults, Some(f2), C)
+      new DomCollection(enrichErr, rawResults, Some(f2), C, prevCheck)
     }
 
     def singleton: F[Z[F, A]] =
@@ -348,9 +358,15 @@ object DomZipper {
     def innerHTMLs: F[C[String]] = map(_.innerHTML)
     def innerTexts: F[C[String]] = map(_.innerText)
 
-    def collect01 = new DomCollection[Z, F, Option, Dom, A](enrichErr, result, None, F.C01)
-    def collect0n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, F.C0N)
-    def collect1n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, F.C1N)
+    private def nextPrevCheck: Option[() => F[Unit]] =
+      if (prevCheck.isEmpty && (C eq F.C0N))
+        None
+      else
+        Some(() => validateRaw)
+
+    def collect01 = new DomCollection[Z, F, Option, Dom, A](enrichErr, result, None, F.C01, nextPrevCheck)
+    def collect0n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, F.C0N, nextPrevCheck)
+    def collect1n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, F.C1N, nextPrevCheck)
   }
 
   // ===================================================================================================================
