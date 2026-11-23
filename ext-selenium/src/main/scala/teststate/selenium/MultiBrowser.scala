@@ -140,14 +140,11 @@ object MultiBrowser {
                   try
                     setupFn(setupTab)
                   finally {
-                    try
-                      mutex.unlock()
-                    finally {
-                      // closeTab() will attempt to acquire the outer lock through the afterClosed callback so the
-                      // browser lock must be released beforehand to maintain lock-ordering (i.e. outer before browser)
+                    try {
                       setupTab.closeTab()
                       ()
-                    }
+                    } finally
+                      mutex.unlock()
                   }
                 }
               }

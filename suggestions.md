@@ -4,43 +4,16 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 25. `MultiBrowser.openTab()`: temp setup tab closed after unlocking `browser.mutex`, and `onNewTab` runs inside `outerMutex` before `onNewDriverWithTempTab`
+## 25. `MultiBrowser.openTab()`: `onNewTab` runs inside `outerMutex` before `onNewDriverWithTempTab`, and `instances` is updated before `onNewDriver`
 
-* **Location:** `ext-selenium/src/main/scala/teststate/selenium/MultiBrowser.scala` (lines 98–163)
-* **Current Code:**
-  ```scala
-            val setup =
-              if (onNewDriverT eq doNothing1) None else Some {
-                val setupTab = browser.multiTab.openTab()
-                val setupFn  = onNewDriverT
-                // Lock browser so that no one else can create a new tab in this browser before setup completes
-                mutex.lock()
-                () => {
-                  try
-                    setupFn(setupTab)
-                  finally {
-                    try
-                      mutex.unlock()
-                    finally {
-                      // closeTab() will attempt to acquire the outer lock through the afterClosed callback so the
-                      // browser lock must be released beforehand to maintain lock-ordering (i.e. outer before browser)
-                      setupTab.closeTab()
-                      ()
-                    }
-                  }
-                }
-              }
-            val tab = createTabWithoutLocking(browserIndex)
-            (tab, setup)
-  ```
+* **Location:** `ext-selenium/src/main/scala/teststate/selenium/MultiBrowser.scala` (lines 98–160)
 * **Issue:**
-  1. **Temp setup tab remains open when waiting threads acquire `browser.mutex`:** In `setup`, `mutex.unlock()` (line 144) is called *before* `setupTab.closeTab()` (line 148). The comment on lines 146–147 is obsolete now that `setupTab` is created via `browser.multiTab.openTab()` without the `removeTab` `afterClosed` callback. Unlocking `mutex` before `setupTab.closeTab()` allows concurrent threads blocked on `browser.mutex` to wake up and interact with the browser while `setupTab` is still open, and then race with `setupTab.closeTab()`.
-  2. **`onNewTab` runs inside `outerMutex` and before `onNewDriverWithTempTab`:**
-     * On line 138, `mutex.lock()` is acquired before `createTabWithoutLocking(browserIndex)` (line 154), which invokes `onNewTab(tab)` (line 104). If `onNewTab(tab)` throws an exception, `openTab()` aborts before reaching `setup.foreach(_.apply())` on line 160, so `mutex.unlock()` and `setupTab.closeTab()` are never called, permanently deadlocking that browser.
+  1. **`onNewTab` runs inside `outerMutex` and before `onNewDriverWithTempTab`:**
+     * On line 138, `mutex.lock()` is acquired before `createTabWithoutLocking(browserIndex)` (line 151), which invokes `onNewTab(tab)` (line 104). If `onNewTab(tab)` throws an exception, `openTab()` aborts before reaching `setup.foreach(_.apply())` on line 157, so `mutex.unlock()` and `setupTab.closeTab()` are never called, permanently deadlocking that browser.
      * For the first tab of a new browser, `onNewTab(tab)` runs *before* `onNewDriverWithTempTab(setupTab)`. If `onNewTab(tab)` calls `tab.use(...)` synchronously, because `mutex` is reentrant and already held by the current thread from line 138, `tab.use(...)` executes in the browser *before* `onNewDriverWithTempTab` has run.
-  3. **`instances` is updated before `onNewDriver(driver)`:** On lines 129–131, `browser` is appended to `instances` before `onNewDriver(driver)` runs; if `onNewDriver(driver)` throws, `instances` retains the uninitialized browser.
+  2. **`instances` is updated before `onNewDriver(driver)`:** On lines 129–131, `browser` is appended to `instances` before `onNewDriver(driver)` runs; if `onNewDriver(driver)` throws, `instances` retains the uninitialized browser.
 * **Proposed Change:**
-  Close `setupTab` before unlocking `mutex`, run `onNewDriver(driver)` before appending `browser` to `instances`, and run `onNewTab(tab)` outside `outerMutex` after `setup` completes.
+  Run `onNewDriver(driver)` before appending `browser` to `instances`, and run `onNewTab(tab)` outside `outerMutex` after `setup` completes.
 
 ---
 
