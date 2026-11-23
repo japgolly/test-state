@@ -4,18 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 23. `addStyleTag` assumes `<head>` exists
-
-* **Locations:**
-  * `util-selenium/src/main/scala/teststate/selenium/util/SeleniumExt.scala` (lines 48–58)
-  * `dom-zipper/js/src/main/scala/teststate/domzipper/JsDomExt.scala` (lines 16–22)
-* **Issue:**
-  Both `SeleniumExt.addStyleTag` and `JsDomExt.addStyleTag` call `getElementsByTagName("head")(0).appendChild(style)` without fallback if `<head>` is absent.
-* **Proposed Change:**
-  Use `(document.head || document.documentElement).appendChild(style)` in `addStyleTag`.
-
----
-
 ## 24. `Tab`: `afterFirstUse` and `aroundFirstUse` execute *before* the first use (wrapping a no-op `doNothing0`), ignore `ExecutionModel[M]` in `useM`, and redundantly re-activate newly opened tabs
 
 * **Location:** `ext-selenium/src/main/scala/teststate/selenium/Tab.scala` (lines 64–114)

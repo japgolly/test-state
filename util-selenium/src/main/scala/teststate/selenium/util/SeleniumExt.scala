@@ -51,7 +51,7 @@ object Internals {
           |var style = document.createElement('style');
           |style.type = 'text/css';
           |style.innerHTML = arguments[0];
-          |document.getElementsByTagName('head')[0].appendChild(style);
+          |(document.head || document.documentElement).appendChild(style);
         """.stripMargin.trim
       executeJsOrThrow(js, content)
       ()

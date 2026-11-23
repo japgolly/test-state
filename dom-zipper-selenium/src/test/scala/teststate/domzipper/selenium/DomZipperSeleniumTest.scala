@@ -127,6 +127,19 @@ object DomZipperSeleniumTest extends TestSuite {
       assert($.dom().parent()(driver) == null)
     }
 
+    "addStyleTagWithoutHead" - {
+      val _ = driver.executeJsOrThrow("window.__savedHead = document.head; document.head.parentNode.removeChild(document.head);")
+      try {
+        driver.addStyleTag("/* test-no-head */")
+        val css = driver.executeJsOrThrow(
+          "var s = document.documentElement.querySelector('style'); var t = s ? s.innerHTML : null; if (s) s.parentNode.removeChild(s); return t;"
+        ).asInstanceOf[String]
+        assertEq(css, "/* test-no-head */")
+      } finally {
+        val _ = driver.executeJsOrThrow("document.documentElement.insertBefore(window.__savedHead, document.documentElement.firstChild); delete window.__savedHead;")
+      }
+    }
+
     "valueEnrichErr" - {
       val Left(err) = $("form").failToEither.value
       assertContains(err, "DESC:")

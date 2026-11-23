@@ -1,6 +1,7 @@
 package teststate.domzipper
 
 import cats.instances.boolean._
+import cats.instances.int._
 import cats.instances.option._
 import cats.instances.set._
 import cats.instances.string._
@@ -177,6 +178,25 @@ object DomZipperJsTest extends TestSuite {
         assertContains(err, "DESC:")
         assertContains(err, "HTML:")
         err
+      }
+    }
+
+    "addStyleTag" - {
+      "withHead" - {
+        val doc = dom.document.implementation.createHTMLDocument("test")
+        doc.addStyleTag("body { color: red; }")
+        val head = doc.getElementsByTagName("head")(0)
+        assertEq(head.getElementsByTagName("style").length, 1)
+        assertEq(head.getElementsByTagName("style")(0).textContent, "body { color: red; }")
+      }
+
+      "withoutHead" - {
+        val doc = dom.document.implementation.createHTMLDocument("test")
+        val head = doc.getElementsByTagName("head")(0)
+        val _ = head.parentNode.removeChild(head)
+        doc.addStyleTag("body { color: blue; }")
+        assertEq(doc.documentElement.getElementsByTagName("style").length, 1)
+        assertEq(doc.documentElement.getElementsByTagName("style")(0).textContent, "body { color: blue; }")
       }
     }
 
