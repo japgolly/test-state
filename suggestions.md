@@ -4,44 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 27. `ExtNyaya.genActionsBy` generates all `sampleSize` samples upfront from the initial `ROS` instead of per sample step
-
-* **Location:** `ext-nyaya/shared/src/main/scala/teststate/ExtNyaya.scala` (lines 16–31)
-* **Current Code:**
-  ```scala
-  final class DslNyayaOps[F[_], R, O, S, E](private val dsl: Dsl[F, R, O, S, E]) extends AnyVal with Dsl.Types[F, R, O, S, E] {
-    def genActions(name: ActionName)(g: Gen[Actions])(implicit s: Settings): Actions =
-      ExtNyaya.genActions(g)(name)(s)
-
-    def genActionsBy(name: ActionName)(g: ROS => Gen[Actions])(implicit s: Settings): Actions =
-      dsl.chooseAction(name)(i => genActions(name)(g(i))(s))
-  }
-  ```
-* **Issue:**
-  `genActionsBy(name)(g: ROS => Gen[Actions])` is meant for stateful action generation where `g` inspects the current observation/state `ROS`. However, `dsl.chooseAction(name)(i => genActions(name)(g(i))(s))` invokes `chooseAction` only **once** before the first sample runs, passing the initial `i: ROS` to `genActions(name)(g(i))(s)`, which immediately draws all `s.sampleSize.value` samples from `g(initialROS)`. As a result, samples `2 .. sampleSize` are generated using the stale initial `ROS` instead of the updated `ROS` after each preceding sample executes.
-* **Proposed Change:**
-  Evaluate `chooseAction` for each sample step so that each generated action sample receives the current `ROS` at the time that step executes:
-  ```scala
-    def genActionsBy(name: ActionName)(g: ROS => Gen[Actions])(implicit s: Settings): Actions = {
-      val total = s.sampleSize.value
-      (1 to total)
-        .iterator
-        .map { idx =>
-          dsl.chooseAction(name) { ros =>
-            g(ros)
-              .samples(s.genSize)
-              .next()
-              .groupIfMultipleByLen(_.toString + " generated actions.")
-              .nameMod(n => s"[$idx/$total] ${n.value}")
-          }
-        }
-        .combine
-        .group(name)
-    }
-  ```
-
----
-
 ## 28. `ExtScalaJsReact`: unsuspended by-name parameters in `doFinally`, `schedule`, and `recover`, non-implicit `executionModalAsyncCallback`, and bare `.get` in `domZipper`
 
 * **Location:** `ext-scalajs-react/src/main/scala/teststate/ExtScalaJsReact.scala` (lines 54–90, 104–107)
