@@ -4,31 +4,22 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 23. `DomZipperSeleniumF.matches` queries and serializes all matching elements in the entire document; `SeleniumExt.parent()` fails on `<html>`; `addStyleTag` assumes `<head>` exists
+## 23. `SeleniumExt.parent()` fails on `<html>`; `addStyleTag` assumes `<head>` exists
 
 * **Locations:**
-  * `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/DomZipperSeleniumF.scala` (lines 112–116)
   * `util-selenium/src/main/scala/teststate/selenium/util/SeleniumExt.scala` (lines 48–58, 126–127)
   * `dom-zipper/js/src/main/scala/teststate/domzipper/JsDomExt.scala` (lines 16–22)
 * **Current Code:**
   ```scala
-  // DomZipperSeleniumF.scala
-  override def matches(css: String): F[Boolean] = {
-    val all = driver.findElements(By.cssSelector(css)).asScala
-    val dom = this.dom()
-    F pass all.contains(dom)
-  }
-
   // SeleniumExt.scala
   def parent()(implicit d: WebDriver): WebElement =
     d.executeJsOrThrow("return arguments[0].parentNode", self).asInstanceOf[WebElement]
   ```
 * **Issue:**
-  1. `DomZipperSeleniumF.matches(css)` executes `driver.findElements(By.cssSelector(css))` across the entire document and transfers every matching `WebElement` over the WebDriver protocol just to check if `this.dom()` is in the list. Executing `return arguments[0].matches(arguments[1])` checks the element directly in the browser in $O(1)$.
-  2. In `SeleniumExt.parent()`, when `self` is the root `<html>` element (`document.documentElement`), `arguments[0].parentNode` returns the `Document` node (`#document`), which Selenium deserializes as a `java.util.Map` rather than a `WebElement`, throwing a `ClassCastException`. Using `parentElement` returns `null` instead.
-  3. Both `SeleniumExt.addStyleTag` and `JsDomExt.addStyleTag` call `getElementsByTagName("head")(0).appendChild(style)` without fallback if `<head>` is absent.
+  1. In `SeleniumExt.parent()`, when `self` is the root `<html>` element (`document.documentElement`), `arguments[0].parentNode` returns the `Document` node (`#document`), which Selenium deserializes as a `java.util.Map` rather than a `WebElement`, throwing a `ClassCastException`. Using `parentElement` returns `null` instead.
+  2. Both `SeleniumExt.addStyleTag` and `JsDomExt.addStyleTag` call `getElementsByTagName("head")(0).appendChild(style)` without fallback if `<head>` is absent.
 * **Proposed Change:**
-  Use `arguments[0].matches(arguments[1])` in `DomZipperSeleniumF.matches`, `return arguments[0].parentElement` in `SeleniumExt.parent()`, and `(document.head || document.documentElement).appendChild(style)` in `addStyleTag`.
+  Use `return arguments[0].parentElement` in `SeleniumExt.parent()`, and `(document.head || document.documentElement).appendChild(style)` in `addStyleTag`.
 
 ---
 

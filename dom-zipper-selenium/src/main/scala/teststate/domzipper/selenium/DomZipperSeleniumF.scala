@@ -112,11 +112,10 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     }
   }
 
-  override def matches(css: String): F[Boolean] = {
-    val all = driver.findElements(By.cssSelector(css)).asScala
-    val dom = this.dom()
-    F pass all.contains(dom) // WebElement implements hashCode and equals sensibly
-  }
+  override def matches(css: String): F[Boolean] =
+    F.attempt(
+      java.lang.Boolean.TRUE.equals(
+        driver.executeJsOrThrow("return arguments[0].matches(arguments[1])", dom(), css)))
 
   override def getAttribute(name: String): Option[String] =
     try
