@@ -16,7 +16,7 @@ object CollectionAssertions {
     val m = mutable.HashMap.empty[A, Int]
     def go(as: IterableOnce[A], n: Int): Unit =
       for (a <- as.iterator)
-        m.update(a, m.get(a).fold(n)(_ + n))
+        m.update(a, m.getOrElse(a, 0) + n)
     go(neg, -1)
     go(pos, 1)
     m

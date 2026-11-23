@@ -35,7 +35,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 * **Location:** `core/shared/src/main/scala/teststate/dsl/CollectionAssertions.scala` (lines 15–23, 71–80, 256–296, 411–428, 489–507, 525–555)
 * **Issues & Proposed Changes:**
-  1. **`tallyElements` (line 19):** `m.get(a).fold(n)(_ + n)` allocates a `Some` option and closure on every key hit; replace with `m.getOrElse(a, 0) + n`.
   2. **`Distinct.Neg` (lines 71–80):** Builds a full `mutable.HashMap[A, Int]` of counts for all elements when it only needs to detect the first duplicate; replace with `val seen = mutable.HashSet.empty[A]; if (as.iterator.exists(!seen.add(_))) None else Some(Was)`.
   3. **`EqualIncludingOrder.Pos` and `Neg` (lines 411–428):** `Neg` materializes two `Seq`s before calling `corresponds` instead of using `source.iterator.corresponds(expect.iterator)(eq.equal)` in $O(1)$ memory; `Pos` converts `expect.iterator.toSeq` and then `e.toVector` on failure instead of converting to `Vector` once.
   4. **`Forall.Pos`, `Forall.Failed`, and `Exists.Neg` (lines 525–555, 598–614):** `Forall.Pos` slices `ko.init` and `ko.last`, and `Failed` immediately rebuilds `val values = valuesI :+ valuesL` (and `Exists.Neg` does this a second time).
