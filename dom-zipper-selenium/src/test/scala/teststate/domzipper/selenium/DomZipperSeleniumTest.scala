@@ -12,17 +12,20 @@ import utest._
 
 object DomZipperSeleniumTest extends TestSuite {
 
-  lazy val $ : DomZipperSelenium = {
+  lazy val driver: ChromeDriver = {
     val testHtmlPath = SeleniumTestUtil.testResource("test.html").getAbsoluteFile
     val options = new ChromeOptions()
     options.setHeadless(true)
     options.addArguments("--no-sandbox") // Travis workaround: https://github.com/SeleniumHQ/selenium/issues/4961
-    val driver = new ChromeDriver(options)
-    driver.manage().timeouts().implicitlyWait(1, TimeUnit.NANOSECONDS)
-    driver.onShutdownQuit()
-    driver.get("file://" + testHtmlPath)
-    DomZipperSelenium.html(driver)
+    val d = new ChromeDriver(options)
+    d.manage().timeouts().implicitlyWait(1, TimeUnit.NANOSECONDS)
+    d.onShutdownQuit()
+    d.get("file://" + testHtmlPath)
+    d
   }
+
+  lazy val $ : DomZipperSelenium =
+    DomZipperSelenium.html(driver)
 
   def name = $("#name")
   def nameLabelHtml = """<label for="name">Name:</label>"""
@@ -111,12 +114,17 @@ object DomZipperSeleniumTest extends TestSuite {
     }
 
     "parentMissingFailToOption" - {
-      assertEq($.failToOption.parent.flatMap(_.failToOption.parent).isEmpty, true)
+      assertEq($.failToOption.parent.isEmpty, true)
     }
 
     "parentMissingFailToEither" - {
-      val res = $.failToEither.parent.flatMap(_.failToEither.parent)
+      val res = $.failToEither.parent
       assert(res.isLeft)
+      assertContains(res.left.getOrElse(""), "Element doesn't have a parent.")
+    }
+
+    "seleniumExtParentOnHtml" - {
+      assert($.dom().parent()(driver) == null)
     }
 
     "valueEnrichErr" - {

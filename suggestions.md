@@ -4,22 +4,15 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 23. `SeleniumExt.parent()` fails on `<html>`; `addStyleTag` assumes `<head>` exists
+## 23. `addStyleTag` assumes `<head>` exists
 
 * **Locations:**
-  * `util-selenium/src/main/scala/teststate/selenium/util/SeleniumExt.scala` (lines 48–58, 126–127)
+  * `util-selenium/src/main/scala/teststate/selenium/util/SeleniumExt.scala` (lines 48–58)
   * `dom-zipper/js/src/main/scala/teststate/domzipper/JsDomExt.scala` (lines 16–22)
-* **Current Code:**
-  ```scala
-  // SeleniumExt.scala
-  def parent()(implicit d: WebDriver): WebElement =
-    d.executeJsOrThrow("return arguments[0].parentNode", self).asInstanceOf[WebElement]
-  ```
 * **Issue:**
-  1. In `SeleniumExt.parent()`, when `self` is the root `<html>` element (`document.documentElement`), `arguments[0].parentNode` returns the `Document` node (`#document`), which Selenium deserializes as a `java.util.Map` rather than a `WebElement`, throwing a `ClassCastException`. Using `parentElement` returns `null` instead.
-  2. Both `SeleniumExt.addStyleTag` and `JsDomExt.addStyleTag` call `getElementsByTagName("head")(0).appendChild(style)` without fallback if `<head>` is absent.
+  Both `SeleniumExt.addStyleTag` and `JsDomExt.addStyleTag` call `getElementsByTagName("head")(0).appendChild(style)` without fallback if `<head>` is absent.
 * **Proposed Change:**
-  Use `return arguments[0].parentElement` in `SeleniumExt.parent()`, and `(document.head || document.documentElement).appendChild(style)` in `addStyleTag`.
+  Use `(document.head || document.documentElement).appendChild(style)` in `addStyleTag`.
 
 ---
 

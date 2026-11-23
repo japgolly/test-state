@@ -124,7 +124,7 @@ object Internals {
     }
 
     def parent()(implicit d: WebDriver): WebElement =
-      d.executeJsOrThrow("return arguments[0].parentNode", self).asInstanceOf[WebElement]
+      d.executeJsOrThrow("return arguments[0].parentElement", self).asInstanceOf[WebElement]
   }
 
   class PointExt(private val p: Point) extends AnyVal {
