@@ -4,16 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 26. `Mutex.monadic` uses non-tail-recursive retry
-
-* **Location:** `ext-selenium/src/main/scala/teststate/selenium/Mutex.scala` (lines 62–78)
-* **Issue:**
-  In `monadic`, `go` recurses directly inside `EM.schedule(go, ...)` instead of using `EM.tailrec`.
-* **Proposed Change:**
-  Use `EM.tailrec` in `monadic`.
-
----
-
 ## 27. `ExtNyaya.genActionsBy` generates all `sampleSize` samples upfront from the initial `ROS` instead of per sample step
 
 * **Location:** `ext-nyaya/shared/src/main/scala/teststate/ExtNyaya.scala` (lines 16–31)
