@@ -4,28 +4,13 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 26. `Mutex`: missing thread-owner check in `unlock()` when `owner ne null`, and non-tail-recursive retry in `monadic`
+## 26. `Mutex.monadic` uses non-tail-recursive retry
 
-* **Location:** `ext-selenium/src/main/scala/teststate/selenium/Mutex.scala` (lines 45–78)
-* **Current Code:**
-  ```scala
-  def unlock(): Unit = synchronized {
-    holds match {
-      case 0 => throw new IllegalMonitorStateException()
-      case 1 =>
-        owner = null
-        holds = 0
-        semaphore.release()
-      case n =>
-        holds = n - 1
-    }
-  }
-  ```
+* **Location:** `ext-selenium/src/main/scala/teststate/selenium/Mutex.scala` (lines 62–78)
 * **Issue:**
-  1. When `Mutex` is locked synchronously via `lock()` or `tryLock(wait)` (so `owner` is set to the owning `Thread`), `unlock()` does not verify that `Thread.currentThread() eq owner`. Checking `if ((owner ne null) && (owner ne Thread.currentThread())) throw new IllegalMonitorStateException()` enforces ownership for thread-bound locks while still allowing `monadic` locks (`owner eq null`) to unlock across threads.
-  2. In `monadic`, `go` recurses directly inside `EM.schedule(go, ...)` instead of using `EM.tailrec`.
+  In `monadic`, `go` recurses directly inside `EM.schedule(go, ...)` instead of using `EM.tailrec`.
 * **Proposed Change:**
-  Add the owner check in `unlock()` and use `EM.tailrec` in `monadic`.
+  Use `EM.tailrec` in `monadic`.
 
 ---
 

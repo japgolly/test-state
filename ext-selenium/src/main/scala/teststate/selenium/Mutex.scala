@@ -43,15 +43,14 @@ final class Mutex {
       false
 
   def unlock(): Unit = synchronized {
-    holds match {
-      case 0 => throw new IllegalMonitorStateException()
-      case 1 =>
-        owner = null
-        holds = 0
-        semaphore.release()
-      case n =>
-        holds = n - 1
-    }
+    if (holds == 0 || ((owner ne null) && (owner ne Thread.currentThread())))
+      throw new IllegalMonitorStateException()
+    if (holds == 1) {
+      owner = null
+      holds = 0
+      semaphore.release()
+    } else
+      holds -= 1
   }
 
   def apply[A](a: => A): A = {
