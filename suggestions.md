@@ -4,29 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 29. `ExecutionModel.scalaFuture.doFinally` drops primary exception when both `main` and `last` fail
-
-* **Location:** `core/shared/src/main/scala/teststate/typeclass/ExecutionModel.scala` (lines 142–151)
-* **Current Code:**
-  ```scala
-      override def doFinally[A, B](main: => Future[A], last: => Future[B]): Future[A] = {
-        val fa = try main catch { case t: Throwable => Future.failed(t) }
-        fa.transformWith { ta =>
-          val fb = try last catch { case t: Throwable => Future.failed(t) }
-          fb.transform {
-            case ScalaSuccess(_) => ta
-            case ScalaFailure(f) => ScalaFailure(f)
-          }
-        }
-      }
-  ```
-* **Issue:**
-  In `doFinally`, when `main` fails with `ScalaFailure(e)` and `last` also fails with `ScalaFailure(f)`, `e` is dropped without `f.addSuppressed(e)`.
-* **Proposed Change:**
-  Call `f.addSuppressed(e)` when both `main` and `last` fail in `doFinally`.
-
----
-
 ## 30. `RunnableTest.run()` and `Runner.run` evaluate `refFnFn()` and allocate `Runner` (with mutable `stats`) outside `EM.point`, and `RunCallbacks.timed` uses `F.point(Instant.now())` instead of `F.now`
 
 * **Locations:**

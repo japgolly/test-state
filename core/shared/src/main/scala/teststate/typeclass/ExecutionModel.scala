@@ -145,7 +145,12 @@ object ExecutionModel {
           val fb = try last catch { case t: Throwable => Future.failed(t) }
           fb.transform {
             case ScalaSuccess(_) => ta
-            case ScalaFailure(f) => ScalaFailure(f)
+            case ScalaFailure(f) =>
+              ta match {
+                case ScalaFailure(e) if f ne e => f.addSuppressed(e)
+                case _                         => ()
+              }
+              ScalaFailure(f)
           }
         }
       }
