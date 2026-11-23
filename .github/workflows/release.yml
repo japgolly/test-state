@@ -56,7 +56,7 @@ jobs:
           jsdom-version: 26.1.0
 
       - name: Release
-        run: sbt ci-release
+        run: sbt -DCI=1 ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
           PGP_SECRET: ${{ secrets.PGP_SECRET }}

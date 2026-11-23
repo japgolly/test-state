@@ -8,6 +8,18 @@ import sbtcrossproject.CrossProject
 import scalajscrossproject.ScalaJSCrossPlugin.autoImport._
 
 object Lib {
+  private val cores = java.lang.Runtime.getRuntime.availableProcessors()
+
+  private def readConfigVar(name: String): String =
+    Option(System.getProperty(name)).orElse(Option(System.getenv(name)))
+      .fold("")(_.trim.toLowerCase)
+
+  val inCI = readConfigVar("CI") == "1"
+  if (inCI) {
+    println(s"[info] ======== CI Mode ========")
+    println(s"[info] $cores cores available")
+  }
+
   type CPE = CrossProject => CrossProject
   type PE = Project => Project
 

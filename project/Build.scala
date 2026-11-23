@@ -29,13 +29,14 @@ object TestState {
   )
 
   def scalac2Flags = Seq(
-    "-opt:l:inline",
-    "-opt-inline-from:japgolly.univeq.**",
-    "-opt-inline-from:teststate.**",
     "-Ywarn-dead-code",
     "-Ywarn-unused",
     "-Ywarn-value-discard",
-  )
+  ) ++ (if (inCI) Seq(
+    "-opt:l:inline",
+    "-opt-inline-from:japgolly.univeq.**",
+    "-opt-inline-from:teststate.**",
+  ) else Nil)
 
   def scalac3Flags = Seq(
     "-source:3.0-migration",
