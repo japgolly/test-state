@@ -129,7 +129,7 @@ object Runner {
   private type CheckNE[C[_, _], O, S, E] = NamedError[Failure[E]] Or C[OS[O, S], E]
 
   final class RefEq[+A <: AnyRef](val value: A) {
-    override def hashCode = value.hashCode
+    override def hashCode = System.identityHashCode(value)
     override def equals(x: Any) = x match {
       case y: RefEq[AnyRef] => value eq y.value
       case _                => false
