@@ -4,40 +4,13 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 24. `Tab`: `afterFirstUse` and `aroundFirstUse` execute *before* the first use (wrapping a no-op `doNothing0`), ignore `ExecutionModel[M]` in `useM`, and redundantly re-activate newly opened tabs
+## 24. `Tab` redundantly re-activates newly opened tabs
 
-* **Location:** `ext-selenium/src/main/scala/teststate/selenium/Tab.scala` (lines 64–114)
-* **Current Code:**
-  ```scala
-  private def prepareWithoutLocking(): D = {
-    implicit def d: D = driver
-
-    if (closed)
-      throw new TabAlreadyClosed()
-
-    tab match {
-      case Some(t) =>
-        tabSupport.activate(t)
-      case None =>
-        val t = tabSupport.open(rootTab)
-        tab = Some(t)
-        tabSupport.activate(t)
-        onFirstUse.foreach { f =>
-          val m = f(d)
-          val g = m[Id, Unit](doNothing0)
-          g()
-        }
-    }
-
-    d
-  }
-  ```
+* **Location:** `ext-selenium/src/main/scala/teststate/selenium/Tab.scala` (lines 70–80)
 * **Issue:**
-  1. **`afterFirstUse` and `aroundFirstUse` wrap `doNothing0` instead of the first use `f(d)`:** Because `prepareWithoutLocking()` evaluates `onFirstUse` applied to `doNothing0` (`() => ()`) *before* returning to `use` / `useM`, any callback registered via `afterFirstUse` (or the "after" half of `aroundFirstUse`) executes **before** `beforeEachUse` and **before** the first use `f(d)` itself has even started.
-  2. **`useM` forces `onFirstUse` into synchronous `Id`:** In `useM`, `onFirstUse` is run with `m[Id, Unit](doNothing0)` inside `prepareWithoutLocking()` instead of wrapping `() => f(d): M[A]` using `ExecutionModel[M]`.
-  3. **Redundant `tabSupport.activate(t)` after `tabSupport.open(rootTab)`:** `TabSupport.open` already activates the newly created tab before returning, so calling `tabSupport.activate(t)` on line 76 immediately makes redundant WebDriver round-trips (`switchTo.window` + `getWindowHandle`).
+  `TabSupport.open` already activates the newly created tab before returning, so calling `tabSupport.activate(t)` immediately after `tabSupport.open(rootTab)` makes redundant WebDriver round-trips (`switchTo.window` + `getWindowHandle`).
 * **Proposed Change:**
-  Have `prepareWithoutLocking()` return `(D, Option[D => ProcMod])` (combining `onFirstUse` with `onEachUse` on the first use) and remove the redundant `tabSupport.activate(t)`.
+  Remove the redundant `tabSupport.activate(t)` call after `tabSupport.open(rootTab)`.
 
 ---
 
