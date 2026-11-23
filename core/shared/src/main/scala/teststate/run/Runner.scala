@@ -126,8 +126,6 @@ object Runner {
     }
   }
 
-  private type CheckNE[C[_, _], O, S, E] = NamedError[Failure[E]] Or C[OS[O, S], E]
-
   final class RefEq[+A <: AnyRef](val value: A) {
     override def hashCode = System.identityHashCode(value)
     override def equals(x: Any) = x match {
@@ -139,6 +137,9 @@ object Runner {
   final class UniqueListBuilder[A <: AnyRef] {
     private var first: A = null.asInstanceOf[A]
     private var set: mutable.LinkedHashSet[RefEq[A]] = null
+
+    def isEmpty: Boolean =
+      first eq null
 
     def +=(a: A): Unit =
       if (set ne null) {
@@ -751,30 +752,25 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
       }
 
     def runInvariants(ros: ROS): (ROS, H) = {
-      val invariantsPoints = {
-        val ps = new UniqueListBuilder[Point[OS[O, S], E]]
-        val es = new UniqueListBuilder[NamedError[FE]]
-        foreachSackE(test.invariants)(ros) {
-          case Right(Invariant.Point(p)) => ps += p
-          case Right(Invariant.Delta(_)) => ()
-          case Left(e)                   => es += e
-        }
-        type T = CheckNE[Point, O, S, E]
-        val pi = ps.iterator().map[T](Right(_))
-        val ei = es.iterator().map[T](Left(_))
-        (pi ++ ei).toList
-      }
-
       val h: H =
-        if (invariantsPoints.isEmpty)
+        if (test.invariants.isEmpty)
           History.empty
         else {
-          val children = {
-            val b = History.newBuilder[E](stats)
-            b.addEachNE(invariantsPoints)(_.name)(ros.some, _.test(ros).noCause)
-            b.history()
+          val ps = new UniqueListBuilder[Point[OS[O, S], E]]
+          val es = new UniqueListBuilder[NamedError[FE]]
+          foreachSackE(test.invariants)(ros) {
+            case Right(Invariant.Point(p)) => ps += p
+            case Right(Invariant.Delta(_)) => ()
+            case Left(e)                   => es += e
           }
-          History(History.parent(InitialState, children))
+          if (ps.isEmpty && es.isEmpty)
+            History.empty
+          else {
+            val b = History.newBuilder[E](stats)
+            b.addEach(ps.iterator())(_.name)(ros.some, _.test(ros).noCause)
+            es.iterator().foreach(b.addNE)
+            History(History.parent(InitialState, b.history()))
+          }
         }
 
       (ros, h)

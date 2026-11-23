@@ -4,16 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 31. `Runner` intermediate list allocations in `subtest.runInvariants`
-
-* **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 735–770)
-* **Issue:**
-  In `subtest.runInvariants`, `ps` and `es` are mapped into `Right(_)` and `Left(_)`, concatenated into a `List[CheckNE[...]]`, and immediately pattern-matched back out in `b.addEachNE`.
-* **Proposed Change:**
-  Add `ps` / `es` directly in `runInvariants`.
-
----
-
 ## 32. `History.:+`, `History.++`, `History.failed`, and `History.rootFailurePath` allocations and stack safety
 
 * **Location:** `core/shared/src/main/scala/teststate/run/History.scala` (lines 12–36, 53–56, 119–120)
