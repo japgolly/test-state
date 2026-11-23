@@ -1,6 +1,7 @@
 package teststate.run
 
 import japgolly.microlibs.name_fn._
+import scala.annotation.tailrec
 import teststate.data.Result.{Fail, Skip}
 import teststate.data._
 import teststate.run.History.{Step, Steps}
@@ -10,28 +11,48 @@ final class History[+E](val steps: Steps[E], val result: Result[E]) {
   override def toString = s"History($steps, $result)"
 
   def failure = result.failure
-  def failed = failure.isDefined
+  def failed = result.failed
   def isEmpty = steps.isEmpty
   @inline def nonEmpty = !isEmpty
 
-  def :+[e >: E](s: Step[e]) = this ++ vector1(s)
-  def ++[e >: E](s: Steps[e]): History[e] = {
-    val result2 = s.foldLeft[Result[e]](result)(_ + _.result)
-    new History[e](steps ++ s, result2)
-  }
+  def :+[e >: E](s: Step[e]): History[e] =
+    new History[e](steps :+ s, result + s.result)
+
+  def ++[e >: E](s: Steps[e]): History[e] =
+    if (s.isEmpty)
+      this
+    else {
+      val result2 = s.foldLeft[Result[e]](result)(_ + _.result)
+      new History[e](steps ++ s, result2)
+    }
+
   def ++[e >: E](s: History[e]): History[e] =
-    new History[e](steps ++ s.steps, result + s.result)
+    if (s.isEmpty && (s.result eq Skip))
+      this
+    else if (this.isEmpty && (this.result eq Skip))
+      s
+    else
+      new History[e](steps ++ s.steps, result + s.result)
 
   def resultStep: Option[Step[E]] =
     steps.find(_.result eq result)
 
   def rootFailurePath: Vector[Step[E]] =
-    if (failed)
-      resultStep match {
-        case Some(s) => s +: s.children.rootFailurePath
-        case None => Vector.empty
-      }
-    else
+    if (failed) {
+      val b = Vector.newBuilder[Step[E]]
+      @tailrec
+      def go(h: History[E]): Unit =
+        h.resultStep match {
+          case Some(s) =>
+            val _ = b += s
+            if (s.children.failed)
+              go(s.children)
+          case None =>
+            ()
+        }
+      go(this)
+      b.result()
+    } else
       Vector.empty
 
   //def +:[e >: E](s: Step[e]) = new History[e](s +: steps, result)
@@ -52,7 +73,7 @@ object History {
 
   case class Step[+E](name: Name, result: Result[E], children: History[E] = empty) {
     def failure = result.failure
-    def failed = failure.isDefined
+    def failed = result.failed
   }
 
   object Step {
@@ -117,7 +138,7 @@ object History {
       }
 
     def failed(): Boolean =
-      r.failure.isDefined
+      r.failed
 
     def result(): Result[FE] =
       r

@@ -4,34 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 32. `History.:+`, `History.++`, `History.failed`, and `History.rootFailurePath` allocations and stack safety
-
-* **Location:** `core/shared/src/main/scala/teststate/run/History.scala` (lines 12–36, 53–56, 119–120)
-* **Current Code:**
-  ```scala
-  def failure = result.failure
-  def failed = failure.isDefined
-  def isEmpty = steps.isEmpty
-  @inline def nonEmpty = !isEmpty
-
-  def :+[e >: E](s: Step[e]) = this ++ vector1(s)
-  def ++[e >: E](s: Steps[e]): History[e] = {
-    val result2 = s.foldLeft[Result[e]](result)(_ + _.result)
-    new History[e](steps ++ s, result2)
-  }
-  def ++[e >: E](s: History[e]): History[e] =
-    new History[e](steps ++ s.steps, result + s.result)
-  ```
-* **Issue:**
-  1. `def :+[e >: E](s: Step[e]) = this ++ vector1(s)` allocates a 1-element `Vector(s)`, a `foldLeft` closure, and calls `Vector.++` instead of `new History[e](steps :+ s, result + s.result)`.
-  2. `++(s: History[e])` is called multiple times per action in `Runner` (`pre ++ step ++ post`, `post ++ invariants`), where `pre`, `post`, or `invariants` is frequently `History.empty`. Short-circuiting when either side is empty avoids allocating new `History` and `Vector` objects.
-  3. `failed` in `History`, `History.Step`, and `History.Builder` calls `result.failure.isDefined`. In `Result.Fail`, `override def failure = Some(error)` allocates a new `Some` on every call. Checking `result.isInstanceOf[Fail[_]]` (or adding `def isFail: Boolean` on `Result`) avoids allocating `Some` on every `.failed` check in `Runner`'s hot loops.
-  4. `rootFailurePath` is not `@tailrec` and uses `_.result eq result` in `resultStep`.
-* **Proposed Change:**
-  Implement `:+` directly, short-circuit `++` on empty `History`, avoid `Some` allocation in `failed`, and make `rootFailurePath` `@tailrec`.
-
----
-
 ## 33. `ReportFormat.Default.format` quadratic string slicing on multi-line error messages, and repeated allocations in `Equal`, `Display`, and `Report.AssertionSettings`
 
 * **Locations:**
