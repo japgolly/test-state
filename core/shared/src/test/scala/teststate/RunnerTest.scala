@@ -574,5 +574,64 @@ object RunnerTest extends TestSuite {
       }
     }
 
+    "lazyEffectAndTimed" - {
+      import java.time.Instant
+      import teststate.data.{Left => OrLeft, Or}
+
+      type Thunk[A] = () => A
+      def mkThunkEM(clock: () => Long): ExecutionModel[Thunk] = new ExecutionModel[Thunk] {
+        override def point[A](a: => A): Thunk[A] = () => a
+        override def pure[A](a: A): Thunk[A] = () => a
+        override def map[A, B](fa: Thunk[A])(f: A => B): Thunk[B] = () => f(fa())
+        override def flatMap[A, B](fa: Thunk[A])(f: A => Thunk[B]): Thunk[B] = () => f(fa())()
+        override def tailrec[A, B](a: A)(rec: A => Thunk[A Or B]): Thunk[B] = () =>
+          ExecutionModel.Immediate.tailrec[A, B](a)(x => rec(x)())
+        override def tailrecA[A](a: A)(stop: A => Boolean)(rec: A => Thunk[A]): Thunk[A] = () =>
+          ExecutionModel.Immediate.tailrecA[A](a)(stop)(x => rec(x)())
+        override def recover[E, A](f: => Thunk[Failure[E] Or A])(implicit attempt: ErrorHandler[E]): Thunk[Failure[E] Or A] = () =>
+          attempt.recover(f(), OrLeft(_))
+        override def now: Thunk[Instant] = () => Instant.ofEpochMilli(clock())
+        override def schedule[A](task: => Thunk[A], startAt: Instant): Thunk[A] = () => task()
+        override def doFinally[A, B](main: => Thunk[A], last: => Thunk[B]): Thunk[A] = () =>
+          try main() finally { val _ = last() }
+      }
+
+      "freshRefAndStatsPerRun" - {
+        implicit val em: ExecutionModel[Thunk] = mkThunkEM(() => System.currentTimeMillis())
+        var refCount = 0
+        var observedRefs = Vector.empty[Int]
+
+        val d = Dsl.full[Thunk, Int, Int, Unit, String]
+        val act = d.action("act")(ros => () => { observedRefs :+= ros.ref })
+        val runF = Plan.action(act).test(Observer[Int, Int](identity)).stateless
+          .withLazyRef { refCount += 1; refCount }
+          .run()
+
+        assertEq(refCount, 0)
+        val r1 = runF()
+        val r2 = runF()
+        assert(!r1.failed)
+        assert(!r2.failed)
+        assertEq(refCount, 2)
+        assertEq(observedRefs, Vector(1, 2))
+        assertEq(r1.stats.performedActions, 1)
+        assertEq(r2.stats.performedActions, 1)
+      }
+
+      "timedUsesExecutionModelNow" - {
+        var clockMillis = 1000L
+        implicit val em: ExecutionModel[Thunk] = mkThunkEM(() => clockMillis)
+        var measuredMs = Option.empty[Long]
+
+        val d = Dsl.full[Thunk, Unit, Unit, Unit, String]
+        val act = d.action("act")(_ => () => { clockMillis += 250L })
+        val cb = d.runCallbacks.aroundActions.timed((_, _, _, dur) => () => { measuredMs = Some(dur.toMillis) })
+        val report = Plan.action(act).testU.stateless.withoutRef.withCallbacks(cb).run()()
+
+        assert(!report.failed)
+        assertEq(measuredMs, Some(250L))
+      }
+    }
+
   }
 }

@@ -317,6 +317,9 @@ final case class RunnableTest[F[_], R, O, S, E](test        : Test[F, R, O, S, E
   def withCallbacks(o: Option[RunCallbacks[F, R, O, S, E]]): RunnableTest[F, R, O, S, E] =
     copy(callbacks = o)
 
-  def run(): F[Report[E]] =
-    Runner.run(test)(initialState, refFnFn(), callbacks)
+  def run(): F[Report[E]] = {
+    // Suspend refFnFn() inside F so lazy/repeatable effects get a fresh ref per execution (e.g. withLazyRef)
+    val em = test.executionModel
+    em.flatten(em.point(Runner.run(test)(initialState, refFnFn(), callbacks)))
+  }
 }

@@ -4,36 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 30. `RunnableTest.run()` and `Runner.run` evaluate `refFnFn()` and allocate `Runner` (with mutable `stats`) outside `EM.point`, and `RunCallbacks.timed` uses `F.point(Instant.now())` instead of `F.now`
-
-* **Locations:**
-  * `core/shared/src/main/scala/teststate/run/Test.scala` (lines 320–321)
-  * `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 222–226, 312–326)
-  * `core/shared/src/main/scala/teststate/run/RunCallbacks.scala` (lines 72–79)
-* **Current Code:**
-  ```scala
-  // Test.scala
-  def run(): F[Report[E]] =
-    Runner.run(test)(initialState, refFnFn(), callbacks)
-
-  // RunCallbacks.scala
-  def timed(f: (ROS[R, O, S], Name, Option[E], Duration) => F[Unit]): RunCallbacks[F, R, O, S, E] =
-    apply((ros, n) => F.point {
-      val start = Instant.now()
-      oe => F.flatMap(F.point(Instant.now())) { end =>
-        val dur = Duration.between(start, end)
-        f(ros, n, oe, dur)
-      }
-    })
-  ```
-* **Issue:**
-  1. For lazy/repeatable effect types `F` (such as `AsyncCallback`): `refFnFn()` in `RunnableTest.run()` and `new Runner` in `Runner.run` are evaluated eagerly when constructing `F[Report[E]]` rather than when `F` executes. If `withLazyRef` is used and the returned `F[Report[E]]` is executed more than once, the same memoized `lazy val r` and mutable `runner.stats` are shared across runs.
-  2. In `RunCallbacks.Dsl.aroundActions.timed`, `F.point(Instant.now())` is used instead of `F.now`. For `ExecutionModel.scalaFuture`, `F.now` is `Future.successful(Instant.now())` (immediate), whereas `F.point(Instant.now())` schedules a `Runnable` onto the `ExecutionContext` thread pool *after* the action completes before recording `end`, inflating the measured duration with thread-pool queue wait time.
-* **Proposed Change:**
-  Suspend `Runner` instantiation and `refFnFn()` inside `EM.point` (making `stats` a `val` on `Runner`), and use `F.now` in `RunCallbacks.timed`.
-
----
-
 ## 31. `RefEq` uses structural `value.hashCode`, and `UniqueListBuilder` / `UnpackChecks` eagerly allocates 7 `LinkedHashSet`s per action
 
 * **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 131–209, 458–461, 706–734)
