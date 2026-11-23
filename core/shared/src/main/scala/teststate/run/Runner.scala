@@ -137,18 +137,36 @@ object Runner {
   }
 
   final class UniqueListBuilder[A <: AnyRef] {
-    private val set = mutable.LinkedHashSet.empty[RefEq[A]]
+    private var first: A = null.asInstanceOf[A]
+    private var set: mutable.LinkedHashSet[RefEq[A]] = null
 
-    def +=(a: A): Unit = {
-      set add new RefEq(a)
-      ()
-    }
+    def +=(a: A): Unit =
+      if (set ne null) {
+        val _ = set.add(new RefEq(a))
+      } else if (first eq null) {
+        first = a
+      } else if (first ne a) {
+        val s = mutable.LinkedHashSet.empty[RefEq[A]]
+        val _ = s.add(new RefEq(first))
+        val _ = s.add(new RefEq(a))
+        set = s
+      }
 
     def iterator(): Iterator[A] =
-      set.iterator.map(_.value)
+      if (set ne null)
+        set.iterator.map(_.value)
+      else if (first ne null)
+        Iterator.single(first)
+      else
+        Iterator.empty
 
     def result(): List[A] =
-      iterator().toList
+      if (set ne null)
+        set.iterator.map(_.value).toList
+      else if (first ne null)
+        first :: Nil
+      else
+        Nil
   }
 
   case class UnpackChecks[F[_], O, S, E](befores       : F[Point        [OS[O, S], E]],
@@ -159,53 +177,63 @@ object Runner {
 
   object UnpackChecks {
 
+    private val _empty: UnpackChecks[List, Any, Any, Any] =
+      UnpackChecks[List, Any, Any, Any](Nil, Nil, Nil, Nil, false)
+
+    def empty[O, S, E]: UnpackChecks[List, O, S, E] =
+      _empty.asInstanceOf[UnpackChecks[List, O, S, E]]
+
     def invariants[O, S, E](invariants: Invariants[O, S, E], input: OS[O, S])
-                           (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] = {
+                           (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] =
+      if (invariants.isEmpty)
+        empty
+      else {
+        type Builder[A <: AnyRef] = UniqueListBuilder[A]
+        def newBuilder[A <: AnyRef]: Builder[A] = new UniqueListBuilder[A]
+        def add[A <: AnyRef](b: Builder[A], a: A): Unit = b += a
+        def result[A <: AnyRef](r: Builder[A]): List[A] = r.result()
 
-      type Builder[A <: AnyRef] = UniqueListBuilder[A]
-      def newBuilder[A <: AnyRef]: Builder[A] = new UniqueListBuilder[A]
-      def add[A <: AnyRef](b: Builder[A], a: A): Unit = b += a
-      def result[A <: AnyRef](r: Builder[A]): List[A] = r.result()
+        val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
+        val as = newBuilder[Point        [OS[O, S], E]]
+        val es = newBuilder[NamedError[Failure[E]]]
 
-      val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
-      val as = newBuilder[Point        [OS[O, S], E]]
-      val es = newBuilder[NamedError[Failure[E]]]
+        val coproductFound =
+          foreachSackE(invariants)(input) {
+            case Right(Invariant.Point(p)) => add(as, p)
+            case Right(Invariant.Delta(d)) => add(ds, d)
+            case Left(e)                   => add(es, e)
+          }
 
-      val coproductFound =
-        foreachSackE(invariants)(input) {
-          case Right(Invariant.Point(p)) => add(as, p)
-          case Right(Invariant.Delta(d)) => add(ds, d)
-          case Left(e)                   => add(es, e)
-        }
-
-      UnpackChecks(List.empty[Point[OS[O, S], E]], result(ds), result(as), result(es), coproductFound)
-    }
+        UnpackChecks(List.empty[Point[OS[O, S], E]], result(ds), result(as), result(es), coproductFound)
+      }
 
     def arounds[O, S, E](arounds: Arounds[O, S, E], input: OS[O, S])
-                        (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] = {
+                        (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] =
+      if (arounds.isEmpty)
+        empty
+      else {
+        import Around.{Before, After}
 
-      import Around.{Before, After}
+        type Builder[A <: AnyRef] = UniqueListBuilder[A]
+        def newBuilder[A <: AnyRef]: Builder[A] = new UniqueListBuilder[A]
+        def add[A <: AnyRef](b: Builder[A], a: A): Unit = b += a
+        def result[A <: AnyRef](r: Builder[A]): List[A] = r.result()
 
-      type Builder[A <: AnyRef] = UniqueListBuilder[A]
-      def newBuilder[A <: AnyRef]: Builder[A] = new UniqueListBuilder[A]
-      def add[A <: AnyRef](b: Builder[A], a: A): Unit = b += a
-      def result[A <: AnyRef](r: Builder[A]): List[A] = r.result()
+        val bs = newBuilder[Point        [OS[O, S], E]]
+        val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
+        val as = newBuilder[Point        [OS[O, S], E]]
+        val es = newBuilder[NamedError[Failure[E]]]
 
-      val bs = newBuilder[Point        [OS[O, S], E]]
-      val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
-      val as = newBuilder[Point        [OS[O, S], E]]
-      val es = newBuilder[NamedError[Failure[E]]]
+        val coproductFound =
+          foreachSackE(arounds)(input) {
+            case Right(Around.Delta(d))         => add(ds, d)
+            case Right(Around.Point(p, Before)) => add(bs, p)
+            case Right(Around.Point(p, After))  => add(as, p)
+            case Left(e)                        => add(es, e)
+          }
 
-      val coproductFound =
-        foreachSackE(arounds)(input) {
-          case Right(Around.Delta(d))         => add(ds, d)
-          case Right(Around.Point(p, Before)) => add(bs, p)
-          case Right(Around.Point(p, After))  => add(as, p)
-          case Left(e)                        => add(es, e)
-        }
-
-      UnpackChecks(result(bs), result(ds), result(as), result(es), coproductFound)
-    }
+        UnpackChecks(result(bs), result(ds), result(as), result(es), coproductFound)
+      }
   }
 
   final case class PreCheck[+A](pre: A, invariants: A)

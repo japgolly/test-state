@@ -633,5 +633,42 @@ object RunnerTest extends TestSuite {
       }
     }
 
+    "uniqueListBuilder" - {
+      import teststate.run.Runner
+      final class Box(val n: Int)
+
+      "empty" - {
+        val b = new Runner.UniqueListBuilder[Box]
+        assert(b.result().isEmpty)
+        assert(b.iterator().isEmpty)
+      }
+
+      "singleAndDuplicate" - {
+        val b = new Runner.UniqueListBuilder[Box]
+        val x = new Box(1)
+        b += x
+        b += x
+        assertEq(b.result().map(_.n), List(1))
+        assertEq(b.iterator().map(_.n).toList, List(1))
+      }
+
+      "multiplePreservesOrderAndRefEq" - {
+        val b = new Runner.UniqueListBuilder[Box]
+        val x1 = new Box(1)
+        val x2 = new Box(1)
+        val y  = new Box(2)
+        b += x1
+        b += x1
+        b += y
+        b += x2
+        b += y
+        val res = b.result()
+        assertEq(res.length, 3)
+        assert(res(0) eq x1)
+        assert(res(1) eq y)
+        assert(res(2) eq x2)
+      }
+    }
+
   }
 }

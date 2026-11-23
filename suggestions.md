@@ -4,30 +4,14 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 31. `RefEq` uses structural `value.hashCode`, and `UniqueListBuilder` / `UnpackChecks` eagerly allocates 7 `LinkedHashSet`s per action
+## 31. `Runner` redundant unpacking in `postChecks` and intermediate list allocations in `subtest.runInvariants`
 
-* **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 131–209, 458–461, 706–734)
-* **Current Code:**
-  ```scala
-  final class RefEq[+A <: AnyRef](val value: A) {
-    override def hashCode = value.hashCode
-    override def equals(x: Any) = x match {
-      case y: RefEq[AnyRef] => value eq y.value
-      case _                => false
-    }
-  }
-
-  final class UniqueListBuilder[A <: AnyRef] {
-    private val set = mutable.LinkedHashSet.empty[RefEq[A]]
-    ...
-  }
-  ```
+* **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 480–495, 730–765)
 * **Issue:**
-  2. Before *every* action in a test, `runPreChecks` calls `UnpackChecks.invariants` (which allocates 3 `UniqueListBuilder`s / `LinkedHashSet`s) and `UnpackChecks.arounds` (which allocates 4 `UniqueListBuilder`s / `LinkedHashSet`s), even when `invariants.isEmpty` or `arounds.isEmpty`, or when `errors`/`befores`/`deltas` are empty.
-  3. In `postChecks` (lines 458–461), if only `invariants` has a coproduct, `arounds` is unnecessarily unpacked again, and vice versa.
-  4. In `subtest.runInvariants` (lines 706–730), `ps` and `es` are mapped into `Right(_)` and `Left(_)`, concatenated into a `List[CheckNE[...]]`, and immediately pattern-matched back out in `b.addEachNE`.
+  1. In `postChecks`, if only `invariants` has a coproduct, `arounds` is unnecessarily unpacked again, and vice versa.
+  2. In `subtest.runInvariants`, `ps` and `es` are mapped into `Right(_)` and `Left(_)`, concatenated into a `List[CheckNE[...]]`, and immediately pattern-matched back out in `b.addEachNE`.
 * **Proposed Change:**
-  Use `System.identityHashCode(value)` in `RefEq`, lazily allocate `set` in `UniqueListBuilder` (or short-circuit `UnpackChecks` when the `Sack` is empty), check `coproductFound` for `arounds` and `invariants` independently in `postChecks`, and add `ps` / `es` directly in `runInvariants`.
+  Check `coproductFound` for `arounds` and `invariants` independently in `postChecks`, and add `ps` / `es` directly in `runInvariants`.
 
 ---
 
