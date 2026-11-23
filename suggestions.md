@@ -4,17 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 25. `MultiBrowser.openTab()`: `onNewTab` runs inside `outerMutex` and before `onNewDriverWithTempTab`
-
-* **Location:** `ext-selenium/src/main/scala/teststate/selenium/MultiBrowser.scala` (lines 98–160)
-* **Issue:**
-  * On line 137, `mutex.lock()` is acquired before `createTabWithoutLocking(browserIndex)` (line 150), which invokes `onNewTab(tab)` (line 104). If `onNewTab(tab)` throws an exception, `openTab()` aborts before reaching `setup.foreach(_.apply())` on line 156, so `mutex.unlock()` and `setupTab.closeTab()` are never called, permanently deadlocking that browser.
-  * For the first tab of a new browser, `onNewTab(tab)` runs *before* `onNewDriverWithTempTab(setupTab)`. If `onNewTab(tab)` calls `tab.use(...)` synchronously, because `mutex` is reentrant and already held by the current thread from line 137, `tab.use(...)` executes in the browser *before* `onNewDriverWithTempTab` has run.
-* **Proposed Change:**
-  Run `onNewTab(tab)` outside `outerMutex` after `setup` completes.
-
----
-
 ## 26. `Mutex`: missing thread-owner check in `unlock()` when `owner ne null`, and non-tail-recursive retry in `monadic`
 
 * **Location:** `ext-selenium/src/main/scala/teststate/selenium/Mutex.scala` (lines 45–78)
