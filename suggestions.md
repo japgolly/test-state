@@ -4,48 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 28. `ExtScalaJsReact`: unsuspended by-name parameters in `doFinally`, `schedule`, and `recover`, non-implicit `executionModalAsyncCallback`, and bare `.get` in `domZipper`
-
-* **Location:** `ext-scalajs-react/src/main/scala/teststate/ExtScalaJsReact.scala` (lines 54–90, 104–107)
-* **Current Code:**
-  ```scala
-  lazy val executionModalAsyncCallback: ExecutionModel[AsyncCallback] =
-    new ExecutionModel[AsyncCallback] {
-      ...
-      override def recover[E, A](f: => F[Or[Failure[E], A]])(implicit attempt: ErrorHandler[E]): F[Or[Failure[E], A]] =
-        attempt.recover(
-          f.attempt.map(_.fold(t => teststate.data.Left(attempt(t)), identity)),
-          t => AsyncCallback.pure(teststate.data.Left(t)))
-
-      override val now: F[Instant] =
-        AsyncCallback.delay(Instant.now())
-
-      override def schedule[A](task: => F[A], startAt: Instant): F[A] =
-        now.flatMap { n =>
-          val d = startAt.toEpochMilli - n.toEpochMilli
-          task.delayMs(d.toDouble)
-        }
-
-      override def doFinally[A, B](main: => F[A], last: => F[B]): F[A] =
-        main.finallyRun(last)
-    }
-  ...
-  final class ExtScalaJsReactCompExt(private val m: GenericComponent.MountedRaw) extends AnyVal {
-    def domZipper(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJs =
-      DomZipperJs(m.displayName, ReactDOM.findDOMNode(m.raw).get.asElement())($, scrub)
-  }
-  ```
-* **Issue:**
-  1. **`doFinally` evaluates `main` and `last` eagerly and misses synchronous throws:** Calling `main.finallyRun(last)` evaluates both by-name expressions `main` and `last` immediately when `doFinally` is called (before the `AsyncCallback` is run). If evaluating `main` throws a synchronous exception, `last` is never run and the exception escapes instead of being captured in `AsyncCallback`.
-  2. **`schedule` evaluates `task` before the delay and schedules timers even when `d <= 0`:** Calling `task.delayMs(d.toDouble)` evaluates the by-name `task` *before* waiting `d` ms, and queues a JS `setTimeout` even when `d <= 0`.
-  3. **`recover` evaluates `f` when building the `AsyncCallback` rather than when running it:** Wrapping `f` in `AsyncCallback.suspend(f)` ensures `f` is evaluated each time the `AsyncCallback` runs.
-  4. **`executionModalAsyncCallback` is not `implicit` (and has a typo `Modal` vs `Model`):** Marking `executionModelAsyncCallback` `implicit` (and keeping `executionModalAsyncCallback` as a deprecated alias) allows `Dsl.full[AsyncCallback, ...]` to resolve `ExecutionModel[AsyncCallback]` automatically.
-  5. **`domZipper` calls `.get` on `ReactDOM.findDOMNode(m.raw)`:** If a component renders `EmptyVdom` / `null`, `.get` throws an uninformative `NoSuchElementException: None.get` without naming `m.displayName`.
-* **Proposed Change:**
-  Use `AsyncCallback.suspend(...)` in `recover`, `schedule`, and `doFinally`, skip `.delayMs` when `d <= 0`, provide `implicit lazy val executionModelAsyncCallback`, and use `.getOrElse(sys.error(...))` in `domZipper`.
-
----
-
 ## 29. `ExecutionModel.scalaFuture`: `schedule` uses `new Date` and goes through `Timer` when `delayMs <= 0`, and `doFinally` drops primary exception when both `main` and `last` fail
 
 * **Location:** `core/shared/src/main/scala/teststate/typeclass/ExecutionModel.scala` (lines 82–87, 109–141)

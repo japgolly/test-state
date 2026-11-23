@@ -51,7 +51,11 @@ trait ExtScalaJsReact extends domzipper.Exports {
 //        main.finallyRun(last)
 //    }
 
-  lazy val executionModalAsyncCallback: ExecutionModel[AsyncCallback] =
+  @deprecated("Use executionModelAsyncCallback", "3.2.0")
+  final def executionModalAsyncCallback: ExecutionModel[AsyncCallback] =
+    executionModelAsyncCallback
+
+  implicit lazy val executionModelAsyncCallback: ExecutionModel[AsyncCallback] =
     new ExecutionModel[AsyncCallback] {
       override def point[A](a: => A): F[A] =
         AsyncCallback.delay(a)
@@ -72,9 +76,7 @@ trait ExtScalaJsReact extends domzipper.Exports {
         AsyncCallback.tailrec(a)(a => if (stop(a)) AsyncCallback.pure(Right(a)) else rec(a).map(Left(_)))
 
       override def recover[E, A](f: => F[Or[Failure[E], A]])(implicit attempt: ErrorHandler[E]): F[Or[Failure[E], A]] =
-        attempt.recover(
-          f.attempt.map(_.fold(t => teststate.data.Left(attempt(t)), identity)),
-          t => AsyncCallback.pure(teststate.data.Left(t)))
+        AsyncCallback.suspend(f).attempt.map(_.fold(t => teststate.data.Left(attempt(t)), identity))
 
       override val now: F[Instant] =
         AsyncCallback.delay(Instant.now())
@@ -82,11 +84,14 @@ trait ExtScalaJsReact extends domzipper.Exports {
       override def schedule[A](task: => F[A], startAt: Instant): F[A] =
         now.flatMap { n =>
           val d = startAt.toEpochMilli - n.toEpochMilli
-          task.delayMs(d.toDouble)
+          if (d <= 0)
+            AsyncCallback.suspend(task)
+          else
+            AsyncCallback.suspend(task).delayMs(d.toDouble)
         }
 
       override def doFinally[A, B](main: => F[A], last: => F[B]): F[A] =
-        main.finallyRun(last)
+        AsyncCallback.suspend(main).finallyRun(AsyncCallback.suspend(last))
     }
 }
 
@@ -102,7 +107,11 @@ object ExtScalaJsReact extends ExtScalaJsReact {
   }
 
   final class ExtScalaJsReactCompExt(private val m: GenericComponent.MountedRaw) extends AnyVal {
-    def domZipper(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJs =
-      DomZipperJs(m.displayName, ReactDOM.findDOMNode(m.raw).get.asElement())($, scrub)
+    def domZipper(implicit $: CssSelEngine, scrub: HtmlScrub): DomZipperJs = {
+      val node = ReactDOM.findDOMNode(m.raw).getOrElse(
+        sys.error(s"ReactDOM.findDOMNode returned null/undefined for component [${m.displayName}].")
+      )
+      DomZipperJs(m.displayName, node.asElement())($, scrub)
+    }
   }
 }
