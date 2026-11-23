@@ -22,6 +22,6 @@ target
 .metadata
 .bloop
 .metals
-project/metals.sbt
+metals.sbt
 .bsp
 .vscode
