@@ -1,7 +1,7 @@
 package teststate.typeclass
 
 import java.time.Instant
-import java.util.{Date, Timer, TimerTask}
+import java.util.{Timer, TimerTask}
 import scala.annotation.tailrec
 import scala.concurrent._
 import teststate.data._
@@ -80,7 +80,7 @@ object ExecutionModel {
         attempt.recover(f, Left(_))
 
       override def schedule[A](task: => A, startAt: Instant): A = {
-        val waitTime = startAt.toEpochMilli - Instant.now().toEpochMilli
+        val waitTime = startAt.toEpochMilli - System.currentTimeMillis()
         if (waitTime > 0)
           Platform.threadSleep(waitTime)
         task
@@ -108,23 +108,33 @@ object ExecutionModel {
 
       override def schedule[A](task: => F[A], startAt: Instant) = {
         val promise = Promise[A]()
-        val timerTask = new TimerTask {
-          override def run(): Unit =
-            ec.execute(new Runnable {
-              override def run(): Unit = {
-                try {
-                  promise.completeWith(task)
-                } catch {
-                  case t: Throwable => promise.failure(t)
-                }
-                ()
+        def runTask(): Unit =
+          ec.execute(new Runnable {
+            override def run(): Unit = {
+              try {
+                promise.completeWith(task)
+              } catch {
+                case t: Throwable => promise.failure(t)
               }
-            })
-        }
-        try {
-          futureTimer.schedule(timerTask, new Date(startAt.toEpochMilli))
-        } catch {
-          case t: Throwable => promise.failure(t)
+              ()
+            }
+          })
+        val delayMs = startAt.toEpochMilli - System.currentTimeMillis()
+        if (delayMs <= 0)
+          try
+            runTask()
+          catch {
+            case t: Throwable => promise.failure(t)
+          }
+        else {
+          val timerTask = new TimerTask {
+            override def run(): Unit = runTask()
+          }
+          try
+            futureTimer.schedule(timerTask, delayMs)
+          catch {
+            case t: Throwable => promise.failure(t)
+          }
         }
         promise.future
       }

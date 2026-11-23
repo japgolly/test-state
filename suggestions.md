@@ -4,21 +4,11 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 29. `ExecutionModel.scalaFuture`: `schedule` uses `new Date` and goes through `Timer` when `delayMs <= 0`, and `doFinally` drops primary exception when both `main` and `last` fail
+## 29. `ExecutionModel.scalaFuture.doFinally` drops primary exception when both `main` and `last` fail
 
-* **Location:** `core/shared/src/main/scala/teststate/typeclass/ExecutionModel.scala` (lines 82–87, 109–141)
+* **Location:** `core/shared/src/main/scala/teststate/typeclass/ExecutionModel.scala` (lines 142–151)
 * **Current Code:**
   ```scala
-      override def schedule[A](task: => F[A], startAt: Instant) = {
-        ...
-        try {
-          futureTimer.schedule(timerTask, new Date(startAt.toEpochMilli))
-        } catch {
-          case t: Throwable => promise.failure(t)
-        }
-        promise.future
-      }
-
       override def doFinally[A, B](main: => Future[A], last: => Future[B]): Future[A] = {
         val fa = try main catch { case t: Throwable => Future.failed(t) }
         fa.transformWith { ta =>
@@ -31,10 +21,9 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
       }
   ```
 * **Issue:**
-  1. When `Retry.Policy` schedules an immediate retry (`delayMs <= 0`), going through the global synchronized `java.util.Timer` thread and allocating a `Date` and `TimerTask` adds unnecessary thread-hop latency and contention on `futureTimer`. Using a relative delay `val delayMs = startAt.toEpochMilli - System.currentTimeMillis()` (and running directly on `ec` when `delayMs <= 0`) avoids allocating `new Date(...)`. Similarly, `Immediate.schedule` (line 83) allocates `Instant.now()` just to call `.toEpochMilli`.
-  2. In `doFinally`, when `main` fails with `ScalaFailure(e)` and `last` also fails with `ScalaFailure(f)`, `e` is dropped without `f.addSuppressed(e)`.
+  In `doFinally`, when `main` fails with `ScalaFailure(e)` and `last` also fails with `ScalaFailure(f)`, `e` is dropped without `f.addSuppressed(e)`.
 * **Proposed Change:**
-  Short-circuit `schedule` when `delayMs <= 0`, pass `delayMs` to `futureTimer.schedule(timerTask, delayMs)`, and call `f.addSuppressed(e)` in `doFinally`.
+  Call `f.addSuppressed(e)` when both `main` and `last` fail in `doFinally`.
 
 ---
 

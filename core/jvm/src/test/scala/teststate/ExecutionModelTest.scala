@@ -28,6 +28,35 @@ object ExecutionModelTest extends TestSuite {
           val err = Await.result(f.failed, 2.seconds)
           assertEq(err.getMessage, "schedule boom")
         }
+
+        "pastBypassesTimer" - {
+          var executedOn: Thread = null
+          val directEc = new scala.concurrent.ExecutionContext {
+            override def execute(runnable: Runnable): Unit = {
+              executedOn = Thread.currentThread()
+              runnable.run()
+            }
+            override def reportFailure(cause: Throwable): Unit = throw cause
+          }
+          val directEm = ExecutionModel.scalaFuture(directEc)
+          val caller = Thread.currentThread()
+          val f = directEm.schedule(Future.successful(7), Instant.now().minusSeconds(1))
+          assertEq(Await.result(f, 2.seconds), 7)
+          assert(executedOn eq caller)
+        }
+
+        "futureDelay" - {
+          val startAt = Instant.now().plusMillis(40)
+          val f = EM.schedule(Future.successful(System.currentTimeMillis()), startAt)
+          val ranAt = Await.result(f, 2.seconds)
+          assert(ranAt >= startAt.toEpochMilli - 5)
+        }
+
+        "futureSyncException" - {
+          val f = EM.schedule[Int](throw new RuntimeException("delayed boom"), Instant.now().plusMillis(15))
+          val err = Await.result(f.failed, 2.seconds)
+          assertEq(err.getMessage, "delayed boom")
+        }
       }
 
       "doFinally" - {
