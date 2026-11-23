@@ -229,9 +229,11 @@ object ActionOps {
           action match {
 
             case Single(r) =>
-              Single(i =>
+              Single { i =>
+                val s0 = i.state
                 r(i.mapOS(f, g)).map(fn => () =>
-                  em.map(fn())(_.map(j => (x: X) => j(f(x)).map(s => h(i.state, s))))))
+                  em.map(fn())(_.map(j => (x: X) => j(f(x)).map(s => h(s0, s)))))
+              }
 
             case Group(a, c) =>
               Group(a.mapOS(f, g)(h), c.mapOS(f, g))
@@ -370,7 +372,10 @@ object ActionOps {
               if (ss.isEmpty)
                 name match {
                   case Some(n) =>
-                    val inner = Action.Single[F, R, O, S, E](ros => Some(() => em.point(Right((o: O) => f(o)(ros.state)))))
+                    val inner = Action.Single[F, R, O, S, E] { ros =>
+                      val s0 = ros.state
+                      Some(() => em.point(Right((o: O) => f(o)(s0))))
+                    }
                     val action = Action.liftInner(inner)(n)
                     Product(Vector.empty :+ action)
                   case None =>

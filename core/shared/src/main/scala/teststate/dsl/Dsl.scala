@@ -127,7 +127,10 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
       attempt(f.andThen(EM.map(_)(_ => None)))
 
     def attempt(f: ROS => F[Option[E]]): Actions =
-      full(i => EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(i.state))))
+      full { i =>
+        val s0 = i.state
+        EM.map(f(i))(oe => Or.liftLeft(oe, _ => Right(s0)))
+      }
 
     def update(f: ROS => F[S]): Actions =
       updateBy(i => EM.map(f(i))(Function.const))

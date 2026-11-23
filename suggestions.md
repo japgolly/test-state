@@ -4,30 +4,18 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 34. Full `ROS` reference retention across async action execution in `ActionOps.mapOS`, `Action.Single.empty`, and `Dsl.ActionB.attempt`, plus `Or` and `Sack` allocations
+## 34. `Or`, `Sack`, and `VectorTree` allocations
 
 * **Locations:**
-  * `core/shared/src/main/scala/teststate/core/ActionOps.scala` (lines 231–234, 347–373)
-  * `core/shared/src/main/scala/teststate/core/Action.scala` (line 29)
-  * `core/shared/src/main/scala/teststate/dsl/Dsl.scala` (line 130)
   * `core/shared/src/main/scala/teststate/data/Or.scala` (lines 17–83, 96–105)
   * `core/shared/src/main/scala/teststate/data/Sack.scala` (lines 53–69)
   * `core/shared/src/main/scala/teststate/data/VectorTree.scala` (lines 35–36)
-* **Current Code:**
-  ```scala
-  // ActionOps.scala:231-234
-  case Single(r) =>
-    Single(i =>
-      r(i.mapOS(f, g)).map(fn => () =>
-        em.map(fn())(_.map(j => (x: X) => j(f(x)).map(s => h(i.state, s))))))
-  ```
 * **Issue:**
-  1. Referencing `i.state` inside the innermost post-action closure `s => h(i.state, s)` (and similarly `ros.state` in `Action.Single.empty`, `ActionOps.stateMod`, and `Dsl.ActionB.attempt`) causes the nested lambdas to capture the entire `i: ROS` instance, retaining `i.ref` and the pre-action observation `i.obs` (such as a DOM snapshot) in memory throughout the asynchronous action and post-action observation. Extracting `val s0 = i.state` before `.map(fn => ...)` captures only the state.
-  2. In `Or.scala`, `map` delegates to `flatMap(b => Right(f(b)))` and `bimap`, `exists`, `leftOption`, `toOption`, `toOptionMap`, `toTri`, `toTriMap`, `toTriFlatMap`, and `toEither` delegate to `fold(...)` (allocating 1–2 closures per call instead of direct pattern matching), and `Or.liftLeft` allocates a new `Right(())` on every `None`.
-  3. In `Sack.scala`, `sackInstanceProfunctor` does not override `lmap` (falling back to `dimap(m)(g, identity)`, which re-allocates every `Value(b)`), and `Product(s)` in `Sack`, `CheckOps`, and `ActionOps` does not short-circuit when `s.isEmpty` (`Sack.empty`).
-  4. In `VectorTree.Node.iteratorWithLevel`, leaf nodes (`children.elements.isEmpty`) still allocate `children.iteratorWithLevel(currentLevel + 1)` and a `ConcatIterator`.
+  1. In `Or.scala`, `map` delegates to `flatMap(b => Right(f(b)))` and `bimap`, `exists`, `leftOption`, `toOption`, `toOptionMap`, `toTri`, `toTriMap`, `toTriFlatMap`, and `toEither` delegate to `fold(...)` (allocating 1–2 closures per call instead of direct pattern matching), and `Or.liftLeft` allocates a new `Right(())` on every `None`.
+  2. In `Sack.scala`, `sackInstanceProfunctor` does not override `lmap` (falling back to `dimap(m)(g, identity)`, which re-allocates every `Value(b)`), and `Product(s)` in `Sack`, `CheckOps`, and `ActionOps` does not short-circuit when `s.isEmpty` (`Sack.empty`).
+  3. In `VectorTree.Node.iteratorWithLevel`, leaf nodes (`children.elements.isEmpty`) still allocate `children.iteratorWithLevel(currentLevel + 1)` and a `ConcatIterator`.
 * **Proposed Change:**
-  Extract `val s0 = i.state` before nested closures, use direct pattern matching and a cached `rightUnit` in `Or`, override `lmap` and short-circuit on empty `Product` in `Sack`/`CheckOps`/`ActionOps`, and short-circuit `iteratorWithLevel` on leaf nodes.
+  Use direct pattern matching and a cached `rightUnit` in `Or`, override `lmap` and short-circuit on empty `Product` in `Sack`/`CheckOps`/`ActionOps`, and short-circuit `iteratorWithLevel` on leaf nodes.
 
 ---
 

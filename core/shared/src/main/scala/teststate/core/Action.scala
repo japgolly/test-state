@@ -26,7 +26,10 @@ object Action {
   }
   object Single {
     def empty[F[_], R, O, S, E](implicit F: ExecutionModel[F]): Single[F, R, O, S, E] =
-      apply(ros => Some(() => F.pure(Right((_: O) => Right(ros.state)))))
+      apply { ros =>
+        val s0 = Right(ros.state)
+        Some(() => F.pure(Right((_: O) => s0)))
+      }
     def skip[F[_], R, O, S, E]: Single[F, R, O, S, E] =
       apply(_ => None)
   }
