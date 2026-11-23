@@ -4,38 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 33. `ReportFormat.Default.format` quadratic string slicing on multi-line error messages, and repeated allocations in `Equal`, `Display`, and `Report.AssertionSettings`
-
-* **Locations:**
-  * `core/shared/src/main/scala/teststate/run/ReportFormat.scala` (lines 75–96)
-  * `core/shared/src/main/scala/teststate/typeclass/Equal.scala` (lines 13–14, 41–45)
-  * `core/shared/src/main/scala/teststate/typeclass/Display.scala` (lines 40–41, 51–52, 95, 109–110)
-  * `core/shared/src/main/scala/teststate/run/Report.scala` (lines 107–115)
-* **Current Code:**
-  ```scala
-  // ReportFormat.scala
-  @tailrec
-  def go(line: String, remainderWithLine: String): Unit = {
-    val remainder = remainderWithLine.drop(line.length + 1)
-    sb append s.eol
-    appendIndent(indent2)
-    sb append s.failureDetail
-    sb append line
-    if (remainder.nonEmpty)
-      go(remainder.takeWhile(_ != '\n'), remainder)
-  }
-  go(firstLine, errorMsg)
-  ```
-* **Issue:**
-  1. In `ReportFormat.Default.format`, on multi-line error messages (such as stack traces or DOM diffs), `remainderWithLine.drop(...)` and `remainder.takeWhile(_ != '\n')` allocate two new `String`s per line instead of scanning with `errorMsg.indexOf('\n', start)` and `sb.append(errorMsg, start, lineEnd)`.
-  2. In `Equal.scala`, `testStateEqualIndexedSeq` calls `x.indices.forall(i => e.equal(x(i), y(i)))`, which allocates a `Range` and boxes every `Int` index into `java.lang.Integer` instead of using `x.corresponds(y)(e.equal)`. Also `Equal.by_==[A]` allocates a new `Equal` on every `testStateEqualByUnivEq` implicit lookup instead of casting a shared private `Equal[Any]` instance.
-  3. In `Display.scala`, `testStateDisplayByToString[A]` and `byToString[A]` allocate a new `Display` on every implicit lookup instead of sharing a private `Display[Any]`, and `testStateDisplayName` (line 109) is a `def` instead of a `val`.
-  4. In `Report.AssertionSettings`, `uncoloured`, `coloured`, and `default` are `def`s rather than `val`s, so every implicit resolution of `Exports.testStateAssertionSettings` allocates 2 `ReportFormat.Default` instances, a copied `Settings`, and an `AssertionSettings`.
-* **Proposed Change:**
-  Use `indexOf('\n', start)` in `ReportFormat`, `corresponds` and a shared `anyEqual` in `Equal`, a shared `anyToString` and `val testStateDisplayName` in `Display`, and `val`s in `Report.AssertionSettings`.
-
----
-
 ## 34. Full `ROS` reference retention across async action execution in `ActionOps.mapOS`, `Action.Single.empty`, and `Dsl.ActionB.attempt`, plus `Or` and `Sack` allocations
 
 * **Locations:**

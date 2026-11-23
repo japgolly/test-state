@@ -7,11 +7,14 @@ class Equal[A](val equal: (A, A) => Boolean) extends AnyVal
 
 object Equal {
 
+  private val anyEqualFn: (Any, Any) => Boolean =
+    _ == _
+
   def apply[A](fn: (A, A) => Boolean): Equal[A] =
     new Equal(fn)
 
   def by_==[A]: Equal[A] =
-    Equal(_ == _)
+    Equal(anyEqualFn.asInstanceOf[(A, A) => Boolean])
 
   trait ImplicitsLowPri {
     @nowarn("cat=unused")
@@ -39,8 +42,21 @@ object Equal {
           || x.corresponds(y)(e.equal))
 
     implicit def testStateEqualIndexedSeq[C[x] <: IndexedSeq[x], A](implicit e: Equal[A]): Equal[C[A]] =
-      Equal((x, y) =>
-        (x eq y)
-          || (x.length == y.length && x.indices.forall(i => e.equal(x(i), y(i)))))
+      Equal { (x, y) =>
+        (x eq y) || {
+          val len = x.length
+          if (len != y.length)
+            false
+          else {
+            var i = 0
+            var eq = true
+            while (eq && i < len) {
+              eq = e.equal(x(i), y(i))
+              i += 1
+            }
+            eq
+          }
+        }
+      }
   }
 }

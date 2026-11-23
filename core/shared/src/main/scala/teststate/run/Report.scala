@@ -104,14 +104,14 @@ object Report {
     def uniform(format: Format): AssertionSettings =
       AssertionSettings(format, format)
 
-    def uncoloured = AssertionSettings(
+    lazy val uncoloured: AssertionSettings = AssertionSettings(
       onPass = Format.Default.uncoloured.apply,
       onFail = Format.Default.uncoloured.alwaysShowChildren.apply)
 
-    def coloured = AssertionSettings(
+    lazy val coloured: AssertionSettings = AssertionSettings(
       onPass = Format.Default.coloured.apply,
       onFail = Format.Default.coloured.alwaysShowChildren.apply)
 
-    def default = coloured
+    def default: AssertionSettings = coloured
   }
 }
