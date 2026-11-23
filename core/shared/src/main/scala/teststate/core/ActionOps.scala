@@ -349,7 +349,7 @@ object ActionOps {
         override def pmapR[F[_], R, O, S, E, X](x: Actions[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]) =
           x match {
             case Value(v)        => Value(v map(_ pmapR f))
-            case Product(ss)     => Product(ss map (_ pmapR f))
+            case Product(ss)     => if (ss.isEmpty) Sack.empty else Product(ss map (_ pmapR f))
             case CoProduct(n, p) =>
               CoProduct(n pmapR f,
                 _.emapR(f).fold(e => Sack Value Left(NamedError(n(None), Failure NoCause e)), p(_) pmapR f))
@@ -358,7 +358,7 @@ object ActionOps {
         override def pmapO[F[_], R, O, S, E, X](x: Actions[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
           x match {
             case Value(v)        => Value(v map(_ pmapO f))
-            case Product(ss)     => Product(ss map (_ pmapO f))
+            case Product(ss)     => if (ss.isEmpty) Sack.empty else Product(ss map (_ pmapO f))
             case CoProduct(n, p) =>
               CoProduct(n pmapO f,
                 _.emapO(f).fold(e => Sack Value Left(NamedError(n(None), Failure NoCause e)), p(_) pmapO f))
@@ -379,7 +379,7 @@ object ActionOps {
                     val action = Action.liftInner(inner)(n)
                     Product(Vector.empty :+ action)
                   case None =>
-                    Product(Vector.empty)
+                    Sack.empty
                 }
               else
                 Product(ss.init :+ ss.last.modS(name, f))

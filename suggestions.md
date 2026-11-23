@@ -4,18 +4,16 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 34. `Or`, `Sack`, and `VectorTree` allocations
+## 34. `Or` and `VectorTree` allocations
 
 * **Locations:**
   * `core/shared/src/main/scala/teststate/data/Or.scala` (lines 17–83, 96–105)
-  * `core/shared/src/main/scala/teststate/data/Sack.scala` (lines 53–69)
   * `core/shared/src/main/scala/teststate/data/VectorTree.scala` (lines 35–36)
 * **Issue:**
   1. In `Or.scala`, `map` delegates to `flatMap(b => Right(f(b)))` and `bimap`, `exists`, `leftOption`, `toOption`, `toOptionMap`, `toTri`, `toTriMap`, `toTriFlatMap`, and `toEither` delegate to `fold(...)` (allocating 1–2 closures per call instead of direct pattern matching), and `Or.liftLeft` allocates a new `Right(())` on every `None`.
-  2. In `Sack.scala`, `sackInstanceProfunctor` does not override `lmap` (falling back to `dimap(m)(g, identity)`, which re-allocates every `Value(b)`), and `Product(s)` in `Sack`, `CheckOps`, and `ActionOps` does not short-circuit when `s.isEmpty` (`Sack.empty`).
-  3. In `VectorTree.Node.iteratorWithLevel`, leaf nodes (`children.elements.isEmpty`) still allocate `children.iteratorWithLevel(currentLevel + 1)` and a `ConcatIterator`.
+  2. In `VectorTree.Node.iteratorWithLevel`, leaf nodes (`children.elements.isEmpty`) still allocate `children.iteratorWithLevel(currentLevel + 1)` and a `ConcatIterator`.
 * **Proposed Change:**
-  Use direct pattern matching and a cached `rightUnit` in `Or`, override `lmap` and short-circuit on empty `Product` in `Sack`/`CheckOps`/`ActionOps`, and short-circuit `iteratorWithLevel` on leaf nodes.
+  Use direct pattern matching and a cached `rightUnit` in `Or`, and short-circuit `iteratorWithLevel` on leaf nodes.
 
 ---
 
