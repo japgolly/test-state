@@ -4,14 +4,13 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 31. `Runner` redundant unpacking in `postChecks` and intermediate list allocations in `subtest.runInvariants`
+## 31. `Runner` intermediate list allocations in `subtest.runInvariants`
 
-* **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 480–495, 730–765)
+* **Location:** `core/shared/src/main/scala/teststate/run/Runner.scala` (lines 735–770)
 * **Issue:**
-  1. In `postChecks`, if only `invariants` has a coproduct, `arounds` is unnecessarily unpacked again, and vice versa.
-  2. In `subtest.runInvariants`, `ps` and `es` are mapped into `Right(_)` and `Left(_)`, concatenated into a `List[CheckNE[...]]`, and immediately pattern-matched back out in `b.addEachNE`.
+  In `subtest.runInvariants`, `ps` and `es` are mapped into `Right(_)` and `Left(_)`, concatenated into a `List[CheckNE[...]]`, and immediately pattern-matched back out in `b.addEachNE`.
 * **Proposed Change:**
-  Check `coproductFound` for `arounds` and `invariants` independently in `postChecks`, and add `ps` / `es` directly in `runInvariants`.
+  Add `ps` / `es` directly in `runInvariants`.
 
 ---
 

@@ -482,12 +482,17 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                          ros2      : ROS): HH = {
 
     // TODO This didn't work out as planned - redo unpackChecks stuff
-    var checksPostA = checksPre.pre
-    var checksPostI = checksPre.invariants
-    if (checksPostA.coproductFound || checksPostI.coproductFound) {
-      checksPostA = UnpackChecks.arounds(arounds, ros2)
-      checksPostI = UnpackChecks.invariants(invariants, ros2)
-    }
+    val checksPostA =
+      if (checksPre.pre.coproductFound)
+        UnpackChecks.arounds(arounds, ros2)
+      else
+        checksPre.pre
+
+    val checksPostI =
+      if (checksPre.invariants.coproductFound)
+        UnpackChecks.invariants(invariants, ros2)
+      else
+        checksPre.invariants
 
     // Post conditions
     val post = {
