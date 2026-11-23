@@ -74,8 +74,8 @@ object Tab {
               None
             case None =>
               val t = tabSupport.open(rootTab)
+              // No need to call tabSupport.activate(t) here because tabSupport.open() already activates the new tab
               tab = Some(t)
-              tabSupport.activate(t)
               onFirstUse
           }
 

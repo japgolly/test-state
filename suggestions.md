@@ -4,16 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 24. `Tab` redundantly re-activates newly opened tabs
-
-* **Location:** `ext-selenium/src/main/scala/teststate/selenium/Tab.scala` (lines 70–80)
-* **Issue:**
-  `TabSupport.open` already activates the newly created tab before returning, so calling `tabSupport.activate(t)` immediately after `tabSupport.open(rootTab)` makes redundant WebDriver round-trips (`switchTo.window` + `getWindowHandle`).
-* **Proposed Change:**
-  Remove the redundant `tabSupport.activate(t)` call after `tabSupport.open(rootTab)`.
-
----
-
 ## 25. `MultiBrowser.openTab()`: temp setup tab closed after unlocking `browser.mutex`, and `onNewTab` runs inside `outerMutex` before `onNewDriverWithTempTab`
 
 * **Location:** `ext-selenium/src/main/scala/teststate/selenium/MultiBrowser.scala` (lines 98–163)
