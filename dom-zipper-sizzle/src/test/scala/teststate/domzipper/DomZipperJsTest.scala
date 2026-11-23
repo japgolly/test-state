@@ -5,7 +5,7 @@ import cats.instances.option._
 import cats.instances.set._
 import cats.instances.string._
 import cats.instances.vector._
-import japgolly.microlibs.testutil.TestUtil.assertEq
+import japgolly.microlibs.testutil.TestUtil._
 import org.scalajs.dom
 import teststate.domzipper.sizzle.Exports._
 import utest._
@@ -139,6 +139,45 @@ object DomZipperJsTest extends TestSuite {
       assertEq(c.outerHTML, "<h3>EH?</h3>")
       assertEq(c.parent.outerHTML, "<div><h3>EH?</h3></div>")
       assertEq(c.parent.child().outerHTML, "<h3>EH?</h3>")
+    }
+
+    "enrichErrOnFailures" - {
+      "needAttribute" - {
+        val Left(err) = $("form").failToEither.needAttribute("nonexistent")
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "checked" - {
+        val Left(err) = $("form").failToEither.checked
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "value" - {
+        val Left(err) = $("form").failToEither.value
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "parent" - {
+        val Left(err) = DomZipperJs.failToEither(dom.document.createElement("div")).parent
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "domAs" - {
+        val Left(err) = $("form").failToEither.domAsInput
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "domsAs" - {
+        val Left(err) = $.failToEither.collect1n("form").domsAsInput
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+        err
+      }
     }
 
   }

@@ -478,6 +478,22 @@ object DomZipperJsoupTest extends TestSuite {
       }
     }
 
+    "enrichErrOnFailures" - {
+      "needAttribute" - {
+        val Left(err) = $("form").failToEither.needAttribute("nonexistent")
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+        err
+      }
+
+      "parent" - {
+        val Left(err) = $.failToEither.parent
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+        err
+      }
+    }
+
   }
 
 }

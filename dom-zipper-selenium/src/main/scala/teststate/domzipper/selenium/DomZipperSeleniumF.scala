@@ -140,5 +140,5 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     dom().classes()
 
   override def value: F[String] =
-    getAttribute("value") orFail s".value failed on <${dom().getTagName}>."
+    getAttribute("value") orFail enrichErr(s".value failed on <${dom().getTagName}>.")
 }

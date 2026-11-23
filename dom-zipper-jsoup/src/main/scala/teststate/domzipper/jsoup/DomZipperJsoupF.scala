@@ -88,7 +88,7 @@ final class DomZipperJsoupF[F[_], A](override protected val layers: DomZipperBas
     dom.selectChildren(sel)
 
   override protected def _parent: F[Dom] =
-    F.option(dom.parent, s"$dom doesn't have a parent.")
+    F.option(dom.parent, enrichErr("Dom doesn't have a parent."))
 
   override def matches(sel: String): F[Boolean] =
     F pass dom.matches(sel)
@@ -106,7 +106,7 @@ final class DomZipperJsoupF[F[_], A](override protected val layers: DomZipperBas
     dom.innerText
 
   override def value: F[String] =
-    Option(dom.underlying.`val`()) orFail s".value failed on <${dom.getTagName}>."
+    Option(dom.underlying.`val`()) orFail enrichErr(s".value failed on <${dom.getTagName}>.")
 
   override def checked: F[Boolean] =
     F pass dom.isSelected

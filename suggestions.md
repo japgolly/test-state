@@ -4,26 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 22. Several `DomZipper` failure paths omit `enrichErr`
-
-* **Locations:**
-  * `dom-zipper/shared/src/main/scala/teststate/domzipper/DomZipper.scala` (lines 151–152)
-  * `dom-zipper/js/src/main/scala/teststate/domzipper/DomZipperJsF.scala` (lines 120–121, 132–133, 159–160)
-  * `dom-zipper-jsoup/src/main/scala/teststate/domzipper/jsoup/DomZipperJsoupF.scala` (lines 96–97, 114–115)
-  * `dom-zipper-selenium/src/main/scala/teststate/domzipper/selenium/DomZipperSeleniumF.scala` (lines 133–134)
-* **Current Code:**
-  ```scala
-  // DomZipper.scala
-  final def needAttribute(name: String): F[String] =
-    F.option(getAttribute(name), s"$tagName doesn't have attribute $name")
-  ```
-* **Issue:**
-  `DomZipper.needAttribute`, `.value`, `.checked`, `_parent`, and `domAs` fail without wrapping their error message in `enrichErr(...)`, omitting the `DESC: ... \n HTML: ...` context that all other `DomZipper` errors provide. Since `F.option` and `orFail` take the error string by-name (`=> String`), calling `enrichErr(...)` has zero cost when no error occurs.
-* **Proposed Change:**
-  Wrap the error messages in `needAttribute`, `.value`, `.checked`, `_parent`, and `domAs` with `enrichErr(...)`.
-
----
-
 ## 23. `DomZipperSeleniumF.matches` queries and serializes all matching elements in the entire document; `SeleniumExt.parent()` fails on `<html>`; `addStyleTag` assumes `<head>` exists
 
 * **Locations:**

@@ -15,12 +15,18 @@ object DomZipperJsF {
   type CssSelEngine = DomZipper.CssSelEngine[Dom, Dom]
 
   def safeCastDom[F[_], D <: Dom](dom: Dom)(implicit ct: ClassTag[D], F: ErrorHandler[F]): F[D] =
-    ct.unapply(dom) orFail s"${dom.nodeName} is not a ${ct.runtimeClass}."
+    safeCastDom(dom, identity)
+
+  def safeCastDom[F[_], D <: Dom](dom: Dom, enrichErr: String => String)(implicit ct: ClassTag[D], F: ErrorHandler[F]): F[D] =
+    ct.unapply(dom) orFail enrichErr(s"${dom.nodeName} is not a ${ct.runtimeClass}.")
 
   def liftNode[F[_]](n: dom.Node)(implicit F: ErrorHandler[F]): F[Dom] =
+    liftNode(n, identity)
+
+  def liftNode[F[_]](n: dom.Node, enrichErr: String => String)(implicit F: ErrorHandler[F]): F[Dom] =
     n match {
       case e: dom.Element => F pass e
-      case x              => F fail s"Not an element: $x"
+      case x              => F fail enrichErr(s"Not an element: $x")
     }
 
   private val rootDomFn: DomZipperBase.Layers[Dom] => Dom =
@@ -78,7 +84,7 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     new DomZipperJsF(layers, peek)($, h, g)
 
   override protected def _parent: F[Dom] =
-    liftNode(dom.parentNode)
+    liftNode(dom.parentNode, enrichErr(_))
 
   override protected[domzipper] def _outerHTML: String =
     dynamicString(_.outerHTML)
@@ -115,7 +121,7 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     dom.textContent.trim
 
   override def checked: F[Boolean] =
-    dynamicMethod[Boolean](_.checked) orFail s".checked failed on $dom."
+    dynamicMethod[Boolean](_.checked) orFail enrichErr(s".checked failed on $dom.")
 
   override def classes: Set[String] = {
     val c = dom.classList
@@ -123,7 +129,7 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
   }
 
   override def value: F[String] =
-    dynamicMethod[String](_.value).map(_.toString) orFail s".value failed on $dom."
+    dynamicMethod[String](_.value).map(_.toString) orFail enrichErr(s".value failed on $dom.")
 
   /** Cast DOM to [[js.Dynamic]] and invoke a method expected to return `A` if successful. */
   def dynamicMethod[B](f: js.Dynamic => Any): Option[B] = {
@@ -136,7 +142,7 @@ final class DomZipperJsF[F[_], A](override protected val layers: DomZipperBase.L
     dynamicMethod[Any](f).fold("undefined")(_.toString)
 
   def domAs[D <: Dom](implicit ct: ClassTag[D]): F[D] =
-    safeCastDom[F, D](dom)
+    safeCastDom[F, D](dom, enrichErr(_))
 
   def domAsHtml: F[html.Element] =
     domAs[html.Element]

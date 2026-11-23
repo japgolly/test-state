@@ -119,5 +119,11 @@ object DomZipperSeleniumTest extends TestSuite {
       assert(res.isLeft)
     }
 
+    "valueEnrichErr" - {
+      val Left(err) = $("form").failToEither.value
+      assertContains(err, "DESC:")
+      assertContains(err, "HTML:")
+    }
+
   }
 }

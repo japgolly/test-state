@@ -149,7 +149,7 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
   def value: F[String]
 
   final def needAttribute(name: String): F[String] =
-    F.option(getAttribute(name), s"$tagName doesn't have attribute $name")
+    F.option(getAttribute(name), enrichErr(s"$tagName doesn't have attribute $name"))
 
   final def outerHTML: String = htmlScrub run _outerHTML
   final def innerHTML: String = htmlScrub run _innerHTML

@@ -2,7 +2,7 @@ package teststate.domzipper
 
 import org.scalajs.dom.html
 import scala.reflect.ClassTag
-import teststate.domzipper.DomZipperJsF.{Dom, DomCollection, safeCastDom}
+import teststate.domzipper.DomZipperJsF.{Dom, DomCollection}
 
 object DomCollectionJsExt {
   trait Exports {
@@ -12,10 +12,8 @@ object DomCollectionJsExt {
 }
 
 final class DomCollectionJsExt[F[_], C[_], A](private val self: DomCollection[F, C, A]) extends AnyVal {
-  def domsAs[D <: Dom: ClassTag]: F[C[D]] = {
-    implicit val F = self.F
-    self.traverseDoms(safeCastDom[F, D])
-  }
+  def domsAs[D <: Dom: ClassTag]: F[C[D]] =
+    self.traverse(_.domAs[D])
 
   def domsAsHtml: F[C[html.Element]] =
     domsAs[html.Element]
