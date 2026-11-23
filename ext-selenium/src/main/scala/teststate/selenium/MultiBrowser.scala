@@ -120,15 +120,16 @@ object MultiBrowser {
 
           } else {
             // Start new browser
-            val driver       = newDriver
-            val mutex        = Mutex()
-            val rootTab      = tabSupport.active()(driver)
-            val multiTab     = MultiTab(driver, mutex)(tabSupport)(rootTab)
-            val browser      = Browser(driver, mutex, rootTab, multiTab, Vector.empty)
-            val browserIndex = instances.length
-            instances = instances :+ browser
+            val driver   = newDriver
+            val mutex    = Mutex()
+            val rootTab  = tabSupport.active()(driver)
+            val multiTab = MultiTab(driver, mutex)(tabSupport)(rootTab)
+            val browser  = Browser(driver, mutex, rootTab, multiTab, Vector.empty)
 
             onNewDriver(driver)
+
+            val browserIndex = instances.length
+            instances = instances :+ browser
 
             val setup =
               if (onNewDriverT eq doNothing1) None else Some {
