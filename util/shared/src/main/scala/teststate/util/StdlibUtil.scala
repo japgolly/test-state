@@ -144,7 +144,7 @@ object StdlibUtil {
       new NamedMap(s"$namePlural($desc)", underlying filter f)
 
     def get(k: K): NamedOption[V] =
-      new NamedOption(namePlural, underlying.get(k))
+      new NamedOption(s"$namePlural[$k]", underlying.get(k))
 
     def apply(k: K): V =
       underlying.get(k) match {
@@ -153,11 +153,16 @@ object StdlibUtil {
       }
   }
 
-  implicit def NamedMapToMap[K, V](n: NamedMap[K, V]): Map[K, V] = n.underlying
+  object NamedMap {
+    implicit def toMap[K, V](n: NamedMap[K, V]): Map[K, V] = n.underlying
+  }
+
+  @deprecated("Use NamedMap.toMap", "3.2.0")
+  def NamedMapToMap[K, V](n: NamedMap[K, V]): Map[K, V] = n.underlying
 
   final class TestStateMapExt[K, V](private val self: Map[K, V]) extends AnyVal {
     def named(namePlural: String): NamedMap[K, V] =
-      new NamedMap(namePlural, self.toMap)
+      new NamedMap(namePlural, self)
   }
 
 }

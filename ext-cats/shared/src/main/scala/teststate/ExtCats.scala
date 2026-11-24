@@ -26,10 +26,10 @@ trait ExtCats extends T.Equal.ImplicitsLowPri {
       override def dimap[A, B, C, D](m: M[A, B])(f: C => A)(g: B => D) = p.dimap(m)(f, g)
     }
 
-  implicit def catsNatTransFromTestState[F[_], G[_]](implicit t: F ~> G): T.~~>[F, G] =
+  implicit def catsNatTransToTestState[F[_], G[_]](implicit t: F ~> G): T.~~>[F, G] =
     new T.~~>[F, G] { def apply[A](fa: => F[A]) = t(fa) }
 
-  implicit def catsNatTransToTestState[F[_], G[_]](implicit t: T.~~>[F, G]): F ~> G =
+  implicit def catsNatTransFromTestState[F[_], G[_]](implicit t: T.~~>[F, G]): F ~> G =
     new (F ~> G) { def apply[A](fa: F[A]) = t(fa) }
 
   implicit def catsEqualFromTestState[A](implicit e: Equal[A]): Eq[A] =

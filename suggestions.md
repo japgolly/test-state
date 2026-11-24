@@ -4,36 +4,6 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 36. `StdlibUtil.NamedMap` missing companion object for implicit conversion and key name in `get`, and swapped method names in `ExtCats`
-
-* **Locations:**
-  * `util/shared/src/main/scala/teststate/util/StdlibUtil.scala` (lines 138–161)
-  * `ext-cats/shared/src/main/scala/teststate/ExtCats.scala` (lines 29–39)
-* **Current Code:**
-  ```scala
-  // StdlibUtil.scala
-  final class NamedMap[K, +V](namePlural: String, val underlying: Map[K, V]) {
-    ...
-    def get(k: K): NamedOption[V] =
-      new NamedOption(namePlural, underlying.get(k))
-  }
-  implicit def NamedMapToMap[K, V](n: NamedMap[K, V]): Map[K, V] = n.underlying
-
-  // ExtCats.scala
-  implicit def catsNatTransFromTestState[F[_], G[_]](implicit t: F ~> G): T.~~>[F, G] =
-    new T.~~>[F, G] { def apply[A](fa: => F[A]) = t(fa) }
-
-  implicit def catsNatTransToTestState[F[_], G[_]](implicit t: T.~~>[F, G]): F ~> G =
-    new (F ~> G) { def apply[A](fa: F[A]) = t(fa) }
-  ```
-* **Issue:**
-  1. `NamedOption` and `NamedVector` place their implicit conversions in `object NamedOption` and `object NamedVector`, whereas `NamedMap` has no companion object and `NamedMapToMap` is only in `object StdlibUtil` (not in `trait StdlibUtil` / `teststate.util.Exports`). Also, `NamedMap.get(k)` passes `namePlural` instead of `s"$namePlural[$k]"` to `NamedOption`, losing the key `k` in error messages, and `TestStateMapExt.named` calls a redundant `self.toMap`.
-  2. In `ExtCats`, `catsNatTransFromTestState` and `catsNatTransToTestState` have their names swapped relative to `catsEqualFromTestState` / `catsEqualToTestState` and `catsProfunctorFromTestState`.
-* **Proposed Change:**
-  Add `object NamedMap { implicit def toMap[K, V](n: NamedMap[K, V]): Map[K, V] = n.underlying }`, pass `s"$namePlural[$k]"` in `NamedMap.get(k)`, and fix/alias the method names in `ExtCats`.
-
----
-
 ## 37. Build configuration (`project/Lib.scala`, `project/Build.scala`), example resource cleanup, and minor dead-code / API polish
 
 * **Locations:**
