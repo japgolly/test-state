@@ -34,7 +34,13 @@ object Action {
       apply(_ => None)
   }
 
-  final case class Loop[F[_], R, O, S, E](run: ROS[R, O, S] => Option[LoopStep[F, R, O, S, E]]) extends Inner[F, R, O, S, E]
+  final case class Loop[F[_], R, O, S, E](run: ROS[R, O, S] => LoopStep[F, R, O, S, E],
+                                          cond: Group.Cond[R, O, S, E]) extends Inner[F, R, O, S, E]
+
+  object Loop {
+    def lift[F[_], R, O, S, E](run: ROS[R, O, S] => LoopStep[F, R, O, S, E]): Loop[F, R, O, S, E] =
+      apply[F, R, O, S, E](run, Group.Cond.always)
+  }
 
   final case class Group[F[_], R, O, S, E](actions: Actions[F, R, O, S, E],
                                            cond: Group.Cond[R, O, S, E]) extends Inner[F, R, O, S, E]
@@ -126,7 +132,7 @@ object Action {
       case a: Single [F, R, O, S, E] => a.copy(run = a.run when f)
       case a: Group  [F, R, O, S, E] => a.copy(cond = a.cond |+| Group.Cond.when(f))
       case a: SubTest[F, R, O, S, E] => a.copy(action = a.action when f)
-      case a: Loop   [F, R, O, S, E] => a.copy(run = a.run when f)
+      case a: Loop   [F, R, O, S, E] => a.copy(cond = a.cond |+| Group.Cond.when(f))
     })
 
   implicit def actionOuterInstanceConditional[F[_], R, O, S, E]: Conditional[Outer[F, R, O, S, E], ROS[R, O, S]] =

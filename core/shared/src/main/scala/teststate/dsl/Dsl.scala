@@ -48,7 +48,7 @@ object Dsl {
     protected def emptyAction: Actions
 
     final def apply(name: ActionName)(f: ROS => LoopStep): Actions = {
-      val inner = Action.Loop[F, R, O, S, E](ros => Some(f(ros)))
+      val inner = Action.Loop.lift[F, R, O, S, E](f)
       Action.liftInner(inner)(name)
     }
 
