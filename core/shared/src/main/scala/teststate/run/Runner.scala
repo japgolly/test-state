@@ -143,13 +143,14 @@ object Runner {
 
     def +=(a: A): Unit =
       if (set ne null) {
-        val _ = set.add(new RefEq(a))
+        set.add(new RefEq(a))
+        ()
       } else if (first eq null) {
         first = a
       } else if (first ne a) {
         val s = mutable.LinkedHashSet.empty[RefEq[A]]
-        val _ = s.add(new RefEq(first))
-        val _ = s.add(new RefEq(a))
+        s.add(new RefEq(first))
+        s.add(new RefEq(a))
         set = s
       }
 

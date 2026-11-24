@@ -111,9 +111,7 @@ object ExecutionModel {
         def runTask(): Unit =
           ec.execute(new Runnable {
             override def run(): Unit = {
-              try {
-                promise.completeWith(task)
-              } catch {
+              try promise.completeWith(task) catch {
                 case t: Throwable => promise.failure(t)
               }
               ()
@@ -121,18 +119,14 @@ object ExecutionModel {
           })
         val delayMs = startAt.toEpochMilli - System.currentTimeMillis()
         if (delayMs <= 0)
-          try
-            runTask()
-          catch {
+          try runTask() catch {
             case t: Throwable => promise.failure(t)
           }
         else {
           val timerTask = new TimerTask {
             override def run(): Unit = runTask()
           }
-          try
-            futureTimer.schedule(timerTask, delayMs)
-          catch {
+          try futureTimer.schedule(timerTask, delayMs) catch {
             case t: Throwable => promise.failure(t)
           }
         }
