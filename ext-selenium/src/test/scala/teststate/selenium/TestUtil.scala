@@ -12,13 +12,13 @@ object TestUtil extends japgolly.microlibs.testutil.TestUtil {
 
   def newChrome() = {
     val options = new ChromeOptions()
-    options.setHeadless(true)
+    options.addArguments("--headless=new")
     new ChromeDriver(options)
   }
 
   def newFirefox() = {
     val options = new FirefoxOptions()
-    options.setHeadless(true)
+    options.addArguments("-headless")
     new FirefoxDriver(options)
   }
 
