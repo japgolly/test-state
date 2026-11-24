@@ -216,6 +216,7 @@ object ActionOps {
             case a: Single [F, R, O, S, E] => a.copy(run = a.run(_).map(f => () => t(f())))
             case a: Group  [F, R, O, S, E] => a.copy(actions = a.actions trans t)
             case a: SubTest[F, R, O, S, E] => a.copy(action = a.action trans t)
+            case a: Loop   [F, R, O, S, E] => a.copy(run = a.run(_).map(_ trans t))
           }
 
         override def mapR[F[_], R, O, S, E, X](x: Inner[F, R, O, S, E])(f: X => R) =
@@ -223,6 +224,7 @@ object ActionOps {
             case Single (r)    => Single (i => r(i mapR f))
             case Group  (a, c) => Group  (a mapR f, c.mapR(f))
             case SubTest(a, i) => SubTest(a mapR f, i)
+            case Loop   (r)    => Loop   (i => r(i mapR f).map(_.mapR(f)))
           }
 
         override def mapOS[F[_], R, O, S, E, X, Y](action: Inner[F, R, O, S, E])(f: X => O, g: Y => S)(h: (Y, S) => Y)(implicit em: ExecutionModel[F]) =
@@ -240,6 +242,9 @@ object ActionOps {
 
             case SubTest(a, i) =>
               SubTest(a.mapOS(f, g)(h), i.mapOS(f, g))
+
+            case Loop(run) =>
+              Loop(i => run(i.mapOS(f, g)).map(_.mapOS(f, g)(h)))
           }
 
         override def mapE[F[_], R, O, S, E, X](action: Inner[F, R, O, S, E])(f: E => X)(implicit em: ExecutionModel[F]) =
@@ -247,6 +252,7 @@ object ActionOps {
             case Single (r)    => Single(r(_).map(fn => () => em.map(fn())(_.bimap(f, _.andThen(_ leftMap f)))))
             case Group  (a, c) => Group(a mapE f, c mapE f)
             case SubTest(a, i) => SubTest(a mapE f, i mapE f)
+            case Loop   (r)    => Loop(r(_).map(_.mapE(f)))
           }
 
         override def pmapR[F[_], R, O, S, E, X](x: Inner[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]) =
@@ -259,6 +265,12 @@ object ActionOps {
 
             case SubTest(a, i) =>
               SubTest(a pmapR f, i)
+
+            case Loop(run) =>
+              Loop(xos => f(xos.ref) match {
+                case Right(r) => run(xos.withRef(r)).map(_.pmapR(f))
+                case Left(e)  => Some(LoopStep.Fail(e))
+              })
           }
 
         override def pmapO[F[_], R, O, S, E, X](action: Inner[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
@@ -273,6 +285,12 @@ object ActionOps {
 
             case SubTest(a, i) =>
               SubTest(a pmapO f, i pmapO f)
+
+            case Loop(run) =>
+              Loop(rxs => f(rxs.obs) match {
+                case Right(o) => run(rxs.withObs(o)).map(_.pmapO(f))
+                case Left(e)  => Some(LoopStep.Fail(e))
+              })
           }
 
         override def modS[F[_], R, O, S, E](x: Inner[F, R, O, S, E])(name: Option[String], m: O => S => E Or S)(implicit em: ExecutionModel[F]) =
@@ -282,8 +300,15 @@ object ActionOps {
                 run(_).map(f => () => em.map(f())(
                   _.map(g => (o: O) => g(o) flatMap m(o))
                 )))
-            case Group(a, c)   => Group(a.modS(name, m), c)
-            case SubTest(a, i) => SubTest(a.modS(name, m), i)
+
+            case Group(a, c) =>
+              Group(a.modS(name, m), c)
+
+            case SubTest(a, i) =>
+              SubTest(a.modS(name, m), i)
+
+            case Loop(run) =>
+              Loop(ros => run(ros).map(_.modS(name, m, ros.obs)))
           }
       }
 
@@ -326,6 +351,7 @@ object ActionOps {
             case Action.Single(_)      => VectorTree.one(name)
             case Action.Group(a2, _)   => VectorTree.one(name, a2.nameTree)
             case Action.SubTest(a2, _) => VectorTree.one(name, a2.nameTree)
+            case Action.Loop(_)        => VectorTree.one(name)
           }
         }
       }
