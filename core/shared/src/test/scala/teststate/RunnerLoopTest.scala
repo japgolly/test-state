@@ -66,9 +66,9 @@ object RunnerLoopTest extends TestSuite {
     "basic" - {
       "immediateBreak" - {
         var afterRan = false
-        val d = Dsl[Counter, Int, Int]
-        val loop = d.loop("L")(_ => d.loop.break)
-        val after = d.action("After")(_ => afterRan = true)
+        val dsl = Dsl[Counter, Int, Int]
+        val loop = dsl.loop("L")(_ => dsl.loop.break)
+        val after = dsl.action("After")(_ => afterRan = true)
         val c = new Counter(0)
 
         val r1 = Plan.action(loop).test(Observer(_.value)).withInitialState(0).withRef(c).run()
@@ -87,10 +87,10 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "actThenBreak" - {
-        val d = Dsl[Counter, Int, Unit]
-        val inc = d.action("Inc")(_.ref.inc())
-        val loop = d.loop("Count to 3") { ros =>
-          if (ros.obs < 3) d.loop.act(inc) else d.loop.break
+        val dsl = Dsl[Counter, Int, Unit]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val loop = dsl.loop("Count to 3") { ros =>
+          if (ros.obs < 3) dsl.loop.act(inc) else dsl.loop.break
         }
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
@@ -109,13 +109,13 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "multiActionPerIteration" - {
-        val d = Dsl[Counter, Int, Int]
-        val a1 = d.action("A1")(_.ref.inc("A1")).updateState(_ + 1)
-        val a2 = d.action("A2")(_.ref.inc("A2")).updateState(_ + 10)
+        val dsl = Dsl[Counter, Int, Int]
+        val a1 = dsl.action("A1")(_.ref.inc("A1")).updateState(_ + 1)
+        val a2 = dsl.action("A2")(_.ref.inc("A2")).updateState(_ + 10)
         var finalState = -1
-        val after = d.action("After")(ros => finalState = ros.state)
-        val loop = d.loop("Pairs") { ros =>
-          if (ros.obs < 4) d.loop.act(a1 >> a2) else d.loop.break
+        val after = dsl.action("After")(ros => finalState = ros.state)
+        val loop = dsl.loop("Pairs") { ros =>
+          if (ros.obs < 4) dsl.loop.act(a1 >> a2) else dsl.loop.break
         }
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).withInitialState(0).withRef(c).run()
@@ -138,10 +138,10 @@ object RunnerLoopTest extends TestSuite {
 
       "emptyAct" - {
         var iterations = 0
-        val d = Dsl[Unit, Unit, Unit]
-        val loop = d.loop("EmptyAct") { _ =>
+        val dsl = Dsl[Unit, Unit, Unit]
+        val loop = dsl.loop("EmptyAct") { _ =>
           iterations += 1
-          if (iterations < 3) d.loop.act(d.emptyAction) else d.loop.break
+          if (iterations < 3) dsl.loop.act(dsl.emptyAction) else dsl.loop.break
         }
         val r = Plan.action(loop).testU.stateless.runU()
         assertEq(r.result, Result.Pass)
@@ -150,11 +150,11 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "actWithSkippedInnerAction" - {
-        val d = Dsl[Counter, Int, Unit]
-        val inc = d.action("Inc")(_.ref.inc())
-        val skipped = d.action("Never")(_.ref.inc("never")).skip
-        val loop = d.loop("WithSkip") { ros =>
-          if (ros.obs < 2) d.loop.act(inc >> skipped) else d.loop.break
+        val dsl = Dsl[Counter, Int, Unit]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val skipped = dsl.action("Never")(_.ref.inc("never")).skip
+        val loop = dsl.loop("WithSkip") { ros =>
+          if (ros.obs < 2) dsl.loop.act(inc >> skipped) else dsl.loop.break
         }
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
@@ -172,13 +172,13 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "actWithGroupAndChoice" - {
-        val d = Dsl[Counter, Int, Unit]
-        val a1 = d.action("A1")(_.ref.inc("A1"))
-        val a2 = d.action("A2")(_.ref.inc("A2"))
+        val dsl = Dsl[Counter, Int, Unit]
+        val a1 = dsl.action("A1")(_.ref.inc("A1"))
+        val a2 = dsl.action("A2")(_.ref.inc("A2"))
         val grp = (a1 >> a2).group("Pair")
-        val chosen = d.chooseAction("Pick")(ros => if (ros.obs == 0) grp else a1)
-        val loop = d.loop("Complex") { ros =>
-          if (ros.obs < 3) d.loop.act(chosen) else d.loop.break
+        val chosen = dsl.chooseAction("Pick")(ros => if (ros.obs == 0) grp else a1)
+        val loop = dsl.loop("Complex") { ros =>
+          if (ros.obs < 3) dsl.loop.act(chosen) else dsl.loop.break
         }
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
@@ -198,11 +198,11 @@ object RunnerLoopTest extends TestSuite {
       "refByName" - {
         var refVal = 0
         var seenRefs = Vector.empty[Int]
-        val d = Dsl[Int, Unit, Unit]
-        val bump = d.action("Bump")(ros => refVal = ros.ref + 1)
-        val loop = d.loop("RefByName") { ros =>
+        val dsl = Dsl[Int, Unit, Unit]
+        val bump = dsl.action("Bump")(ros => refVal = ros.ref + 1)
+        val loop = dsl.loop("RefByName") { ros =>
           seenRefs :+= ros.ref
-          if (ros.ref < 3) d.loop.act(bump) else d.loop.break
+          if (ros.ref < 3) dsl.loop.act(bump) else dsl.loop.break
         }
         val r = Plan.action(loop).testU.stateless.withRefByName(refVal).run()
         assertEq(r.result, Result.Pass)
@@ -211,10 +211,10 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "sequentialLoops" - {
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc()).updateState(_ + 1)
-        val loop1 = d.loop("Loop1")(ros => if (ros.state < 2) d.loop.act(inc) else d.loop.break)
-        val loop2 = d.loop("Loop2")(ros => if (ros.state < 5) d.loop.act(inc) else d.loop.break)
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc()).updateState(_ + 1)
+        val loop1 = dsl.loop("Loop1")(ros => if (ros.state < 2) dsl.loop.act(inc) else dsl.loop.break)
+        val loop2 = dsl.loop("Loop2")(ros => if (ros.state < 5) dsl.loop.act(inc) else dsl.loop.break)
         val c = new Counter(0)
         val r = Plan.action(loop1 >> loop2).test(Observer(_.value)).withInitialState(0).withRef(c).run()
         assertEq(r.result, Result.Pass)
@@ -223,13 +223,13 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "nestedLoops" - {
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc()).updateState(_ + 1)
-        val inner = d.loop("Inner") { ros =>
-          if (ros.obs % 2 != 0 || ros.state == 0) d.loop.act(inc) else d.loop.break
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc()).updateState(_ + 1)
+        val inner = dsl.loop("Inner") { ros =>
+          if (ros.obs % 2 != 0 || ros.state == 0) dsl.loop.act(inc) else dsl.loop.break
         }
-        val outer = d.loop("Outer") { ros =>
-          if (ros.obs < 4) d.loop.act(inc >> inner) else d.loop.break
+        val outer = dsl.loop("Outer") { ros =>
+          if (ros.obs < 4) dsl.loop.act(inc >> inner) else dsl.loop.break
         }
         val c = new Counter(0)
         val r = Plan.action(outer).test(Observer(_.value)).withInitialState(0).withRef(c).run()
@@ -249,11 +249,11 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "subTestInsideLoop" - {
-        val d = Dsl[Counter, Int, Int]
-        val obsEqState = d.focus("Val").obsAndState(identity, identity).assert.equal
-        val inc = d.action("Inc")(_.ref.inc()).updateState(_ + 1)
+        val dsl = Dsl[Counter, Int, Int]
+        val obsEqState = dsl.focus("Val").obsAndState(identity, identity).assert.equal
+        val inc = dsl.action("Inc")(_.ref.inc()).updateState(_ + 1)
         val sub = Plan(inc, obsEqState).asAction("Sub")
-        val loop = d.loop("LoopSub")(ros => if (ros.obs < 2) d.loop.act(sub) else d.loop.break)
+        val loop = dsl.loop("LoopSub")(ros => if (ros.obs < 2) dsl.loop.act(sub) else dsl.loop.break)
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).withInitialState(0).withRef(c).run()
         assertEq(r.result, Result.Pass)
@@ -263,10 +263,10 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "loopInsideSubTest" - {
-        val d = Dsl[Counter, Int, Int]
-        val obsEqState = d.focus("Val").obsAndState(identity, identity).assert.equal
-        val inc = d.action("Inc")(_.ref.inc()).updateState(_ + 1)
-        val loop = d.loop("InnerLoop")(ros => if (ros.obs < 2) d.loop.act(inc) else d.loop.break)
+        val dsl = Dsl[Counter, Int, Int]
+        val obsEqState = dsl.focus("Val").obsAndState(identity, identity).assert.equal
+        val inc = dsl.action("Inc")(_.ref.inc()).updateState(_ + 1)
+        val loop = dsl.loop("InnerLoop")(ros => if (ros.obs < 2) dsl.loop.act(inc) else dsl.loop.break)
         val sub = Plan(loop, obsEqState).asAction("Sub")
         val c = new Counter(0)
         val r = Plan.action(sub).test(Observer(_.value)).withInitialState(0).withRef(c).run()
@@ -276,11 +276,11 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "timesOnLoop" - {
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc()).updateState(_ + 1)
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc()).updateState(_ + 1)
         var target = 0
-        val bumpTarget = d.action("SetTarget")(_ => target += 2)
-        val loop = d.loop("ReachTarget")(ros => if (ros.obs < target) d.loop.act(inc) else d.loop.break)
+        val bumpTarget = dsl.action("SetTarget")(_ => target += 2)
+        val loop = dsl.loop("ReachTarget")(ros => if (ros.obs < target) dsl.loop.act(inc) else dsl.loop.break)
         val c = new Counter(0)
         val r = Plan.action((bumpTarget >> loop).times(2)).test(Observer(_.value)).withInitialState(0).withRef(c).run()
         assertEq(r.result, Result.Pass)
@@ -289,10 +289,10 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "contextualLoopName" - {
-        val d = Dsl[Counter, Int, Unit]
-        val inc = d.action("Inc")(_.ref.inc())
-        val nameFn = NameFn[d.ROS](o => s"Loop(start=${o.fold("?")(_.obs.toString)})")
-        val loop = d.loop(nameFn)(ros => if (ros.obs < 2) d.loop.act(inc) else d.loop.break)
+        val dsl = Dsl[Counter, Int, Unit]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val nameFn = NameFn[dsl.ROS](o => s"Loop(start=${o.fold("?")(_.obs.toString)})")
+        val loop = dsl.loop(nameFn)(ros => if (ros.obs < 2) dsl.loop.act(inc) else dsl.loop.break)
         val c = new Counter(1)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
         assertRun(r,
@@ -309,12 +309,12 @@ object RunnerLoopTest extends TestSuite {
       "actUpdatesState" - {
         var observedStates = Vector.empty[Int]
         var stateAfter = -1
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc()).updateState(_ + 10)
-        val after = d.action("After")(ros => stateAfter = ros.state)
-        val loop = d.loop("StateLoop") { ros =>
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc()).updateState(_ + 10)
+        val after = dsl.action("After")(ros => stateAfter = ros.state)
+        val loop = dsl.loop("StateLoop") { ros =>
           observedStates :+= ros.state
-          if (ros.obs < 3) d.loop.act(inc) else d.loop.break
+          if (ros.obs < 3) dsl.loop.act(inc) else dsl.loop.break
         }
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).withInitialState(1).withRef(c).run()
@@ -326,11 +326,11 @@ object RunnerLoopTest extends TestSuite {
       "setState" - {
         var observedStates = Vector.empty[Int]
         var stateAfter = -1
-        val d = Dsl[Unit, Unit, Int]
-        val after = d.action("After")(ros => stateAfter = ros.state)
-        val loop = d.loop("SetState") { ros =>
+        val dsl = Dsl[Unit, Unit, Int]
+        val after = dsl.action("After")(ros => stateAfter = ros.state)
+        val loop = dsl.loop("SetState") { ros =>
           observedStates :+= ros.state
-          if (ros.state < 3) d.loop.setState(ros.state + 1) else d.loop.break
+          if (ros.state < 3) dsl.loop.setState(ros.state + 1) else dsl.loop.break
         }
         val r = Plan.action(loop >> after).testU.withInitialState(0).runU()
         assertEq(r.result, Result.Pass)
@@ -340,12 +340,12 @@ object RunnerLoopTest extends TestSuite {
 
       "setStateAndBreak" - {
         var stateAfter = -1
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc())
-        val stateFocus = d.focus("state").value(_.state)
-        val after = d.action("After")(ros => stateAfter = ros.state)
-        val loop = d.loop("BreakState") { ros =>
-          if (ros.obs < 2) d.loop.act(inc) else d.loop.setStateAndBreak(99)
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val stateFocus = dsl.focus("state").value(_.state)
+        val after = dsl.action("After")(ros => stateAfter = ros.state)
+        val loop = dsl.loop("BreakState") { ros =>
+          if (ros.obs < 2) dsl.loop.act(inc) else dsl.loop.setStateAndBreak(99)
         } +> stateFocus.assert(99)
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).withInitialState(0).withRef(c).run()
@@ -357,10 +357,10 @@ object RunnerLoopTest extends TestSuite {
 
       "setStateAndBreakImmediate" - {
         var stateAfter = -1
-        val d = Dsl[Unit, Unit, Int]
-        val stateFocus = d.focus("state").value(_.state)
-        val after = d.action("After")(ros => stateAfter = ros.state)
-        val loop = d.loop("ImmediateBreakState")(_ => d.loop.setStateAndBreak(42)) +> stateFocus.assert(42)
+        val dsl = Dsl[Unit, Unit, Int]
+        val stateFocus = dsl.focus("state").value(_.state)
+        val after = dsl.action("After")(ros => stateAfter = ros.state)
+        val loop = dsl.loop("ImmediateBreakState")(_ => dsl.loop.setStateAndBreak(42)) +> stateFocus.assert(42)
         val r = Plan.action(loop >> after).testU.withInitialState(0).runU()
         assertEq(r.result, Result.Pass)
         assertEq(stateAfter, 42)
@@ -369,10 +369,10 @@ object RunnerLoopTest extends TestSuite {
       "breakModStateLeft" - {
         var postRan = false
         var afterRan = false
-        val d = Dsl[Unit, Unit, Int]
-        val post = d.point("Post")(_ => { postRan = true; None })
-        val after = d.action("After")(_ => afterRan = true)
-        val loop = d.loop("BadBreak")(_ => LoopStep.Break[Id, Unit, Unit, Int, String](Some(_ => OrLeft("bad break state")))) +> post
+        val dsl = Dsl[Unit, Unit, Int]
+        val post = dsl.point("Post")(_ => { postRan = true; None })
+        val after = dsl.action("After")(_ => afterRan = true)
+        val loop = dsl.loop("BadBreak")(_ => LoopStep.Break[Id, Unit, Unit, Int, String](Some(_ => OrLeft("bad break state")))) +> post
         val r = Plan.action(loop >> after).testU.withInitialState(0).runU()
         assert(r.failed)
         assertEq(r.failure, Some(Failure.NoCause("bad break state")))
@@ -383,9 +383,9 @@ object RunnerLoopTest extends TestSuite {
       "breakModStateException" - {
         val boom = new RuntimeException("break state boom")
         var postRan = false
-        val d = Dsl[Unit, Unit, Int]
-        val post = d.point("Post")(_ => { postRan = true; None })
-        val loop = d.loop("ThrowBreak")(_ => LoopStep.Break[Id, Unit, Unit, Int, String](Some(_ => throw boom))) +> post
+        val dsl = Dsl[Unit, Unit, Int]
+        val post = dsl.point("Post")(_ => { postRan = true; None })
+        val loop = dsl.loop("ThrowBreak")(_ => LoopStep.Break[Id, Unit, Unit, Int, String](Some(_ => throw boom))) +> post
         val r = Plan.action(loop).testU.withInitialState(0).runU()
         assert(r.failed)
         r.failure match {
@@ -400,16 +400,16 @@ object RunnerLoopTest extends TestSuite {
         import vc.em
         var world = 0
         var stateAfter = -1
-        val d = Dsl.full[Thunk, Unit, Int, Int, String]
-        val bump = d.action("Bump")(_ => () => { world += 1 })
-        val after = d.action("After")(ros => () => { stateAfter = ros.state })
-        val loop = d.loop("OuterMod") { ros =>
-          if (ros.obs == 0) d.loop.act(bump)
+        val dsl = Dsl.full[Thunk, Unit, Int, Int, String]
+        val bump = dsl.action("Bump")(_ => () => { world += 1 })
+        val after = dsl.action("After")(ros => () => { stateAfter = ros.state })
+        val loop = dsl.loop("OuterMod") { ros =>
+          if (ros.obs == 0) dsl.loop.act(bump)
           else if (ros.obs == 1) {
             world += 1
-            d.loop.sleepMs(10)
-          } else if (ros.obs == 2) d.loop.act(bump)
-          else d.loop.break
+            dsl.loop.sleepMs(10)
+          } else if (ros.obs == 2) dsl.loop.act(bump)
+          else dsl.loop.break
         }.updateState(_ + 100)
 
         val r = Plan.action(loop >> after).test(Observer(_ => world)).withInitialState(5).withoutRef.run()()
@@ -421,11 +421,11 @@ object RunnerLoopTest extends TestSuite {
 
       "outerUpdateStateComposesWithSetStateAndBreak" - {
         var stateAfter = -1
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc())
-        val after = d.action("After")(ros => stateAfter = ros.state)
-        val loop = d.loop("ComposeBreak") { ros =>
-          if (ros.obs < 2) d.loop.act(inc) else d.loop.setStateAndBreak(10)
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val after = dsl.action("After")(ros => stateAfter = ros.state)
+        val loop = dsl.loop("ComposeBreak") { ros =>
+          if (ros.obs < 2) dsl.loop.act(inc) else dsl.loop.setStateAndBreak(10)
         }.updateState(_ * 3)
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).withInitialState(1).withRef(c).run()
@@ -436,11 +436,11 @@ object RunnerLoopTest extends TestSuite {
 
       "outerUpdateStateBySeesFinalObs" - {
         var stateAfter = -1
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc())
-        val after = d.action("After")(ros => stateAfter = ros.state)
-        val loop = d.loop("FinalObs") { ros =>
-          if (ros.obs < 4) d.loop.act(inc) else d.loop.break
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val after = dsl.action("After")(ros => stateAfter = ros.state)
+        val loop = dsl.loop("FinalObs") { ros =>
+          if (ros.obs < 4) dsl.loop.act(inc) else dsl.loop.break
         }.updateStateBy(os => os.obs * 10 + os.state)
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).withInitialState(2).withRef(c).run()
@@ -450,11 +450,11 @@ object RunnerLoopTest extends TestSuite {
 
       "outerUpdateStateAttemptFail" - {
         var afterRan = false
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc())
-        val after = d.action("After")(_ => afterRan = true)
-        val loop = d.loop("FailMod") { ros =>
-          if (ros.obs < 1) d.loop.act(inc) else d.loop.break
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val after = dsl.action("After")(_ => afterRan = true)
+        val loop = dsl.loop("FailMod") { ros =>
+          if (ros.obs < 1) dsl.loop.act(inc) else dsl.loop.break
         }.updateStateAttempt(_ => OrLeft("outer mod failed"))
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).withInitialState(0).withRef(c).run()
@@ -466,9 +466,9 @@ object RunnerLoopTest extends TestSuite {
 
       "outerUpdateStateNotAppliedWhenSkipped" - {
         var stateAfter = -1
-        val d = Dsl[Unit, Unit, Int]
-        val after = d.action("After")(ros => stateAfter = ros.state)
-        val loop = d.loop("Skipped")(_ => d.loop.break).when(_ => false).updateState(_ + 100)
+        val dsl = Dsl[Unit, Unit, Int]
+        val after = dsl.action("After")(ros => stateAfter = ros.state)
+        val loop = dsl.loop("Skipped")(_ => dsl.loop.break).when(_ => false).updateState(_ + 100)
         val r = Plan.action(loop >> after).testU.withInitialState(7).runU()
         assertEq(r.result, Result.Pass)
         assertEq(stateAfter, 7)
@@ -476,8 +476,8 @@ object RunnerLoopTest extends TestSuite {
 
       "outerUpdateStateNotAppliedOnFail" - {
         var modCalled = false
-        val d = Dsl[Unit, Unit, Int]
-        val loop = d.loop("FailLoop")(_ => d.loop.fail("nope")).updateState { s =>
+        val dsl = Dsl[Unit, Unit, Int]
+        val loop = dsl.loop("FailLoop")(_ => dsl.loop.fail("nope")).updateState { s =>
           modCalled = true
           s + 100
         }
@@ -493,14 +493,14 @@ object RunnerLoopTest extends TestSuite {
         val vc = new VirtualClock(initialMs = 5000L, onSchedule = { _ => externalValue += 1 })
         import vc.em
 
-        val d = Dsl.full[Thunk, Unit, Int, Unit, String]
+        val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
         var seenObs = Vector.empty[Int]
-        val loop = d.loop("WaitForReady") { ros =>
+        val loop = dsl.loop("WaitForReady") { ros =>
           seenObs :+= ros.obs
           ros.obs match {
-            case 0 => d.loop.sleepMs(100)
-            case 1 => d.loop.sleep(JavaDuration.ofMillis(250))
-            case _ => d.loop.break
+            case 0 => dsl.loop.sleepMs(100)
+            case 1 => dsl.loop.sleep(JavaDuration.ofMillis(250))
+            case _ => dsl.loop.break
           }
         }
         val r = Plan.action(loop).test(Observer(_ => externalValue)).stateless.withoutRef.run()()
@@ -526,9 +526,9 @@ object RunnerLoopTest extends TestSuite {
         val vc = new VirtualClock(initialMs = 1000L, onSchedule = { _ => externalValue += 1 })
         import vc.em
 
-        val d = Dsl.full[Thunk, Unit, Int, Unit, String]
-        val loop = d.loop("ZeroSleep") { ros =>
-          if (ros.obs == 0) d.loop.sleep(JavaDuration.ZERO) else d.loop.break
+        val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
+        val loop = dsl.loop("ZeroSleep") { ros =>
+          if (ros.obs == 0) dsl.loop.sleep(JavaDuration.ZERO) else dsl.loop.break
         }
         val r = Plan.action(loop).test(Observer(_ => externalValue)).stateless.withoutRef.run()()
         assertEq(r.result, Result.Pass)
@@ -544,15 +544,15 @@ object RunnerLoopTest extends TestSuite {
         val vc = new VirtualClock(initialMs = 2000L, onSchedule = { _ => externalValue += 1 })
         import vc.em
 
-        val d = Dsl.full[Thunk, Unit, Int, Int, String]
+        val dsl = Dsl.full[Thunk, Unit, Int, Int, String]
         var pairs = Vector.empty[(Int, Int)]
         var stateAfter = -1
-        val after = d.action("After")(ros => () => { stateAfter = ros.state })
-        val loop = d.loop("StateSleep") { ros =>
+        val after = dsl.action("After")(ros => () => { stateAfter = ros.state })
+        val loop = dsl.loop("StateSleep") { ros =>
           pairs :+= (ros.obs -> ros.state)
-          if (ros.obs == 0) d.loop.setStateAndSleepMs(10, 50)
-          else if (ros.obs == 1) d.loop.setStateAndSleep(20, JavaDuration.ofMillis(75))
-          else d.loop.break
+          if (ros.obs == 0) dsl.loop.setStateAndSleepMs(10, 50)
+          else if (ros.obs == 1) dsl.loop.setStateAndSleep(20, JavaDuration.ofMillis(75))
+          else dsl.loop.break
         }
         val r = Plan.action(loop >> after).test(Observer(_ => externalValue)).withInitialState(0).withoutRef.run()()
         assertEq(r.result, Result.Pass)
@@ -569,9 +569,9 @@ object RunnerLoopTest extends TestSuite {
         import vc.em
 
         var postRan = false
-        val d = Dsl.full[Thunk, Unit, Unit, Int, String]
-        val post = d.point("Post")(_ => { postRan = true; None })
-        val loop = d.loop("BadSleepState") { _ =>
+        val dsl = Dsl.full[Thunk, Unit, Unit, Int, String]
+        val post = dsl.point("Post")(_ => { postRan = true; None })
+        val loop = dsl.loop("BadSleepState") { _ =>
           LoopStep.Sleep[Thunk, Unit, Unit, Int, String](JavaDuration.ofMillis(50), Some(_ => OrLeft("sleep state err")))
         } +> post
         val r = Plan.action(loop).testU.withInitialState(0).withoutRef.run()()
@@ -586,8 +586,8 @@ object RunnerLoopTest extends TestSuite {
         import vc.em
 
         val boom = new RuntimeException("sleep state boom")
-        val d = Dsl.full[Thunk, Unit, Unit, Int, String]
-        val loop = d.loop("ThrowSleepState") { _ =>
+        val dsl = Dsl.full[Thunk, Unit, Unit, Int, String]
+        val loop = dsl.loop("ThrowSleepState") { _ =>
           LoopStep.Sleep[Thunk, Unit, Unit, Int, String](JavaDuration.ofMillis(50), Some(_ => throw boom))
         }
         val r = Plan.action(loop).testU.withInitialState(0).withoutRef.run()()
@@ -607,17 +607,17 @@ object RunnerLoopTest extends TestSuite {
 
           var pointInvSeen = Vector.empty[(Int, Int)]
           var deltaInvSeen = Vector.empty[(Int, Int)]
-          val d = Dsl.full[Thunk, Unit, Int, Int, String]
-          val pointInv = d.point("obs==state") { os =>
+          val dsl = Dsl.full[Thunk, Unit, Int, Int, String]
+          val pointInv = dsl.point("obs==state") { os =>
             pointInvSeen :+= (os.obs -> os.state)
             if (os.obs == os.state) None else Some(s"${os.obs} != ${os.state}")
           }
-          val deltaInv = d.around("monotonic")(_.obs) { (after, before) =>
+          val deltaInv = dsl.around("monotonic")(_.obs) { (after, before) =>
             deltaInvSeen :+= (before -> after.obs)
             if (after.obs >= before) None else Some(s"regressed $before -> ${after.obs}")
           }
-          val loop = d.loop("SleepInv") { ros =>
-            if (ros.obs < 2) d.loop.setStateAndSleepMs(ros.state + 1, 50) else d.loop.break
+          val loop = dsl.loop("SleepInv") { ros =>
+            if (ros.obs < 2) dsl.loop.setStateAndSleepMs(ros.state + 1, 50) else dsl.loop.break
           }
           val r = Plan(loop, pointInv & deltaInv).test(Observer(_ => externalValue)).withInitialState(0).withoutRef.run()()
           assertEq(r.result, Result.Pass)
@@ -634,13 +634,13 @@ object RunnerLoopTest extends TestSuite {
 
           var iterations = 0
           var postRan = false
-          val d = Dsl.full[Thunk, Unit, Int, Int, String]
-          val inv = d.focus("Val").obsAndState(identity, identity).assert.equal
-          val post = d.point("Post")(_ => { postRan = true; None })
+          val dsl = Dsl.full[Thunk, Unit, Int, Int, String]
+          val inv = dsl.focus("Val").obsAndState(identity, identity).assert.equal
+          val post = dsl.point("Post")(_ => { postRan = true; None })
           // Sleeps without updating state, so after sleep obs=1 != state=0 -> invariant fails!
-          val loop = d.loop("SleepInvFail") { _ =>
+          val loop = dsl.loop("SleepInvFail") { _ =>
             iterations += 1
-            if (iterations <= 5) d.loop.sleepMs(50) else d.loop.break
+            if (iterations <= 5) dsl.loop.sleepMs(50) else dsl.loop.break
           } +> post
           val r = Plan(loop, inv).test(Observer(_ => externalValue)).withInitialState(0).withoutRef.run()()
           assert(r.failed)
@@ -654,13 +654,13 @@ object RunnerLoopTest extends TestSuite {
           import vc.em
 
           var iterations = 0
-          val d = Dsl.full[Thunk, Unit, Int, Unit, String]
-          val deltaInv = d.around("nonDecreasing")(_.obs) { (after, before) =>
+          val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
+          val deltaInv = dsl.around("nonDecreasing")(_.obs) { (after, before) =>
             if (after.obs >= before) None else Some(s"dropped $before -> ${after.obs}")
           }
-          val loop = d.loop("SleepDeltaFail") { _ =>
+          val loop = dsl.loop("SleepDeltaFail") { _ =>
             iterations += 1
-            if (iterations <= 5) d.loop.sleepMs(50) else d.loop.break
+            if (iterations <= 5) dsl.loop.sleepMs(50) else dsl.loop.break
           }
           val r = Plan(loop, deltaInv).test(Observer(_ => externalValue)).stateless.withoutRef.run()()
           assert(r.failed)
@@ -674,12 +674,12 @@ object RunnerLoopTest extends TestSuite {
         val vc = new VirtualClock()
         import vc.em
 
-        val d = Dsl.full[Thunk, Unit, Int, Unit, String]
+        val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
         val obs = Observer.attempt[Unit, Int, String] { _ =>
           obsCalls += 1
           if (obsCalls == 1) OrRight(0) else OrLeft("obs failed after sleep")
         }
-        val loop = d.loop("ObsFailSleep")(ros => if (ros.obs == 0) d.loop.sleepMs(20) else d.loop.break)
+        val loop = dsl.loop("ObsFailSleep")(ros => if (ros.obs == 0) dsl.loop.sleepMs(20) else dsl.loop.break)
         val r = Plan.action(loop).test(obs).stateless.withoutRef.run()()
         assert(r.failed)
         assertEq(r.failure, Some(Failure.NoCause("obs failed after sleep")))
@@ -690,15 +690,15 @@ object RunnerLoopTest extends TestSuite {
         val vc = new VirtualClock(initialMs = 1000L, onSchedule = { _ => externalValue += 10 })
         import vc.em
 
-        val d = Dsl.full[Thunk, Unit, Int, Unit, String]
-        val inc1 = d.action("Inc1")(_ => () => { externalValue += 1 })
-        val loop = d.loop("Interleaved") { ros =>
+        val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
+        val inc1 = dsl.action("Inc1")(_ => () => { externalValue += 1 })
+        val loop = dsl.loop("Interleaved") { ros =>
           ros.obs match {
-            case 0  => d.loop.act(inc1)
-            case 1  => d.loop.sleepMs(50)
-            case 11 => d.loop.act(inc1)
-            case 12 => d.loop.sleepMs(75)
-            case _  => d.loop.break
+            case 0  => dsl.loop.act(inc1)
+            case 1  => dsl.loop.sleepMs(50)
+            case 11 => dsl.loop.act(inc1)
+            case 12 => dsl.loop.sleepMs(75)
+            case _  => dsl.loop.break
           }
         }
         val r = Plan.action(loop).test(Observer(_ => externalValue)).stateless.withoutRef.run()()
@@ -719,10 +719,10 @@ object RunnerLoopTest extends TestSuite {
       "loopStepFailImmediate" - {
         var postRan = false
         var afterRan = false
-        val d = Dsl[Unit, Unit, Unit]
-        val post = d.point("Post")(_ => { postRan = true; None })
-        val after = d.action("After")(_ => afterRan = true)
-        val loop = d.loop("FailNow")(_ => d.loop.fail("stop now")) +> post
+        val dsl = Dsl[Unit, Unit, Unit]
+        val post = dsl.point("Post")(_ => { postRan = true; None })
+        val after = dsl.action("After")(_ => afterRan = true)
+        val loop = dsl.loop("FailNow")(_ => dsl.loop.fail("stop now")) +> post
         val r = Plan.action(loop >> after).testU.stateless.runU()
         assert(r.failed)
         assertEq(r.failure, Some(Failure.NoCause("stop now")))
@@ -734,12 +734,12 @@ object RunnerLoopTest extends TestSuite {
       "loopStepFailMidLoop" - {
         var postRan = false
         var afterRan = false
-        val d = Dsl[Counter, Int, Unit]
-        val inc = d.action("Inc")(_.ref.inc())
-        val post = d.point("Post")(_ => { postRan = true; None })
-        val after = d.action("After")(_ => afterRan = true)
-        val loop = d.loop("FailAt2") { ros =>
-          if (ros.obs < 2) d.loop.act(inc) else d.loop.fail("gave up at 2")
+        val dsl = Dsl[Counter, Int, Unit]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val post = dsl.point("Post")(_ => { postRan = true; None })
+        val after = dsl.action("After")(_ => afterRan = true)
+        val loop = dsl.loop("FailAt2") { ros =>
+          if (ros.obs < 2) dsl.loop.act(inc) else dsl.loop.fail("gave up at 2")
         } +> post
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).stateless.withRef(c).run()
@@ -758,10 +758,10 @@ object RunnerLoopTest extends TestSuite {
         val boom = new RuntimeException("loop fn boom")
         var postRan = false
         var afterRan = false
-        val d = Dsl[Unit, Unit, Unit]
-        val post = d.point("Post")(_ => { postRan = true; None })
-        val after = d.action("After")(_ => afterRan = true)
-        val loop = d.loop("ThrowLoop")(_ => throw boom) +> post
+        val dsl = Dsl[Unit, Unit, Unit]
+        val post = dsl.point("Post")(_ => { postRan = true; None })
+        val after = dsl.action("After")(_ => afterRan = true)
+        val loop = dsl.loop("ThrowLoop")(_ => throw boom) +> post
         val r = Plan.action(loop >> after).testU.stateless.runU()
         assert(r.failed)
         r.failure match {
@@ -776,16 +776,16 @@ object RunnerLoopTest extends TestSuite {
         var iterations = 0
         var postRan = false
         var afterRan = false
-        val d = Dsl[Counter, Int, Unit]
-        val inc = d.action("Inc")(_.ref.inc())
-        val bad = d.action("Bad").attempt(_ => Some("inner boom"))
-        val post = d.point("Post")(_ => { postRan = true; None })
-        val after = d.action("After")(_ => afterRan = true)
-        val loop = d.loop("InnerFail") { ros =>
+        val dsl = Dsl[Counter, Int, Unit]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val bad = dsl.action("Bad").attempt(_ => Some("inner boom"))
+        val post = dsl.point("Post")(_ => { postRan = true; None })
+        val after = dsl.action("After")(_ => afterRan = true)
+        val loop = dsl.loop("InnerFail") { ros =>
           iterations += 1
-          if (ros.obs == 0) d.loop.act(inc)
-          else if (ros.obs == 1) d.loop.act(bad)
-          else d.loop.break
+          if (ros.obs == 0) dsl.loop.act(inc)
+          else if (ros.obs == 1) dsl.loop.act(bad)
+          else dsl.loop.break
         } +> post
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).stateless.withRef(c).run()
@@ -800,11 +800,11 @@ object RunnerLoopTest extends TestSuite {
       "innerActionThrowsStopsLoop" - {
         val boom = new RuntimeException("inner ex")
         var iterations = 0
-        val d = Dsl[Unit, Unit, Unit]
-        val bad = d.action("Crash")(_ => throw boom)
-        val loop = d.loop("InnerCrash") { _ =>
+        val dsl = Dsl[Unit, Unit, Unit]
+        val bad = dsl.action("Crash")(_ => throw boom)
+        val loop = dsl.loop("InnerCrash") { _ =>
           iterations += 1
-          d.loop.act(bad)
+          dsl.loop.act(bad)
         }
         val r = Plan.action(loop).testU.stateless.runU()
         assert(r.failed)
@@ -818,12 +818,12 @@ object RunnerLoopTest extends TestSuite {
       "earlierStepFailedSkipsLoop" - {
         var loopFnCalled = false
         var preCalled = false
-        val d = Dsl[Unit, Unit, Unit]
-        val bad = d.action("FailFirst").attempt(_ => Some("first failed"))
-        val pre = d.point("Pre")(_ => { preCalled = true; None })
-        val loop = pre +> d.loop("L") { _ =>
+        val dsl = Dsl[Unit, Unit, Unit]
+        val bad = dsl.action("FailFirst").attempt(_ => Some("first failed"))
+        val pre = dsl.point("Pre")(_ => { preCalled = true; None })
+        val loop = pre +> dsl.loop("L") { _ =>
           loopFnCalled = true
-          d.loop.break
+          dsl.loop.break
         }
         val r = Plan.action(bad >> loop).testU.stateless.runU()
         assert(r.failed)
@@ -839,12 +839,12 @@ object RunnerLoopTest extends TestSuite {
         var loopFnCalled = false
         var preCalled = false
         var postCalled = false
-        val d = Dsl[Unit, Unit, Unit]
-        val pre = d.point("Pre")(_ => { preCalled = true; None })
-        val post = d.point("Post")(_ => { postCalled = true; None })
-        val loop = (pre +> d.loop("SkippedLoop") { _ =>
+        val dsl = Dsl[Unit, Unit, Unit]
+        val pre = dsl.point("Pre")(_ => { preCalled = true; None })
+        val post = dsl.point("Post")(_ => { postCalled = true; None })
+        val loop = (pre +> dsl.loop("SkippedLoop") { _ =>
           loopFnCalled = true
-          d.loop.break
+          dsl.loop.break
         } +> post).skip
         val r = Plan.action(loop).testU.stateless.runU()
         assertRun(r,
@@ -864,12 +864,12 @@ object RunnerLoopTest extends TestSuite {
         var loopFnCalled = false
         var preCalled = false
         var afterRan = false
-        val d = Dsl[Counter, Int, Unit]
-        val pre = d.point("Pre")(_ => { preCalled = true; None })
-        val after = d.action("After")(_ => afterRan = true)
-        val loop = (pre +> d.loop("Guarded") { _ =>
+        val dsl = Dsl[Counter, Int, Unit]
+        val pre = dsl.point("Pre")(_ => { preCalled = true; None })
+        val after = dsl.action("After")(_ => afterRan = true)
+        val loop = (pre +> dsl.loop("Guarded") { _ =>
           loopFnCalled = true
-          d.loop.break
+          dsl.loop.break
         }).when(_.obs == 99)
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).stateless.withRef(c).run()
@@ -883,10 +883,10 @@ object RunnerLoopTest extends TestSuite {
 
       "whenEvaluatedOnlyAtEntryNotMidLoop" - {
         var condChecks = 0
-        val d = Dsl[Counter, Int, Unit]
-        val inc = d.action("Inc")(_.ref.inc())
-        val loop = d.loop("EntryOnly") { ros =>
-          if (ros.obs < 3) d.loop.act(inc) else d.loop.break
+        val dsl = Dsl[Counter, Int, Unit]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val loop = dsl.loop("EntryOnly") { ros =>
+          if (ros.obs < 3) dsl.loop.act(inc) else dsl.loop.break
         }.when { ros =>
           condChecks += 1
           ros.obs == 0
@@ -901,9 +901,9 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "unless" - {
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc())
-        val loop = d.loop("UnlessLoop")(ros => if (ros.obs < 2) d.loop.act(inc) else d.loop.break).unless(_.state == 0)
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val loop = dsl.loop("UnlessLoop")(ros => if (ros.obs < 2) dsl.loop.act(inc) else dsl.loop.break).unless(_.state == 0)
 
         val c1 = new Counter(0)
         val r1 = Plan.action(loop).test(Observer(_.value)).withInitialState(0).withRef(c1).run()
@@ -919,10 +919,10 @@ object RunnerLoopTest extends TestSuite {
       "whenException" - {
         val boom = new RuntimeException("cond boom")
         var loopFnCalled = false
-        val d = Dsl[Unit, Unit, Unit]
-        val loop = d.loop("BadCond") { _ =>
+        val dsl = Dsl[Unit, Unit, Unit]
+        val loop = dsl.loop("BadCond") { _ =>
           loopFnCalled = true
-          d.loop.break
+          dsl.loop.break
         }.when(_ => throw boom)
         val r = Plan.action(loop).testU.stateless.runU()
         assert(r.failed)
@@ -936,10 +936,10 @@ object RunnerLoopTest extends TestSuite {
       "multipleWhenShortCircuit" - {
         var secondCalled = false
         var loopFnCalled = false
-        val d = Dsl[Unit, Unit, Unit]
-        val loop = d.loop("ShortCircuit") { _ =>
+        val dsl = Dsl[Unit, Unit, Unit]
+        val loop = dsl.loop("ShortCircuit") { _ =>
           loopFnCalled = true
-          d.loop.break
+          dsl.loop.break
         }.when(_ => false).when { _ =>
           secondCalled = true
           true
@@ -955,18 +955,18 @@ object RunnerLoopTest extends TestSuite {
       "preAndPostRunOnceAroundWholeLoop" - {
         var preCalls = 0
         var postCalls = 0
-        val d = Dsl[Counter, Int, Unit]
-        val inc = d.action("Inc")(_.ref.inc())
-        val pre = d.point("Pre0") { os =>
+        val dsl = Dsl[Counter, Int, Unit]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val pre = dsl.point("Pre0") { os =>
           preCalls += 1
           if (os.obs == 0) None else Some(s"expected 0, got ${os.obs}")
         }
-        val post = d.point("Post3") { os =>
+        val post = dsl.point("Post3") { os =>
           postCalls += 1
           if (os.obs == 3) None else Some(s"expected 3, got ${os.obs}")
         }
-        val loop = pre +> d.loop("Count") { ros =>
-          if (ros.obs < 3) d.loop.act(inc) else d.loop.break
+        val loop = pre +> dsl.loop("Count") { ros =>
+          if (ros.obs < 3) dsl.loop.act(inc) else dsl.loop.break
         } +> post
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
@@ -988,11 +988,11 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "aroundDeltaSpansEntireLoop" - {
-        val d = Dsl[Counter, Int, Unit]
-        val v = d.focus("v").value(_.obs)
-        val inc = d.action("Inc")(_.ref.inc())
-        val loop = d.loop("Add3") { ros =>
-          if (ros.obs < 3) d.loop.act(inc) else d.loop.break
+        val dsl = Dsl[Counter, Int, Unit]
+        val v = dsl.focus("v").value(_.obs)
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val loop = dsl.loop("Add3") { ros =>
+          if (ros.obs < 3) dsl.loop.act(inc) else dsl.loop.break
         } +> v.assert.increaseBy(3)
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
@@ -1012,12 +1012,12 @@ object RunnerLoopTest extends TestSuite {
       "preConditionFailAbortsLoop" - {
         var loopFnCalled = false
         var postCalled = false
-        val d = Dsl[Counter, Int, Unit]
-        val v = d.focus("v").value(_.obs)
-        val post = d.point("Post")(_ => { postCalled = true; None })
-        val loop = v.assert(99) +> d.loop("NeverRun") { _ =>
+        val dsl = Dsl[Counter, Int, Unit]
+        val v = dsl.focus("v").value(_.obs)
+        val post = dsl.point("Post")(_ => { postCalled = true; None })
+        val loop = v.assert(99) +> dsl.loop("NeverRun") { _ =>
           loopFnCalled = true
-          d.loop.break
+          dsl.loop.break
         } +> post
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
@@ -1029,11 +1029,11 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "postConditionFailFailsLoop" - {
-        val d = Dsl[Counter, Int, Unit]
-        val v = d.focus("v").value(_.obs)
-        val inc = d.action("Inc")(_.ref.inc())
-        val loop = d.loop("PostFail") { ros =>
-          if (ros.obs < 2) d.loop.act(inc) else d.loop.break
+        val dsl = Dsl[Counter, Int, Unit]
+        val v = dsl.focus("v").value(_.obs)
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val loop = dsl.loop("PostFail") { ros =>
+          if (ros.obs < 2) dsl.loop.act(inc) else dsl.loop.break
         } +> v.assert(99)
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
@@ -1050,15 +1050,15 @@ object RunnerLoopTest extends TestSuite {
 
       "invariantsFailMidLoopHaltsImmediately" - {
         var iterations = 0
-        val d = Dsl[Counter, Int, Int]
-        val inv = d.focus("Val").obsAndState(identity, identity).assert.equal
-        val incOk = d.action("IncOk")(_.ref.inc()).updateState(_ + 1)
-        val incBad = d.action("IncBad")(_.ref.inc()) // forgets updateState -> breaks invariant!
-        val loop = d.loop("InvHalt") { ros =>
+        val dsl = Dsl[Counter, Int, Int]
+        val inv = dsl.focus("Val").obsAndState(identity, identity).assert.equal
+        val incOk = dsl.action("IncOk")(_.ref.inc()).updateState(_ + 1)
+        val incBad = dsl.action("IncBad")(_.ref.inc()) // forgets updateState -> breaks invariant!
+        val loop = dsl.loop("InvHalt") { ros =>
           iterations += 1
-          if (ros.obs == 0) d.loop.act(incOk)
-          else if (ros.obs == 1) d.loop.act(incBad)
-          else d.loop.act(incOk)
+          if (ros.obs == 0) dsl.loop.act(incOk)
+          else if (ros.obs == 1) dsl.loop.act(incBad)
+          else dsl.loop.act(incOk)
         }
         val c = new Counter(0)
         val r = Plan(loop, inv).test(Observer(_.value)).withInitialState(0).withRef(c).run()
@@ -1075,15 +1075,15 @@ object RunnerLoopTest extends TestSuite {
         var obsCalls = 0
         var firstLoopObs = -1
         var scopes = Vector.empty[Retry.Scope]
-        val d = Dsl[Unit, Int, Unit]
-        val v = d.focus("v").value(_.obs)
+        val dsl = Dsl[Unit, Int, Unit]
+        val v = dsl.focus("v").value(_.obs)
         val obs = Observer[Unit, Int] { _ =>
           obsCalls += 1
           if (obsCalls < 3) 0 else 10
         }
-        val loop = v.assert(10) +> d.loop("AfterPre") { ros =>
+        val loop = v.assert(10) +> dsl.loop("AfterPre") { ros =>
           firstLoopObs = ros.obs
-          d.loop.break
+          dsl.loop.break
         }
         val policy = Retry.Policy { (ctx, _) =>
           scopes :+= ctx.scope
@@ -1099,13 +1099,13 @@ object RunnerLoopTest extends TestSuite {
       "postCondRetry" - {
         var obsCalls = 0
         var scopes = Vector.empty[Retry.Scope]
-        val d = Dsl[Unit, Int, Unit]
-        val v = d.focus("v").value(_.obs)
+        val dsl = Dsl[Unit, Int, Unit]
+        val v = dsl.focus("v").value(_.obs)
         val obs = Observer[Unit, Int] { _ =>
           obsCalls += 1
           if (obsCalls < 4) 0 else 50
         }
-        val loop = d.loop("PostRetry")(_ => d.loop.break) +> v.assert(50)
+        val loop = dsl.loop("PostRetry")(_ => dsl.loop.break) +> v.assert(50)
         val policy = Retry.Policy { (ctx, _) =>
           scopes :+= ctx.scope
           if (ctx.retryCount < 4) Some(Instant.now()) else None
@@ -1119,14 +1119,14 @@ object RunnerLoopTest extends TestSuite {
       "loopStepFailRetriedUnderActionScope" - {
         var obsCalls = 0
         var scopes = Vector.empty[Retry.Scope]
-        val d = Dsl[Unit, Int, Unit]
+        val dsl = Dsl[Unit, Int, Unit]
         val obs = Observer[Unit, Int] { _ =>
           obsCalls += 1
           obsCalls // 1, 2, 3
         }
-        val loop = d.loop("RetryFailStep") { ros =>
-          if (ros.obs < 3) d.loop.fail(s"not ready: ${ros.obs}")
-          else d.loop.break
+        val loop = dsl.loop("RetryFailStep") { ros =>
+          if (ros.obs < 3) dsl.loop.fail(s"not ready: ${ros.obs}")
+          else dsl.loop.break
         }
         val policy = Retry.Policy { (ctx, _) =>
           scopes :+= ctx.scope
@@ -1141,9 +1141,9 @@ object RunnerLoopTest extends TestSuite {
 
       "loopStepFailExhaustsRetries" - {
         var attempts = 0
-        val d = Dsl[Unit, Int, Unit]
+        val dsl = Dsl[Unit, Int, Unit]
         val obs = Observer[Unit, Int](_ => { attempts += 1; attempts })
-        val loop = d.loop("AlwaysFail")(ros => d.loop.fail(s"err ${ros.obs}"))
+        val loop = dsl.loop("AlwaysFail")(ros => dsl.loop.fail(s"err ${ros.obs}"))
         val policy = Retry.Policy.fixedIntervalAndAttempts(ScalaDuration.Zero, 2)
         val r = Plan.action(loop).test(obs).stateless.withRetryPolicy(policy).runU()
         assert(r.failed)
@@ -1154,14 +1154,14 @@ object RunnerLoopTest extends TestSuite {
       "runExceptionRetriedUnderActionScope" - {
         var obsCalls = 0
         var scopes = Vector.empty[Retry.Scope]
-        val d = Dsl[Unit, Int, Unit]
+        val dsl = Dsl[Unit, Int, Unit]
         val obs = Observer[Unit, Int] { _ =>
           obsCalls += 1
           obsCalls
         }
-        val loop = d.loop("RetryThrow") { ros =>
+        val loop = dsl.loop("RetryThrow") { ros =>
           if (ros.obs < 3) sys.error(s"transient ${ros.obs}")
-          else d.loop.break
+          else dsl.loop.break
         }
         val policy = Retry.Policy { (ctx, _) =>
           scopes :+= ctx.scope
@@ -1176,8 +1176,8 @@ object RunnerLoopTest extends TestSuite {
 
       "runExceptionExhaustsRetries" - {
         val boom = new RuntimeException("permanent boom")
-        val d = Dsl[Unit, Unit, Unit]
-        val loop = d.loop("AlwaysThrow")(_ => throw boom)
+        val dsl = Dsl[Unit, Unit, Unit]
+        val loop = dsl.loop("AlwaysThrow")(_ => throw boom)
         val policy = Retry.Policy.fixedIntervalAndAttempts(ScalaDuration.Zero, 2)
         val r = Plan.action(loop).testU.stateless.withRetryPolicy(policy).runU()
         assert(r.failed)
@@ -1190,8 +1190,8 @@ object RunnerLoopTest extends TestSuite {
 
       "innerActionRetry" - {
         var failsLeft = 2
-        val d = Dsl[Counter, Int, Unit]
-        val flakyInc = d.action("FlakyInc").attempt { ros =>
+        val dsl = Dsl[Counter, Int, Unit]
+        val flakyInc = dsl.action("FlakyInc").attempt { ros =>
           if (failsLeft > 0) {
             failsLeft -= 1
             Some("flaky")
@@ -1200,7 +1200,7 @@ object RunnerLoopTest extends TestSuite {
             None
           }
         }
-        val loop = d.loop("FlakyLoop")(ros => if (ros.obs < 2) d.loop.act(flakyInc) else d.loop.break)
+        val loop = dsl.loop("FlakyLoop")(ros => if (ros.obs < 2) dsl.loop.act(flakyInc) else dsl.loop.break)
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).withRetryPolicy(policy3).run()
         assertEq(r.result, Result.Pass)
@@ -1213,7 +1213,7 @@ object RunnerLoopTest extends TestSuite {
         val vc = new VirtualClock()
         import vc.em
 
-        val d = Dsl.full[Thunk, Unit, Int, Unit, String]
+        val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
         val obs = Observer.attempt[Unit, Int, String] { _ =>
           obsCalls += 1
           obsCalls match {
@@ -1223,7 +1223,7 @@ object RunnerLoopTest extends TestSuite {
             case _ => OrRight(1)
           }
         }
-        val loop = d.loop("SleepObsRetry")(ros => if (ros.obs == 0) d.loop.sleepMs(25) else d.loop.break)
+        val loop = dsl.loop("SleepObsRetry")(ros => if (ros.obs == 0) dsl.loop.sleepMs(25) else dsl.loop.break)
         val r = Plan.action(loop).test(obs).stateless.withoutRef.withRetryPolicy(policy3).run()()
         assertEq(r.result, Result.Pass)
         assertEq(obsCalls, 4)
@@ -1235,15 +1235,15 @@ object RunnerLoopTest extends TestSuite {
         val vc = new VirtualClock()
         import vc.em
 
-        val d = Dsl.full[Thunk, Unit, Int, Int, String]
+        val dsl = Dsl.full[Thunk, Unit, Int, Int, String]
         // After sleep updates state to 1, observer returns stale 0 twice before catching up to 1
         val obs = Observer[Unit, Int] { _ =>
           obsCalls += 1
           if (obsCalls <= 3) 0 else 1
         }
-        val inv = d.focus("Val").obsAndState(identity, identity).assert.equal
-        val loop = d.loop("SleepInvRetry") { ros =>
-          if (ros.obs == 0) d.loop.setStateAndSleepMs(1, 25) else d.loop.break
+        val inv = dsl.focus("Val").obsAndState(identity, identity).assert.equal
+        val loop = dsl.loop("SleepInvRetry") { ros =>
+          if (ros.obs == 0) dsl.loop.setStateAndSleepMs(1, 25) else dsl.loop.break
         }
         val r = Plan(loop, inv).test(obs).withInitialState(0).withoutRef.withRetryPolicy(policy3).run()()
         assertEq(r.result, Result.Pass)
@@ -1259,16 +1259,16 @@ object RunnerLoopTest extends TestSuite {
 
         var events = Vector.empty[String]
         var step = 0
-        val d = Dsl.full[Thunk, Unit, Int, Unit, String]
-        val cb = d.runCallbacks.aroundActions.before((_, name) => () => { events :+= s"before:${name.value}" }) ++
-          d.runCallbacks.aroundActions.after((_, name, err) => () => { events :+= s"after:${name.value}:${err.getOrElse("ok")}" })
-        val a1 = d.action("A1")(_ => () => { step += 1; events :+= "run:A1" })
-        val loop = d.loop("OuterLoop") { ros =>
+        val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
+        val cb = dsl.runCallbacks.aroundActions.before((_, name) => () => { events :+= s"before:${name.value}" }) ++
+          dsl.runCallbacks.aroundActions.after((_, name, err) => () => { events :+= s"after:${name.value}:${err.getOrElse("ok")}" })
+        val a1 = dsl.action("A1")(_ => () => { step += 1; events :+= "run:A1" })
+        val loop = dsl.loop("OuterLoop") { ros =>
           ros.obs match {
-            case 0 => d.loop.act(a1)
-            case 1 => step += 1; d.loop.sleepMs(10)
-            case 2 => d.loop.act(a1)
-            case _ => d.loop.break
+            case 0 => dsl.loop.act(a1)
+            case 1 => step += 1; dsl.loop.sleepMs(10)
+            case 2 => dsl.loop.act(a1)
+            case _ => dsl.loop.break
           }
         }
         val r = Plan.action(loop).test(Observer(_ => step)).stateless.withoutRef.withCallbacks(cb).run()()
@@ -1326,17 +1326,17 @@ object RunnerLoopTest extends TestSuite {
 
       "mapE" - {
         implicit val intErrHandler: ErrorHandler[Int] = ErrorHandler[Int](_ => -1)
-        val d = Dsl[Unit, Unit, Int]
+        val dsl = Dsl[Unit, Unit, Int]
 
         "loopFail" - {
-          val loop = d.loop("L")(_ => d.loop.fail("abc")).mapE(_.length)
+          val loop = dsl.loop("L")(_ => dsl.loop.fail("abc")).mapE(_.length)
           val r = Plan.action(loop).testU.withInitialState(0).runU()
           assert(r.failed)
           assertEq(r.failure, Some(Failure.NoCause(3)))
         }
 
         "breakModState" - {
-          val loop = d.loop("L")(_ => LoopStep.Break[Id, Unit, Unit, Int, String](Some(_ => OrLeft("hello")))).mapE(_.length)
+          val loop = dsl.loop("L")(_ => LoopStep.Break[Id, Unit, Unit, Int, String](Some(_ => OrLeft("hello")))).mapE(_.length)
           val r = Plan.action(loop).testU.withInitialState(0).runU()
           assert(r.failed)
           assertEq(r.failure, Some(Failure.NoCause(5)))
@@ -1428,9 +1428,9 @@ object RunnerLoopTest extends TestSuite {
 
       "transToFuture" - {
         import scala.concurrent.ExecutionContext.Implicits.global
-        val d = Dsl[Counter, Int, Int]
-        val inc = d.action("Inc")(_.ref.inc()).updateState(_ + 1)
-        val loop = d.loop("SyncToFuture")(ros => if (ros.obs < 3) d.loop.act(inc) else d.loop.break)
+        val dsl = Dsl[Counter, Int, Int]
+        val inc = dsl.action("Inc")(_.ref.inc()).updateState(_ + 1)
+        val loop = dsl.loop("SyncToFuture")(ros => if (ros.obs < 3) dsl.loop.act(inc) else dsl.loop.break)
         val c = new Counter(0)
         val testF = Plan.action(loop).test(Observer(_.value)).withInitialState(0).trans(ExecutionModel.toFuture)
         testF.withRef(c).run().map { r =>
@@ -1446,19 +1446,19 @@ object RunnerLoopTest extends TestSuite {
         import scala.concurrent.ExecutionContext.Implicits.global
         import scala.concurrent.Future
 
-        val d = Dsl.future[Counter, Int, Int]
-        val inc = d.action("IncAsync")(ros => Future { ros.ref.inc() }).updateState(_ + 1)
+        val dsl = Dsl.future[Counter, Int, Int]
+        val inc = dsl.action("IncAsync")(ros => Future { ros.ref.inc() }).updateState(_ + 1)
         var slept = false
-        val loop = d.loop("AsyncLoop") { ros =>
-          if (ros.obs == 0) d.loop.act(inc)
+        val loop = dsl.loop("AsyncLoop") { ros =>
+          if (ros.obs == 0) dsl.loop.act(inc)
           else if (!slept) {
             slept = true
-            d.loop.setStateAndSleepMs(ros.state + 10, 1)
-          } else if (ros.obs < 2) d.loop.act(inc)
-          else d.loop.break
+            dsl.loop.setStateAndSleepMs(ros.state + 10, 1)
+          } else if (ros.obs < 2) dsl.loop.act(inc)
+          else dsl.loop.break
         }
         var finalState = -1
-        val after = d.action("After")(ros => Future { finalState = ros.state })
+        val after = dsl.action("After")(ros => Future { finalState = ros.state })
         val c = new Counter(0)
         Plan.action(loop >> after).test(Observer(_.value)).withInitialState(0).withRef(c).run().map { r =>
           assertEq(r.result, Result.Pass)
@@ -1470,10 +1470,10 @@ object RunnerLoopTest extends TestSuite {
 
       "stackSafetySync" - {
         val size = Platform.StackTestSize
-        val d = Dsl[Counter, Int, Unit]
-        val inc = d.action("Inc")(_.ref.inc())
-        val loop = d.loop("BigSync") { ros =>
-          if (ros.obs < size) d.loop.act(inc) else d.loop.break
+        val dsl = Dsl[Counter, Int, Unit]
+        val inc = dsl.action("Inc")(_.ref.inc())
+        val loop = dsl.loop("BigSync") { ros =>
+          if (ros.obs < size) dsl.loop.act(inc) else dsl.loop.break
         }
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
@@ -1487,13 +1487,13 @@ object RunnerLoopTest extends TestSuite {
         import scala.concurrent.Future
 
         val size = Platform.StackTestSize
-        val d = Dsl.future[Counter, Int, Unit]
-        val inc = d.action("Inc") { ros =>
+        val dsl = Dsl.future[Counter, Int, Unit]
+        val inc = dsl.action("Inc") { ros =>
           ros.ref.inc()
           Future.successful(())
         }
-        val loop = d.loop("BigAsync") { ros =>
-          if (ros.obs < size) d.loop.act(inc) else d.loop.break
+        val loop = dsl.loop("BigAsync") { ros =>
+          if (ros.obs < size) dsl.loop.act(inc) else dsl.loop.break
         }
         val c = new Counter(0)
         Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run().map { r =>
