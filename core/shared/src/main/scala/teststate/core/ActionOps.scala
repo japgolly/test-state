@@ -308,7 +308,7 @@ object ActionOps {
               SubTest(a.modS(name, m), i)
 
             case Loop(run) =>
-              Loop(ros => run(ros).map(_.modS(name, m, ros.obs)))
+              Loop(ros => run(ros).map(_.modS(m, ros.obs)))
           }
       }
 

@@ -65,22 +65,20 @@ sealed trait LoopStep[F[_], R, O, S, E] {
       case Sleep(duration, m) => Sleep(duration, m)
     }
 
-  final def modS(name: Option[String], m: O => S => E Or S, o: O)(implicit em: ExecutionModel[F]): LoopStep[F, R, O, S, E] = {
-    def modSS(oss: Option[S => E Or S], l: Option[S => E Or S] => LoopStep[F, R, O, S, E]): LoopStep[F, R, O, S, E] = {
-      val f = m(o)
-      val composed: S => E Or S = oss match {
-        case None    => f
-        case Some(g) => g(_).flatMap(f)
-      }
-      l(Some(composed))
-    }
+  final def modS(m: O => S => E Or S, o: O): LoopStep[F, R, O, S, E] =
+    // Here we only apply it to the break step because we want a loop-external .updateState call to only run at the end
+    // of the loop, not be applied to every step inside the loop.
     this match {
-      case Act(actions)       => Act(actions.modS(name, m))
-      case Break(m)           => modSS(m, Break(_))
-      case Fail(failure)      => Fail(failure)
-      case Sleep(duration, m) => modSS(m, Sleep(duration, _))
+      case Break(oss) =>
+        val f = m(o)
+        val composed: S => E Or S = oss match {
+          case None    => f
+          case Some(g) => g(_).flatMap(f)
+        }
+        Break(Some(composed))
+      case Act(_) | Fail(_) | Sleep(_, _) =>
+        this
     }
-  }
 }
 
 object LoopStep {
