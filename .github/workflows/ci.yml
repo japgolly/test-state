@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - java: 8
+          - java: 11
             scala: 2
           - java: 17
             scala: 3
