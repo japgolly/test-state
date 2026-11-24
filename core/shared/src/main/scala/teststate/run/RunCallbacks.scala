@@ -1,7 +1,7 @@
 package teststate.run
 
 import japgolly.microlibs.name_fn._
-import java.time.{Duration, Instant}
+import java.time.Duration
 import teststate.data._
 import teststate.typeclass._
 
@@ -70,9 +70,8 @@ object RunCallbacks {
         apply((ros, n) => F.pure(oe => f(ros, n, oe)))
 
       def timed(f: (ROS[R, O, S], Name, Option[E], Duration) => F[Unit]): RunCallbacks[F, R, O, S, E] =
-        apply((ros, n) => F.point {
-          val start = Instant.now()
-          oe => F.flatMap(F.point(Instant.now())) { end =>
+        apply((ros, n) => F.map(F.now) { start =>
+          oe => F.flatMap(F.now) { end =>
             val dur = Duration.between(start, end)
             f(ros, n, oe, dur)
           }

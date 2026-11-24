@@ -29,6 +29,10 @@ object Retry {
 
     def retryI[F[_], A](scope: Scope, initialA: A)(failed: A => Boolean, retryF: => F[A])
                        (implicit EM: ExecutionModel[F]): F[A] =
+      retryFnI[F, A](scope, initialA)(failed, _ => retryF)
+
+    def retryFnI[F[_], A](scope: Scope, initialA: A)(failed: A => Boolean, retryF: A => F[A])
+                         (implicit EM: ExecutionModel[F]): F[A] =
       if (failed(initialA)) {
         type InProgress = (A, Option[Retry.Ctx])
         type Out = InProgress Or A
@@ -40,7 +44,7 @@ object Retry {
                 val result: F[Out] =
                   nextTry(retryCtx2, now2) match {
                     case Some(at) =>
-                      EM.schedule(EM.map(retryF)(a2 => Left((a2, Some(retryCtx2))): Out), at)
+                      EM.schedule(EM.map(retryF(a))(a2 => Left((a2, Some(retryCtx2))): Out), at)
                     case None =>
                       // No more retries
                       EM.pure(Right(a))

@@ -22,6 +22,7 @@ trait ReportFormat {
 }
 
 object ReportFormat {
+  import java.lang.StringBuilder
 
   val printMutex = new AnyRef
 
@@ -72,8 +73,8 @@ object ReportFormat {
         for (failure <- optionFailure) {
           val errorMsg = de.display(failure.failure)
           if (errorMsg.nonEmpty) {
-            val firstLine = errorMsg.takeWhile(_ != '\n')
-            if (firstLine.length == errorMsg.length) {
+            val firstNl = errorMsg.indexOf('\n')
+            if (firstNl < 0) {
               // Single line error msg
               sb append s.failureDetail
               sb append " -- "
@@ -81,17 +82,19 @@ object ReportFormat {
             } else {
               // Multi-line error msg
               val indent2 = indent + (if (multilineStepDesc) 1 else 2)
+              val len = errorMsg.length
               @tailrec
-              def go(line: String, remainderWithLine: String): Unit = {
-                val remainder = remainderWithLine.drop(line.length + 1)
+              def go(start: Int, nl: Int): Unit = {
+                val end = if (nl < 0) len else nl
                 sb append s.eol
                 appendIndent(indent2)
                 sb append s.failureDetail
-                sb append line
-                if (remainder.nonEmpty)
-                  go(remainder.takeWhile(_ != '\n'), remainder)
+                sb.append(errorMsg, start, end)
+                val nextStart = end + 1
+                if (nextStart < len)
+                  go(nextStart, errorMsg.indexOf('\n', nextStart))
               }
-              go(firstLine, errorMsg)
+              go(0, firstNl)
             }
           }
         }
@@ -119,7 +122,7 @@ object ReportFormat {
         sb append s.eol
       }
 
-      Some(sb.result())
+      Some(sb.toString())
     }
   }
 
@@ -152,7 +155,9 @@ object ReportFormat {
         val secfmt = "%." + secPrec + "f sec"
         d =>
           if (d.toMicros == 0)
-            d.toNanos.toString + " μs"
+            d.toNanos.toString + " ns"
+          else if (d.toMillis == 0)
+            d.toMicros.toString + " μs"
           else if (d.toSeconds == 0)
             d.toMillis.toString + " ms"
           else
@@ -255,7 +260,7 @@ object ReportFormat {
       // val BRIGHT_CYAN    = "\u001b[96m"
       // val BRIGHT_WHITE   = "\u001b[97m"
       Settings(
-        indent        = "  ",
+        indent        = uncoloured.indent,
         onPass        = BOLD + BRIGHT_GREEN + uncoloured.onPass + RESET + WHITE,
         onFail        = BRIGHT_RED + uncoloured.onFail + BOLD,
         onSkip        = BOLD + BRIGHT_YELLOW + uncoloured.onSkip + RESET + BRIGHT_BLACK,

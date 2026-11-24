@@ -43,34 +43,27 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
   final protected def runCssQuery(sel: String): CssSelResult[Dom] =
     $.run(sel, dom)
 
-  final override def apply(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-    val results = runCssQuery(sel)
+  private def selectOne(name: String, desc: String, results: CssSelResult[Dom], which: MofN): F[Self[F, A]] =
     if (results.length != which.n)
       F fail {
         val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-        enrichErr(s"${q}uery failed: [$sel]. Expected ${which.n} results, not ${results.length}.")
+        enrichErr(s"${q}uery failed: [$desc]. Expected ${which.n} results, not ${results.length}.")
       }
     else
       F pass {
         val nextDom = results(which.m - 1)
-        val nextLayer = Layer(name, sel, nextDom)
+        val nextLayer = Layer(name, desc, nextDom)
         addLayer(nextLayer)
       }
-  }
 
-  final override def child(name: String, sel: String, which: MofN): F[Self[F, A]] = {
-    val results = if (sel.isEmpty) children0n else children0n(sel)
-    val desc = if (sel.isEmpty) ">*" else cssPrepend_>(sel)
-    F.flatMap(results.zippers) { zippers =>
-      if (zippers.length != which.n)
-        F fail {
-          val q = Option(name).filter(_.nonEmpty).fold("Q")(_ + " q")
-          enrichErr(s"${q}uery failed: [$desc]. Expected ${which.n} results, not ${zippers.length}.")
-        }
-      else
-        F pass addLayer(Layer(name, desc, zippers(which.m - 1).dom))
-    }
-  }
+  final override def apply(name: String, sel: String, which: MofN): F[Self[F, A]] =
+    selectOne(name, sel, runCssQuery(sel), which)
+
+  final override def child(name: String, sel: String, which: MofN): F[Self[F, A]] =
+    if (sel.isEmpty)
+      selectOne(name, ">*", rawChildren, which)
+    else
+      selectOne(name, cssPrepend_>(sel), rawChildren(sel), which)
 
   // ====================
   // DOM & DOM inspection
@@ -86,9 +79,20 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
   protected[domzipper] def _outerHTML: String
   protected[domzipper] def _innerHTML: String
 
-  protected def collect        [C[_]](sel: String, C: Container[F, C])              : DomCollection[Self, F, C, Dom, A]
-  protected def collectChildren[C[_]](desc: String, C: Container[F, C])             : DomCollection[Self, F, C, Dom, A]
-  protected def collectChildren[C[_]](desc: String, sel: String, C: Container[F, C]): DomCollection[Self, F, C, Dom, A]
+  final protected def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: Container[F, C]): DomCollection[Self, F, C, Dom, A] =
+    DomCollection[Self, F, C, Dom, Dom, A](desc, enrichErr, result, C)(addLayer)
+
+  protected def rawChildren: CssSelResult[Dom]
+  protected def rawChildren(sel: String): CssSelResult[Dom]
+
+  protected def collect[C[_]](sel: String, C: Container[F, C]): DomCollection[Self, F, C, Dom, A] =
+    newDomCollection(sel, runCssQuery(sel), C)
+
+  protected def collectChildren[C[_]](desc: String, C: Container[F, C]): DomCollection[Self, F, C, Dom, A] =
+    newDomCollection(desc, rawChildren, C)
+
+  protected def collectChildren[C[_]](desc: String, sel: String, C: Container[F, C]): DomCollection[Self, F, C, Dom, A] =
+    newDomCollection(desc, rawChildren(sel), C)
 
   final override def collect01(sel: String): DomCollection[Self, F, Option, Dom, A] = collect(sel, F.C01)
   final override def collect0n(sel: String): DomCollection[Self, F, Vector, Dom, A] = collect(sel, F.C0N)
@@ -101,6 +105,28 @@ trait DomZipperBase[F[_], Dom, A, Self[G[_], B] <: DomZipperBase[G, Dom, B, Self
   final override def children01(sel: String): DomCollection[Self, F, Option, Dom, A] = collectChildren(cssPrepend_>(sel), sel, F.C01)
   final override def children0n(sel: String): DomCollection[Self, F, Vector, Dom, A] = collectChildren(cssPrepend_>(sel), sel, F.C0N)
   final override def children1n(sel: String): DomCollection[Self, F, Vector, Dom, A] = collectChildren(cssPrepend_>(sel), sel, F.C1N)
+
+  final override def count(sel: String): Int =
+    runCssQuery(sel).length
+
+  final override def exists(sel: String): Boolean =
+    runCssQuery(sel).nonEmpty
+
+  override def selectedOption: F[DomCollection[Self, F, Option, Dom, A]] =
+    tagName.toUpperCase match {
+      case "SELECT" =>
+        val sel = if (isCapable(DomZipper.Capability.Selected)) "option:checked" else "option[selected]"
+        val results = runCssQuery(sel)
+        val selected =
+          if (results.isEmpty && getAttribute("multiple").isEmpty) {
+            val all = runCssQuery("option")
+            if (all.nonEmpty) Vector(all.head) else Vector.empty
+          } else
+            results
+        F pass newDomCollection(sel, selected, F.C01)
+      case x =>
+        F fail enrichErr(s"<$x> is not a <SELECT>")
+    }
 }
 
 object DomZipperBase {

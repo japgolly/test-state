@@ -12,17 +12,20 @@ import utest._
 
 object DomZipperSeleniumTest extends TestSuite {
 
-  lazy val $ : DomZipperSelenium = {
+  lazy val driver: ChromeDriver = {
     val testHtmlPath = SeleniumTestUtil.testResource("test.html").getAbsoluteFile
     val options = new ChromeOptions()
     options.setHeadless(true)
     options.addArguments("--no-sandbox") // Travis workaround: https://github.com/SeleniumHQ/selenium/issues/4961
-    val driver = new ChromeDriver(options)
-    driver.manage().timeouts().implicitlyWait(1, TimeUnit.NANOSECONDS)
-    driver.onShutdownQuit()
-    driver.get("file://" + testHtmlPath)
-    DomZipperSelenium.html(driver)
+    val d = new ChromeDriver(options)
+    d.manage().timeouts().implicitlyWait(1, TimeUnit.NANOSECONDS)
+    d.onShutdownQuit()
+    d.get("file://" + testHtmlPath)
+    d
   }
+
+  lazy val $ : DomZipperSelenium =
+    DomZipperSelenium.html(driver)
 
   def name = $("#name")
   def nameLabelHtml = """<label for="name">Name:</label>"""
@@ -103,6 +106,44 @@ object DomZipperSeleniumTest extends TestSuite {
       assertEq(c.outerHTML, "<h3>EH?</h3>")
       assertEq(c.parent.outerHTML, "<div><h3>EH?</h3></div>")
       assertEq(c.parent.child().outerHTML, "<h3>EH?</h3>")
+    }
+
+    "parentCachesWebElement" - {
+      val p = $("form").child("div", 3 of 3)("h3").parent
+      assert(p.dom() eq p.dom())
+    }
+
+    "parentMissingFailToOption" - {
+      assertEq($.failToOption.parent.isEmpty, true)
+    }
+
+    "parentMissingFailToEither" - {
+      val res = $.failToEither.parent
+      assert(res.isLeft)
+      assertContains(res.left.getOrElse(""), "Element doesn't have a parent.")
+    }
+
+    "seleniumExtParentOnHtml" - {
+      assert($.dom().parent()(driver) == null)
+    }
+
+    "addStyleTagWithoutHead" - {
+      val _ = driver.executeJsOrThrow("window.__savedHead = document.head; document.head.parentNode.removeChild(document.head);")
+      try {
+        driver.addStyleTag("/* test-no-head */")
+        val css = driver.executeJsOrThrow(
+          "var s = document.documentElement.querySelector('style'); var t = s ? s.innerHTML : null; if (s) s.parentNode.removeChild(s); return t;"
+        ).asInstanceOf[String]
+        assertEq(css, "/* test-no-head */")
+      } finally {
+        val _ = driver.executeJsOrThrow("document.documentElement.insertBefore(window.__savedHead, document.documentElement.firstChild); delete window.__savedHead;")
+      }
+    }
+
+    "valueEnrichErr" - {
+      val Left(err) = $("form").failToEither.value
+      assertContains(err, "DESC:")
+      assertContains(err, "HTML:")
     }
 
   }

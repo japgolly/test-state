@@ -61,56 +61,56 @@ object Tab {
       private var afterClose  = (doNothing1: D => Unit)
       private var afterClosed = doNothing0
 
-      private def prepareWithoutLocking(): D = {
+      private def prepareWithoutLocking(): (D, Option[D => ProcMod]) = {
         implicit def d: D = driver
 
         if (closed)
           throw new TabAlreadyClosed()
 
-        tab match {
-          case Some(t) =>
-            tabSupport.activate(t)
-          case None =>
-            val t = tabSupport.open(rootTab)
-            tab = Some(t)
-            tabSupport.activate(t)
-            onFirstUse.foreach { f =>
-              val m = f(d)
-              val g = m[Id, Unit](doNothing0)
-              g()
-            }
-        }
+        val firstMod: Option[D => ProcMod] =
+          tab match {
+            case Some(t) =>
+              tabSupport.activate(t)
+              None
+            case None =>
+              val t = tabSupport.open(rootTab)
+              // No need to call tabSupport.activate(t) here because tabSupport.open() already activates the new tab
+              tab = Some(t)
+              onFirstUse
+          }
 
-        d
+        val mod: Option[D => ProcMod] =
+          (firstMod, onEachUse) match {
+            case (Some(f), Some(e)) => Some(d => f(d).andThen(e(d)))
+            case (Some(_), None)    => firstMod
+            case (None, Some(_))    => onEachUse
+            case (None, None)       => None
+          }
+
+        (d, mod)
       }
+
+      private def runWithMod[M[_], A](d: D, mod: Option[D => ProcMod], f: D => M[A])
+                                     (implicit EM: ExecutionModel[M]): M[A] =
+        mod match {
+          case None =>
+            f(d)
+          case Some(around) =>
+            val m = around(d)
+            val g = m(() => f(d))
+            g()
+        }
 
       override def use[A](f: D => A): A =
         mutex {
-          val d = prepareWithoutLocking()
-          onEachUse match {
-            case None =>
-              f(d)
-            case Some(around) =>
-              val m = around(d)
-              val g = m[Id, A](() => f(d))
-              g()
-          }
+          val (d, mod) = prepareWithoutLocking()
+          runWithMod[Id, A](d, mod, f)
         }
 
       override def useM[M[_], A](f: D => M[A], lockWait: Duration, lockRetry: Duration)
                                 (implicit EM: ExecutionModel[M]): M[A] = {
-        val f2: D => M[A] = { d =>
-          onEachUse match {
-            case None =>
-              f(d)
-            case Some(around) =>
-              val m = around(d)
-              val g = m(() => f(d))
-              g()
-          }
-        }
-        def driver = EM.point(prepareWithoutLocking())
-        mutex.monadic(EM.flatMap(driver)(f2), lockWait, lockRetry)
+        def prepared = EM.point(prepareWithoutLocking())
+        mutex.monadic(EM.flatMap(prepared) { case (d, mod) => runWithMod(d, mod, f) }, lockWait, lockRetry)
       }
 
       override def closeTab(): Boolean = {

@@ -17,7 +17,9 @@ object JsDomExt extends JsDomExt {
       val style = self.createElement("style").asInstanceOf[html.Style]
       style.`type` = "text/css"
       style.innerHTML = content
-      self.getElementsByTagName("head")(0).appendChild(style)
+      val heads = self.getElementsByTagName("head")
+      val target: dom.Node = if (heads.length > 0) heads(0) else self.documentElement
+      target.appendChild(style)
       ()
     }
 

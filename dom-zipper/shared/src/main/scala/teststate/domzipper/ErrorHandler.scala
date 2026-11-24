@@ -23,7 +23,7 @@ trait ErrorHandler[Result[_]] {
 
   def attempt[A](a: => A): Result[A] =
     try pass(a) catch {
-      case NonFatal(t) => fail(t.getMessage)
+      case NonFatal(t) => fail(Option(t.getMessage).getOrElse(t.toString))
     }
 
   private[domzipper] final val C01 = new DomZipper.DomCollection.Container01()(this)

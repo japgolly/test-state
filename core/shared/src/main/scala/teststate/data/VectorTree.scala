@@ -10,7 +10,10 @@ final case class VectorTree[+A](elements: Vector[Node[A]]) {
     elements.map(_.value)
 
   def iteratorWithLevel(currentLevel: Int = 0): Iterator[(Int, A)] =
-    elements.iterator.flatMap(_.iteratorWithLevel(currentLevel))
+    if (elements.isEmpty)
+      Iterator.empty
+    else
+      elements.iterator.flatMap(_.iteratorWithLevel(currentLevel))
 
   def prettyPrintedLines(indent: String = "  "): Iterator[String] =
     iteratorWithLevel().map(x => (indent * x._1) + x._2)
@@ -32,8 +35,13 @@ object VectorTree {
     def map[B](f: A => B): Node[B] =
       Node(f(value), children.map(f))
 
-    def iteratorWithLevel(currentLevel: Int = 0): Iterator[(Int, A)] =
-      Iterator.single(currentLevel -> value) ++ children.iteratorWithLevel(currentLevel + 1)
+    def iteratorWithLevel(currentLevel: Int = 0): Iterator[(Int, A)] = {
+      val self = Iterator.single((currentLevel, value))
+      if (children.elements.isEmpty)
+        self
+      else
+        self ++ children.iteratorWithLevel(currentLevel + 1)
+    }
 
     def deepSize: Int =
       1 + children.deepSize

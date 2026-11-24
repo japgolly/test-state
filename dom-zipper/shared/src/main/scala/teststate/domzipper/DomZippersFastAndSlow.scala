@@ -49,7 +49,15 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
     val C = colF.C
     val rawResults = Vector.tabulate(colF.size) { i =>
       val f = colF.rawResults(i)
-      lazy val s = colS.flatMap(_.zippers).map(C.get(_, i))
+      lazy val s = colS.flatMap { cs =>
+        F.flatMap(cs.zippers) { _ =>
+          val rs = cs.rawResults
+          if (rs.isDefinedAt(i))
+            F.pass(rs(i))
+          else
+            F.fail[Slow](cs.enrichErr(s"Inconsistency detected: element $i missing in slow DOM (found ${rs.length})."))
+        }
+      }
       FastAndSlow[F, FastF, FX, FD, SlowF, SX, SD](f, () => s, isCapableFn).toDomZipper(peek)
     }
     new DomCollection[({ type L[X[_], Y] = DomZippersFastAndSlow[X, Dom, Y] })#L, F, C, Dom, A](
@@ -161,6 +169,12 @@ sealed trait DomZippersFastAndSlow[F[_], Dom, A] extends DomZipperBase.Store[F, 
   override def children01 = cmap(_.children01, _.children01)
   override def children0n = cmap(_.children0n, _.children0n)
   override def children1n = cmap(_.children1n, _.children1n)
+
+  override def count(sel: String): Int =
+    fast.count(sel)
+
+  override def exists(sel: String): Boolean =
+    fast.exists(sel)
 
   override def enrichErr(msg: String) = fast.enrichErr(msg)
 }

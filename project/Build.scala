@@ -202,7 +202,8 @@ object TestState {
       libraryDependencies ++= Seq(
         Dep.nyayaGen.value,
         Dep.nyayaTest.value,
-    ))
+    )).jsSettings(
+      libraryDependencies += Dep.scalaJsJavaTime.value % Test)
 
   lazy val extScalaJsReact = project
     .in(file("ext-scalajs-react"))

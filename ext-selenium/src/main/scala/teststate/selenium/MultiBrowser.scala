@@ -4,6 +4,7 @@ import java.util.concurrent.Executors
 import org.openqa.selenium.WebDriver
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.control.NonFatal
 import teststate.selenium.Internal._
 
 /** Creates tabs across multiple browsers.
@@ -101,7 +102,6 @@ object MultiBrowser {
         tab          = browser.multiTab.openTab().afterClosed(removeTab(browser.driver, tab))
         val browser2 = browser.copy(tabs = browser.tabs :+ tab)
         instances    = instances.updated(browserIndex, browser2)
-        onNewTab(tab)
         tab
       }
 
@@ -109,26 +109,28 @@ object MultiBrowser {
       override def openTab(): Tab[D] = {
 
         // Hold outer lock and be quick
-        val (tab, setup) = outerMutex {
+        val (tab, setup, onNewTabFn) = outerMutex {
           val i = growthStrategy.nextBrowser(instances.map(_.tabs.length))
+          val newTabFn = onNewTab
 
           if (instances.indices.contains(i)) {
             // Use existing browser
             val browserIndex = i
             val tab = createTabWithoutLocking(browserIndex)
-            (tab, None)
+            (tab, None, newTabFn)
 
           } else {
             // Start new browser
-            val driver       = newDriver
-            val mutex        = Mutex()
-            val rootTab      = tabSupport.active()(driver)
-            val multiTab     = MultiTab(driver, mutex)(tabSupport)(rootTab)
-            val browser      = Browser(driver, mutex, rootTab, multiTab, Vector.empty)
-            val browserIndex = instances.length
-            instances = instances :+ browser
+            val driver   = newDriver
+            val mutex    = Mutex()
+            val rootTab  = tabSupport.active()(driver)
+            val multiTab = MultiTab(driver, mutex)(tabSupport)(rootTab)
+            val browser  = Browser(driver, mutex, rootTab, multiTab, Vector.empty)
 
             onNewDriver(driver)
+
+            val browserIndex = instances.length
+            instances = instances :+ browser
 
             val setup =
               if (onNewDriverT eq doNothing1) None else Some {
@@ -140,24 +142,28 @@ object MultiBrowser {
                   try
                     setupFn(setupTab)
                   finally {
-                    try
-                      mutex.unlock()
-                    finally {
-                      // closeTab() will attempt to acquire the outer lock through the afterClosed callback so the
-                      // browser lock must be released beforehand to maintain lock-ordering (i.e. outer before browser)
+                    try {
                       setupTab.closeTab()
                       ()
-                    }
+                    } finally
+                      mutex.unlock()
                   }
                 }
               }
             val tab = createTabWithoutLocking(browserIndex)
-            (tab, setup)
+            (tab, setup, newTabFn)
           }
         }
 
-        // Do per-browser setup with browser lock only
-        setup.foreach(_.apply())
+        try {
+          // Do per-browser setup with browser lock only
+          setup.foreach(_.apply())
+          onNewTabFn(tab)
+        } catch {
+          case NonFatal(e) =>
+            try { tab.closeTab(); () } catch { case NonFatal(_) => () }
+            throw e
+        }
 
         tab
       }

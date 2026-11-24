@@ -51,7 +51,7 @@ object Internals {
           |var style = document.createElement('style');
           |style.type = 'text/css';
           |style.innerHTML = arguments[0];
-          |document.getElementsByTagName('head')[0].appendChild(style);
+          |(document.head || document.documentElement).appendChild(style);
         """.stripMargin.trim
       executeJsOrThrow(js, content)
       ()
@@ -124,7 +124,7 @@ object Internals {
     }
 
     def parent()(implicit d: WebDriver): WebElement =
-      d.executeJsOrThrow("return arguments[0].parentNode", self).asInstanceOf[WebElement]
+      d.executeJsOrThrow("return arguments[0].parentElement", self).asInstanceOf[WebElement]
   }
 
   class PointExt(private val p: Point) extends AnyVal {

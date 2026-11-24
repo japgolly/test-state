@@ -210,6 +210,53 @@ object DomZipperJsoupTest extends TestSuite {
       assertEq(res.get.get.dom().map(_.innerText), Some("Submit"))
     }
 
+    "fastAndSlowCmapDesync" - {
+      type E[A] = Either[String, A]
+      implicit def errorHandler: ErrorHandler[E] = ErrorHandler.ReturnEither
+
+      def mkBoth(html: String) = {
+        val doc = Jsoup.parse(html)
+        val slow = DomZipperJsoup.failToEither(doc)
+        val fast = DomZipperJsoup.failToEither.parseHtml(slow.outerHTML)
+        val both = DomZippersFastAndSlow[E, DomZipperJsoupF, JsoupElement, JsoupElement, DomZipperJsoupF, JsoupElement, JsoupElement](fast, slow)
+        (doc, both)
+      }
+
+      "collect0nElementRemoved" - {
+        val (doc, both) = mkBoth("<div><button>Cancel</button><button>Submit</button></div>")
+        val Right(btns) = both.collect0n("button").zippers
+        doc.select("button").last().remove()
+        val res = btns(1).dom()
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), "Inconsistency detected")
+      }
+
+      "collect01ElementRemoved" - {
+        val (doc, both) = mkBoth("<div><button>Submit</button></div>")
+        val Right(Some(btn)) = both.collect01("button").zippers
+        doc.selectFirst("button").remove()
+        val res = btn.dom()
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), "Inconsistency detected")
+      }
+
+      "collect01ElementAdded" - {
+        val (doc, both) = mkBoth("<div><button>Submit</button></div>")
+        val Right(Some(btn)) = both.collect01("button").zippers
+        doc.selectFirst("div").append("<button>Extra</button>")
+        val res = btn.dom()
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), "Expected [0,1] results, not 2.")
+      }
+
+      "collect01ToCollect0nFailsWhenInvalid" - {
+        val (_, both) = mkBoth("<div><button>Cancel</button><button>Submit</button></div>")
+        val res = both.collect01("button").collect0n.zippers
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), "Expected [0,1] results, not 2.")
+      }
+    }
+
     "html" - {
       val h = DomZipperJsoup.parseHtml(htmlSource)
       assertEq(h.tagName, "html")
@@ -301,6 +348,149 @@ object DomZipperJsoupTest extends TestSuite {
           assertEq("both.innerHTML scrub invocation count", innerRuns, 1)
           assertEq("both.innerHTML output", html, expectedInner)
         }
+      }
+    }
+
+    "jsoupElement" - {
+      final class ProbeElement extends org.jsoup.nodes.Element("span") {
+        def hasAttrs: Boolean = hasAttributes()
+      }
+
+      "attrDoesNotAllocateAttributes" - {
+        val raw = new ProbeElement
+        val el = JsoupElement(raw)
+        assert(!raw.hasAttrs)
+        assertEq(el.attr("id"), None)
+        assert(!raw.hasAttrs)
+      }
+
+      "attrCaseInsensitive" - {
+        assertEq(name.dom.attr("VALUE"), Some("Bob Loblaw"))
+        assertEq(name.dom.attr("nonexistent"), None)
+      }
+
+      "isSelectedDoesNotAllocateAttributes" - {
+        val raw = new ProbeElement
+        val el = JsoupElement(raw)
+        assert(!raw.hasAttrs)
+        assertEq(el.isSelected, false)
+        assert(!raw.hasAttrs)
+      }
+
+      "isSelectedTrue" - {
+        assertEq($("input[type=checkbox]", 1 of 2).dom.isSelected, true)
+        assertEq($("input[type=checkbox]", 2 of 2).dom.isSelected, false)
+      }
+
+      "selectChildrenImmediateOnly" - {
+        val form = $("form").dom
+        assertEq(form.selectChildren("h3").map(_.innerText), Vector("HI"))
+        assert(form.selectChildren("input").isEmpty)
+        assertEq(form.selectChildren("div").size, 3)
+      }
+
+      "matchesDetached" - {
+        val detached = JsoupElement(Jsoup.parse("<div class='a'><span id='s'></span></div>").selectFirst("span"))
+        assert(detached.matches("span"))
+        assert(detached.matches("div.a > span#s"))
+        assert(!detached.matches("p"))
+      }
+    }
+
+    "domCollection" - {
+      def assertLeftContains(res: Either[String, Any], substr: String): Unit = {
+        assert(res.isLeft)
+        assertContains(res.left.getOrElse(""), substr)
+      }
+
+      "collect01HeadValidates" - {
+        assertLeftContains($("form")("select", 2 of 2).failToEither.collect01("option").head, "Expected [0,1] results, not 2.")
+      }
+
+      "collect01LastValidates" - {
+        assertLeftContains($("form")("select", 2 of 2).failToEither.collect01("option").last, "Expected [0,1] results, not 2.")
+      }
+
+      "collect01SingletonValidates" - {
+        assertLeftContains($("form")("select", 2 of 2).failToEither.collect01("option").singleton, "Expected [0,1] results, not 2.")
+      }
+
+      "collect1nHeadValidates" - {
+        assertLeftContains($("form").failToEither.collect1n("pre").head, "Expected [1,n] results, not 0.")
+      }
+
+      "collect1nLastValidates" - {
+        assertLeftContains($("form").failToEither.collect1n("pre").last, "Expected [1,n] results, not 0.")
+      }
+
+      "collect1nSingletonValidates" - {
+        assertLeftContains($("form").failToEither.collect1n("pre").singleton, "Expected [1,n] results, not 0.")
+      }
+
+      "collect01SingleSuccess" - {
+        val col = $("form").failToEither.collect01("> h3")
+        assertEq(col.head.map(_.innerText).toOption, Some("HI"))
+        assertEq(col.last.map(_.innerText).toOption, Some("HI"))
+        assertEq(col.singleton.map(_.innerText).toOption, Some("HI"))
+      }
+
+      "filterLazy" - {
+        var calls = 0
+        val col = $("form").collect0n("option").filter { _ => calls += 1; true }.filter(_.getAttribute("value").isDefined)
+        assertEq(calls, 0)
+        assertEq(col.size, 6)
+        assertEq(calls, 6)
+      }
+
+      "mapAndTraverseDomsAndExtracts" - {
+        val sel = $("form")("select", 2 of 2).failToEither
+        val col = sel.collect1n("option")
+        assertEq(col.mapDoms(_.attr("value")).toOption, Some(Vector(Some("a"), Some("b"))))
+        assertEq(col.traverseDoms(d => Right(d.innerText)).toOption, Some(Vector("A", "B")))
+        assertEq(col.mapExtracts(_.innerText).toOption, Some(Vector("A", "B")))
+        assertEq(col.traverseExtracts(d => Right(d.innerText)).toOption, Some(Vector("A", "B")))
+        assertLeftContains(sel.collect01("option").mapDoms(_.innerText), "Expected [0,1] results, not 2.")
+      }
+
+      "containerConversions" - {
+        val sel = $("form")("select", 2 of 2).failToEither
+
+        "collect01ToCollect0nFailsWhenInvalid" - {
+          assertLeftContains(sel.collect01("option").collect0n.zippers, "Expected [0,1] results, not 2.")
+        }
+
+        "collect01ToCollect0nToCollect1nFailsWhenInvalid" - {
+          assertLeftContains(sel.collect01("option").collect0n.collect1n.zippers, "Expected [0,1] results, not 2.")
+        }
+
+        "collect1nToCollect0nFailsWhenEmpty" - {
+          assertLeftContains($("form").failToEither.collect1n("pre").collect0n.zippers, "Expected [1,n] results, not 0.")
+        }
+
+        "collect1nFilterToCollect01Valid" - {
+          assertEq(sel.collect1n("option").filter(_.innerText == "B").collect01.zippers.map(_.map(_.innerText)).toOption, Some(Some("B")))
+          assertEq(sel.collect1n("option").filter(_.innerText == "Z").collect01.zippers.map(_.map(_.innerText)).toOption, Some(None))
+        }
+
+        "collect0nToCollect1nValid" - {
+          assertEq(sel.collect0n("option").collect1n.zippers.map(_.map(_.innerText)).toOption, Some(Vector("A", "B")))
+        }
+      }
+    }
+
+    "enrichErrOnFailures" - {
+      "needAttribute" - {
+        val Left(err) = $("form").failToEither.needAttribute("nonexistent")
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+        err
+      }
+
+      "parent" - {
+        val Left(err) = $.failToEither.parent
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+        err
       }
     }
 

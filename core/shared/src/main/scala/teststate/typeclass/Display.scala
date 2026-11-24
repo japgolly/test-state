@@ -37,8 +37,11 @@ object Display {
   def by[A, B](f: A => B)(implicit d: Display[B]): Display[A] =
     new Display(d.display compose f)
 
+  private val anyToStringFn: Any => String =
+    _.toString
+
   def byToString[A]: Display[A] =
-    Display(_.toString)
+    Display(anyToStringFn)
 
   def build[A](f: (StringBuilder, A) => Unit): Display[A] =
     Display { a =>
@@ -49,7 +52,7 @@ object Display {
 
   // Putting this into a low-priority implicits trait overrides implicit instances in user-defined companion objects. :(
   implicit def testStateDisplayByToString[A]: Display[A] =
-    Display(_.toString)
+    byToString
 
   def escapeChar(sb: StringBuilder, other: Char)(c: Char): Unit =
     c match {
@@ -106,7 +109,7 @@ object Display {
         ()
       }
 
-    implicit def testStateDisplayName: Display[Name] =
+    implicit val testStateDisplayName: Display[Name] =
       Display(_.value)
 
     implicit def testStateDisplayNameFn[A]: Display[NameFn[A]] =

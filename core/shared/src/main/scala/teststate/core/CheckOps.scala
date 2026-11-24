@@ -116,7 +116,7 @@ object CheckOps {
         override def pmapO[O, S, E, X](m: CheckShape[C, O, S, E])(f: X => E Or O): CheckShape[C, X, S, E] =
           m match {
             case Value(o)        => Value(o map (_ pmapO f))
-            case Product(ss)     => Product(ss map (pmapO(_)(f)))
+            case Product(ss)     => if (ss.isEmpty) Sack.empty else Product(ss map (pmapO(_)(f)))
             case CoProduct(n, p) =>
               CoProduct(
                 n pmapO f,

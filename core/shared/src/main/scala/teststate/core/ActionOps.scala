@@ -229,9 +229,11 @@ object ActionOps {
           action match {
 
             case Single(r) =>
-              Single(i =>
+              Single { i =>
+                val s0 = i.state
                 r(i.mapOS(f, g)).map(fn => () =>
-                  em.map(fn())(_.map(j => (x: X) => j(f(x)).map(s => h(i.state, s))))))
+                  em.map(fn())(_.map(j => (x: X) => j(f(x)).map(s => h(s0, s)))))
+              }
 
             case Group(a, c) =>
               Group(a.mapOS(f, g)(h), c.mapOS(f, g))
@@ -280,7 +282,7 @@ object ActionOps {
                 run(_).map(f => () => em.map(f())(
                   _.map(g => (o: O) => g(o) flatMap m(o))
                 )))
-            case Group(a, c)   => Group(a.modS(name, m), c.modS(m))
+            case Group(a, c)   => Group(a.modS(name, m), c)
             case SubTest(a, i) => SubTest(a.modS(name, m), i)
           }
       }
@@ -347,7 +349,7 @@ object ActionOps {
         override def pmapR[F[_], R, O, S, E, X](x: Actions[F, R, O, S, E])(f: X => E Or R)(implicit em: ExecutionModel[F]) =
           x match {
             case Value(v)        => Value(v map(_ pmapR f))
-            case Product(ss)     => Product(ss map (_ pmapR f))
+            case Product(ss)     => if (ss.isEmpty) Sack.empty else Product(ss map (_ pmapR f))
             case CoProduct(n, p) =>
               CoProduct(n pmapR f,
                 _.emapR(f).fold(e => Sack Value Left(NamedError(n(None), Failure NoCause e)), p(_) pmapR f))
@@ -356,7 +358,7 @@ object ActionOps {
         override def pmapO[F[_], R, O, S, E, X](x: Actions[F, R, O, S, E])(f: X => E Or O)(implicit em: ExecutionModel[F]) =
           x match {
             case Value(v)        => Value(v map(_ pmapO f))
-            case Product(ss)     => Product(ss map (_ pmapO f))
+            case Product(ss)     => if (ss.isEmpty) Sack.empty else Product(ss map (_ pmapO f))
             case CoProduct(n, p) =>
               CoProduct(n pmapO f,
                 _.emapO(f).fold(e => Sack Value Left(NamedError(n(None), Failure NoCause e)), p(_) pmapO f))
@@ -370,11 +372,14 @@ object ActionOps {
               if (ss.isEmpty)
                 name match {
                   case Some(n) =>
-                    val inner = Action.Single[F, R, O, S, E](ros => Some(() => em.point(Right((o: O) => f(o)(ros.state)))))
+                    val inner = Action.Single[F, R, O, S, E] { ros =>
+                      val s0 = ros.state
+                      Some(() => em.point(Right((o: O) => f(o)(s0))))
+                    }
                     val action = Action.liftInner(inner)(n)
                     Product(Vector.empty :+ action)
                   case None =>
-                    Product(Vector.empty)
+                    Sack.empty
                 }
               else
                 Product(ss.init :+ ss.last.modS(name, f))

@@ -2,6 +2,7 @@ package teststate.selenium
 
 import java.util.concurrent.{Semaphore, TimeUnit}
 import scala.concurrent.duration.Duration
+import teststate.data._
 import teststate.typeclass.ExecutionModel
 
 final class Mutex {
@@ -43,15 +44,14 @@ final class Mutex {
       false
 
   def unlock(): Unit = synchronized {
-    holds match {
-      case 0 => throw new IllegalMonitorStateException()
-      case 1 =>
-        owner = null
-        holds = 0
-        semaphore.release()
-      case n =>
-        holds = n - 1
-    }
+    if (holds == 0 || ((owner ne null) && (owner ne Thread.currentThread())))
+      throw new IllegalMonitorStateException()
+    if (holds == 1) {
+      owner = null
+      holds = 0
+      semaphore.release()
+    } else
+      holds -= 1
   }
 
   def apply[A](a: => A): A = {
@@ -61,20 +61,19 @@ final class Mutex {
 
   def monadic[M[_], A](ma: => M[A], wait: Duration, retry: Duration)
                       (implicit EM: ExecutionModel[M]): M[A] = {
-
     def unlockM: M[Unit] = EM.point(unlock())
+    val retryStep: M[Unit Or A] = EM.pure(Left(()))
 
-    def go: M[A] =
+    EM.tailrec[Unit, A](()) { _ =>
       EM.flatten(
         EM.point {
           if (tryLock(wait, null))
-            EM.doFinally(ma, unlockM)
+            EM.map[A, Unit Or A](EM.doFinally(ma, unlockM))(Right(_))
           else
-            EM.flatMap(EM.now)(now => EM.schedule(go, now.plusMillis(retry.toMillis)))
+            EM.flatMap(EM.now)(now => EM.schedule(retryStep, now.plusMillis(retry.toMillis)))
         }
       )
-
-    go
+    }
   }
 }
 

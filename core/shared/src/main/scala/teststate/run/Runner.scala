@@ -126,10 +126,8 @@ object Runner {
     }
   }
 
-  private type CheckNE[C[_, _], O, S, E] = NamedError[Failure[E]] Or C[OS[O, S], E]
-
   final class RefEq[+A <: AnyRef](val value: A) {
-    override def hashCode = value.hashCode
+    override def hashCode = System.identityHashCode(value)
     override def equals(x: Any) = x match {
       case y: RefEq[AnyRef] => value eq y.value
       case _                => false
@@ -137,18 +135,40 @@ object Runner {
   }
 
   final class UniqueListBuilder[A <: AnyRef] {
-    private val set = mutable.LinkedHashSet.empty[RefEq[A]]
+    private var first: A = null.asInstanceOf[A]
+    private var set: mutable.LinkedHashSet[RefEq[A]] = null
 
-    def +=(a: A): Unit = {
-      set add new RefEq(a)
-      ()
-    }
+    def isEmpty: Boolean =
+      first eq null
+
+    def +=(a: A): Unit =
+      if (set ne null) {
+        set.add(new RefEq(a))
+        ()
+      } else if (first eq null) {
+        first = a
+      } else if (first ne a) {
+        val s = mutable.LinkedHashSet.empty[RefEq[A]]
+        s.add(new RefEq(first))
+        s.add(new RefEq(a))
+        set = s
+      }
 
     def iterator(): Iterator[A] =
-      set.iterator.map(_.value)
+      if (set ne null)
+        set.iterator.map(_.value)
+      else if (first ne null)
+        Iterator.single(first)
+      else
+        Iterator.empty
 
     def result(): List[A] =
-      iterator().toList
+      if (set ne null)
+        set.iterator.map(_.value).toList
+      else if (first ne null)
+        first :: Nil
+      else
+        Nil
   }
 
   case class UnpackChecks[F[_], O, S, E](befores       : F[Point        [OS[O, S], E]],
@@ -159,53 +179,63 @@ object Runner {
 
   object UnpackChecks {
 
+    private val _empty: UnpackChecks[List, Any, Any, Any] =
+      UnpackChecks[List, Any, Any, Any](Nil, Nil, Nil, Nil, false)
+
+    def empty[O, S, E]: UnpackChecks[List, O, S, E] =
+      _empty.asInstanceOf[UnpackChecks[List, O, S, E]]
+
     def invariants[O, S, E](invariants: Invariants[O, S, E], input: OS[O, S])
-                           (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] = {
+                           (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] =
+      if (invariants.isEmpty)
+        empty
+      else {
+        type Builder[A <: AnyRef] = UniqueListBuilder[A]
+        def newBuilder[A <: AnyRef]: Builder[A] = new UniqueListBuilder[A]
+        def add[A <: AnyRef](b: Builder[A], a: A): Unit = b += a
+        def result[A <: AnyRef](r: Builder[A]): List[A] = r.result()
 
-      type Builder[A <: AnyRef] = UniqueListBuilder[A]
-      def newBuilder[A <: AnyRef]: Builder[A] = new UniqueListBuilder[A]
-      def add[A <: AnyRef](b: Builder[A], a: A): Unit = b += a
-      def result[A <: AnyRef](r: Builder[A]): List[A] = r.result()
+        val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
+        val as = newBuilder[Point        [OS[O, S], E]]
+        val es = newBuilder[NamedError[Failure[E]]]
 
-      val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
-      val as = newBuilder[Point        [OS[O, S], E]]
-      val es = newBuilder[NamedError[Failure[E]]]
+        val coproductFound =
+          foreachSackE(invariants)(input) {
+            case Right(Invariant.Point(p)) => add(as, p)
+            case Right(Invariant.Delta(d)) => add(ds, d)
+            case Left(e)                   => add(es, e)
+          }
 
-      val coproductFound =
-        foreachSackE(invariants)(input) {
-          case Right(Invariant.Point(p)) => add(as, p)
-          case Right(Invariant.Delta(d)) => add(ds, d)
-          case Left(e)                   => add(es, e)
-        }
-
-      UnpackChecks(List.empty[Point[OS[O, S], E]], result(ds), result(as), result(es), coproductFound)
-    }
+        UnpackChecks(List.empty[Point[OS[O, S], E]], result(ds), result(as), result(es), coproductFound)
+      }
 
     def arounds[O, S, E](arounds: Arounds[O, S, E], input: OS[O, S])
-                        (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] = {
+                        (implicit r: ErrorHandler[E]): UnpackChecks[List, O, S, E] =
+      if (arounds.isEmpty)
+        empty
+      else {
+        import Around.{Before, After}
 
-      import Around.{Before, After}
+        type Builder[A <: AnyRef] = UniqueListBuilder[A]
+        def newBuilder[A <: AnyRef]: Builder[A] = new UniqueListBuilder[A]
+        def add[A <: AnyRef](b: Builder[A], a: A): Unit = b += a
+        def result[A <: AnyRef](r: Builder[A]): List[A] = r.result()
 
-      type Builder[A <: AnyRef] = UniqueListBuilder[A]
-      def newBuilder[A <: AnyRef]: Builder[A] = new UniqueListBuilder[A]
-      def add[A <: AnyRef](b: Builder[A], a: A): Unit = b += a
-      def result[A <: AnyRef](r: Builder[A]): List[A] = r.result()
+        val bs = newBuilder[Point        [OS[O, S], E]]
+        val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
+        val as = newBuilder[Point        [OS[O, S], E]]
+        val es = newBuilder[NamedError[Failure[E]]]
 
-      val bs = newBuilder[Point        [OS[O, S], E]]
-      val ds = newBuilder[Around.DeltaA[OS[O, S], E]]
-      val as = newBuilder[Point        [OS[O, S], E]]
-      val es = newBuilder[NamedError[Failure[E]]]
+        val coproductFound =
+          foreachSackE(arounds)(input) {
+            case Right(Around.Delta(d))         => add(ds, d)
+            case Right(Around.Point(p, Before)) => add(bs, p)
+            case Right(Around.Point(p, After))  => add(as, p)
+            case Left(e)                        => add(es, e)
+          }
 
-      val coproductFound =
-        foreachSackE(arounds)(input) {
-          case Right(Around.Delta(d))         => add(ds, d)
-          case Right(Around.Point(p, Before)) => add(bs, p)
-          case Right(Around.Point(p, After))  => add(as, p)
-          case Left(e)                        => add(es, e)
-        }
-
-      UnpackChecks(result(bs), result(ds), result(as), result(es), coproductFound)
-    }
+        UnpackChecks(result(bs), result(ds), result(as), result(es), coproductFound)
+      }
   }
 
   final case class PreCheck[+A](pre: A, invariants: A)
@@ -289,18 +319,18 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                            (implicit stats: Stats.Mutable): F[A] =
     EM.flatMap(impureRun)(_withRetryF(scope, _)(impureRun, failed))
 
-  private def withRetryF1[A](scope: Retry.Scope, firstAttempt: => F[A], repeatAttempts: => F[A])(failed: A => Boolean)
-                            (implicit stats: Stats.Mutable): F[A] =
-    EM.flatMap(firstAttempt)(_withRetryF(scope, _)(repeatAttempts, failed))
-
   private def withRetryF1I[A](scope: Retry.Scope, firstAttempt: => F[A])(repeatAttempts: A => F[A], failed: A => Boolean)
                             (implicit stats: Stats.Mutable): F[A] =
-    EM.flatMap(firstAttempt)(a0 => _withRetryF(scope, a0)(repeatAttempts(a0), failed))
+    EM.flatMap(firstAttempt)(_withRetryFI(scope, _)(repeatAttempts, failed))
 
   private def _withRetryF[A](scope: Retry.Scope, initialA: A)(retryF: => F[A], failed: A => Boolean)
-                            (implicit stats: Stats.Mutable): F[A] = {
-    def retryWithStats = EM.flatMap(EM.point(stats.retries += 1))(_ => retryF)
-    retryPolicy.retryI(scope, initialA)(failed, retryWithStats)
+                            (implicit stats: Stats.Mutable): F[A] =
+    _withRetryFI(scope, initialA)(_ => retryF, failed)
+
+  private def _withRetryFI[A](scope: Retry.Scope, initialA: A)(retryF: A => F[A], failed: A => Boolean)
+                             (implicit stats: Stats.Mutable): F[A] = {
+    def retryWithStats(a: A) = EM.flatMap(EM.point(stats.retries += 1))(_ => retryF(a))
+    retryPolicy.retryFnI(scope, initialA)(failed, retryWithStats)
   }
 
   private def observeWithRetry(test: Test, ref: R): F[FE Or O] =
@@ -433,15 +463,16 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
   private def runPreChecksWithRetry[A, B](preCheckFn: P => ActionResult.PreCheckFail[A] Or B,
                                           reObserve : () => F[FE Or (R, O)],
                                           p0        : P): F[ActionResult.PreCheckFail[A] Or (ROS, B)] = {
-    def retry: F[ActionResult.PreCheckFail[A] Or (ROS, B)] =
+    type Res = ActionResult.PreCheckFail[A] Or (ROS, B)
+    def retry(last: Res): F[Res] =
       EM.map(reObserve()) {
         case Right((r, o)) =>
           val ros = ROS(r, o, p0.ros.state)
           preCheckFn(p0.copy(ros = ros)).map((ros, _))
         case Left(_) =>
-          preCheckFn(p0).map((p0.ros, _))
+          last
       }
-    withRetryF1(Retry.Scope.PreConditions, EM.point(preCheckFn(p0).map((p0.ros, _))), retry)(retryCheckAround0)
+    withRetryF1I(Retry.Scope.PreConditions, EM.point(preCheckFn(p0).map((p0.ros, _))))(retry, retryCheckAround0)
   }
 
   private def postChecks(hcsA      : Vector[HalfCheck[O, S, E]],
@@ -453,12 +484,17 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                          ros2      : ROS): HH = {
 
     // TODO This didn't work out as planned - redo unpackChecks stuff
-    var checksPostA = checksPre.pre
-    var checksPostI = checksPre.invariants
-    if (checksPostA.coproductFound || checksPostI.coproductFound) {
-      checksPostA = UnpackChecks.arounds(arounds, ros2)
-      checksPostI = UnpackChecks.invariants(invariants, ros2)
-    }
+    val checksPostA =
+      if (checksPre.pre.coproductFound)
+        UnpackChecks.arounds(arounds, ros2)
+      else
+        checksPre.pre
+
+    val checksPostI =
+      if (checksPre.invariants.coproductFound)
+        UnpackChecks.invariants(invariants, ros2)
+      else
+        checksPre.invariants
 
     // Post conditions
     val post = {
@@ -503,14 +539,14 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
     val initialPostCheck: (ROS, HH) =
       runPostChecks(ros)
 
-    def reObserveAndPostCheck: F[(ROS, HH)] =
+    def reObserveAndPostCheck(last: (ROS, HH)): F[(ROS, HH)] =
       EM.map(reObserve()) {
         case Right((r, o)) => runPostChecks(ROS(r, o, ros.state))
-        case Left(_)       => initialPostCheck
+        case Left(_)       => last
       }
 
     val postCheckWithRetry: F[(ROS, HH)] =
-      _withRetryF(Retry.Scope.PostConditions, initialPostCheck)(reObserveAndPostCheck, _._2.retry)
+      _withRetryFI(Retry.Scope.PostConditions, initialPostCheck)(reObserveAndPostCheck, _._2.retry)
 
     EM.map(postCheckWithRetry)(x => (history, x._1, x._2))
   }
@@ -550,20 +586,28 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
     }
 
     def tryAttempt(ros: ROS): F[Result] =
-      actionFn(ros) match {
-        case None =>
+      attempt.attempt(actionFn(ros)) match {
+        case Right(None) =>
           EM.pure(ActionResult.Skip)
 
-        case Some(_) =>
+        case Right(Some(act0)) =>
           EM.flatMap(runPreChecksWithRetryFor(ros)) {
             case Right((rosPass, x)) =>
-              actionFn(rosPass) match {
-                case Some(act) => runActionOnly(rosPass, x, act)
-                case None      => EM.pure(ActionResult.Skip)
-              }
+              if (rosPass eq ros)
+                runActionOnly(rosPass, x, act0)
+              else
+                attempt.attempt(actionFn(rosPass)) match {
+                  case Right(Some(act)) => runActionOnly(rosPass, x, act)
+                  case Right(None)      => EM.pure(ActionResult.Skip)
+                  case Left(fe)         => EM.pure(ActionResult.ActionFail(fe, (rosPass, x)))
+                }
             case Left(ActionResult.PreCheckFail(p2, _)) =>
               EM.pure(ActionResult.PreCheckFail(p2, false))
           }
+
+        case Left(fe) =>
+          val p2 = p0.copy(ros = ros) :+ History.Step(name, Fail(fe))
+          EM.pure(ActionResult.PreCheckFail(p2, true))
       }
 
     def onRetry(lastFailure: Result): F[Result] =
@@ -571,19 +615,24 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
         case Right((r, o)) =>
           tryAttempt(ROS(r, o, ros0.state))
         case Left(e) =>
-          val actionFailure: Option[FE] =
-            lastFailure match {
-              case ActionResult.ActionFail(fe, _) => Some(fe)
-              case ActionResult.ObsFail(fe, _, _) => fe
-              case _                              => None
-            }
-          val lastROS_X: (ROS, X) =
-            lastFailure match {
-              case ActionResult.ActionFail(_, rx) => rx
-              case ActionResult.ObsFail(_, _, rx) => rx
-              case _                              => (ros0, null.asInstanceOf[X])
-            }
-          EM.pure(ActionResult.ObsFail(actionFailure, e, lastROS_X))
+          lastFailure match {
+            case ActionResult.PreCheckFail(p2, r) =>
+              EM.pure(ActionResult.PreCheckFail(p2, r))
+            case _ =>
+              val actionFailure: Option[FE] =
+                lastFailure match {
+                  case ActionResult.ActionFail(fe, _) => Some(fe)
+                  case ActionResult.ObsFail(fe, _, _) => fe
+                  case _                              => None
+                }
+              val lastROS_X: (ROS, X) =
+                lastFailure match {
+                  case ActionResult.ActionFail(_, rx) => rx
+                  case ActionResult.ObsFail(_, _, rx) => rx
+                  case _                              => (ros0, null.asInstanceOf[X])
+                }
+              EM.pure(ActionResult.ObsFail(actionFailure, e, lastROS_X))
+          }
       }
 
     withRetryF1I(Retry.Scope.Action, tryAttempt(ros0))(onRetry, _.retry)
@@ -704,30 +753,25 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
       }
 
     def runInvariants(ros: ROS): (ROS, H) = {
-      val invariantsPoints = {
-        val ps = new UniqueListBuilder[Point[OS[O, S], E]]
-        val es = new UniqueListBuilder[NamedError[FE]]
-        foreachSackE(test.invariants)(ros) {
-          case Right(Invariant.Point(p)) => ps += p
-          case Right(Invariant.Delta(_)) => ()
-          case Left(e)                   => es += e
-        }
-        type T = CheckNE[Point, O, S, E]
-        val pi = ps.iterator().map[T](Right(_))
-        val ei = es.iterator().map[T](Left(_))
-        (pi ++ ei).toList
-      }
-
       val h: H =
-        if (invariantsPoints.isEmpty)
+        if (test.invariants.isEmpty)
           History.empty
         else {
-          val children = {
-            val b = History.newBuilder[E](stats)
-            b.addEachNE(invariantsPoints)(_.name)(ros.some, _.test(ros).noCause)
-            b.history()
+          val ps = new UniqueListBuilder[Point[OS[O, S], E]]
+          val es = new UniqueListBuilder[NamedError[FE]]
+          foreachSackE(test.invariants)(ros) {
+            case Right(Invariant.Point(p)) => ps += p
+            case Right(Invariant.Delta(_)) => ()
+            case Left(e)                   => es += e
           }
-          History(History.parent(InitialState, children))
+          if (ps.isEmpty && es.isEmpty)
+            History.empty
+          else {
+            val b = History.newBuilder[E](stats)
+            b.addEach(ps.iterator())(_.name)(ros.some, _.test(ros).noCause)
+            es.iterator().foreach(b.addNE)
+            History(History.parent(InitialState, b.history()))
+          }
         }
 
       (ros, h)

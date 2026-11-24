@@ -149,7 +149,7 @@ trait DomZipper[F[_], Dom, A, Self[G[_], B] <: DomZipper[G, Dom, B, Self]] {
   def value: F[String]
 
   final def needAttribute(name: String): F[String] =
-    F.option(getAttribute(name), s"$tagName doesn't have attribute $name")
+    F.option(getAttribute(name), enrichErr(s"$tagName doesn't have attribute $name"))
 
   final def outerHTML: String = htmlScrub run _outerHTML
   final def innerHTML: String = htmlScrub run _innerHTML
@@ -248,20 +248,21 @@ object DomZipper {
       private[domzipper] val enrichErr : String => String,
       private[domzipper] val rawResults: Vector[Z[F, A]],
                              filterFn  : Option[Z[F, A] => Boolean],
-      private[domzipper] val C         : DomCollection.Container[F, C])
+      private[domzipper] val C         : DomCollection.Container[F, C],
+                             prevCheck : Option[() => F[Unit]] = None)
       (implicit val F: ErrorHandler[F]) {
 
-    private val result: Vector[Z[F, A]] =
+    private lazy val result: Vector[Z[F, A]] =
       filterFn match {
         case None    => rawResults
         case Some(f) => rawResults.filter(f)
       }
 
     private def validateRaw: F[Unit] =
-      if (filterFn.isEmpty)
-        F.pass(())
-      else
-        F.map(C(enrichErr, rawResults))(_ => ())
+      prevCheck match {
+        case None    => F.map(C(enrichErr, rawResults))(_ => ())
+        case Some(p) => F.flatMap(p())(_ => F.map(C(enrichErr, rawResults))(_ => ()))
+      }
 
     private def fail[B](errMsg: String): F[B] =
       F fail enrichErr(errMsg)
@@ -276,10 +277,22 @@ object DomZipper {
       result.length
 
     def zippers: F[C[Z[F, A]]] =
-      F.flatMap(validateRaw)(_ => C(enrichErr, result))
+      if (filterFn.isEmpty)
+        prevCheck match {
+          case None    => C(enrichErr, rawResults)
+          case Some(p) => F.flatMap(p())(_ => C(enrichErr, rawResults))
+        }
+      else
+        F.flatMap(validateRaw)(_ => C(enrichErr, result))
 
     def map[B](f: Z[F, A] => B): F[C[B]] =
-      F.flatMap(validateRaw)(_ => C(enrichErr, result.map(f)))
+      if (filterFn.isEmpty)
+        prevCheck match {
+          case None    => C(enrichErr, rawResults.map(f))
+          case Some(p) => F.flatMap(p())(_ => C(enrichErr, rawResults.map(f)))
+        }
+      else
+        F.flatMap(validateRaw)(_ => C(enrichErr, result.map(f)))
 
     @deprecated("Use .map", "2.2.0")
     def mapZippers[B](f: Z[F, A] => B): F[C[B]] =
@@ -292,23 +305,23 @@ object DomZipper {
       map(_.dom)
 
     def mapDoms[B](f: Dom => B): F[C[B]] =
-      F.map(doms)(C.map(_)(f))
+      map(z => f(z.dom))
 
     def traverseDoms[B](f: Dom => F[B]): F[C[B]] =
-      F.flatMap(doms)(C.traverse(_)(f))
+      traverse(z => f(z.dom))
 
     def extracts: F[C[A]] =
       map(_.extract)
 
     def mapExtracts[B](f: A => B): F[C[B]] =
-      F.map(extracts)(C.map(_)(f))
+      map(z => f(z.extract))
 
     def traverseExtracts[B](f: A => F[B]): F[C[B]] =
-      F.flatMap(extracts)(C.traverse(_)(f))
+      traverse(z => f(z.extract))
 
     def filter(f: Z[F, A] => Boolean): DomCollection[Z, F, C, Dom, A] = {
       val f2: Z[F, A] => Boolean = filterFn.fold(f)(f0 => z => f0(z) && f(z))
-      new DomCollection(enrichErr, rawResults, Some(f2), C)
+      new DomCollection(enrichErr, rawResults, Some(f2), C, prevCheck)
     }
 
     def singleton: F[Z[F, A]] =
@@ -345,9 +358,15 @@ object DomZipper {
     def innerHTMLs: F[C[String]] = map(_.innerHTML)
     def innerTexts: F[C[String]] = map(_.innerText)
 
-    def collect01 = new DomCollection[Z, F, Option, Dom, A](enrichErr, result, None, new DomCollection.Container01[F])
-    def collect0n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, new DomCollection.Container0N[F])
-    def collect1n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, new DomCollection.Container1N[F])
+    private def nextPrevCheck: Option[() => F[Unit]] =
+      if (prevCheck.isEmpty && (C eq F.C0N))
+        None
+      else
+        Some(() => validateRaw)
+
+    def collect01 = new DomCollection[Z, F, Option, Dom, A](enrichErr, result, None, F.C01, nextPrevCheck)
+    def collect0n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, F.C0N, nextPrevCheck)
+    def collect1n = new DomCollection[Z, F, Vector, Dom, A](enrichErr, result, None, F.C1N, nextPrevCheck)
   }
 
   // ===================================================================================================================
@@ -416,16 +435,16 @@ object DomZipper {
         as(idx)
     }
 
-    private def vectorTraverse[F[_], A, B](c: Vector[A])(f: A => F[B])(implicit F: ErrorHandler[F]): F[Vector[B]] = {
-      def go(i: Int, v: Vector[B]): F[Vector[B]] =
-        if (i == c.length)
-          F pass v
-        else {
-          val a = c(i)
-          F.flatMap(f(a))(b => go(i + 1, v :+ b))
-        }
-      go(0, Vector.empty)
-    }
+    private def vectorTraverse[F[_], A, B](c: Vector[A])(f: A => F[B])(implicit F: ErrorHandler[F]): F[Vector[B]] =
+      if (c.isEmpty)
+        F.pass(Vector.empty)
+      else {
+        type Res = scala.collection.mutable.Builder[B, Vector[B]]
+        val builder: Res = Vector.newBuilder[B]
+        builder.sizeHint(c.length)
+        val r = c.foldLeft(F.pass(builder))((acc, a) => F.flatMap(acc)(bs => F.map(f(a))(b => (bs += b): Res)))
+        F.map(r)(_.result())
+      }
 
   }
 

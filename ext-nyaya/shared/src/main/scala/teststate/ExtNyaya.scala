@@ -17,8 +17,22 @@ object ExtNyaya extends ExtNyaya {
     def genActions(name: ActionName)(g: Gen[Actions])(implicit s: Settings): Actions =
       ExtNyaya.genActions(g)(name)(s)
 
-    def genActionsBy(name: ActionName)(g: ROS => Gen[Actions])(implicit s: Settings): Actions =
-      dsl.chooseAction(name)(i => genActions(name)(g(i))(s))
+    def genActionsBy(name: ActionName)(g: ROS => Gen[Actions])(implicit s: Settings): Actions = {
+      val total = s.sampleSize.value
+      (1 to total)
+        .iterator
+        .map { idx =>
+          dsl.chooseAction(name) { ros =>
+            g(ros)
+              .samples(s.genSize)
+              .next()
+              .groupIfMultipleByLen(_.toString + " generated actions.")
+              .nameMod(n => s"[$idx/$total] ${n.value}")
+          }
+        }
+        .combine
+        .group(name)
+    }
   }
 
   def genActions[F[_], R, O, S, E](g: Gen[Actions[F, R, O, S, E]])(name: NameFn[ROS[R, O, S]])(implicit s: Settings): Actions[F, R, O, S, E] =

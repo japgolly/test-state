@@ -28,6 +28,35 @@ object ExecutionModelTest extends TestSuite {
           val err = Await.result(f.failed, 2.seconds)
           assertEq(err.getMessage, "schedule boom")
         }
+
+        "pastBypassesTimer" - {
+          var executedOn: Thread = null
+          val directEc = new scala.concurrent.ExecutionContext {
+            override def execute(runnable: Runnable): Unit = {
+              executedOn = Thread.currentThread()
+              runnable.run()
+            }
+            override def reportFailure(cause: Throwable): Unit = throw cause
+          }
+          val directEm = ExecutionModel.scalaFuture(directEc)
+          val caller = Thread.currentThread()
+          val f = directEm.schedule(Future.successful(7), Instant.now().minusSeconds(1))
+          assertEq(Await.result(f, 2.seconds), 7)
+          assert(executedOn eq caller)
+        }
+
+        "futureDelay" - {
+          val startAt = Instant.now().plusMillis(40)
+          val f = EM.schedule(Future.successful(System.currentTimeMillis()), startAt)
+          val ranAt = Await.result(f, 2.seconds)
+          assert(ranAt >= startAt.toEpochMilli - 5)
+        }
+
+        "futureSyncException" - {
+          val f = EM.schedule[Int](throw new RuntimeException("delayed boom"), Instant.now().plusMillis(15))
+          val err = Await.result(f.failed, 2.seconds)
+          assertEq(err.getMessage, "delayed boom")
+        }
       }
 
       "doFinally" - {
@@ -84,15 +113,41 @@ object ExecutionModelTest extends TestSuite {
 
         "syncExceptionInBoth" - {
           var lastRan = false
+          val mainEx = new RuntimeException("main boom")
+          val lastEx = new RuntimeException("last boom")
           val f = EM.doFinally[Int, Unit](
-            throw new RuntimeException("main boom"), {
+            throw mainEx, {
               lastRan = true
-              throw new RuntimeException("last boom")
+              throw lastEx
             }
           )
           val err = Await.result(f.failed, 2.seconds)
-          assertEq(err.getMessage, "last boom")
+          assert(err eq lastEx)
+          assertEq(err.getSuppressed.map(_.getMessage).toVector, Vector("main boom"))
           assert(lastRan)
+        }
+
+        "asyncFailureInBoth" - {
+          val mainEx = new RuntimeException("main async")
+          val lastEx = new RuntimeException("last async")
+          val f = EM.doFinally[Int, Unit](
+            Future.failed(mainEx),
+            Future.failed(lastEx)
+          )
+          val err = Await.result(f.failed, 2.seconds)
+          assert(err eq lastEx)
+          assertEq(err.getSuppressed.map(_.getMessage).toVector, Vector("main async"))
+        }
+
+        "sameExceptionInBoth" - {
+          val ex = new RuntimeException("same boom")
+          val f = EM.doFinally[Int, Unit](
+            Future.failed(ex),
+            Future.failed(ex)
+          )
+          val err = Await.result(f.failed, 2.seconds)
+          assert(err eq ex)
+          assertEq(err.getSuppressed.length, 0)
         }
       }
 

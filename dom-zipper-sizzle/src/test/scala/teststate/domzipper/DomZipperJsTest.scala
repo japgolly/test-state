@@ -1,10 +1,12 @@
 package teststate.domzipper
 
+import cats.instances.boolean._
+import cats.instances.int._
 import cats.instances.option._
 import cats.instances.set._
 import cats.instances.string._
 import cats.instances.vector._
-import japgolly.microlibs.testutil.TestUtil.assertEq
+import japgolly.microlibs.testutil.TestUtil._
 import org.scalajs.dom
 import teststate.domzipper.sizzle.Exports._
 import utest._
@@ -75,6 +77,25 @@ object DomZipperJsTest extends TestSuite {
     "classes" - {
       "none" - assertEq($("form").classes, Set.empty[String])
       "some" - assertEq(name.classes, Set("a", "b", "c"))
+      "svg" - {
+        val svg = dom.document.createElementNS("http://www.w3.org/2000/svg", "svg")
+        svg.setAttribute("class", "icon active")
+        assertEq(DomZipperJs(svg).classes, Set("icon", "active"))
+      }
+    }
+
+    "dynamicMethod" - {
+      "nullReturnsNone" - assertEq(name.dynamicMethod[String](_ => null), None)
+      "undefinedReturnsNone" - assertEq(name.dynamicMethod[String](_.nonExistentProp), None)
+      "defined" - {
+        assertEq(name.dynamicMethod[String](_.value), Some("Bob Loblaw"))
+        assertEq(name.dynamicMethod[Boolean](_.disabled), Some(false))
+      }
+      "valueWithNullFailsCleanly" - {
+        val el = dom.document.createElement("div")
+        el.asInstanceOf[scala.scalajs.js.Dynamic].value = null
+        assertEq(DomZipperJs.failToOption(el).value, None)
+      }
     }
 
     "selectedOption" - {
@@ -119,6 +140,64 @@ object DomZipperJsTest extends TestSuite {
       assertEq(c.outerHTML, "<h3>EH?</h3>")
       assertEq(c.parent.outerHTML, "<div><h3>EH?</h3></div>")
       assertEq(c.parent.child().outerHTML, "<h3>EH?</h3>")
+    }
+
+    "enrichErrOnFailures" - {
+      "needAttribute" - {
+        val Left(err) = $("form").failToEither.needAttribute("nonexistent")
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "checked" - {
+        val Left(err) = $("form").failToEither.checked
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "value" - {
+        val Left(err) = $("form").failToEither.value
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "parent" - {
+        val Left(err) = DomZipperJs.failToEither(dom.document.createElement("div")).parent
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "domAs" - {
+        val Left(err) = $("form").failToEither.domAsInput
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+      }
+
+      "domsAs" - {
+        val Left(err) = $.failToEither.collect1n("form").domsAsInput
+        assertContains(err, "DESC:")
+        assertContains(err, "HTML:")
+        err
+      }
+    }
+
+    "addStyleTag" - {
+      "withHead" - {
+        val doc = dom.document.implementation.createHTMLDocument("test")
+        doc.addStyleTag("body { color: red; }")
+        val head = doc.getElementsByTagName("head")(0)
+        assertEq(head.getElementsByTagName("style").length, 1)
+        assertEq(head.getElementsByTagName("style")(0).textContent, "body { color: red; }")
+      }
+
+      "withoutHead" - {
+        val doc = dom.document.implementation.createHTMLDocument("test")
+        val head = doc.getElementsByTagName("head")(0)
+        val _ = head.parentNode.removeChild(head)
+        doc.addStyleTag("body { color: blue; }")
+        assertEq(doc.documentElement.getElementsByTagName("style").length, 1)
+        assertEq(doc.documentElement.getElementsByTagName("style")(0).textContent, "body { color: blue; }")
+      }
     }
 
   }

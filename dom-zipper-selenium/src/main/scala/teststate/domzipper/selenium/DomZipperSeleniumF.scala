@@ -2,7 +2,7 @@ package teststate.domzipper.selenium
 
 import org.openqa.selenium.{By, WebDriver, WebElement}
 import scala.jdk.CollectionConverters._
-import teststate.domzipper.DomZipper.{CssSelResult, DomCollection, Layer}
+import teststate.domzipper.DomZipper.{CssSelResult, Layer}
 import teststate.domzipper.ErrorHandler.ErrorHandlerOptionOps
 import teststate.domzipper._
 import teststate.selenium.util.SeleniumExt._
@@ -85,7 +85,12 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     new DomZipperSeleniumF(layers, peek)($, h, g, driver)
 
   override protected def _parent: F[Dom] =
-    F.attempt(() => dom().parent()(driver))
+    F.flatMap(F.attempt(dom().parent()(driver))) { p =>
+      if (p == null)
+        F.fail(enrichErr("Element doesn't have a parent."))
+      else
+        F.pass(() => p)
+    }
 
   override protected[domzipper] def _outerHTML: String =
     getAttribute("outerHTML").getOrElse("null")
@@ -93,30 +98,33 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
   override protected[domzipper] def _innerHTML: String =
     getAttribute("innerHTML").getOrElse("null")
 
-  private def newDomCollection[C[_]](desc: String, result: CssSelResult[Dom], C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =
-    DomCollection[DomZipperSeleniumF, F, C, Dom, Dom, A](desc, enrichErr, result, C)(addLayer)
+  override protected def rawChildren: CssSelResult[Dom] =
+    dom().children().map(() => _)
 
-  override protected def collect[C[_]](sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =
-    newDomCollection(sel, runCssQuery(sel), C)
-
-  override protected def collectChildren[C[_]](desc: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] =
-    newDomCollection(desc, dom().children().map(() => _), C)
-
-  override protected def collectChildren[C[_]](desc: String, sel: String, C: DomCollection.Container[F, C]): DomCollection[DomZipperSeleniumF, F, C, Dom, A] = {
-    // WebElement implements hashCode and equals sensibly
-    val all: Set[WebElement] = runCssQuery(sel).iterator.map(_()).toSet
-    val children = dom().children().iterator.filter(all.contains).map(() => _).toVector
-    newDomCollection(desc, children, C)
+  override protected def rawChildren(sel: String): CssSelResult[Dom] = {
+    val results = runCssQuery(sel)
+    if (results.isEmpty)
+      Vector.empty
+    else {
+      // WebElement implements hashCode and equals sensibly
+      val all: Set[WebElement] = results.iterator.map(_()).toSet
+      dom().children().iterator.filter(all.contains).map(() => _).toVector
+    }
   }
 
-  override def matches(css: String): F[Boolean] = {
-    val all = driver.findElements(By.cssSelector(css)).asScala
-    val dom = this.dom()
-    F pass all.contains(dom) // WebElement implements hashCode and equals sensibly
-  }
+  override def matches(css: String): F[Boolean] =
+    F.attempt(
+      java.lang.Boolean.TRUE.equals(
+        driver.executeJsOrThrow("return arguments[0].matches(arguments[1])", dom(), css)))
 
   override def getAttribute(name: String): Option[String] =
-    Option(dom().getAttribute(name))
+    try
+      Option(dom().getAttribute(name))
+    catch {
+      // javascript error: a.getAttributeNode is not a function
+      case _: org.openqa.selenium.JavascriptException =>
+        None
+    }
 
   override def tagName: String =
     dom().getTagName()
@@ -131,21 +139,5 @@ final class DomZipperSeleniumF[F[_], A](override protected val layers: DomZipper
     dom().classes()
 
   override def value: F[String] =
-    getAttribute("value") orFail s".value failed on <${dom().getTagName}>."
-
-  override def selectedOption: F[DomCollection[DomZipperSeleniumF, F, Option, Dom, A]] =
-    tagName.toUpperCase match {
-      case "SELECT" =>
-        val sel = "option:checked"
-        val results = runCssQuery(sel)
-        val selected =
-          if (results.isEmpty && getAttribute("multiple").isEmpty) {
-            val all = runCssQuery("option")
-            if (all.nonEmpty) Vector(all.head) else Vector.empty
-          } else
-            results
-        F pass newDomCollection(sel, selected, F.C01)
-      case x =>
-        F fail enrichErr(s"<$x> is not a <SELECT>")
-    }
+    getAttribute("value") orFail enrichErr(s".value failed on <${dom().getTagName}>.")
 }

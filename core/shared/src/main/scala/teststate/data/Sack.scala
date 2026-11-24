@@ -53,17 +53,24 @@ object Sack {
   implicit val sackInstanceProfunctor: Profunctor[Sack] =
     new Profunctor[Sack] {
 
+      override def lmap[A, B, C](m: Sack[A, B])(g: C => A): Sack[C, B] =
+        m match {
+          case v @ Value(_)    => v
+          case Product(s)      => if (s.isEmpty) empty else Product(s map (_ lmap g))
+          case CoProduct(n, p) => CoProduct(n cmap g, c => p(g(c)) lmap g)
+        }
+
       override def rmap[A, B, C](m: Sack[A, B])(f: B => C): Sack[A, C] =
         m match {
           case Value(b)        => Value(f(b))
-          case Product(s)      => Product(s map (_ rmap f))
+          case Product(s)      => if (s.isEmpty) empty else Product(s map (_ rmap f))
           case CoProduct(n, p) => CoProduct(n, p(_) rmap f)
         }
 
       override def dimap[A, B, C, D](m: Sack[A, B])(g: C => A, f: B => D): Sack[C, D] =
         m match {
           case Value(b)        => Value(f(b))
-          case Product(s)      => Product(s map (_.dimap(g, f)))
+          case Product(s)      => if (s.isEmpty) empty else Product(s map (_.dimap(g, f)))
           case CoProduct(n, p) => CoProduct(n cmap g, c => p(g(c)).dimap(g, f))
         }
     }

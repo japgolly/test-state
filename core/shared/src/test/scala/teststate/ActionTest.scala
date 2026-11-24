@@ -4,7 +4,7 @@ import cats.instances.string._
 import cats.instances.vector._
 import teststate.Exports._
 import teststate.TestUtil._
-import teststate.data.VectorTree
+import teststate.data.{Left, Right, VectorTree}
 import utest._
 
 object ActionTest extends TestSuite {
@@ -53,6 +53,47 @@ object ActionTest extends TestSuite {
           |[skip] C1
           |[skip] A2
         """.stripMargin.trim)
+    }
+
+    "groupCond" - {
+      import teststate.core.Action.Group.Cond
+      import teststate.data.ROS
+
+      val ros = ROS((), (), ())
+
+      "shortCircuit" - {
+        "false" - {
+          var called = false
+          val c1 = Cond.when[Unit, Unit, Unit](_ => false)
+          val c2 = Cond[Unit, Unit, Unit, String](_ => { called = true; Left("boom") })
+          val combined = c1 |+| c2
+          val result = combined.permit(ros)
+          assertEq(result, Right(false))
+          assert(!called)
+        }
+
+        "fail" - {
+          var called = false
+          val c1 = Cond[Unit, Unit, Unit, String](_ => Left("err1"))
+          val c2 = Cond[Unit, Unit, Unit, String](_ => { called = true; Left("err2") })
+          val combined = c1 |+| c2
+          val result = combined.permit(ros)
+          assertEq(result, Left("err1"))
+          assert(!called)
+        }
+      }
+
+      "identity" - {
+        val c = Cond.when[Unit, Unit, Unit](_ => true)
+        assert((c |+| Cond.always).permit eq c.permit)
+        assert((Cond.always |+| c).permit eq c.permit)
+      }
+
+      "alwaysPreservation" - {
+        assert(Cond.always.mapE((_: Nothing) => "err").isAlways)
+        assert(Cond.always.mapR((_: Int) => ()).isAlways)
+        assert(Cond.always.mapOS((_: Int) => (), (_: String) => ()).isAlways)
+      }
     }
 
   }
