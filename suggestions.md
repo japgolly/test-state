@@ -4,16 +4,13 @@ This document contains numbered suggestions, bug fixes, improvements, and optimi
 
 ---
 
-## 34. `Or` and `VectorTree` allocations
+## 34. `Or` allocations
 
-* **Locations:**
-  * `core/shared/src/main/scala/teststate/data/Or.scala` (lines 17–83, 96–105)
-  * `core/shared/src/main/scala/teststate/data/VectorTree.scala` (lines 35–36)
+* **Location:** `core/shared/src/main/scala/teststate/data/Or.scala` (lines 17–83, 96–105)
 * **Issue:**
-  1. In `Or.scala`, `map` delegates to `flatMap(b => Right(f(b)))` and `bimap`, `exists`, `leftOption`, `toOption`, `toOptionMap`, `toTri`, `toTriMap`, `toTriFlatMap`, and `toEither` delegate to `fold(...)` (allocating 1–2 closures per call instead of direct pattern matching), and `Or.liftLeft` allocates a new `Right(())` on every `None`.
-  2. In `VectorTree.Node.iteratorWithLevel`, leaf nodes (`children.elements.isEmpty`) still allocate `children.iteratorWithLevel(currentLevel + 1)` and a `ConcatIterator`.
+  In `Or.scala`, `map` delegates to `flatMap(b => Right(f(b)))` and `bimap`, `exists`, `leftOption`, `toOption`, `toOptionMap`, `toTri`, `toTriMap`, `toTriFlatMap`, and `toEither` delegate to `fold(...)` (allocating 1–2 closures per call instead of direct pattern matching), and `Or.liftLeft` allocates a new `Right(())` on every `None`.
 * **Proposed Change:**
-  Use direct pattern matching and a cached `rightUnit` in `Or`, and short-circuit `iteratorWithLevel` on leaf nodes.
+  Use direct pattern matching and a cached `rightUnit` in `Or`.
 
 ---
 
