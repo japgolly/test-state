@@ -1,6 +1,6 @@
 package teststate.example.selenium
 
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 import org.openqa.selenium.PageLoadStrategy
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 
@@ -19,14 +19,14 @@ object MyTestState
 
   def newChrome() = {
     val options = new ChromeOptions()
-    options.setHeadless(true)
+    options.addArguments("--headless=new")
     options.setPageLoadStrategy(PageLoadStrategy.NONE)
 
     val driver = new ChromeDriver(options)
 
     // Tell Selenium not to wait (block). TestState will manage retries itself.
     // When parallel testing, the allows TestState to move around various tabs.
-    driver.manage().timeouts().implicitlyWait(1, TimeUnit.MILLISECONDS)
+    driver.manage().timeouts().implicitlyWait(Duration.ofMillis(1))
 
     driver
   }

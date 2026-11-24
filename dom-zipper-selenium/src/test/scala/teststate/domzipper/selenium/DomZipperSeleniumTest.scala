@@ -5,7 +5,7 @@ import cats.instances.set._
 import cats.instances.string._
 import cats.instances.vector._
 import japgolly.microlibs.testutil.TestUtil._
-import java.util.concurrent.TimeUnit
+import java.time.Duration
 import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
 import teststate.domzipper.selenium.Exports._
 import utest._
@@ -15,9 +15,9 @@ object DomZipperSeleniumTest extends TestSuite {
   lazy val driver: ChromeDriver = {
     val testHtmlPath = SeleniumTestUtil.testResource("test.html").getAbsoluteFile
     val options = new ChromeOptions()
-    options.setHeadless(true)
+    options.addArguments("--headless=new")
     val d = new ChromeDriver(options)
-    d.manage().timeouts().implicitlyWait(1, TimeUnit.NANOSECONDS)
+    d.manage().timeouts().implicitlyWait(Duration.ofNanos(1))
     d.onShutdownQuit()
     d.get("file://" + testHtmlPath)
     d
