@@ -411,17 +411,17 @@ object CollectionAssertions {
     object Pos extends EqualIncludingOrder {
       override def apply[A](source: IterableOnce[A], expect: IterableOnce[A])(implicit eq: Equal[A], s: Display[A]) = {
         val a = source.iterator.toVector
-        val e = expect.iterator.toSeq
+        val e = expect.iterator.toVector
         if (a.corresponds(e)(eq.equal))
           None
         else
-          Some(Mismatch(a, e.toVector))
+          Some(Mismatch(a, e))
       }
     }
 
     object Neg extends EqualIncludingOrder {
       override def apply[A](source: IterableOnce[A], expect: IterableOnce[A])(implicit eq: Equal[A], s: Display[A]) =
-        if (source.iterator.toSeq.corresponds(expect.iterator.toSeq)(eq.equal))
+        if (source.iterator.corresponds(expect.iterator)(eq.equal))
           Some(Matched)
         else
           None
@@ -489,11 +489,11 @@ object CollectionAssertions {
       override def apply[A](args: Args[A])(implicit s: Display[A]) =
         prep(args) match {
           case Some(_) => None
-          case None         => Some(Matched())
+          case None    => Some(Matched)
         }
     }
 
-    sealed trait Failure[A] extends HasErrorString with Product with Serializable
+    sealed trait Failure[+A] extends HasErrorString with Product with Serializable
 
     case class Mismatch[A](errors: Map[A, EA[Int]])(implicit s: Display[A]) extends Failure[A] {
       override def errorString =
@@ -502,7 +502,7 @@ object CollectionAssertions {
           .mkString(" ")
     }
 
-    case class Matched[A]() extends Failure[A] {
+    case object Matched extends Failure[Nothing] {
       override def errorString = "Expected changes occurred."
     }
   }
