@@ -83,7 +83,7 @@ This is a (simplified) model of how tests are executed:
 ![concept](doc/concept.uml.png)
 
 When retries are enabled, then test execution is
-[like this](https://rawgit.com/japgolly/test-state/master/doc/retries.gv.svg).
+[like this](https://raw.githubusercontent.com/japgolly/test-state/main/doc/retries.gv.svg).
 
 # How do I use this?
   - [Usage](doc/USAGE.md)

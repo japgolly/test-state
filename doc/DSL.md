@@ -22,7 +22,7 @@ val dsl = Dsl.future[Ref, Obs, State]
 ```
 
 Once you have an instance, you can create your test content as follows:
-![dsl-core](https://rawgit.com/japgolly/test-state/master/doc/dsl-core.gv.svg)
+![dsl-core](https://raw.githubusercontent.com/japgolly/test-state/main/doc/dsl-core.gv.svg)
 
 You can create assertions here but it's more convenient to use the *focus* DSL below.
 
@@ -105,7 +105,7 @@ Performed 3 actions, 0 checks.
 *Focus* DSL exists to allows you make assertions easily and repeatedly,
 about a particular value, or number of values.
 
-![dsl-focus](https://rawgit.com/japgolly/test-state/master/doc/dsl-focus.gv.svg)
+![dsl-focus](https://raw.githubusercontent.com/japgolly/test-state/main/doc/dsl-focus.gv.svg)
 
 Examples:
 ```scala

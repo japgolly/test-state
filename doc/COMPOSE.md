@@ -76,4 +76,4 @@ Extract `Actions` and `Invariants` from `Plan` using `.actions`, `.invariants`.
 
 Turn a `Plan` into a `Test` (and vice-versa similarly) like this:
 
-![Runner hierarchy](https://rawgit.com/japgolly/test-state/master/doc/runner.gv.svg)
+![Runner hierarchy](https://raw.githubusercontent.com/japgolly/test-state/main/doc/runner.gv.svg)
