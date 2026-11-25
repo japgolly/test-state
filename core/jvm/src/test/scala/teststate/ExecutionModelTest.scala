@@ -1,11 +1,11 @@
 package teststate
 
 import java.time.Instant
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.jdk.CollectionConverters._
 import teststate.Exports._
+import teststate.Platform.globalExecutionContext
 import teststate.TestUtil._
 import utest._
 

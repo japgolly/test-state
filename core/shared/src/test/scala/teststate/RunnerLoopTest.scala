@@ -3,6 +3,7 @@ package teststate
 import java.time.{Duration => JavaDuration, Instant}
 import scala.concurrent.duration.{Duration => ScalaDuration}
 import teststate.Exports.{testStateAssertionSettings => _, testStateEqualByUnivEq => _, _}
+import teststate.Platform.globalExecutionContext
 import teststate.TestUtil._
 import teststate.core.LoopStep
 import teststate.data.{Id, Left => OrLeft, Or, Right => OrRight}
@@ -1448,7 +1449,6 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "transToFuture" - {
-        import scala.concurrent.ExecutionContext.Implicits.global
         val dsl = Dsl[Counter, Int, Int]
         val inc = dsl.action("Inc")(_.ref.inc()).updateState(_ + 1)
         val loop = dsl.loop("SyncToFuture")(ros => if (ros.obs < 3) dsl.loop.act(inc) else dsl.loop.break)
@@ -1464,7 +1464,6 @@ object RunnerLoopTest extends TestSuite {
 
     "asyncAndStackSafety" - {
       "asyncFutureWithActAndSleep" - {
-        import scala.concurrent.ExecutionContext.Implicits.global
         import scala.concurrent.Future
 
         val dsl = Dsl.future[Counter, Int, Int]
@@ -1504,7 +1503,6 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "stackSafetyAsync" - {
-        import scala.concurrent.ExecutionContext.Implicits.global
         import scala.concurrent.Future
 
         val size = Platform.StackTestSize
