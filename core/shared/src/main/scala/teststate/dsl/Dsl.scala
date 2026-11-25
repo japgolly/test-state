@@ -2,6 +2,7 @@ package teststate.dsl
 
 import japgolly.microlibs.name_fn._
 import japgolly.univeq.UnivEq
+import java.time.Duration
 import teststate.core.CoreExports._
 import teststate.core.Types.SackE
 import teststate.core._
@@ -30,6 +31,7 @@ object Dsl {
     final type Arounds              = CoreExports.Arounds[O, S, E]
     final type Invariants           = CoreExports.Invariants[O, S, E]
     final type Actions              = CoreExports.Actions[F, R, O, S, E]
+    final type LoopStep             = CoreExports.LoopStep[F, R, O, S, E]
     final type PlanWithInitialState = teststate.run.PlanWithInitialState[F, R, O, S, E]
     final type TestWithInitialState = teststate.run.TestWithInitialState[F, R, O, S, E]
     final type Plan                 = teststate.run.Plan[F, R, O, S, E]
@@ -38,8 +40,55 @@ object Dsl {
 
   def Types[F[_], R, O, S, E]: Types[F, R, O, S, E] =
     new Types[F, R, O, S, E]{}
-}
 
+  trait Loop[F[_], R, O, S, E] extends Types[F, R, O, S, E] {
+    import CoreExports2._
+
+    protected implicit def em: ExecutionModel[F]
+    protected def emptyAction: Actions
+
+    final def apply(name: ActionName)(f: ROS => LoopStep): Actions = {
+      val inner = Action.Loop.lift[F, R, O, S, E](f)
+      Action.liftInner(inner)(name)
+    }
+
+    /** Run actions and continue the loop. */
+    final def act(actions: Actions): LoopStep =
+      LoopStep.Act(actions)
+
+    /** Break the loop. */
+    final def break: LoopStep =
+      LoopStep.Break(None)
+
+    /** Report a failure. */
+    final def fail(failure: E): LoopStep =
+      LoopStep.Fail(failure)
+
+    /** Sleep for a specified duration then continue the loop. */
+    final def sleep(duration: Duration): LoopStep =
+      LoopStep.Sleep(duration, None)
+
+    /** Sleep for a specified number of milliseconds then continue the loop. */
+    final def sleepMs(milliseconds: Long): LoopStep =
+      sleep(Duration.ofMillis(milliseconds))
+
+    /** Update the state and continue the loop. */
+    def setState(s: S): LoopStep =
+      act(emptyAction.updateState(_ => s))
+
+    /** Update the state and break the loop. */
+    def setStateAndBreak(s: S): LoopStep =
+      LoopStep.Break(Some(_ => Right(s)))
+
+    /** Update the state, sleep for a specified duration, then continue the loop. */
+    final def setStateAndSleep(s: S, duration: Duration): LoopStep =
+      LoopStep.Sleep(duration, Some(_ => Right(s)))
+
+    /** Update the state, sleep for a specified number of milliseconds, then continue the loop. */
+    final def setStateAndSleepMs(s: S, milliseconds: Long): LoopStep =
+      setStateAndSleep(s, Duration.ofMillis(milliseconds))
+  }
+}
 
 final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Action.Single[F, R, O, S, E])
                                  (implicit EM: ExecutionModel[F]) extends Dsl.Types[F, R, O, S, E] {
@@ -590,6 +639,11 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
   def runCallbacks: RunCallbacks.Dsl[F, R, O, S, E] =
       new RunCallbacks.Dsl
 
+  /** @since 3.2.0 */
+  object loop extends Dsl.Loop[F, R, O, S, E] {
+    override protected implicit def em: ExecutionModel[F] = EM
+    override protected def emptyAction: Actions = Empty.instance
+  }
 }
 
 // TODO Runner should print state & obs on failure, each assertion needn't. It should print S and/or S' depending on the type of check (pre and/or post) that failed.

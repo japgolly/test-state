@@ -18,6 +18,7 @@ trait CoreExports
   type Invariants[-O, -S, E] = Types.Invariants[O, S, E]
 
   type Actions[F[_], R, O, S, E] = Action.Actions[F, R, O, S, E]
+  type LoopStep[F[_], R, O, S, E] = teststate.core.LoopStep[F, R, O, S, E]
 
   import Types._
   implicit def autoWidenChecksToInvariants[C[-_, _], A, E](c: CheckShapeA[C, A, E])(implicit t: ToInvariants[CheckShapeA, C]): CheckShapeA[Invariant, A, E] =

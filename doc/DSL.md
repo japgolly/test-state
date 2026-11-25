@@ -34,6 +34,72 @@ The majority of your test actions will be created like this:
 dsl.action("Launch missiles")(_.missiles.nukes.launchAllNow())
 ```
 
+## Looping
+
+You can create a looping super-action by using `dsl.loop(name)(loopingFunction)`.
+The looping function takes as input an `ROS` (i.e. Ref + Obs + State), and returns a `LoopStep` value.
+`LoopStep` values can be constructed via the following:
+
+```scala
+/** Run actions and continue the loop. */
+dsl.loop.act(actions: Actions)
+
+/** Break the loop. */
+dsl.loop.break
+
+/** Report a failure. */
+dsl.loop.fail(failure: E)
+
+/** Sleep for a specified duration then continue the loop. */
+dsl.loop.sleep(duration: Duration)
+
+/** Sleep for a specified number of milliseconds then continue the loop. */
+dsl.loop.sleepMs(milliseconds: Long)
+
+/** Update the state and continue the loop. */
+dsl.loop.setState(s: S)
+
+/** Update the state and break the loop. */
+dsl.loop.setStateAndBreak(s: S)
+
+/** Update the state, sleep for a specified duration, then continue the loop. */
+dsl.loop.setStateAndSleep(s: S, duration: Duration)
+
+/** Update the state, sleep for a specified number of milliseconds, then continue the loop. */
+dsl.loop.setStateAndSleepMs(s: S, milliseconds: Long)
+```
+
+Example:
+
+```scala
+class Counter(var value: Int = 0) {
+  def inc(): Unit =
+    value += 1
+}
+
+val dsl = Dsl[Counter, Int, Unit]
+val inc = dsl.action("Inc")(_.ref.inc())
+val loop = dsl.loop("Count to 3") { ros =>
+  if (ros.obs < 3)
+    dsl.loop.act(inc)
+  else
+    dsl.loop.break
+}
+val c = new Counter(0)
+Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
+```
+
+which generates a report like this:
+
+```txt
+✓ Count to 3
+  ✓ Inc
+  ✓ Inc
+  ✓ Inc
+✓ All pass.
+Performed 3 actions, 0 checks.
+```
+
 ## Focus
 
 *Focus* DSL exists to allows you make assertions easily and repeatedly,

@@ -1,6 +1,7 @@
 package teststate.run
 
 import japgolly.microlibs.name_fn._
+import java.time.{Duration => JavaDuration}
 import scala.annotation.tailrec
 import scala.collection.mutable
 import teststate.core.CoreExports._
@@ -33,6 +34,46 @@ object Runner {
   val Observation  = "Observation"
   val UpdateState  = "Update expected state"
   val InitialState = "Initial state."
+
+  private val emptyName: Name =
+    Name.now("")
+
+  private def sleepStepName(d: JavaDuration): Name = {
+    val prefix = "Sleep for "
+    if (d.isZero)
+      Name.now(prefix + "0ms")
+    else {
+      val neg       = d.isNegative
+      val abs       = if (neg) d.negated() else d
+      val totalSecs = abs.getSeconds
+      val hours     = totalSecs / 3600
+      val mins      = (totalSecs % 3600) / 60
+      val secs      = totalSecs % 60
+      val nanos     = abs.getNano
+      val ms        = nanos / 1000000
+      val us        = (nanos % 1000000) / 1000
+      val ns        = nanos % 1000
+
+      val sb = new java.lang.StringBuilder(prefix)
+      if (neg)
+        sb.append('-')
+      var sep = false
+      def add(v: Long, unit: String): Unit =
+        if (v != 0) {
+          if (sep)
+            sb.append(' ')
+          sb.append(v).append(unit)
+          sep = true
+        }
+      add(hours, "h")
+      add(mins, "m")
+      add(secs, "s")
+      add(ms, "ms")
+      add(us, "μs")
+      add(ns, "ns")
+      Name.now(sb.toString())
+    }
+  }
 
   val notRightRight: (Any Or (Any Or Any)) => Boolean = {
     case x: Right[_] => x.isLeft
@@ -379,6 +420,20 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
   /** First arg is step.failed */
   private type PostCheckFn = Boolean => ROS => HH
 
+  private def runHalfChecks(deltas: Iterable[Around.DeltaA[OS[O, S], E]], ros: ROS): Vector[HalfCheck[O, S, E]] =
+    if (deltas.isEmpty)
+      Vector.empty
+    else {
+      val b = Vector.newBuilder[HalfCheck[O, S, E]]
+      for (d0 <- deltas) {
+        val d = d0.aux
+        val r = attempt.attempt(d.before(ros)).fold[Tri[FE, d.A]](Failed(_), _.noCause)
+        b += HalfCheck(d)(r)
+        ()
+      }
+      b.result()
+    }
+
   private def runPreChecks(name      : Name,
                            invariants: Invariants[O, S, E],
                            arounds   : Arounds[O, S, E],
@@ -410,22 +465,9 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
 
     } else {
 
-      def runHalfChecks(deltas: Iterable[Around.DeltaA[OS[O, S], E]],
-                        prepend: Vector[HalfCheck[O, S, E]] = Vector.empty): Vector[HalfCheck[O, S, E]] = {
-        var b = prepend
-        for (d0 <- deltas) {
-          val d = d0.aux
-          val r = attempt.attempt(d.before(p.ros)).fold[Tri[FE, d.A]](Failed(_), _.noCause)
-          b :+= HalfCheck(d)(r)
-        }
-        b
-      }
-
       // Perform around-pre
-      val halfChecksI: Vector[HalfCheck[O, S, E]] =
-        runHalfChecks(checksPre.invariants.deltas)
-      val halfChecksA: Vector[HalfCheck[O, S, E]] =
-        runHalfChecks(checksPre.pre.deltas)
+      val halfChecksI: Vector[HalfCheck[O, S, E]] = runHalfChecks(checksPre.invariants.deltas, p.ros)
+      val halfChecksA: Vector[HalfCheck[O, S, E]] = runHalfChecks(checksPre.pre.deltas, p.ros)
 
       val postChecksFn: PostCheckFn =
         failed =>
@@ -671,7 +713,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                 val invariants = nonInitialInvariants & test.invariants
                 innerAction match {
 
-                  // ==============================================================================
+                  // ===================================================================================================
                   case Action.Single(prepareAction) =>
 
                     val actionResultF =
@@ -705,7 +747,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                         EM.pure(p :+ History.Step(name, Skip))
                     }
 
-                  // ==============================================================================
+                  // ===================================================================================================
                   case Action.Group(actions, cond) =>
 
                     def run(ros: ROS, postCheckFn: PostCheckFn): F[(H, ROS, HH)] =
@@ -729,7 +771,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                         EM.pure(p :+ History.Step(name, Fail(e)))
                     }
 
-                  // ==============================================================================
+                  // ===================================================================================================
                   case Action.SubTest(action, subInvariants) =>
                     val runFn = (ros: ROS, postChks: PostCheckFn) => {
                       val t    = Plan(action, subInvariants).test(test.observer)
@@ -742,6 +784,197 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                     def preChecksF = runPreChecksWithRetry(preChecks1, reObserve, p0)
                     val logic      = runWithChecksAround(preChecksF, runFn)
                     EM.map(logic)(s => s.copy(history = p.history ++ s.history))
+
+                  // ===================================================================================================
+                  case Action.Loop(run, cond) =>
+
+                    def runLoop(ros0: ROS, postCheckFn: PostCheckFn): F[(H, ROS, HH)] = {
+                      type LoopState = (ROS, H)
+                      type LoopDone  = (H, ROS)
+                      type Step      = teststate.core.LoopStep[F, R, O, S, E]
+
+                      def evalStep(ros: ROS): (ROS, FE Or Step) =
+                        attempt.attempt(run(ros)) match {
+                          case Right(LoopStep.Fail(e)) => (ros, Left(Failure NoCause e))
+                          case Right(step)             => (ros, Right(step))
+                          case Left(fe)                => (ros, Left(fe))
+                        }
+
+                      def nextStepWithRetry(curRos: ROS): F[(ROS, FE Or Step)] = {
+                        def retryStep(last: (ROS, FE Or Step)): F[(ROS, FE Or Step)] =
+                          EM.map(reObserve()) {
+                            case Right((r, o)) => evalStep(ROS(r, o, curRos.state))
+                            case Left(_)       => last
+                          }
+                        _withRetryFI(Retry.Scope.Action, evalStep(curRos))(retryStep, _._2.isLeft)
+                      }
+
+                      def runSleep(stepRos: ROS, accHistory: H, duration: JavaDuration, modState: Option[S => E Or S]): F[LoopState Or LoopDone] = {
+                        val stateResult: FE Or S =
+                          modState match {
+                            case None =>
+                              Right(stepRos.state)
+                            case Some(f) =>
+                              attempt.attempt(f(stepRos.state)) match {
+                                case Right(Right(s2)) => Right(s2)
+                                case Right(Left(e))   => Left(Failure NoCause e)
+                                case Left(fe)         => Left(fe)
+                              }
+                          }
+
+                        stateResult match {
+                          case Left(fe) =>
+                            EM.pure(Right((accHistory :+ History.Step(UpdateState, Fail(fe)), stepRos)))
+
+                          case Right(nextState) =>
+                            val sleepName  = sleepStepName(duration)
+                            val checksPreI = UnpackChecks.invariants(invariants, stepRos)
+                            if (checksPreI.errors.nonEmpty) {
+                              val bI = History.newBuilder[E](stats)
+                              checksPreI.errors foreach bI.addNE
+                              val sleepStep = History.parent(sleepName, bI.group(InvariantsName))
+                              EM.pure(Right((accHistory :+ sleepStep, stepRos)))
+                            } else {
+                              val halfChecksI = runHalfChecks(checksPreI.deltas, stepRos)
+
+                              def checkSleepInvs(ros2: ROS): H =
+                                if (invariants.isEmpty)
+                                  History.empty
+                                else {
+                                  val checksPostI =
+                                    if (checksPreI.coproductFound)
+                                      UnpackChecks.invariants(invariants, ros2)
+                                    else
+                                      checksPreI
+                                  if (checksPostI.errors.isEmpty && halfChecksI.isEmpty && checksPostI.afters.isEmpty)
+                                    History.empty
+                                  else {
+                                    val b = History.newBuilder[E](stats)
+                                    checksPostI.errors foreach b.addNE
+                                    b.addEach(halfChecksI)(
+                                      c => c.check.name)(Some(BeforeAfter(stepRos, ros2)),
+                                      c => c.before.flatMap(a => Tri failedOption c.check.test(ros2, a).noCause))
+                                    b.addEach(checksPostI.afters)(_.name)(ros2.some, _.test(ros2).noCause)
+                                    b.group(InvariantsName)
+                                  }
+                                }
+
+                              def observeAfterSleep: F[FE Or (R, O)] =
+                                withRetry[FE Or (R, O)](Retry.Scope.Observation, () => {
+                                  val ref = refFn()
+                                  observeNoRetry(test, ref).map((ref, _))
+                                })(_.isLeft)
+
+                              def afterWake: F[LoopState Or LoopDone] =
+                                EM.flatMap(observeAfterSleep) {
+                                  case Left(fe) =>
+                                    val sleepStep = History.parent(sleepName, History(History.Step(Observation, Fail(fe))))
+                                    EM.pure(Right((accHistory :+ sleepStep, stepRos)))
+
+                                  case Right((r2, o2)) =>
+                                    val ros2 = ROS(r2, o2, nextState)
+                                    val initInvs = checkSleepInvs(ros2)
+
+                                    def retryInvs(last: (ROS, H)): F[(ROS, H)] =
+                                      EM.map(reObserve()) {
+                                        case Right((r3, o3)) =>
+                                          val ros3 = ROS(r3, o3, nextState)
+                                          (ros3, checkSleepInvs(ros3))
+                                        case Left(_) =>
+                                          last
+                                      }
+
+                                    EM.map(_withRetryFI(Retry.Scope.PostConditions, (ros2, initInvs))(retryInvs, _._2.failed)) {
+                                      case (finalRos, invs) =>
+                                        val sleepStep =
+                                          if (invs.isEmpty)
+                                            History.Step(sleepName, Pass)
+                                          else
+                                            History.parent(sleepName, invs)
+                                        val nextHistory = accHistory :+ sleepStep
+                                        if (invs.failed)
+                                          Right((nextHistory, finalRos))
+                                        else
+                                          Left((finalRos, nextHistory))
+                                    }
+                                }
+
+                              EM.flatMap(EM.now)(now => EM.schedule(afterWake, now.plus(duration)))
+                            }
+                        }
+                      }
+
+                      val loopResult: F[LoopDone] =
+                        EM.tailrec[LoopState, LoopDone]((ros0, History.empty)) {
+                          case (curRos, accHistory) =>
+                            EM.flatMap(nextStepWithRetry(curRos)) {
+                              case (failRos, Left(fe)) =>
+                                EM.pure(Right((accHistory :+ History.Step(emptyName, Fail(fe)), failRos)))
+
+                              case (stepRos, Right(step)) =>
+                                step match {
+                                  case LoopStep.Act(actions) =>
+                                    EM.map(start(actions, stepRos)) { childResults =>
+                                      val nextHistory = accHistory ++ childResults.history
+                                      if (childResults.failed)
+                                        Right((nextHistory, childResults.ros))
+                                      else
+                                        Left((childResults.ros, nextHistory))
+                                    }
+
+                                  case LoopStep.Break(modState) =>
+                                    val breakResult: FE Or ROS =
+                                      modState match {
+                                        case None =>
+                                          Right(stepRos)
+                                        case Some(f) =>
+                                          attempt.attempt(f(stepRos.state)) match {
+                                            case Right(Right(s2)) => Right(stepRos.withState(s2))
+                                            case Right(Left(e))   => Left(Failure NoCause e)
+                                            case Left(fe)         => Left(fe)
+                                          }
+                                      }
+                                    val done: LoopDone =
+                                      breakResult match {
+                                        case Right(finalRos) =>
+                                          (History(accHistory.steps, accHistory.result + Pass), finalRos)
+                                        case Left(fe) =>
+                                          (accHistory :+ History.Step(UpdateState, Fail(fe)), stepRos)
+                                      }
+                                    EM.pure(Right(done))
+
+                                  case LoopStep.Sleep(duration, modState) =>
+                                    runSleep(stepRos, accHistory, duration, modState)
+
+                                  case LoopStep.Fail(e) =>
+                                    // Unreachable because evalStep converts LoopStep.Fail into Left
+                                    EM.pure(Right((accHistory :+ History.Step(emptyName, Fail(Failure NoCause e)), stepRos)))
+                                }
+                            }
+                        }
+
+                      EM.flatMap(loopResult) {
+                        case (loopHistory, finalRos) =>
+                          retryPostChecks(loopHistory, finalRos, postCheckFn, reObserve)
+                      }
+                    }
+
+                    // Retry here doesn't make sense. This bit is pure and deterministic
+                    attempt.attempt(cond.permit(p.ros)) match {
+                      case Right(Right(true)) =>
+                        val preChecks1 = (p: P) => runPreChecks(name, invariants, check, false, p)
+                        def preChecksF = runPreChecksWithRetry(preChecks1, reObserve, p)
+                        runWithChecksAround(preChecksF, runLoop)
+
+                      case Right(Right(false)) =>
+                        EM.pure(p :+ History.Step(name, Skip))
+
+                      case Right(Left(e)) =>
+                        EM.pure(p :+ History.Step(name, Fail(Failure NoCause e)))
+
+                      case Left(e) =>
+                        EM.pure(p :+ History.Step(name, Fail(e)))
+                    }
                 }
             }
 

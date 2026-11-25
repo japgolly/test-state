@@ -77,8 +77,30 @@ object ReportFormat {
             if (firstNl < 0) {
               // Single line error msg
               sb append s.failureDetail
-              sb append " -- "
+              if (stepDesc1.nonEmpty) {
+                sb append " -- "
+                ()
+              }
               sb append errorMsg
+              ()
+            } else if (stepDesc1.isEmpty) {
+              // Multi-line error msg with no step name
+              val indent2 = indent + 1
+              val len = errorMsg.length
+              @tailrec
+              def go(start: Int, nl: Int, first: Boolean): Unit = {
+                val end = if (nl < 0) len else nl
+                if (!first) {
+                  sb append s.eol
+                  appendIndent(indent2)
+                }
+                sb append s.failureDetail
+                sb.append(errorMsg, start, end)
+                val nextStart = end + 1
+                if (nextStart < len)
+                  go(nextStart, errorMsg.indexOf('\n', nextStart), false)
+              }
+              go(0, firstNl, true)
             } else {
               // Multi-line error msg
               val indent2 = indent + (if (multilineStepDesc) 1 else 2)

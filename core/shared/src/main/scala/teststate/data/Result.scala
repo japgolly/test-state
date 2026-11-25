@@ -1,5 +1,7 @@
 package teststate.data
 
+import japgolly.univeq.UnivEq
+import scala.annotation.nowarn
 
 sealed abstract class Result[+Err] extends Product with Serializable {
   def failure: Option[Err]
@@ -30,4 +32,7 @@ object Result {
     override def failed = true
     override def +[e >: Err](r: Result[e]): Result[e] = this
   }
+
+  @nowarn("cat=unused")
+  implicit def univEq[E: UnivEq]: UnivEq[Result[E]] = UnivEq.derive
 }

@@ -134,7 +134,7 @@ object TestState {
         Dep.nyayaTest      .value % Test,
     ))
     .jsSettings(
-      libraryDependencies += Dep.scalaJsJavaTime.value % Provided)
+      libraryDependencies += Dep.scalaJsJavaTime.value % Test)
 
   lazy val domZipperJVM = domZipper.jvm
   lazy val domZipperJS  = domZipper.js
