@@ -85,8 +85,9 @@ val loop = dsl.loop("Count to 3") { ros =>
   else
     dsl.loop.break
 }
-val c = new Counter(0)
-Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
+
+val counter = new Counter(0)
+val report = Plan.action(loop).test(Observer(_.value)).stateless.withRef(counter).run()
 ```
 
 which generates a report like this:
