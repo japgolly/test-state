@@ -25,7 +25,7 @@ object Dependencies {
     val kindProjector   = "0.13.4"
     val monocle         = "3.3.0"
     val reactJs         = "17.0.2"
-    val scalaJsJavaTime = "1.0.0"
+    val scalaJsJavaTime = "2.4.0"
     val utest           = "0.8.4"
   }
 
@@ -40,7 +40,7 @@ object Dependencies {
     val nyayaProp            = Def.setting("com.github.japgolly.nyaya"         %%% "nyaya-prop"              % Ver.nyaya)
     val nyayaTest            = Def.setting("com.github.japgolly.nyaya"         %%% "nyaya-test"              % Ver.nyaya)
     val scalaJsDom           = Def.setting("org.scala-js"                      %%% "scalajs-dom"             % Ver.scalaJsDom)
-    val scalaJsJavaTime      = Def.setting("org.scala-js"                      %%% "scalajs-java-time"       % Ver.scalaJsJavaTime cross CrossVersion.for3Use2_13)
+    val scalaJsJavaTime      = Def.setting("io.github.cquiroz"                 %%% "scala-java-time"         % Ver.scalaJsJavaTime)
     val scalaJsReactCore     = Def.setting("com.github.japgolly.scalajs-react" %%% "core"                    % Ver.scalaJsReact)
     val scalaJsReactMonocle  = Def.setting("com.github.japgolly.scalajs-react" %%% "extra-ext-monocle3"      % Ver.scalaJsReact)
     val scalaJsReactTest     = Def.setting("com.github.japgolly.scalajs-react" %%% "test"                    % Ver.scalaJsReact)
