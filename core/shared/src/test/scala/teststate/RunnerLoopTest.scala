@@ -349,8 +349,9 @@ object RunnerLoopTest extends TestSuite {
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).withInitialState(0).withRef(c).run()
         assertEq(r.result, Result.Pass)
+        assertEq(c.value, 2)
         assertEq(stateAfter, 99)
-        assertEq(r.stats.performedActions, 2)
+        assertEq(r.stats.performedActions, 3)
         assertEq(r.stats.performedChecks, 1)
       }
 
@@ -503,21 +504,20 @@ object RunnerLoopTest extends TestSuite {
           }
         }
         val r = Plan.action(loop).test(Observer(_ => scheduled)).stateless.withoutRef.run()()
-        assertEq(r.result, Result.Pass)
+        assertRun(r,
+          """
+            |✓ WaitForReady
+            |  ✓ Sleep for 100ms
+            |  ✓ Sleep for 250ms
+            |✓ All pass.
+            |Performed 0 actions, 0 checks.
+          """.stripMargin)
         assertEq(seenObs, Vector(0, 1, 2))
         assertEq(vc.schedules, Vector(
           Instant.ofEpochMilli(5000L) -> Instant.ofEpochMilli(5100L),
           Instant.ofEpochMilli(5100L) -> Instant.ofEpochMilli(5350L),
         ))
         assertEq(vc.nowMs, 5350L)
-
-        // Sleep steps are reported as flat children under the loop step; Break is not
-        val loopStep = r.history.steps.head
-        assertEq(loopStep.name.value, "WaitForReady")
-        assertEq(loopStep.result, Result.Pass)
-        assertEq(loopStep.children.steps.length, 2)
-        assertSleepStep(loopStep.children.steps(0))
-        assertSleepStep(loopStep.children.steps(1))
       }
 
       "zeroDuration" - {
@@ -530,12 +530,15 @@ object RunnerLoopTest extends TestSuite {
           if (ros.obs == 0) dsl.loop.sleep(JavaDuration.ZERO) else dsl.loop.break
         }
         val r = Plan.action(loop).test(Observer(_ => scheduled)).stateless.withoutRef.run()()
-        assertEq(r.result, Result.Pass)
+        assertRun(r,
+          """
+            |✓ ZeroSleep
+            |  ✓ Sleep for 0ms
+            |✓ All pass.
+            |Performed 0 actions, 0 checks.
+          """.stripMargin)
         assertEq(scheduled, 1)
         assertEq(vc.schedules, Vector(Instant.ofEpochMilli(1000L) -> Instant.ofEpochMilli(1000L)))
-        val loopStep = r.history.steps.head
-        assertEq(loopStep.children.steps.length, 1)
-        assertSleepStep(loopStep.children.steps.head)
       }
 
       "setStateAndSleep" - {

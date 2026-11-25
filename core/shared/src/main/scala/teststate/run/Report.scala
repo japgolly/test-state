@@ -15,9 +15,9 @@ case class Report[+E](name: Option[Name], history: History[Failure[E]], stats: S
 
   def failureReason[e >: E](implicit displayError: DisplayError[e]): Option[Failure[String]] =
     failure.map(_ map (err =>
-      (history.rootFailurePath.lastOption, Option(displayError display err).filter(_.nonEmpty)) match {
-        case (Some(f), Some(e)) => s"${f.name.value} -- $e"
-        case (Some(f), None   ) => f.name.value
+      (history.rootFailurePath.lastOption.map(_.name.value).filter(_.nonEmpty), Option(displayError display err).filter(_.nonEmpty)) match {
+        case (Some(f), Some(e)) => s"$f -- $e"
+        case (Some(f), None   ) => f
         case (None   , Some(e)) => e
         case (None   , None   ) => "Failed without an error message."
       }
