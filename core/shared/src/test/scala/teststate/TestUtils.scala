@@ -1,6 +1,7 @@
 package teststate
 
 import cats.Eq
+import scala.annotation.nowarn
 import sourcecode.Line
 import teststate.Exports._
 
@@ -49,6 +50,11 @@ trait TestUtil
     val actual = r.format(f)(s)
     assertMultiline(actual = n(actual), n(expect))
   }
+
+  implicit def univEqThrowable: UnivEq[Throwable] = UnivEq.force
+
+  @nowarn("cat=unused")
+  implicit def univEqFailure[E: UnivEq]: UnivEq[Failure[E]] = UnivEq.derive
 }
 
 case class ActualExpect[A](actual: A, expect: A) {

@@ -1,5 +1,6 @@
 package teststate.run
 
+import japgolly.univeq.UnivEq
 import java.time.{Duration => JavaDuration, Instant}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.{Duration => ScalaDuration}
@@ -159,5 +160,7 @@ object Retry {
     /** Re-observation and state update */
     case object PostAction extends Scope
     case object PostConditions extends Scope
+
+    implicit def univEq: UnivEq[Scope] = UnivEq.derive
   }
 }

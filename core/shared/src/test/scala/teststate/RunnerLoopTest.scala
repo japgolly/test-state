@@ -9,7 +9,6 @@ import teststate.data.{Id, Left => OrLeft, Or, Right => OrRight}
 import utest._
 
 object RunnerLoopTest extends TestSuite {
-  implicit def equal[A]: Equal[A] = Equal.by_==
 
   private type Thunk[A] = () => A
 
@@ -56,7 +55,7 @@ object RunnerLoopTest extends TestSuite {
     }
   }
 
-  private def assertSleepStep[E](step: Report.History.Step[Failure[E]], expectedResult: Result[Failure[E]] = Result.Pass): Unit = {
+  private def assertSleepStep[E: UnivEq](step: Report.History.Step[Failure[E]], expectedResult: Result[Failure[E]] = Result.Pass): Unit = {
     assert(step.name.value.toLowerCase.contains("sleep"))
     assertEq(step.result, expectedResult)
   }
@@ -196,17 +195,17 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "refByName" - {
-        var refVal = 0
+        var refVar = 0
         var seenRefs = Vector.empty[Int]
         val dsl = Dsl[Int, Unit, Unit]
-        val bump = dsl.action("Bump")(ros => refVal = ros.ref + 1)
+        val bump = dsl.action("Bump")(ros => refVar = ros.ref + 1)
         val loop = dsl.loop("RefByName") { ros =>
           seenRefs :+= ros.ref
           if (ros.ref < 3) dsl.loop.act(bump) else dsl.loop.break
         }
-        val r = Plan.action(loop).testU.stateless.withRefByName(refVal).run()
+        val r = Plan.action(loop).testU.stateless.withRefByName(refVar).run()
         assertEq(r.result, Result.Pass)
-        assertEq(refVal, 3)
+        assertEq(refVar, 3)
         assertEq(seenRefs, Vector(0, 1, 2, 3))
       }
 
@@ -489,8 +488,8 @@ object RunnerLoopTest extends TestSuite {
 
     "sleep" - {
       "schedulesAndReObserves" - {
-        var externalValue = 0
-        val vc = new VirtualClock(initialMs = 5000L, onSchedule = { _ => externalValue += 1 })
+        var scheduled = 0
+        val vc = new VirtualClock(initialMs = 5000L, onSchedule = { _ => scheduled += 1 })
         import vc.em
 
         val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
@@ -503,7 +502,7 @@ object RunnerLoopTest extends TestSuite {
             case _ => dsl.loop.break
           }
         }
-        val r = Plan.action(loop).test(Observer(_ => externalValue)).stateless.withoutRef.run()()
+        val r = Plan.action(loop).test(Observer(_ => scheduled)).stateless.withoutRef.run()()
         assertEq(r.result, Result.Pass)
         assertEq(seenObs, Vector(0, 1, 2))
         assertEq(vc.schedules, Vector(
@@ -522,17 +521,17 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "zeroDuration" - {
-        var externalValue = 0
-        val vc = new VirtualClock(initialMs = 1000L, onSchedule = { _ => externalValue += 1 })
+        var scheduled = 0
+        val vc = new VirtualClock(initialMs = 1000L, onSchedule = { _ => scheduled += 1 })
         import vc.em
 
         val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
         val loop = dsl.loop("ZeroSleep") { ros =>
           if (ros.obs == 0) dsl.loop.sleep(JavaDuration.ZERO) else dsl.loop.break
         }
-        val r = Plan.action(loop).test(Observer(_ => externalValue)).stateless.withoutRef.run()()
+        val r = Plan.action(loop).test(Observer(_ => scheduled)).stateless.withoutRef.run()()
         assertEq(r.result, Result.Pass)
-        assertEq(externalValue, 1)
+        assertEq(scheduled, 1)
         assertEq(vc.schedules, Vector(Instant.ofEpochMilli(1000L) -> Instant.ofEpochMilli(1000L)))
         val loopStep = r.history.steps.head
         assertEq(loopStep.children.steps.length, 1)
@@ -540,8 +539,8 @@ object RunnerLoopTest extends TestSuite {
       }
 
       "setStateAndSleep" - {
-        var externalValue = 0
-        val vc = new VirtualClock(initialMs = 2000L, onSchedule = { _ => externalValue += 1 })
+        var scheduled = 0
+        val vc = new VirtualClock(initialMs = 2000L, onSchedule = { _ => scheduled += 1 })
         import vc.em
 
         val dsl = Dsl.full[Thunk, Unit, Int, Int, String]
@@ -554,7 +553,7 @@ object RunnerLoopTest extends TestSuite {
           else if (ros.obs == 1) dsl.loop.setStateAndSleep(20, JavaDuration.ofMillis(75))
           else dsl.loop.break
         }
-        val r = Plan.action(loop >> after).test(Observer(_ => externalValue)).withInitialState(0).withoutRef.run()()
+        val r = Plan.action(loop >> after).test(Observer(_ => scheduled)).withInitialState(0).withoutRef.run()()
         assertEq(r.result, Result.Pass)
         assertEq(pairs, Vector(0 -> 0, 1 -> 10, 2 -> 20))
         assertEq(stateAfter, 20)
@@ -601,8 +600,8 @@ object RunnerLoopTest extends TestSuite {
 
       "sleepChecksInvariants" - {
         "passPointAndDelta" - {
-          var externalValue = 0
-          val vc = new VirtualClock(initialMs = 1000L, onSchedule = { _ => externalValue += 1 })
+          var scheduled = 0
+          val vc = new VirtualClock(initialMs = 1000L, onSchedule = { _ => scheduled += 1 })
           import vc.em
 
           var pointInvSeen = Vector.empty[(Int, Int)]
@@ -619,7 +618,7 @@ object RunnerLoopTest extends TestSuite {
           val loop = dsl.loop("SleepInv") { ros =>
             if (ros.obs < 2) dsl.loop.setStateAndSleepMs(ros.state + 1, 50) else dsl.loop.break
           }
-          val r = Plan(loop, pointInv & deltaInv).test(Observer(_ => externalValue)).withInitialState(0).withoutRef.run()()
+          val r = Plan(loop, pointInv & deltaInv).test(Observer(_ => scheduled)).withInitialState(0).withoutRef.run()()
           assertEq(r.result, Result.Pass)
           // Initial state: (0,0); after sleep 1: (1,1); after sleep 2: (2,2); (and possibly once more at loop exit)
           assert(pointInvSeen.startsWith(Vector(0 -> 0, 1 -> 1, 2 -> 2)))
@@ -628,8 +627,8 @@ object RunnerLoopTest extends TestSuite {
         }
 
         "failPointStopsLoop" - {
-          var externalValue = 0
-          val vc = new VirtualClock(initialMs = 1000L, onSchedule = { _ => externalValue += 1 })
+          var scheduled = 0
+          val vc = new VirtualClock(initialMs = 1000L, onSchedule = { _ => scheduled += 1 })
           import vc.em
 
           var iterations = 0
@@ -642,7 +641,7 @@ object RunnerLoopTest extends TestSuite {
             iterations += 1
             if (iterations <= 5) dsl.loop.sleepMs(50) else dsl.loop.break
           } +> post
-          val r = Plan(loop, inv).test(Observer(_ => externalValue)).withInitialState(0).withoutRef.run()()
+          val r = Plan(loop, inv).test(Observer(_ => scheduled)).withInitialState(0).withoutRef.run()()
           assert(r.failed)
           assertEq(iterations, 1)
           assertEq(postRan, false)
@@ -743,15 +742,19 @@ object RunnerLoopTest extends TestSuite {
         } +> post
         val c = new Counter(0)
         val r = Plan.action(loop >> after).test(Observer(_.value)).stateless.withRef(c).run()
-        assert(r.failed)
+        assertRun(r,
+          """
+            |✘ FailAt2
+            |  ✓ Inc
+            |  ✓ Inc
+            |  ✘ gave up at 2
+            |- After
+            |Performed 2 actions, 0 checks.
+          """.stripMargin)
         assertEq(r.failure, Some(Failure.NoCause("gave up at 2")))
         assertEq(c.value, 2)
-        assertEq(r.stats.performedActions, 2)
         assertEq(postRan, false)
         assertEq(afterRan, false)
-        val loopStep = r.history.steps.head
-        assertEq(loopStep.children.steps.take(2).map(_.name.value), Vector("Inc", "Inc"))
-        assertEq(loopStep.children.steps.take(2).map(_.result), Vector(Result.Pass, Result.Pass))
       }
 
       "runFunctionThrows" - {
@@ -1030,11 +1033,11 @@ object RunnerLoopTest extends TestSuite {
 
       "postConditionFailFailsLoop" - {
         val dsl = Dsl[Counter, Int, Unit]
-        val v = dsl.focus("v").value(_.obs)
+        val obs = dsl.focus("v").value(_.obs)
         val inc = dsl.action("Inc")(_.ref.inc())
         val loop = dsl.loop("PostFail") { ros =>
           if (ros.obs < 2) dsl.loop.act(inc) else dsl.loop.break
-        } +> v.assert(99)
+        } +> obs.assert(99)
         val c = new Counter(0)
         val r = Plan.action(loop).test(Observer(_.value)).stateless.withRef(c).run()
         assertRun(r,
@@ -1062,7 +1065,21 @@ object RunnerLoopTest extends TestSuite {
         }
         val c = new Counter(0)
         val r = Plan(loop, inv).test(Observer(_.value)).withInitialState(0).withRef(c).run()
-        assert(r.failed)
+        assertRun(r,
+          """
+            |✓ Initial state.
+            |  ✓ Val should be 0.
+            |✘ InvHalt
+            |  ✓ IncOk
+            |    ✓ Action
+            |    ✓ Invariants
+            |      ✓ Val should be 1.
+            |  ✘ IncBad
+            |    ✓ Action
+            |    ✘ Invariants
+            |      ✘ Val should be 1. -- Got 2.
+            |Performed 2 actions, 3 checks.
+          """.stripMargin)
         assertEq(iterations, 2)
         assertEq(c.value, 2)
       }
@@ -1296,6 +1313,7 @@ object RunnerLoopTest extends TestSuite {
 
       "mapOS" - {
         final case class OuterState(tag: String, count: Int)
+        implicit def univEqOuterState: UnivEq[OuterState] = UnivEq.derive
         val vc = new VirtualClock()
         import vc.em
 
