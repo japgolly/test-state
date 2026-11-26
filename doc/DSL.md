@@ -30,6 +30,19 @@ val catsEffectDsl = Dsl.io  [Ref, Obs, State] // Dsl[cats.efffect.IO, Ref, Obs, 
 val zioDsl        = Dsl.task[Ref, Obs, State] // Dsl[zio.Task,        Ref, Obs, State, String]
 ```
 
+If you want to specify a custom error type rather than `String`,
+use `Dsl.full` to specify the full range of type parameters:
+
+```scala
+enum Error:
+  case PageNotFound
+  case LoginFailed
+  case ServerOverloaded
+  case VerificationFailed
+
+val dsl = Dsl.full[Id, Ref, Obs, State, Error]
+```
+
 Once you have an instance, you can create your test content as follows:
 ![dsl-core](https://raw.githubusercontent.com/japgolly/test-state/main/doc/dsl-core.gv.svg)
 
