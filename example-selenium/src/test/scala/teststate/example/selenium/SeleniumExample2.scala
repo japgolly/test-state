@@ -53,9 +53,9 @@ object SeleniumExample2 extends TestSuite {
     debug(s"Observed $name. Result count = ${resultCount.fold("N/A")(_.toString)}")
   }
 
-  val observer: Observer[Ref, Obs, String] = Observer(_.observe())
-
   val dsl = Dsl[Ref, Obs, Unit].withSeleniumTab(_.tab)
+
+  val observer = dsl.observer(_.observe())
 
   def searchFor(term: String) =
     dsl.action(s"Search for '$term'")(_.obs.typeIntoSearch(term + Keys.ENTER))

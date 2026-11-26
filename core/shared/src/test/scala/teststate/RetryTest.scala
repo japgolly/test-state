@@ -144,7 +144,7 @@ object RetryTest extends TestSuite {
   val insufficientRetryPolicy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2)
   val hugeRetryPolicy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 11)
 
-  val observer = Observer((_: Ref).toObs())
+  val observer = dsl.observer(_.toObs())
 
   def mkTest(plan: dsl.Plan, refMod: Ref => Unit = _ => ()) =
     plan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
@@ -405,7 +405,7 @@ object RetryTest extends TestSuite {
         var actionAttempt = 0
         var obsCall = 0
         val d = Dsl[Unit, Int, Unit]
-        val obs = Observer.attempt[Unit, Int, String] { _ =>
+        val obs = d.observer.attempt { _ =>
           obsCall += 1
           if (obsCall == 3) Left("obs err") else Right(0)
         }
@@ -428,7 +428,7 @@ object RetryTest extends TestSuite {
         var obsCall = 0
         val d = Dsl[Unit, Int, Unit]
         val v = d.focus("v").value(_.obs)
-        val obs = Observer.attempt[Unit, Int, String] { _ =>
+        val obs = d.observer.attempt { _ =>
           obsCall += 1
           obsCall match {
             case 1 => Right(0)
@@ -452,7 +452,7 @@ object RetryTest extends TestSuite {
         var obsCall = 0
         val d = Dsl[Unit, Int, Unit]
         val v = d.focus("v").value(_.obs)
-        val obs = Observer.attempt[Unit, Int, String] { _ =>
+        val obs = d.observer.attempt { _ =>
           obsCall += 1
           obsCall match {
             case 1 => Right(0)

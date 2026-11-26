@@ -18,7 +18,7 @@ object CoproductExample {
       dsl.action("Add")(_.ref.txt += a).updateState(_ + a)
         .addCheck(txt.assert.equal.beforeAndAfter)
 
-    val test = Plan.action(add("x").times(2)).test(Observer(_.txt))
+    val test = Plan.action(add("x").times(2)).test(dsl.observer(_.txt))
   }
 
   class Num(init: Int) {
@@ -34,7 +34,7 @@ object CoproductExample {
       dsl.action("Add")(_.ref.num += a).updateState(_ + a)
         .addCheck(num.assert.equal.beforeAndAfter)
 
-    val test = Plan.action(add(2).times(2)).test(Observer(_.num))
+    val test = Plan.action(add(2).times(2)).test(dsl.observer(_.num))
   }
 
   sealed abstract class Type {
@@ -114,7 +114,7 @@ object CoproductExample {
       testNum >> swapTypes >> testTxt
 
     val test = Plan(actions, invariants).test(
-      Observer(_.get() match {
+      dsl.observer(_.get() match {
         case x: Num => Left(x.num)
         case x: Txt => Right(x.txt)
       }))

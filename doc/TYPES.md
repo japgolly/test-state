@@ -57,7 +57,7 @@ val invariants = dsl.emptyInvariant // Invariants         [Obs, Int, String]
 
 Plan(action, invariants)            // Plan                [Id, Ref, Obs, Int, String]
   .withInitialState(123)            // PlanWithInitialState[Id, Ref, Obs, Int, String]
-  .test(Observer(new Obs(_)))       // TestWithInitialState[Id, Ref, Obs, Int, String]
+  .test(dsl.observer(new Obs(_)))   // TestWithInitialState[Id, Ref, Obs, Int, String]
   .run(new Ref)                     // Id[Report[String]] = Report[String]
 ```
 

@@ -36,6 +36,7 @@ object Dsl {
     final type TestWithInitialState = teststate.run.TestWithInitialState[F, R, O, S, E]
     final type Plan                 = teststate.run.Plan[F, R, O, S, E]
     final type Test                 = teststate.run.Test[F, R, O, S, E]
+    final type Observer             = teststate.run.Observer[F, R, O, E]
   }
 
   def Types[F[_], R, O, S, E]: Types[F, R, O, S, E] =
@@ -108,7 +109,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
   def emptyPlan: Plan =
     Empty.instance
 
-  def emptyTest(observer: Observer[R, O, E])(implicit a: ErrorHandler[E]): Test =
+  def emptyTest(observer: Observer)(implicit a: ErrorHandler[E]): Test =
     emptyPlan.test(observer)(a)
 
   val transformer: Transformer[F, R, O, S, E, F, R, O, S, E] =
@@ -643,6 +644,36 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
   object loop extends Dsl.Loop[F, R, O, S, E] {
     override protected implicit def em: ExecutionModel[F] = EM
     override protected def emptyAction: Actions = Empty.instance
+  }
+
+  /** @since 3.2.0 */
+  object observer {
+    def apply(f: R => F[O]): Observer =
+      Observer(r => EM.map(f(r))(Right(_)))
+
+    def attempt(f: R => F[E Or O]): Observer =
+      Observer(f)
+
+    def pure(f: R => O): Observer =
+      Observer(r => EM.pure(Right(f(r))))
+
+    def pureAttempt(f: R => E Or O): Observer =
+      Observer(r => EM.pure(f(r)))
+
+    def defer(f: => F[O]): Observer =
+      deferAttempt(EM.map(f)(Right(_)))
+
+    def deferAttempt(f: => F[E Or O]): Observer =
+      Observer(_ => f)
+
+    def watch(obs: => O)(implicit ev: Id[O] =:= F[O]): Observer =
+      defer(obs)
+
+    def watchAttempt(obs: => E Or O)(implicit ev: Id[E Or O] =:= F[E Or O]): Observer =
+      deferAttempt(obs)
+
+    def unit(implicit ev: teststate.run.Observer[F, R, Unit, E] =:= Observer): Observer =
+      Observer.unit[F, R, E]
   }
 }
 
