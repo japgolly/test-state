@@ -52,13 +52,17 @@ class Obs(ref: Ref)
 
 val dsl = Dsl[Ref, Obs, Int]
 
-val action = dsl.emptyAction        // Actions   [Id, Ref, Obs, Int, String]
-val invariants = dsl.emptyInvariant // Invariants         [Obs, Int, String]
+val action = dsl.emptyAction            // Actions             [Id, Ref, Obs, Int, String]
+val invariants = dsl.emptyInvariant     // Invariants          [         Obs, Int, String]
+val observer = dsl.observer(new Obs(_)) // Observer            [Id, Ref, Obs,      String]
 
-Plan(action, invariants)            // Plan                [Id, Ref, Obs, Int, String]
-  .withInitialState(123)            // PlanWithInitialState[Id, Ref, Obs, Int, String]
-  .test(dsl.observer(new Obs(_)))   // TestWithInitialState[Id, Ref, Obs, Int, String]
-  .run(new Ref)                     // Id[Report[String]] = Report[String]
+val report: Report[String] =
+  Plan(action, invariants)              // Plan                [Id, Ref, Obs, Int, String]
+    .withInitialState(0)                // PlanWithInitialState[Id, Ref, Obs, Int, String]
+    .test(observer)                     // TestWithInitialState[Id, Ref, Obs, Int, String]
+    .run(new Ref)                       // Id[Report[String]]
+
+report.assert()
 ```
 
 # Secondary Types

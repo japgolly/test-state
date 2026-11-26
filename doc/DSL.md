@@ -21,6 +21,15 @@ val dsl = Dsl.future[Ref, Obs, State]
 // dsl.emptyAction: Actions[Future, Ref, Obs, State, String]
 ```
 
+If you're using the Cats Effect or ZIO modules you can use those too:
+
+```scala
+import MyTestState._
+
+val catsEffectDsl = Dsl.io  [Ref, Obs, State] // Dsl[cats.efffect.IO, Ref, Obs, State, String]
+val zioDsl        = Dsl.task[Ref, Obs, State] // Dsl[zio.Task,        Ref, Obs, State, String]
+```
+
 Once you have an instance, you can create your test content as follows:
 ![dsl-core](https://raw.githubusercontent.com/japgolly/test-state/main/doc/dsl-core.gv.svg)
 
@@ -31,7 +40,7 @@ The majority of your test actions will be created like this:
 
 ```scala
 // .action .apply is the most common path
-dsl.action("Launch missiles")(_.missiles.nukes.launchAllNow())
+dsl.action("Launch missiles")(_.ref.missiles.nukes.launchAllNow())
 ```
 
 ## Looping
@@ -78,6 +87,7 @@ class Counter(var value: Int = 0) {
 }
 
 val dsl = Dsl[Counter, Int, Unit]
+val observer = dsl.observer(_.value)
 val inc = dsl.action("Inc")(_.ref.inc())
 val loop = dsl.loop("Count to 3") { ros =>
   if (ros.obs < 3)
@@ -87,7 +97,7 @@ val loop = dsl.loop("Count to 3") { ros =>
 }
 
 val counter = new Counter(0)
-val report = Plan.action(loop).test(dsl.observer(_.value)).stateless.withRef(counter).run()
+val report = Plan.action(loop).test(observer).stateless.withRef(counter).run()
 ```
 
 which generates a report like this:
