@@ -1,7 +1,7 @@
 package teststate
 
 import cats.effect.IO
-import java.time.Instant
+import java.time.{Duration => JavaDuration, Instant}
 import scala.concurrent.duration._
 import teststate.data.{Failure, Left, Or, Right}
 import teststate.dsl.Dsl
@@ -48,11 +48,11 @@ trait ExtCatsEffect {
 
       override def schedule[A](task: => IO[A], startAt: Instant): IO[A] =
         now.flatMap { n =>
-          val d = startAt.toEpochMilli - n.toEpochMilli
-          if (d <= 0)
+          val ns = JavaDuration.between(n, startAt).toNanos
+          if (ns <= 0)
             IO.defer(task)
           else
-            IO.sleep(Duration(d, MILLISECONDS)) >> IO.defer(task)
+            IO.sleep(Duration(ns, NANOSECONDS)) >> IO.defer(task)
         }
 
       override def doFinally[A, B](main: => IO[A], last: => IO[B]): IO[A] =
