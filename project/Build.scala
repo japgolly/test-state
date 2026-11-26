@@ -101,6 +101,7 @@ object TestState {
         extCatsEffectJVM,
         extNyayaJVM,
         extSelenium,
+        extZioJVM,
         utilJVM,
         utilSelenium,
       )
@@ -116,6 +117,7 @@ object TestState {
         extCatsEffectJS,
         extNyayaJS,
         extScalaJsReact,
+        extZioJS,
         utilJS,
       )
 
@@ -242,6 +244,17 @@ object TestState {
         Dep.seleniumChrome.value,
         Dep.seleniumFirefox.value,
     ))
+
+  lazy val extZioJVM = extZio.jvm
+  lazy val extZioJS  = extZio.js
+  lazy val extZio = crossProject(JSPlatform, JVMPlatform)
+    .in(file("ext-zio"))
+    .configureCross(commonSettings, publicationSettings)
+    .dependsOn(core)
+    .configureCross(testSettings)
+    .settings(
+      moduleName          := "ext-zio",
+      libraryDependencies += Dep.zio.value)
 
   lazy val utilJVM = util.jvm
   lazy val utilJS  = util.js

@@ -23,6 +23,7 @@
       "com.github.japgolly.test-state" %%% "ext-nyaya"           % TestStateVer % Test,
       "com.github.japgolly.test-state" %%% "ext-scalajs-react"   % TestStateVer % Test,
       "com.github.japgolly.test-state" %%  "ext-selenium"        % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%% "ext-zio"             % TestStateVer % Test,
     )
     ```
 
@@ -58,6 +59,7 @@
          with teststate.ExtCatsEffect
          with teststate.ExtNyaya
          with teststate.ExtScalaJsReact
+         with teststate.ExtZio
     {
       // Additional config here if desired.
 

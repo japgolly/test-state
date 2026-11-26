@@ -21,6 +21,7 @@ object Dependencies {
     val selenium        = "4.54.0"
     val sizzle          = "2.3.0"
     val univEq          = "2.1.0"
+    val zio             = "2.1.27"
 
     // Internal
     val kindProjector   = "0.13.4"
@@ -53,6 +54,7 @@ object Dependencies {
     val sizzle               = Def.setting("org.webjars.bower"                   % "sizzle"                  % Ver.sizzle / "sizzle.min.js" commonJSName "Sizzle")
     val univEq               = Def.setting("com.github.japgolly.univeq"        %%% "univeq"                  % Ver.univEq)
     val utest                = Def.setting("com.lihaoyi"                       %%% "utest"                   % Ver.utest)
+    val zio                  = Def.setting("dev.zio"                           %%% "zio"                     % Ver.zio)
 
     // Compiler plugins
     val kindProjector = compilerPlugin("org.typelevel" %% "kind-projector" % Ver.kindProjector cross CrossVersion.full)
