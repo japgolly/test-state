@@ -10,6 +10,7 @@ object Dependencies {
 
     // Exported
     val cats            = "2.13.0"
+    val catsEffect      = "3.7.1"
     val jsoup           = "1.24.1"
     val microlibs       = "4.3.0"
     val nyaya           = "1.2.0"
@@ -31,6 +32,7 @@ object Dependencies {
 
   object Dep {
     val cats                 = Def.setting("org.typelevel"                     %%% "cats-core"               % Ver.cats)
+    val catsEffect           = Def.setting("org.typelevel"                     %%% "cats-effect"             % Ver.catsEffect)
     val jsoup                = Def.setting("org.jsoup"                           % "jsoup"                   % Ver.jsoup)
     val microlibsNameFn      = Def.setting("com.github.japgolly.microlibs"     %%% "name-fn"                 % Ver.microlibs)
     val microlibsTestUtil    = Def.setting("com.github.japgolly.microlibs"     %%% "test-util"               % Ver.microlibs)
