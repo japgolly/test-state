@@ -16,7 +16,7 @@ Test **stateful** stuff **statelessly**, and reasonably.
 - [Modules](#modules)
 - [Examples](#examples)
 - [Changelogs](doc/changelog)
-- [Support](#supportexamples)
+- [Support](#support)
 
 
 # What is this?
