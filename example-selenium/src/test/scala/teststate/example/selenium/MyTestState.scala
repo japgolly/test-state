@@ -14,9 +14,6 @@ object MyTestState
     with teststate.selenium.Exports
     with teststate.domzipper.selenium.Exports {
 
-  lazy val CI: Boolean =
-    Option(System.getProperty("CI")).exists(_.nonEmpty)
-
   def newChrome() = {
     val options = new ChromeOptions()
     options.addArguments("--headless=new")
