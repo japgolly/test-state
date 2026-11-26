@@ -27,7 +27,7 @@ object ExtNyayaTest extends TestSuite {
         Gen.pure(dsl.action(s"inc from ${ros.state}")(_ => ref += 1).updateState(_ + 1))
       }
 
-      val report = Plan.action(actions).test(Observer.watch(ref)).withInitialState(0).runU()
+      val report = Plan.action(actions).test(dsl.observer.watch(ref)).withInitialState(0).runU()
       report.assert()
       assertEq(ref, 4)
       assertEq(seenStates, Vector(0, 1, 2, 3))
@@ -41,7 +41,7 @@ object ExtNyayaTest extends TestSuite {
 
       val actions = dsl.genActions("gen")(Gen.pure(dsl.action("inc")(_ => ref += 1).updateState(_ + 1)))
 
-      val report = Plan.action(actions).test(Observer.watch(ref)).withInitialState(0).runU()
+      val report = Plan.action(actions).test(dsl.observer.watch(ref)).withInitialState(0).runU()
       report.assert()
       assertEq(ref, 3)
     }

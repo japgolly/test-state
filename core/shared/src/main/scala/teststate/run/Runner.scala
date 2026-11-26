@@ -350,11 +350,6 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
   private type ActionResult[+V, +A] = Runner.ActionResultF[V, A, P, FE]
 
   // TODO Ref result should be in an F
-  // TODO Observer result should be in an F
-
-  private def withRetry[A](scope: Retry.Scope, impureRun: () => A)(failed: A => Boolean)
-                          (implicit stats: Stats.Mutable): F[A] =
-    _withRetryF(scope, impureRun())(EM.point(impureRun()), failed)
 
   private def withRetryF[A](scope: Retry.Scope, impureRun: => F[A])(failed: A => Boolean)
                            (implicit stats: Stats.Mutable): F[A] =
@@ -375,10 +370,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
   }
 
   private def observeWithRetry(test: Test, ref: R): F[FE Or O] =
-    withRetry[FE Or O](Retry.Scope.Observation, () => observeNoRetry(test, ref))(_.isLeft)
+    withRetryF[FE Or O](Retry.Scope.Observation, observeNoRetry(test, ref))(_.isLeft)
 
-  private def observeNoRetry(test: Test, ref: R): FE Or O =
-    attempt.recover(test.observer(ref).leftMap(Failure NoCause _), Left(_))
+  private def observeNoRetry(test: Test, ref: R): F[FE Or O] =
+    EM.recover(EM.map(test.observer(ref))(_.leftMap(Failure NoCause _)))
 
   private implicit var stats: Stats.Mutable = _
 
@@ -705,9 +700,8 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                 val name = attempt.name(nameFn, ros.some)
 
                 val reObserve: () => F[FE Or (R, O)] =
-                  () => EM.point {
-                    val ref = refFn()
-                    observeNoRetry(test, ref).map((ref, _))
+                  () => EM.flatMap(EM.point(refFn())) { ref =>
+                    EM.map(observeNoRetry(test, ref))(_.map((ref, _)))
                   }
 
                 val invariants = nonInitialInvariants & test.invariants
@@ -860,10 +854,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                                 }
 
                               def observeAfterSleep: F[FE Or (R, O)] =
-                                withRetry[FE Or (R, O)](Retry.Scope.Observation, () => {
-                                  val ref = refFn()
-                                  observeNoRetry(test, ref).map((ref, _))
-                                })(_.isLeft)
+                                withRetryF[FE Or (R, O)](Retry.Scope.Observation, reObserve())(_.isLeft)
 
                               def afterWake: F[LoopState Or LoopDone] =
                                 EM.flatMap(observeAfterSleep) {
@@ -1010,10 +1001,10 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
       (ros, h)
     }
 
-    def runInvariantsOnRetry(): FE Or (ROS, H) = {
-      val r = refFn()
-      observeNoRetry(test, r).map(o => runInvariants(ROS(r, o, initROS.state)))
-    }
+    def runInvariantsOnRetry: F[FE Or (ROS, H)] =
+      EM.flatMap(EM.point(refFn())) { r =>
+        EM.map(observeNoRetry(test, r))(_.map(o => runInvariants(ROS(r, o, initROS.state))))
+      }
 
     def runAfterInvariants(ros: ROS, initialHistory: H): F[P] = {
       val fh: F[P] =
@@ -1046,7 +1037,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
       _withRetryF[FE Or (ROS, H)](
         Retry.Scope.InitialInvariants,
         Right(runInvariants(initROS)))(
-        EM.point(runInvariantsOnRetry()), retryInvariants)
+        runInvariantsOnRetry, retryInvariants)
 
     EM.flatMap(runInvariantsWithRetry) {
       case Right((ros, h)) => runAfterInvariants(ros, h)

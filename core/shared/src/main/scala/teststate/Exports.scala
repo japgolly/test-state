@@ -41,7 +41,7 @@ trait Exports
   type NameFn[-A] = japgolly.microlibs.name_fn.NameFn[A]
   val NameFn = japgolly.microlibs.name_fn.NameFn
 
-  type Observer[-R, +O, +E] = teststate.run.Observer[R, O, E]
+  type Observer[F[_], R, O, E] = teststate.run.Observer[F, R, O, E]
   val Observer = teststate.run.Observer
 
   type Plan[F[_], R, O, S, E] = teststate.run.Plan[F, R, O, S, E]

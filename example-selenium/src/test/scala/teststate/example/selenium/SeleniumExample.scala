@@ -26,9 +26,9 @@ object SeleniumExample extends TestSuite {
     // println(s"responseText = ${responseText.toString.replace("\n", " ").take(60)}")
   }
 
-  val observer: Observer[Ref, Obs, String] = Observer(ref => new Obs(FastDomZipperSelenium.html(ref)))
-
   val dsl = Dsl[Ref, Obs, Unit]
+
+  val observer = dsl.observer(ref => new Obs(FastDomZipperSelenium.html(ref)))
 
   val clickGet = dsl.action("Click GET")(_.obs.clickButton())
 
