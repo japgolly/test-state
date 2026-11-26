@@ -2,7 +2,7 @@ package teststate
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.test._
-import java.time.Instant
+import java.time.{Duration => JavaDuration, Instant}
 import teststate.data.{Failure, Or}
 import teststate.typeclass.{ErrorHandler, ExecutionModel}
 
@@ -83,11 +83,11 @@ trait ExtScalaJsReact extends domzipper.Exports {
 
       override def schedule[A](task: => F[A], startAt: Instant): F[A] =
         now.flatMap { n =>
-          val d = startAt.toEpochMilli - n.toEpochMilli
-          if (d <= 0)
+          val ns = JavaDuration.between(n, startAt).toNanos
+          if (ns <= 0)
             AsyncCallback.suspend(task)
           else
-            AsyncCallback.suspend(task).delayMs(d.toDouble)
+            AsyncCallback.suspend(task).delayMs(ns / 1000000.0)
         }
 
       override def doFinally[A, B](main: => F[A], last: => F[B]): F[A] =

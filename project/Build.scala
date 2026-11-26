@@ -190,6 +190,17 @@ object TestState {
       moduleName          := "ext-cats",
       libraryDependencies += Dep.cats.value)
 
+  lazy val extCatsEffectJVM = extCatsEffect.jvm
+  lazy val extCatsEffectJS  = extCatsEffect.js
+  lazy val extCatsEffect = crossProject(JSPlatform, JVMPlatform)
+    .in(file("ext-cats-effect"))
+    .configureCross(commonSettings, publicationSettings)
+    .dependsOn(core)
+    .configureCross(testSettings)
+    .settings(
+      moduleName          := "ext-cats-effect",
+      libraryDependencies += Dep.catsEffect.value)
+
   lazy val extNyayaJVM = extNyaya.jvm
   lazy val extNyayaJS  = extNyaya.js
   lazy val extNyaya = crossProject(JSPlatform, JVMPlatform)

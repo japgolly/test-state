@@ -10,7 +10,7 @@
 1. Choose dependencies and add to SBT.
     <br>Module descriptions are [here](../README.md#modules). Take what you need and delete the rest.
     ```scala
-    val TestStateVer = "2.4.1"
+    val TestStateVer = "3.2.0"
 
     libraryDependencies ++= Seq(
       "com.github.japgolly.test-state" %%% "core"                % TestStateVer % Test,
@@ -19,6 +19,7 @@
       "com.github.japgolly.test-state" %%  "dom-zipper-selenium" % TestStateVer % Test,
       "com.github.japgolly.test-state" %%% "dom-zipper-sizzle"   % TestStateVer % Test,
       "com.github.japgolly.test-state" %%% "ext-cats"            % TestStateVer % Test,
+      "com.github.japgolly.test-state" %%% "ext-cats-effect"     % TestStateVer % Test,
       "com.github.japgolly.test-state" %%% "ext-nyaya"           % TestStateVer % Test,
       "com.github.japgolly.test-state" %%% "ext-scalajs-react"   % TestStateVer % Test,
       "com.github.japgolly.test-state" %%  "ext-selenium"        % TestStateVer % Test,
@@ -54,6 +55,7 @@
          with teststate.domzipper.selenium.Exports // This already extends Core
          with teststate.domzipper.sizzle.Exports   // This already extends Core
          with teststate.ExtCats
+         with teststate.ExtCatsEffect
          with teststate.ExtNyaya
          with teststate.ExtScalaJsReact
     {
