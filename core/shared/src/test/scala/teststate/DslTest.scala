@@ -83,7 +83,7 @@ object DslTest extends TestSuite {
       val inc = dsl.action("inc")(_ => ()).updateState(_ + 1)
       val check = dsl.testAround("inc by 1", (before, after) => s"${before.state} -> ${after.state}")(
         (before, after) => after.state - before.state == 1)
-      val report = Plan.action(inc +> check).testU.withInitialState(10).runU()
+      val report = Plan.action(inc +> check).withoutObserver.withInitialState(10).withoutRef.run()
       report.assert()
     }
 
@@ -150,7 +150,7 @@ object DslTest extends TestSuite {
         val dsl = Dsl[Unit, Int, Unit]
         val check = dsl.focus("num").value(_.obs).assert.equalByWhenDefined(_ => None)
         val action = dsl.action("act")(_ => ()) +> check
-        val report = Plan.action(action).test(dsl.observer.watch(123)).stateless.runU()
+        val report = Plan.action(action).withObserver(dsl.observer.watch(123)).withoutState.withoutRef.run()
         val text = report.format(Report.Format.Default.uncolouredAscii.alwaysShowChildren)
         assertContains(text, "[skip] num should be <?>.")
         assertEq(report.stats.performedChecks, 0)
@@ -195,9 +195,9 @@ object DslTest extends TestSuite {
           items
         })
         val plan = Plan.action(action)
-        val test = plan.test(obs).stateless
+        val test = plan.withObserver(obs).withoutState
           .withRetryPolicy(Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2))
-        val report = test.runU()
+        val report = test.withoutRef.run()
         report.assert()
       }
 
@@ -219,9 +219,9 @@ object DslTest extends TestSuite {
           items
         })
         val plan = Plan.action(action)
-        val test = plan.test(obs).stateless
+        val test = plan.withObserver(obs).withoutState
           .withRetryPolicy(Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2))
-        val report = test.runU()
+        val report = test.withoutRef.run()
         report.assert()
       }
 
@@ -233,7 +233,7 @@ object DslTest extends TestSuite {
           .map(_ * 2)
           .assert.elemChanges()(add = 6)
         val action = dsl.action("mutate")(_ => buf += 3) +> check
-        val report = Plan.action(action).testU.stateless.runU()
+        val report = Plan.action(action).withoutObserver.withoutState.withoutRef.run()
         report.assert()
       }
     }
@@ -246,13 +246,13 @@ object DslTest extends TestSuite {
       "pass" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 9) +> focus.assert.increaseBy(2)
-        Plan.action(a).test(dsl.observer.watch(x)).stateless.runU().assert()
+        Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run().assert()
       }
 
       "failDifferent" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 8) +> focus.assert.increaseBy(2)
-        val r = Plan.action(a).test(dsl.observer.watch(x)).stateless.runU()
+        val r = Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run()
         val text = r.format(fmt)
         assertContains(text, "Got 8, expected 7 to change into 9.")
       }
@@ -260,7 +260,7 @@ object DslTest extends TestSuite {
       "failUnchanged" - {
         val x = 7
         val a = dsl.action("act")(_ => ()) +> focus.assert.increaseBy(2)
-        val r = Plan.action(a).test(dsl.observer.watch(x)).stateless.runU()
+        val r = Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run()
         val text = r.format(fmt)
         assertContains(text, "Expected 7 to change, but it didn't.")
       }
@@ -268,13 +268,13 @@ object DslTest extends TestSuite {
       "negPass" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 8) +> focus.assert.not.increaseBy(2)
-        Plan.action(a).test(dsl.observer.watch(x)).stateless.runU().assert()
+        Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run().assert()
       }
 
       "negFail" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 9) +> focus.assert.not.increaseBy(2)
-        val r = Plan.action(a).test(dsl.observer.watch(x)).stateless.runU()
+        val r = Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run()
         val text = r.format(fmt)
         assertContains(text, "Expected 9 to change, but it didn't.")
       }
@@ -288,13 +288,13 @@ object DslTest extends TestSuite {
       "pass" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 5) +> focus.assert.decreaseBy(2)
-        Plan.action(a).test(dsl.observer.watch(x)).stateless.runU().assert()
+        Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run().assert()
       }
 
       "failDifferent" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 6) +> focus.assert.decreaseBy(2)
-        val r = Plan.action(a).test(dsl.observer.watch(x)).stateless.runU()
+        val r = Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run()
         val text = r.format(fmt)
         assertContains(text, "Got 6, expected 7 to change into 5.")
       }
@@ -302,7 +302,7 @@ object DslTest extends TestSuite {
       "failUnchanged" - {
         val x = 7
         val a = dsl.action("act")(_ => ()) +> focus.assert.decreaseBy(2)
-        val r = Plan.action(a).test(dsl.observer.watch(x)).stateless.runU()
+        val r = Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run()
         val text = r.format(fmt)
         assertContains(text, "Expected 7 to change, but it didn't.")
       }
@@ -316,13 +316,13 @@ object DslTest extends TestSuite {
       "pass" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 8) +> focus.assert.increment
-        Plan.action(a).test(dsl.observer.watch(x)).stateless.runU().assert()
+        Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run().assert()
       }
 
       "failDifferent" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 10) +> focus.assert.increment
-        val r = Plan.action(a).test(dsl.observer.watch(x)).stateless.runU()
+        val r = Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run()
         val text = r.format(fmt)
         assertContains(text, "Got 10, expected 7 to change into 8.")
       }
@@ -336,13 +336,13 @@ object DslTest extends TestSuite {
       "pass" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 6) +> focus.assert.decrement
-        Plan.action(a).test(dsl.observer.watch(x)).stateless.runU().assert()
+        Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run().assert()
       }
 
       "failDifferent" - {
         var x = 7
         val a = dsl.action("act")(_ => x = 10) +> focus.assert.decrement
-        val r = Plan.action(a).test(dsl.observer.watch(x)).stateless.runU()
+        val r = Plan.action(a).withObserver(dsl.observer.watch(x)).withoutState.withoutRef.run()
         val text = r.format(fmt)
         assertContains(text, "Got 10, expected 7 to change into 6.")
       }

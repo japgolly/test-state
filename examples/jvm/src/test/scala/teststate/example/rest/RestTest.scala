@@ -43,7 +43,7 @@ object RestTest extends TestSuite {
 
     Plan(test, invariants)
       .withInitialState(State(None))
-      .test(observer)
+      .withObserver(observer)
       .withRef(ref)
       .run()
   }

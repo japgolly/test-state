@@ -768,7 +768,7 @@ private final class Runner[F[_], R, O, S, E](retryPolicy: Retry.Policy, callback
                   // ===================================================================================================
                   case Action.SubTest(action, subInvariants) =>
                     val runFn = (ros: ROS, postChks: PostCheckFn) => {
-                      val t    = Plan(action, subInvariants).test(test.observer)
+                      val t    = Plan(action, subInvariants).withObserver(test.observer)
                       val subP = subtest(t, invariants, refFn, ros, false)
                       EM.flatMap(subP)(s =>
                         retryPostChecks(s.history, s.ros, postChks, reObserve))

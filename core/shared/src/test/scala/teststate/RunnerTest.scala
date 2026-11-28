@@ -36,11 +36,11 @@ object RunnerTest extends TestSuite {
     a(1)
     >> a(2)
     >> (a(3) >> a(4)).group("A34").addCheck(f.assert.beforeAndAfter(expectAt(2), expectAt(4)))
-  ).test(dsl.observer(_.s)).stateless
+  ).withObserver(dsl.observer(_.s)).withoutState
 
   val test2 = Plan.action(
     f.assert(expectAt(0)) +> (dsl.action("A1")(_.ref += "A1") >> a(2)).group("A12") +> f.assert(expectAt(2))
-  ).test(dsl.observer(_.s)).stateless
+  ).withObserver(dsl.observer(_.s)).withoutState
 
   def newState = new RecordVar(Record(Vector.empty))
 
@@ -94,7 +94,7 @@ object RunnerTest extends TestSuite {
     "failureReason" - {
       "action" - {
         val e = new RuntimeException("hurr")
-        val test = Plan.action(dsl.action("A")(_ => throw e)).test(dsl.observer(_.s)).stateless
+        val test = Plan.action(dsl.action("A")(_ => throw e)).withObserver(dsl.observer(_.s)).withoutState
         val r = test.withRef(newState).run()
         r.failureReason match {
           case Some(Failure.WithCause(_, f)) => assert(e eq f)
@@ -103,7 +103,7 @@ object RunnerTest extends TestSuite {
       }
       "after" - {
         val e = new RuntimeException("hurr")
-        val test = Plan.action(dsl.action("A")(_ => ()) +> dsl.test("x")(_ => throw e)).test(dsl.observer(_.s)).stateless
+        val test = Plan.action(dsl.action("A")(_ => ()) +> dsl.test("x")(_ => throw e)).withObserver(dsl.observer(_.s)).withoutState
         val r = test.withRef(newState).run()
         r.failureReason match {
           case Some(Failure.WithCause(_, f)) => assert(e eq f)
@@ -118,7 +118,7 @@ object RunnerTest extends TestSuite {
       def badPoint = dsl.point("OMG")(_ => sys error "Crash!")
 
       "action" - {
-        val test = Plan.action(dsl.action("A")(_ => sys error "Crash!")).test(dsl.observer(_.s)).stateless
+        val test = Plan.action(dsl.action("A")(_ => sys error "Crash!")).withObserver(dsl.observer(_.s)).withoutState
         assertRun(test.withRef(newState).run(),
           """
             |✘ A -- java.lang.RuntimeException: Crash!
@@ -127,7 +127,7 @@ object RunnerTest extends TestSuite {
       }
 
       "before" - {
-        val test = Plan(nop, badPoint.before).test(dsl.observer(_.s)).stateless
+        val test = Plan(nop, badPoint.before).withObserver(dsl.observer(_.s)).withoutState
         assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
@@ -139,7 +139,7 @@ object RunnerTest extends TestSuite {
       // Point-invariants don't distinguish between before/after.
       // All point-invariants are run both before and after actions.
       "after" - {
-        val test = Plan(nop, badPoint.after).test(dsl.observer(_.s)).stateless
+        val test = Plan(nop, badPoint.after).withObserver(dsl.observer(_.s)).withoutState
         assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
@@ -149,7 +149,7 @@ object RunnerTest extends TestSuite {
       }
 
       "around" - {
-        val test = Plan(nop, dsl.focus("").value(_ => 0).testAround(_ => "what?")((_: Any, _: Any) => sys error "Crashhh!")).test(dsl.observer(_.s)).stateless
+        val test = Plan(nop, dsl.focus("").value(_ => 0).testAround(_ => "what?")((_: Any, _: Any) => sys error "Crashhh!")).withObserver(dsl.observer(_.s)).withoutState
         assertRun(test.withRef(newState).run(),
           """
             |✘ NOP
@@ -161,7 +161,7 @@ object RunnerTest extends TestSuite {
       }
 
       "invariants" - {
-        val test = Plan(nop, badPoint).test(dsl.observer(_.s)).stateless
+        val test = Plan(nop, badPoint).withObserver(dsl.observer(_.s)).withoutState
         assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
@@ -171,7 +171,7 @@ object RunnerTest extends TestSuite {
       }
 
       "coproduct" - {
-        val test = Plan(nop, dsl.chooseInvariant("Who knows?!")(_ => sys error "NO!")).test(dsl.observer(_.s)).stateless
+        val test = Plan(nop, dsl.chooseInvariant("Who knows?!")(_ => sys error "NO!")).withObserver(dsl.observer(_.s)).withoutState
         assertRun(test.withRef(newState).run(),
         """
           |✘ Initial state.
@@ -181,7 +181,7 @@ object RunnerTest extends TestSuite {
       }
 
       "obs1" - {
-        val test = Plan.action(nop).test(dsl.observer watch (sys error "NO!")).stateless
+        val test = Plan.action(nop).withObserver(dsl.observer watch (sys error "NO!")).withoutState
         assertRun(test.withRef(newState).run(),
           """
             |✘ Initial state.
@@ -191,7 +191,7 @@ object RunnerTest extends TestSuite {
       }
 
       "obs2" - {
-        val test = Plan.action(nop).test(dsl.observer(delayCrash(1)(_.s))).stateless
+        val test = Plan.action(nop).withObserver(dsl.observer(delayCrash(1)(_.s))).withoutState
         assertRun(test.withRef(newState).run(),
           """
             |✘ NOP
@@ -208,9 +208,9 @@ object RunnerTest extends TestSuite {
         val dsl = Dsl[Unit, Yar, Unit]
         val a = dsl.action("NOP")(_ => ())
           .addCheck(dsl.focus("Blah").value(_.obs.b).assert.change)
-        val test = Plan.action(a).test(dsl.observer watch new Yar).stateless
+        val test = Plan.action(a).withObserver(dsl.observer watch new Yar).withoutState
 
-        assertRun(test.runU(),
+        assertRun(test.withoutRef.run(),
           """
             |✘ NOP
             |  ✓ Action
@@ -222,7 +222,7 @@ object RunnerTest extends TestSuite {
 
       "nextState" - {
         val a = dsl.action("Merf")(_ => ()).updateStateBy(_ => sys error "BERF")
-        val test = Plan.action(a).test(dsl.observer(_.s)).stateless
+        val test = Plan.action(a).withObserver(dsl.observer(_.s)).withoutState
         assertRun(test.withRef(newState).run(),
           """
             |✘ Merf
@@ -237,7 +237,7 @@ object RunnerTest extends TestSuite {
       var i = 3
       val dsl = Dsl[Int, Unit, Unit]
       val inc = dsl.action("inc")(x => i = x.ref + 1)
-      val h = Plan.action(inc.times(4)).testU.stateless.withRefByName(i).run()
+      val h = Plan.action(inc.times(4)).withoutObserver.withoutState.withRefByName(i).run()
       assertEq(h.failure, None)
       assertEq(i, 7)
     }
@@ -250,7 +250,7 @@ object RunnerTest extends TestSuite {
           .updateState(_ + 8)
           .updateStateBy(_.state - 3)
           .updateState(_ - 4)
-        val h = Plan.action(inc.times(3)).test(dsl.observer watch i).withInitialState(i).runU()
+        val h = Plan.action(inc.times(3)).withObserver(dsl.observer watch i).withInitialState(i).withoutRef.run()
         assertEq(h.failure, None)
         assertEq(i, 12)
       }
@@ -264,7 +264,7 @@ object RunnerTest extends TestSuite {
         val a2 = dsl.action("A2")(_ => ran2 = true)
         val a3 = dsl.action("A3")(ros => stateAfter = ros.state)
         val g = (a1 >> a2).group("G").when(_.state == 0).updateState(_ + 1)
-        val h = Plan.action(g >> a3).testU.withInitialState(0).runU()
+        val h = Plan.action(g >> a3).withoutObserver.withInitialState(0).withoutRef.run()
         assertEq(h.failure, None)
         assertEq(ran1, true)
         assertEq(ran2, true)
@@ -285,7 +285,7 @@ object RunnerTest extends TestSuite {
             nextCondEvaluated = true
             true
           })
-        val h = Plan.action(g).testU.withInitialState(0).runU()
+        val h = Plan.action(g).withoutObserver.withInitialState(0).withoutRef.run()
         assertEq(h.failure, None)
         assertEq(ran1, false)
         assertEq(ran2, false)
@@ -308,7 +308,7 @@ object RunnerTest extends TestSuite {
           if (os.obs == "after") Right(os.state + 1)
           else Left(s"Expected post-obs 'after', got '${os.obs}'")
         )
-        val h = Plan.action(g >> a3).test(dsl.observer watch obs).withInitialState(0).runU()
+        val h = Plan.action(g >> a3).withObserver(dsl.observer watch obs).withInitialState(0).withoutRef.run()
         assertEq(h.failure, None)
         assertEq(ran, true)
         assertEq(stateAfter, 1)
@@ -320,7 +320,7 @@ object RunnerTest extends TestSuite {
       "action" - {
         var i = 0
         val a = dsl.action("A")(_ => i += 1).skip
-        val test = Plan.action(a).test(dsl.observer(_.s)).stateless
+        val test = Plan.action(a).withObserver(dsl.observer(_.s)).withoutState
         test.withRef(newState).run()
         assertEq(i, 0)
       }
@@ -328,7 +328,7 @@ object RunnerTest extends TestSuite {
       "invariant" - {
         var i = 0
         val c = dsl.point("X")(_ => {i += 1; None}).skip
-        val test = Plan(a(1), c).test(dsl.observer(_.s)).stateless
+        val test = Plan(a(1), c).withObserver(dsl.observer(_.s)).withoutState
         test.withRef(newState).run()
         assertEq(i, 0)
       }
@@ -337,7 +337,7 @@ object RunnerTest extends TestSuite {
         var i = 0
         val c = dsl.point("X")(_ => {i += 1; None}).skip
         val d = dsl.around("Y")(_ => {i += 1; i})((_, _) => {i += 1; None}).skip
-        val test = Plan.action(a(1) addCheck c.beforeAndAfter addCheck d).test(dsl.observer(_.s)).stateless
+        val test = Plan.action(a(1) addCheck c.beforeAndAfter addCheck d).withObserver(dsl.observer(_.s)).withoutState
         test.withRef(newState).run()
         assertEq(i, 0)
       }
@@ -358,10 +358,10 @@ object RunnerTest extends TestSuite {
           case (true , false) => i10
           case (false, true ) => i01
         })
-        val t = Plan(a >> a, i).test(dsl.observer watch v)
+        val t = Plan(a >> a, i).withObserver(dsl.observer watch v)
 
         v = true
-        assertRun(t.runU(v),
+        assertRun(t.withInitialState(v).withoutRef.run(),
           """
             |✓ Initial state.
             |  ✓ ITT
@@ -378,7 +378,7 @@ object RunnerTest extends TestSuite {
           """.stripMargin)
 
         v = false
-        assertRun(t.runU(v),
+        assertRun(t.withInitialState(v).withoutRef.run(),
           """
             |✓ Initial state.
             |  ✓ IFF
@@ -404,8 +404,8 @@ object RunnerTest extends TestSuite {
           +> dsl.action("Inc")(_ => i += 1)
           +> dsl.test("After")(_ => i == 1))
 
-      val test = plan.stateless.testU
-      assertRun(test.runU(),
+      val test = plan.withoutState.withoutObserver
+      assertRun(test.withoutRef.run(),
         """
           |✓ Inc
           |  ✓ Pre-conditions
@@ -425,8 +425,8 @@ object RunnerTest extends TestSuite {
         val action = dsl.action("Inc")(_ => i += 1)
         val deltaInv = dsl.testAround("InvDelta")((_, _) => true)
         val plan = Plan.action(action).addInvariants(deltaInv)
-        val test = plan.stateless.testU
-        assertRun(test.runU(),
+        val test = plan.withoutState.withoutObserver
+        assertRun(test.withoutRef.run(),
           """
             |✓ Inc
             |  ✓ Action
@@ -443,8 +443,8 @@ object RunnerTest extends TestSuite {
         val action = dsl.action("Inc")(_ => i += 1) +> dsl.test("PostCond")(_ => true)
         val deltaInv = dsl.testAround("InvDelta")((_, _) => true)
         val plan = Plan.action(action).addInvariants(deltaInv)
-        val test = plan.stateless.testU
-        assertRun(test.runU(),
+        val test = plan.withoutState.withoutObserver
+        assertRun(test.withoutRef.run(),
           """
             |✓ Inc
             |  ✓ Action
@@ -473,8 +473,8 @@ object RunnerTest extends TestSuite {
           state = 1
         }) +> check
         val plan = Plan.action(action)
-        val test = plan.stateless.test(dsl.observer(_ => state))
-        val report = test.runU()
+        val test = plan.withoutState.withObserver(dsl.observer(_ => state))
+        val report = test.withoutRef.run()
         assert(report.result == Result.Pass)
       }
     }
@@ -485,7 +485,7 @@ object RunnerTest extends TestSuite {
         val cb = dsl.callbacks.aroundActions.before((_, name) => events :+= s"before:${name.value}")
         val actOk = dsl.action("ok")(_ => events :+= "run:ok")
         val actCrash = dsl.action("crash")(_ => { events :+= "run:crash"; sys.error("boom") })
-        Plan.action(actOk >> actCrash).test(dsl.observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
+        Plan.action(actOk >> actCrash).withObserver(dsl.observer(_.s)).withoutState.withRef(newState).withCallbacks(cb).run()
         assertEq(events, Vector(
           "before:ok",
           "run:ok",
@@ -500,8 +500,8 @@ object RunnerTest extends TestSuite {
         val actOk = dsl.action("ok")(_ => ())
         val actFail = dsl.action("fail").attempt(_ => Some("err"))
         val actCrash = dsl.action("crash")(_ => sys.error("boom"))
-        Plan.action(actOk >> actFail).test(dsl.observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
-        Plan.action(actCrash).test(dsl.observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
+        Plan.action(actOk >> actFail).withObserver(dsl.observer(_.s)).withoutState.withRef(newState).withCallbacks(cb).run()
+        Plan.action(actCrash).withObserver(dsl.observer(_.s)).withoutState.withRef(newState).withCallbacks(cb).run()
         assertEq(events, Vector(
           "ok" -> None,
           "fail" -> Some("err"),
@@ -516,7 +516,7 @@ object RunnerTest extends TestSuite {
       "whenException" - {
         val d = Dsl[Unit, Unit, Unit]
         val act = d.action("act")(_ => ()).when(_ => sys.error("when boom"))
-        val report = Plan.action(act).testU.stateless.runU()
+        val report = Plan.action(act).withoutObserver.withoutState.withoutRef.run()
         assert(report.failed)
         assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: when boom"))
       }
@@ -524,7 +524,7 @@ object RunnerTest extends TestSuite {
       "pmapRException" - {
         val d = Dsl[Unit, Unit, Unit]
         val act = d.action("act")(_ => ()).pmapR[Unit](_ => sys.error("pmapR boom"))
-        val report = Plan.action(act).testU.stateless.runU()
+        val report = Plan.action(act).withoutObserver.withoutState.withoutRef.run()
         assert(report.failed)
         assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: pmapR boom"))
       }
@@ -536,7 +536,7 @@ object RunnerTest extends TestSuite {
           calls += 1
           true
         }
-        val report = Plan.action(act).testU.stateless.runU()
+        val report = Plan.action(act).withoutObserver.withoutState.withoutRef.run()
         assert(!report.failed)
         assertEq(calls, 1)
       }
@@ -554,7 +554,7 @@ object RunnerTest extends TestSuite {
           else sys.error("when retry boom")
         }
         val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 1)
-        val report = Plan.action(act).test(obs).stateless.withRetryPolicy(policy).runU()
+        val report = Plan.action(act).withObserver(obs).withoutState.withRetryPolicy(policy).withoutRef.run()
         assert(report.failed)
         assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: when retry boom"))
       }
@@ -568,7 +568,7 @@ object RunnerTest extends TestSuite {
         }
         val act = d.action("act")(_ => ()).when(_ => sys.error("when boom"))
         val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 1)
-        val report = Plan.action(act).test(obs).stateless.withRetryPolicy(policy).runU()
+        val report = Plan.action(act).withObserver(obs).withoutState.withRetryPolicy(policy).withoutRef.run()
         assert(report.failed)
         assertEq(report.failure.map(_.failure), Some("java.lang.RuntimeException: when boom"))
       }
@@ -603,7 +603,7 @@ object RunnerTest extends TestSuite {
 
         val d = Dsl.full[Thunk, Int, Int, Unit, String]
         val act = d.action("act")(ros => () => { observedRefs :+= ros.ref })
-        val runF = Plan.action(act).test(d.observer.pure(identity)).stateless
+        val runF = Plan.action(act).withObserver(d.observer.pure(identity)).withoutState
           .withLazyRef { refCount += 1; refCount }
           .run()
 
@@ -626,7 +626,7 @@ object RunnerTest extends TestSuite {
         val d = Dsl.full[Thunk, Unit, Unit, Unit, String]
         val act = d.action("act")(_ => () => { clockMillis += 250L })
         val cb = d.callbacks.aroundActions.timed((_, _, _, dur) => () => { measuredMs = Some(dur.toMillis) })
-        val report = Plan.action(act).testU.stateless.withoutRef.withCallbacks(cb).run()()
+        val report = Plan.action(act).withoutObserver.withoutState.withoutRef.withCallbacks(cb).run()()
 
         assert(!report.failed)
         assertEq(measuredMs, Some(250L))

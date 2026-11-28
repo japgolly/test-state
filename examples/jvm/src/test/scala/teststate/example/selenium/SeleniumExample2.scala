@@ -66,8 +66,8 @@ object SeleniumExample2 extends TestSuite {
     Plan.action(
       searchFor(searchTerm) +> resultCount.assert.exists(s"≥ $minimumResults", _ >= minimumResults)
     )
-      .test(observer)
-      .stateless
+      .withObserver(observer)
+      .withoutState
       .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 20 seconds))
 
   def testInParallel() = {

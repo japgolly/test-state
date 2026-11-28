@@ -38,8 +38,8 @@ object SeleniumExample extends TestSuite {
     val driver = openBrowser()
     val plan = Plan.action(clickGet +> responseText.assert.exists("Response", _ contains "Response"))
     val report = plan
-      .test(observer)
-      .stateless
+      .withObserver(observer)
+      .withoutState
       .withRef(driver)
       .withRetryPolicy(Retry.Policy.fixedIntervalWithTimeout(200 millis, 60 seconds))
       .run()

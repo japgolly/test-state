@@ -147,7 +147,7 @@ object RetryTest extends TestSuite {
   val observer = dsl.observer(_.toObs())
 
   def mkTest(plan: dsl.Plan, refMod: Ref => Unit = _ => ()) =
-    plan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
+    plan.addInvariants(invariant).withObserver(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
 
   def assertRetryWorks(plan: dsl.Plan, refMod: Ref => Unit = _ => ()): Unit = {
     _assertRetryWorks(plan, refMod)
@@ -202,10 +202,11 @@ object RetryTest extends TestSuite {
       val fail = Some("fail")
       val result: Report[String] =
         Plan.action(dsl.emptyAction +> dsl.point("fail")(_ => fail))
-          .testU
-          .stateless
+          .withoutObserver
+          .withoutState
           .withRetryPolicy(Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, teststate.Platform.StackTestSize))
-          .runU()
+          .withoutRef
+          .run()
       // println(result.format)
       assert(result.failed)
     }
@@ -258,7 +259,7 @@ object RetryTest extends TestSuite {
     "initial" - {
       "ref" - {
         val refMod = explodingRef()
-        val test = dsl.emptyPlan.addInvariants(invariant).test(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
+        val test = dsl.emptyPlan.addInvariants(invariant).withObserver(observer).withInitialState(0).withLazyRef((new Ref)(refMod))
         val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
         assert(!result.failed)
       }
@@ -276,7 +277,7 @@ object RetryTest extends TestSuite {
          val ref = new Ref
          var refFn = (_: Ref) => ()
          val plan = Plan.action(dsl.action("hack")(_ => refFn = explodingRef()) >> dsl.emptyAction)
-         val test = plan.addInvariants(invariant).test(observer).withInitialState(0).withRefByName(ref(refFn))
+         val test = plan.addInvariants(invariant).withObserver(observer).withInitialState(0).withRefByName(ref(refFn))
          val result: Report[String] = test.withRetryPolicy(retryPolicy).run()
          result.assert()
        }
@@ -414,7 +415,7 @@ object RetryTest extends TestSuite {
           Some(s"err $actionAttempt")
         }
         val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2)
-        val report = Plan.action(act).test(obs).stateless.withRetryPolicy(policy).runU()
+        val report = Plan.action(act).withObserver(obs).withoutState.withRetryPolicy(policy).withoutRef.run()
         assertRun(report,
           """
             |✘ act
@@ -438,7 +439,7 @@ object RetryTest extends TestSuite {
         }
         val grp = d.emptyAction.group("grp") +> v.assert(123)
         val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2)
-        val report = Plan.action(grp).test(obs).stateless.withRetryPolicy(policy).runU()
+        val report = Plan.action(grp).withObserver(obs).withoutState.withRetryPolicy(policy).withoutRef.run()
         assertRun(report,
           """
             |✘ grp
@@ -462,7 +463,7 @@ object RetryTest extends TestSuite {
         }
         val act = d.action("act")(_ => ()) <+ v.assert(123)
         val policy = Retry.Policy.fixedIntervalAndAttempts(Duration.Zero, 2)
-        val report = Plan.action(act).test(obs).stateless.withRetryPolicy(policy).runU()
+        val report = Plan.action(act).withObserver(obs).withoutState.withRetryPolicy(policy).withoutRef.run()
         assertRun(report,
           """
             |✘ act

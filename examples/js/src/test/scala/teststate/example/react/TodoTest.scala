@@ -59,9 +59,9 @@ object TodoTest extends TestSuite {
       val test = plan
         .addInvariants(invariants)
         .withInitialState(State(0, 0))
-        .test(dsl.observer watch observe())
+        .withObserver(dsl.observer watch observe())
 
-      test.runU()
+      test.withoutRef.run()
     }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

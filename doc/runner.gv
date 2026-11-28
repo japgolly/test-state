@@ -36,10 +36,10 @@ em -> plan
 a,i -> plan
 is -> planS
 o -> test
-plan -> planS [label=".stateless\l.withInitialState\l"]
-plan -> test [label=".test\l.testU\l"]
-planS -> testS [label=".test\l.testU\l"]
-test -> testS [label=".stateless\l.withInitialState\l"]
+plan -> planS [label=".withInitialState\l.withoutState\l"]
+plan -> test [label=".withObserver\l.withoutObserver\l"]
+planS -> testS [label=".withObserver\l.withoutObserver\l"]
+test -> testS [label=".withInitialState\l.withoutState\l"]
 
 ref -> testR
 testS -> testR [label="  .withRef\l  .withRefByName\l  .withLazyRef\l  .withoutRef\l"]

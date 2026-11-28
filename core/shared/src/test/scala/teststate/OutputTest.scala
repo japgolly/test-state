@@ -48,7 +48,7 @@ object OutputTest extends TestSuite {
       .addCheck(mockAround("Sub-delta"))
 
   def test(a: dsl.Actions, i: dsl.Invariants)(expect: String): Unit = {
-    val r = Plan(a, i).stateless.testU.runU()
+    val r = Plan(a, i).withoutState.withoutObserver.withoutRef.run()
     assertRun(r, expect)
   }
 
@@ -103,7 +103,7 @@ object OutputTest extends TestSuite {
           s.assert(3) +> dsl.emptyAction.updateState(_ + 1) // 3 -> 4
             >> dsl.emptyAction.updateState(_ + 3) // -> 7
             >> dsl.emptyAction.updateState(_ + 7) +> s.assert(14) // -> 14
-        ).testU.runU(3)
+        ).withoutObserver.withInitialState(3).withoutRef.run()
         assertRun(r,
           """
             |✓ Update state.
@@ -1132,8 +1132,10 @@ object OutputTest extends TestSuite {
         val checkOSFail = dsl.focus("Evil").obsAndState(_.o, _.s).assert.equal
         val action = dsl.action("Press button.")(_ => ())
         val r = Plan.action(action addCheck checkOSFail.after)
-          .test(dsl.observer watch Obs(777))
-          .runU(State(666))
+          .withObserver(dsl.observer watch Obs(777))
+          .withInitialState(State(666))
+          .withoutRef
+          .run()
         assertRun(r,
           """
             |✘ Press button.
@@ -1151,8 +1153,10 @@ object OutputTest extends TestSuite {
         val checkOSFail = dsl.focus("Evil").obsAndState(_.o, _.s).assert.equal
         val action = dsl.action("Press button.")(_ => ())
         val r = Plan.action(action addCheck checkOSFail.after)
-          .test(dsl.observer watch Obs("wow\nthis\nisn't\nvery\nlong..."))
-          .runU(State("wow\nthis\nis\nlong!"))
+          .withObserver(dsl.observer watch Obs("wow\nthis\nisn't\nvery\nlong..."))
+          .withInitialState(State("wow\nthis\nis\nlong!"))
+          .withoutRef
+          .run()
         assertRun(r,
           """
             |✘ Press button.
@@ -1179,7 +1183,11 @@ object OutputTest extends TestSuite {
       val dsl = Dsl[Unit, List[Int], Boolean]
       val a = dsl.action("Remove 2")(_ => is = List(1, 3)).updateState(_ => false)
       val c = dsl.focus("X").collection(_.obs).assert.existenceOf(2)(_.state)
-      val r = Plan.action(a addCheck c.beforeAndAfter).test(dsl.observer watch is).runU(true)
+      val r = Plan.action(a addCheck c.beforeAndAfter)
+        .withObserver(dsl.observer watch is)
+        .withInitialState(true)
+        .withoutRef
+        .run()
       assertRun(r,
         """
           |✓ Remove 2
@@ -1195,7 +1203,7 @@ object OutputTest extends TestSuite {
 
     "named" - {
       "pass" - {
-        val r = Plan(dsl.emptyAction, checkPoint).named("Beauty").stateless.testU.runU()
+        val r = Plan(dsl.emptyAction, checkPoint).named("Beauty").withoutState.withoutObserver.withoutRef.run()
         assertRun(r,
           """
             |✓ Beauty
@@ -1206,7 +1214,7 @@ object OutputTest extends TestSuite {
           """.stripMargin)
       }
       "fail" - {
-        val r = Plan(dsl.emptyAction, checkPointF).named("Sorrow").stateless.testU.runU()
+        val r = Plan(dsl.emptyAction, checkPointF).named("Sorrow").withoutState.withoutObserver.withoutRef.run()
         assertRun(r,
           """
             |✘ Sorrow

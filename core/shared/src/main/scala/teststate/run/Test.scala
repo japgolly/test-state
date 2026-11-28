@@ -126,14 +126,26 @@ final class Plan[F[_], R, O, S, E](override val name: Option[Name],
   def withInitialState(s: S) =
     PlanWithInitialState(this, s)
 
+  @deprecated("Use withoutState", "3.2.0")
   def stateless(implicit ev: Unit =:= S) =
+    withoutState
+
+  def withoutState(implicit ev: Unit =:= S) =
     withInitialState(())
 
+  @deprecated("Use withObserver", "3.2.0")
   def test(observer: Observer[F, R, O, E])(implicit a: ErrorHandler[E]) =
+    withObserver(observer)
+
+  @deprecated("Use withoutObserver", "3.2.0")
+  def testU(implicit ev: Observer[F, R, Unit, E] =:= Observer[F, R, O, E], a: ErrorHandler[E]) =
+    withoutObserver
+
+  def withObserver(observer: Observer[F, R, O, E])(implicit a: ErrorHandler[E]) =
     Test(this, observer, Retry.Policy.never)(a)
 
-  def testU(implicit ev: Observer[F, R, Unit, E] =:= Observer[F, R, O, E], a: ErrorHandler[E]) =
-    test(ev(Observer.unit))(a)
+  def withoutObserver(implicit ev: Observer[F, R, Unit, E] =:= Observer[F, R, O, E], a: ErrorHandler[E]) =
+    withObserver(ev(Observer.unit))(a)
 }
 
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
@@ -167,11 +179,19 @@ final case class PlanWithInitialState[F[_], R, O, S, E](override val plan: Plan[
 //  def lift[F2[_], R2, O2, S2, E2](implicit t: Transformer[F, R, O, S, E, F2, R2, O2, S2, E2]): Self[F2, R2, O2, S2, E2] =
 //    plan.lift(t).withInitialState(initialState)
 
+  @deprecated("Use withObserver", "3.2.0")
   def test(observer: Observer[F, R, O, E])(implicit a: ErrorHandler[E]) =
-    TestWithInitialState(plan.test(observer)(a), initialState)
+    withObserver(observer)
 
+  @deprecated("Use withoutObserver", "3.2.0")
   def testU(implicit ev: Observer[F, R, Unit, E] =:= Observer[F, R, O, E], a: ErrorHandler[E]) =
-    test(ev(Observer.unit))(a)
+    withoutObserver
+
+  def withObserver(observer: Observer[F, R, O, E])(implicit a: ErrorHandler[E]) =
+    TestWithInitialState(plan.withObserver(observer)(a), initialState)
+
+  def withoutObserver(implicit ev: Observer[F, R, Unit, E] =:= Observer[F, R, O, E], a: ErrorHandler[E]) =
+    withObserver(ev(Observer.unit))(a)
 }
 
 // █████████████████████████████████████████████████████████████████████████████████████████████████████████████████████
@@ -214,7 +234,11 @@ final case class Test[F[_], R, O, S, E](override val plan   : Plan[F, R, O, S, E
   def withInitialState(s: S) =
     TestWithInitialState(this, s)
 
+  @deprecated("Use withoutState", "3.2.0")
   def stateless(implicit ev: Unit =:= S) =
+    withoutState
+
+  def withoutState(implicit ev: Unit =:= S) =
     withInitialState(())
 
   @deprecated("Use withInitialState(s).withRefByName(ref).run()", "2.2.0")
