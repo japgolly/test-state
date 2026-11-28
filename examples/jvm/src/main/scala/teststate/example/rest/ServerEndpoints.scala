@@ -5,10 +5,10 @@ import sttp.tapir.server.ServerEndpoint
 
 object ServerEndpoints {
 
-  val userGet = Endpoints.userGet
+  private val userGet = Endpoints.userGet
     .serverLogic[IO](id => Database.global.get(id).map(_.toRight(s"User not found: $id")))
 
-  val userPost = Endpoints.userPost
+  private val userPost = Endpoints.userPost
     .serverLogic[IO] { user =>
       Database.global.post(user) map {
         case true  => Right((s"/users/${user.id}", user))
@@ -16,7 +16,7 @@ object ServerEndpoints {
       }
     }
 
-  val userDelete = Endpoints.userDelete
+  private val userDelete = Endpoints.userDelete
     .serverLogic[IO] { id =>
       Database.global.delete(id) map {
         case Some(user) => Right(user)

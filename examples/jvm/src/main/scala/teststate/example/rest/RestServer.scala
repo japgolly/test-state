@@ -18,5 +18,4 @@ object RestServer {
     .withHttpApp(routes.orNotFound)
     .withShutdownTimeout(1.second)
     .build
-
 }
