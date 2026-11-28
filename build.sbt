@@ -33,6 +33,5 @@ val extSelenium       = TestState.extSelenium
 val extZioJVM         = TestState.extZioJVM
 val extZioJS          = TestState.extZioJS
 
-val examples          = TestState.examples
-val exampleSelenium   = TestState.exampleSelenium
-val exampleReactJS    = TestState.exampleReactJS
+val examplesJVM       = TestState.examplesJVM
+val examplesJS        = TestState.examplesJS

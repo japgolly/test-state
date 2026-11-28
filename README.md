@@ -108,11 +108,8 @@ When retries are enabled, then test execution is
 
 # Examples
 
-* [Scala.Js + React](example-react) - Demonstrates DomZipper, invariants, actions, basics.
-* [Selenium](example-selenium) - Demonstrates Selenium testing of external web content, using retry scheduling (instead of `Thread.sleep`), parallelism and concurrency.
-* [TODO] DB triggers.    - real external state, ref.
-* [TODO] Mutable sample. - fuzz, invariants.
-
+* [Scala.Js + React](./examples/js/) - Demonstrates DomZipper, invariants, actions, basics.
+* [Selenium](./examples/jvm/src/test/scala/teststate/example/selenium/) - Demonstrates Selenium testing of external web content, using retry scheduling (instead of `Thread.sleep`), parallelism and concurrency.
 
 # Support
 If you like what I do
