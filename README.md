@@ -108,6 +108,7 @@ When retries are enabled, then test execution is
 
 # Examples
 
+* [REST service](./examples/jvm/src/test/scala/teststate/example/rest/) - Demonstrates using Cats Effect, Tapir and sttp to test a REST service.
 * [Scala.Js + React](./examples/js/) - Demonstrates DomZipper, invariants, actions, basics.
 * [Selenium](./examples/jvm/src/test/scala/teststate/example/selenium/) - Demonstrates Selenium testing of external web content, using retry scheduling (instead of `Thread.sleep`), parallelism and concurrency.
 

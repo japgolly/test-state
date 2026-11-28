@@ -282,7 +282,18 @@ object TestState {
     .in(file("examples"))
     .jvmConfigure(_
       .configure(commonSettings.jvm, preventPublication, testSettingsCI.jvm)
-      .dependsOn(coreJVM, domZipperSelenium, extSelenium)
+      .dependsOn(coreJVM, domZipperSelenium, extSelenium, extCatsEffectJVM)
+      .settings(
+        libraryDependencies ++= Seq(
+          Dep.http4sServer.value,
+          Dep.tapirCore.value,
+          Dep.tapirHttp4sServer.value,
+          Dep.tapirJsonCirce.value,
+          Dep.sttpClientCats.value % Test,
+          Dep.sttpClientCirce.value % Test,
+          Dep.tapirSttpClient.value % Test
+        ),
+      )
     ).jsConfigure(_
       .enablePlugins(ScalaJSPlugin)
       .enablePlugins(JSDependenciesPlugin)
