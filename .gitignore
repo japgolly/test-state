@@ -25,3 +25,4 @@ target
 metals.sbt
 .bsp
 .vscode
+.scala-build
