@@ -5,7 +5,7 @@ import java.util.concurrent.Executors
 import org.openqa.selenium.{Keys, WebDriver}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import teststate.example.selenium.MyTestState._
+import teststate.example.selenium.TestState._
 import teststate.selenium.{GrowthStrategy, Tab}
 import utest._
 

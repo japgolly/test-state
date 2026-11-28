@@ -3,7 +3,7 @@ package teststate.example.react
 import japgolly.scalajs.react.test._
 import monocle.macros.GenLens
 import org.scalajs.dom.html
-import teststate.example.react.MyTestState._
+import teststate.example.react.TestState._
 
 /**
  * Observation capturing everything we want to know about the Todo component.
@@ -102,4 +102,3 @@ object TodoTestDsl {
     dsl.action("Toggle ShowCompleted")(Simulate change _.obs.showCompleteInput) +>
       showingComplete.assert.change
 }
-

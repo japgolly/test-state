@@ -8,7 +8,7 @@ import sttp.client4.Response
 import sttp.model.Uri
 import sttp.tapir.client.sttp4.SttpClientInterpreter
 import sttp.tapir.PublicEndpoint
-import MyTestState._
+import TestState._
 
 object TestDsl {
 

@@ -5,7 +5,7 @@ import java.util.UUID
 import sttp.client4.httpclient.cats.HttpClientCatsBackend
 import sttp.model.Uri
 import utest._
-import MyTestState._
+import TestState._
 import TestDsl._
 
 object RestTest extends TestSuite {

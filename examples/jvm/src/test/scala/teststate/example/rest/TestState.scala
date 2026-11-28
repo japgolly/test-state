@@ -1,5 +1,5 @@
 package teststate.example.rest
 
-object MyTestState
+object TestState
   extends teststate.Exports
     with teststate.ExtCatsEffect
