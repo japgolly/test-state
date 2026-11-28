@@ -36,10 +36,10 @@ em -> plan
 a,i -> plan
 is -> planS
 o -> test
-plan -> planS [label=".withInitialState"]
-plan -> test [label=".test"]
-planS -> testS [label=".test"]
-test -> testS [label=".withInitialState"]
+plan -> planS [label=".stateless\l.withInitialState\l"]
+plan -> test [label=".test\l.testU\l"]
+planS -> testS [label=".test\l.testU\l"]
+test -> testS [label=".stateless\l.withInitialState\l"]
 
 ref -> testR
 testS -> testR [label="  .withRef\l  .withRefByName\l  .withLazyRef\l  .withoutRef\l"]
@@ -47,5 +47,5 @@ testR -> run [label=".run()"]
 
 test -> test [label=".withRetryPolicy"]
 testS -> testS [label=".withRetryPolicy"]
-testR -> testR [label=".withRetryPolicy"]
+testR -> testR [label=".withRetryPolicy\l.withCallbacks\l"]
 }
