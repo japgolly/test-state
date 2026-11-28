@@ -3,9 +3,9 @@ package teststate.selenium
 import cats.instances.string._
 import cats.instances.vector._
 import org.openqa.selenium.WebDriver
-import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import teststate.selenium.TestUtil._
 import teststate.typeclass.ExecutionModel
 import utest._

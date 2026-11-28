@@ -4,9 +4,9 @@ import cats.effect.IO
 import java.util.UUID
 import sttp.client4.httpclient.cats.HttpClientCatsBackend
 import sttp.model.Uri
+import teststate.example.rest.TestDsl._
+import teststate.example.rest.TestState._
 import utest._
-import TestState._
-import TestDsl._
 
 object RestTest extends TestSuite {
   override def tests = Tests {

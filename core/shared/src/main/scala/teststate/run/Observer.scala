@@ -1,7 +1,7 @@
 package teststate.run
 
 import teststate.data.{Left, Or, Right}
-import teststate.typeclass.{~~>, ExecutionModel}
+import teststate.typeclass.{ExecutionModel, ~~>}
 
 final case class Observer[F[_], R, O, E](observe: R => F[E Or O])(implicit F: ExecutionModel[F]) {
   @inline def apply(r: R) = observe(r)

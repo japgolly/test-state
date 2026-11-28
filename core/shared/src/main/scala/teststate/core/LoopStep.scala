@@ -1,10 +1,10 @@
 package teststate.core
 
 import java.time.Duration
-import teststate.typeclass._
+import teststate.core.CoreExports.Actions
+import teststate.core.CoreExports2._
 import teststate.data.Or
-import CoreExports.Actions
-import CoreExports2._
+import teststate.typeclass._
 
 /** The next step to take while in a loop.
   *

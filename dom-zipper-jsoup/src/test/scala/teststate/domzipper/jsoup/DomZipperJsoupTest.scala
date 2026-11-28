@@ -7,8 +7,8 @@ import cats.instances.string._
 import cats.instances.vector._
 import japgolly.microlibs.testutil.TestUtil._
 import org.jsoup.Jsoup
-import teststate.domzipper.{DomZippersFastAndSlow, ErrorHandler}
 import teststate.domzipper.jsoup.Exports._
+import teststate.domzipper.{DomZippersFastAndSlow, ErrorHandler}
 import utest._
 
 object DomZipperJsoupTest extends TestSuite {

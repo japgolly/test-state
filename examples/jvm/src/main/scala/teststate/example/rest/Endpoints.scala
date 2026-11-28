@@ -1,9 +1,9 @@
 package teststate.example.rest
 
 import java.util.UUID
+import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.json.circe._
-import sttp.model.StatusCode
 
 object Endpoints {
 

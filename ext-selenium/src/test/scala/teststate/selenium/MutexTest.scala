@@ -3,9 +3,9 @@ package teststate.selenium
 import cats.instances.int._
 import java.time.Instant
 import java.util.concurrent.{CountDownLatch, TimeUnit}
-import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import teststate.data._
 import teststate.selenium.TestUtil._
 import teststate.typeclass.{ErrorHandler, ExecutionModel}

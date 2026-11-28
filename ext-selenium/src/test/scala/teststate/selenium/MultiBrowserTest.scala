@@ -3,9 +3,9 @@ package teststate.selenium
 import cats.instances.string._
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import org.openqa.selenium.chrome.ChromeDriver
-import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import teststate.selenium.TestUtil._
 import utest._
 

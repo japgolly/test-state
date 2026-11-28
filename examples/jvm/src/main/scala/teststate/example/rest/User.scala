@@ -1,8 +1,8 @@
 package teststate.example.rest
 
-import java.util.UUID
-import java.time.Instant
 import io.circe.Codec
+import java.time.Instant
+import java.util.UUID
 import sttp.tapir.Schema
 
 final case class User(id: UUID, name: String, createdAt: Instant)

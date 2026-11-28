@@ -1,14 +1,13 @@
 package teststate.example.rest
 
 import cats.effect.IO
-import java.util.UUID
 import java.time.Instant
-import sttp.client4.WebSocketBackend
-import sttp.client4.Response
+import java.util.UUID
+import sttp.client4.{Response, WebSocketBackend}
 import sttp.model.Uri
-import sttp.tapir.client.sttp4.SttpClientInterpreter
 import sttp.tapir.PublicEndpoint
-import TestState._
+import sttp.tapir.client.sttp4.SttpClientInterpreter
+import teststate.example.rest.TestState._
 
 object TestDsl {
 
