@@ -637,7 +637,7 @@ final class Dsl[F[_], R, O, S, E](actionMod: Action.Single[F, R, O, S, E] => Act
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   /** @since 3.2.0 */
-  def runCallbacks: RunCallbacks.Dsl[F, R, O, S, E] =
+  def callbacks: RunCallbacks.Dsl[F, R, O, S, E] =
       new RunCallbacks.Dsl
 
   /** @since 3.2.0 */

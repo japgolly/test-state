@@ -1281,8 +1281,8 @@ object RunnerLoopTest extends TestSuite {
         var events = Vector.empty[String]
         var step = 0
         val dsl = Dsl.full[Thunk, Unit, Int, Unit, String]
-        val cb = dsl.runCallbacks.aroundActions.before((_, name) => () => { events :+= s"before:${name.value}" }) ++
-          dsl.runCallbacks.aroundActions.after((_, name, err) => () => { events :+= s"after:${name.value}:${err.getOrElse("ok")}" })
+        val cb = dsl.callbacks.aroundActions.before((_, name) => () => { events :+= s"before:${name.value}" }) ++
+          dsl.callbacks.aroundActions.after((_, name, err) => () => { events :+= s"after:${name.value}:${err.getOrElse("ok")}" })
         val a1 = dsl.action("A1")(_ => () => { step += 1; events :+= "run:A1" })
         val loop = dsl.loop("OuterLoop") { ros =>
           ros.obs match {

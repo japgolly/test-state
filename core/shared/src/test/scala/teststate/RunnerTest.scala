@@ -482,7 +482,7 @@ object RunnerTest extends TestSuite {
     "callbacks" - {
       "before" - {
         var events = Vector.empty[String]
-        val cb = dsl.runCallbacks.aroundActions.before((_, name) => events :+= s"before:${name.value}")
+        val cb = dsl.callbacks.aroundActions.before((_, name) => events :+= s"before:${name.value}")
         val actOk = dsl.action("ok")(_ => events :+= "run:ok")
         val actCrash = dsl.action("crash")(_ => { events :+= "run:crash"; sys.error("boom") })
         Plan.action(actOk >> actCrash).test(dsl.observer(_.s)).stateless.withRef(newState).withCallbacks(cb).run()
@@ -496,7 +496,7 @@ object RunnerTest extends TestSuite {
 
       "after" - {
         var events = Vector.empty[(String, Option[String])]
-        val cb = dsl.runCallbacks.aroundActions.after((_, name, err) => events :+= (name.value -> err))
+        val cb = dsl.callbacks.aroundActions.after((_, name, err) => events :+= (name.value -> err))
         val actOk = dsl.action("ok")(_ => ())
         val actFail = dsl.action("fail").attempt(_ => Some("err"))
         val actCrash = dsl.action("crash")(_ => sys.error("boom"))
@@ -625,7 +625,7 @@ object RunnerTest extends TestSuite {
 
         val d = Dsl.full[Thunk, Unit, Unit, Unit, String]
         val act = d.action("act")(_ => () => { clockMillis += 250L })
-        val cb = d.runCallbacks.aroundActions.timed((_, _, _, dur) => () => { measuredMs = Some(dur.toMillis) })
+        val cb = d.callbacks.aroundActions.timed((_, _, _, dur) => () => { measuredMs = Some(dur.toMillis) })
         val report = Plan.action(act).testU.stateless.withoutRef.withCallbacks(cb).run()()
 
         assert(!report.failed)
