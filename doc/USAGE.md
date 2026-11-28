@@ -34,7 +34,7 @@
     ```scala
     package my.app.test
 
-    object MyTestState
+    object TestState
       extends teststate.Exports                    // Core. Most important piece.
          with teststate.domzipper.jsoup.Exports    // This already extends Core
          with teststate.domzipper.selenium.Exports // This already extends Core

@@ -3,7 +3,7 @@
 Create a dsl instance by simply calling `Dsl.apply`, example:
 
 ```scala
-import MyTestState._
+import TestState._
 
 val dsl = Dsl[Ref, Obs, State]
 
@@ -13,7 +13,7 @@ val dsl = Dsl[Ref, Obs, State]
 or if you want asynchronous tests, you can use the helper method `Dsl.future`, example:
 
 ```scala
-import MyTestState._
+import TestState._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 val dsl = Dsl.future[Ref, Obs, State]
@@ -24,7 +24,7 @@ val dsl = Dsl.future[Ref, Obs, State]
 If you're using the Cats Effect or ZIO modules you can use those too:
 
 ```scala
-import MyTestState._
+import TestState._
 
 val catsEffectDsl = Dsl.io  [Ref, Obs, State] // Dsl[cats.efffect.IO, Ref, Obs, State, String]
 val zioDsl        = Dsl.task[Ref, Obs, State] // Dsl[zio.Task,        Ref, Obs, State, String]

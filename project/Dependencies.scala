@@ -24,16 +24,20 @@ object Dependencies {
     val zio             = "2.1.27"
 
     // Internal
+    val http4s          = "0.23.39"
     val kindProjector   = "0.13.4"
     val monocle         = "3.3.0"
     val reactJs         = "17.0.2"
     val scalaJsJavaTime = "2.4.0"
+    val sttpClient      = "4.0.27"
+    val tapir           = "1.13.32"
     val utest           = "0.8.4"
   }
 
   object Dep {
     val cats                 = Def.setting("org.typelevel"                     %%% "cats-core"               % Ver.cats)
     val catsEffect           = Def.setting("org.typelevel"                     %%% "cats-effect"             % Ver.catsEffect)
+    val http4sServer         = Def.setting("org.http4s"                         %% "http4s-ember-server"     % Ver.http4s)
     val jsoup                = Def.setting("org.jsoup"                           % "jsoup"                   % Ver.jsoup)
     val microlibsNameFn      = Def.setting("com.github.japgolly.microlibs"     %%% "name-fn"                 % Ver.microlibs)
     val microlibsTestUtil    = Def.setting("com.github.japgolly.microlibs"     %%% "test-util"               % Ver.microlibs)
@@ -52,6 +56,12 @@ object Dependencies {
     val seleniumFirefox      = Def.setting("org.seleniumhq.selenium"             % "selenium-firefox-driver" % Ver.selenium)
     val seleniumRemoteDriver = Def.setting("org.seleniumhq.selenium"             % "selenium-remote-driver"  % Ver.selenium)
     val sizzle               = Def.setting("org.webjars.bower"                   % "sizzle"                  % Ver.sizzle / "sizzle.min.js" commonJSName "Sizzle")
+    val sttpClientCats       = Def.setting("com.softwaremill.sttp.client4"      %% "cats"                    % Ver.sttpClient)
+    val sttpClientCirce      = Def.setting("com.softwaremill.sttp.client4"      %% "circe"                   % Ver.sttpClient)
+    val tapirCore            = Def.setting("com.softwaremill.sttp.tapir"        %% "tapir-core"              % Ver.tapir)
+    val tapirHttp4sServer    = Def.setting("com.softwaremill.sttp.tapir"        %% "tapir-http4s-server"     % Ver.tapir)
+    val tapirJsonCirce       = Def.setting("com.softwaremill.sttp.tapir"        %% "tapir-json-circe"        % Ver.tapir)
+    val tapirSttpClient      = Def.setting("com.softwaremill.sttp.tapir"        %% "tapir-sttp-client4"      % Ver.tapir)
     val univEq               = Def.setting("com.github.japgolly.univeq"        %%% "univeq"                  % Ver.univEq)
     val utest                = Def.setting("com.lihaoyi"                       %%% "utest"                   % Ver.utest)
     val zio                  = Def.setting("dev.zio"                           %%% "zio"                     % Ver.zio)

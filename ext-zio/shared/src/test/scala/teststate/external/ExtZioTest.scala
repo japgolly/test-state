@@ -1,11 +1,11 @@
 package teststate.external
 
-object MyTestState
+object TestState
   extends teststate.Exports
   with teststate.ExtZio
 
 object CompilationTest {
-  import MyTestState._
+  import TestState._
 
   val taskDsl = Dsl.task[Unit, Unit, Unit]
 }

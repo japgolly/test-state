@@ -87,7 +87,7 @@ object TestState {
   lazy val root =
     Project("root", file("."))
       .configure(commonSettings.jvm, preventPublication)
-      .aggregate(rootJVM, rootJS, examples)
+      .aggregate(rootJVM, rootJS)
 
   lazy val rootJVM =
     Project("JVM", file(".rootJVM"))
@@ -102,6 +102,7 @@ object TestState {
         extNyayaJVM,
         extSelenium,
         extZioJVM,
+        examplesJVM,
         utilJVM,
         utilSelenium,
       )
@@ -118,7 +119,8 @@ object TestState {
         extNyayaJS,
         extScalaJsReact,
         extZioJS,
-        utilJS,
+        examplesJS,
+        utilJS
       )
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -274,31 +276,38 @@ object TestState {
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  lazy val examples =
-    Project("examples", file(".examples"))
-      .configure(commonSettings.jvm, preventPublication)
-      .aggregate(exampleSelenium, exampleReactJS)
-
-  lazy val exampleSelenium = project
-    .in(file("example-selenium"))
-    .configure(commonSettings.jvm, preventPublication, testSettingsCI.jvm)
-    .dependsOn(coreJVM, domZipperSelenium, extSelenium)
-    .settings(moduleName := "example-selenium")
-
-  lazy val exampleReactJS = project
-    .in(file("example-react"))
-    .enablePlugins(ScalaJSPlugin)
-    .enablePlugins(JSDependenciesPlugin)
-    .configure(commonSettings.js, preventPublication, testSettings.js, addReactJsDependencies(Compile))
-    .dependsOn(coreJS, domZipperSizzle, extScalaJsReact)
-    .settings(
-      moduleName := "example-react",
-      libraryDependencies ++= Seq(
-        Dep.scalaJsReactMonocle.value,
-        Dep.monocleCore        .value,
-        Dep.monocleMacro       .value,
-        Dep.scalaJsJavaTime    .value,
-      ),
-      addMacroParadisePlugin, // For Monocle macros
+  lazy val examplesJVM = examples.jvm
+  lazy val examplesJS  = examples.js
+  lazy val examples = crossProject(JSPlatform, JVMPlatform)
+    .in(file("examples"))
+    .jvmConfigure(_
+      .configure(commonSettings.jvm, preventPublication, testSettingsCI.jvm)
+      .dependsOn(coreJVM, domZipperSelenium, extSelenium, extCatsEffectJVM)
+      .settings(
+        libraryDependencies ++= Seq(
+          Dep.http4sServer.value,
+          Dep.tapirCore.value,
+          Dep.tapirHttp4sServer.value,
+          Dep.tapirJsonCirce.value,
+          Dep.sttpClientCats.value % Test,
+          Dep.sttpClientCirce.value % Test,
+          Dep.tapirSttpClient.value % Test
+        ),
+      )
+    ).jsConfigure(_
+      .enablePlugins(ScalaJSPlugin)
+      .enablePlugins(JSDependenciesPlugin)
+      .configure(commonSettings.js, preventPublication, testSettings.js, addReactJsDependencies(Compile))
+      .dependsOn(coreJS, domZipperSizzle, extScalaJsReact)
+      .settings(
+        libraryDependencies ++= Seq(
+          Dep.scalaJsReactMonocle.value,
+          Dep.monocleCore        .value,
+          Dep.monocleMacro       .value,
+          Dep.scalaJsJavaTime    .value,
+        ),
+        addMacroParadisePlugin, // For Monocle macros
+      )
     )
+
 }

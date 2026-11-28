@@ -1,11 +1,11 @@
 package teststate.external
 
-object MyTestState
+object TestState
   extends teststate.Exports
   with teststate.ExtCatsEffect
 
 object CompilationTest {
-  import MyTestState._
+  import TestState._
 
   val ioDsl = Dsl.io[Unit, Unit, Unit]
 }

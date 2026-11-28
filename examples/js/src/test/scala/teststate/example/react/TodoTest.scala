@@ -1,7 +1,7 @@
 package teststate.example.react
 
 import japgolly.scalajs.react.test._
-import teststate.example.react.MyTestState._
+import teststate.example.react.TestState._
 import teststate.example.react.TodoTestDsl._
 import utest._
 

@@ -5,8 +5,7 @@ package teststate.example.react
   *
   * See `/doc/USAGE.md` for more info.
   */
-object MyTestState
+object TestState
   extends teststate.Exports
      with teststate.ExtScalaJsReact
      with teststate.domzipper.sizzle.Exports
-

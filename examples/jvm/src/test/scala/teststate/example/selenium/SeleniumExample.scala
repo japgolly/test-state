@@ -2,7 +2,7 @@ package teststate.example.selenium
 
 import org.openqa.selenium.WebDriver
 import scala.concurrent.duration._
-import teststate.example.selenium.MyTestState._
+import teststate.example.selenium.TestState._
 import utest._
 
 object SeleniumExample extends TestSuite {

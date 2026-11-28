@@ -9,7 +9,7 @@ import org.openqa.selenium.chrome.{ChromeDriver, ChromeOptions}
   *
   * See `/doc/USAGE.md` for more info.
   */
-object MyTestState
+object TestState
   extends teststate.Exports
     with teststate.selenium.Exports
     with teststate.domzipper.selenium.Exports {
