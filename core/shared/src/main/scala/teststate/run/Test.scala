@@ -221,6 +221,7 @@ final case class Test[F[_], R, O, S, E](override val plan   : Plan[F, R, O, S, E
   def run(initialState: S, ref: => R): F[Report[E]] =
     withInitialState(initialState).withRefByName(ref).run()
 
+  @deprecated("Use withInitialState(initialState).withoutRef.run()", "3.2.0")
   def runU(initialState: S)(implicit ev: Unit =:= R): F[Report[E]] =
     withInitialState(initialState).withoutRef.run()
 }
@@ -270,6 +271,7 @@ final case class TestWithInitialState[F[_], R, O, S, E](test: Test[F, R, O, S, E
   def run(ref: => R): F[Report[E]] =
     withRefByName(ref).run()
 
+  @deprecated("Use withoutRef.run()", "3.2.0")
   def runU()(implicit ev: Unit =:= R): F[Report[E]] =
     withoutRef.run()
 
